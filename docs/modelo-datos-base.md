@@ -66,4 +66,8 @@ Regla: `code` único dentro de cada tenant.
 - `received_at`, opcional
 - `created_at`, `updated_at`
 
-Regla: `lot_number` único por producto y depósito dentro de cada tenant. La fecha de vencimiento queda opcional en la base; el backend deberá exigirla cuando `maneja_vencimiento = true`.
+Regla: `lot_number` único por producto dentro de cada tenant. Un mismo lote físico puede repartirse entre varios depósitos; `warehouse_id` queda como el depósito donde se recibió originalmente y no forma parte de la regla de unicidad. La cantidad disponible en cada depósito se trackeará más adelante mediante movimientos de stock, no en esta tabla. La fecha de vencimiento queda opcional en la base; el backend deberá exigirla cuando `maneja_vencimiento = true`.
+
+## Posible unificación futura de entidades
+
+Hoy `suppliers` y `customers` son tablas separadas con campos casi idénticos. Si en algún momento confirmamos que una misma empresa puede ser cliente y proveedor a la vez, evaluaremos unificarlas en una sola tabla con un rol. Por ahora seguimos con las dos tablas separadas.

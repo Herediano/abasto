@@ -121,7 +121,7 @@ model ProductLot {
   supplier       Supplier? @relation(fields: [supplierId, tenantId], references: [id, tenantId])
 
   @@unique([id, tenantId])
-  @@unique([tenantId, productId, warehouseId, lotNumber])
+  @@unique([tenantId, productId, lotNumber])
   @@index([tenantId, expirationDate])
   @@index([tenantId, warehouseId])
   @@map("product_lots")
