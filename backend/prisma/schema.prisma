@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id         String      @id @default(uuid()) @db.Uuid
+  name       String
+  legalName  String?     @map("legal_name")
+  taxId      String?     @map("tax_id")
+  status     String      @default("active")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  products   Product[]
+  suppliers  Supplier[]
+  customers  Customer[]
+  warehouses Warehouse[]
+  lots       ProductLot[]
+
+  @@map("tenants")
+}
+
+model Product {
+  id                String      @id @default(uuid()) @db.Uuid
+  tenantId          String      @map("tenant_id") @db.Uuid
+  sku               String
+  barcode           String?
+  name              String
+  description       String?
+  category          String?
+  unit              String
+  brand             String?
+  manejaVencimiento Boolean     @default(false) @map("maneja_vencimiento")
+  isActive          Boolean     @default(true) @map("is_active")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  tenant            Tenant      @relation(fields: [tenantId], references: [id])
+  lots              ProductLot[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@map("products")
+}
+
+model Supplier {
+  id         String      @id @default(uuid()) @db.Uuid
+  tenantId   String      @map("tenant_id") @db.Uuid
+  name       String
+  legalName  String?     @map("legal_name")
+  taxId      String?     @map("tax_id")
+  email      String?
+  phone      String?
+  address    String?
+  isActive   Boolean     @default(true) @map("is_active")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  lots       ProductLot[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("suppliers")
+}
+
+model Customer {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  name       String
+  legalName  String?  @map("legal_name")
+  taxId      String?  @map("tax_id")
+  email      String?
+  phone      String?
+  address    String?
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("customers")
+}
+
+model Warehouse {
+  id         String      @id @default(uuid()) @db.Uuid
+  tenantId   String      @map("tenant_id") @db.Uuid
+  name       String
+  code       String
+  address    String?
+  isActive   Boolean     @default(true) @map("is_active")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  lots       ProductLot[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("warehouses")
+}
+
+model ProductLot {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  productId      String    @map("product_id") @db.Uuid
+  warehouseId    String    @map("warehouse_id") @db.Uuid
+  supplierId     String?   @map("supplier_id") @db.Uuid
+  lotNumber      String    @map("lot_number")
+  expirationDate DateTime? @map("expiration_date") @db.Date
+  receivedAt     DateTime? @map("received_at") @db.Date
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  product        Product   @relation(fields: [productId, tenantId], references: [id, tenantId])
+  warehouse      Warehouse @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  supplier       Supplier? @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, productId, warehouseId, lotNumber])
+  @@index([tenantId, expirationDate])
+  @@index([tenantId, warehouseId])
+  @@map("product_lots")
+}
