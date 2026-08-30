@@ -7,6 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum MovementType {
+  purchase_in
+  sale_out
+  transfer_in
+  transfer_out
+  adjustment_in
+  adjustment_out
+}
+
 model Tenant {
   id         String      @id @default(uuid()) @db.Uuid
   name       String
@@ -20,6 +29,7 @@ model Tenant {
   customers  Customer[]
   warehouses Warehouse[]
   lots       ProductLot[]
+  stockMovements StockMovement[]
 
   @@map("tenants")
 }
@@ -40,6 +50,7 @@ model Product {
   updatedAt         DateTime    @updatedAt @map("updated_at")
   tenant            Tenant      @relation(fields: [tenantId], references: [id])
   lots              ProductLot[]
+  stockMovements    StockMovement[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, sku])
@@ -97,6 +108,7 @@ model Warehouse {
   updatedAt  DateTime    @updatedAt @map("updated_at")
   tenant     Tenant      @relation(fields: [tenantId], references: [id])
   lots       ProductLot[]
+  stockMovements StockMovement[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])
@@ -119,10 +131,37 @@ model ProductLot {
   product        Product   @relation(fields: [productId, tenantId], references: [id, tenantId])
   warehouse      Warehouse @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
   supplier       Supplier? @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  stockMovements StockMovement[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, productId, lotNumber])
   @@index([tenantId, expirationDate])
   @@index([tenantId, warehouseId])
   @@map("product_lots")
+}
+
+model StockMovement {
+  id            String       @id @default(uuid()) @db.Uuid
+  tenantId      String       @map("tenant_id") @db.Uuid
+  productId     String       @map("product_id") @db.Uuid
+  productLotId  String?      @map("product_lot_id") @db.Uuid
+  warehouseId   String       @map("warehouse_id") @db.Uuid
+  quantity      Decimal      @db.Decimal(14, 3)
+  movementType  MovementType @map("movement_type")
+  operationId   String?      @map("operation_id") @db.Uuid
+  occurredAt    DateTime     @default(now()) @map("occurred_at")
+  referenceType String?      @map("reference_type")
+  referenceId   String?      @map("reference_id") @db.Uuid
+  notes         String?
+  createdAt     DateTime     @default(now()) @map("created_at")
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+  product       Product      @relation(fields: [productId, tenantId], references: [id, tenantId])
+  productLot    ProductLot?  @relation(fields: [productLotId, tenantId], references: [id, tenantId])
+  warehouse     Warehouse    @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+
+  @@unique([id, tenantId])
+  @@index([tenantId, productId, warehouseId])
+  @@index([tenantId, productLotId, warehouseId])
+  @@index([tenantId, occurredAt])
+  @@map("stock_movements")
 }

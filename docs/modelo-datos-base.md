@@ -71,3 +71,11 @@ Regla: `lot_number` único por producto dentro de cada tenant. Un mismo lote fí
 ## Posible unificación futura de entidades
 
 Hoy `suppliers` y `customers` son tablas separadas con campos casi idénticos. Si en algún momento confirmamos que una misma empresa puede ser cliente y proveedor a la vez, evaluaremos unificarlas en una sola tabla con un rol. Por ahora seguimos con las dos tablas separadas.
+
+## `stock_movements`
+
+La existencia se calculará como la suma de movimientos por tenant, producto, lote y depósito. `quantity` será positiva para ingresos y negativa para egresos. `warehouse_id` representa el depósito donde impacta el movimiento; una transferencia se registrará con dos filas vinculadas por `operation_id`.
+
+`movement_type` es un enum cerrado con estos valores: `purchase_in`, `sale_out`, `transfer_in`, `transfer_out`, `adjustment_in` y `adjustment_out`.
+
+Campos adicionales: `product_lot_id` es opcional para productos sin lote, `occurred_at` registra cuándo ocurrió el movimiento y `reference_type`/`reference_id` permiten vincularlo a una operación externa. La tabla funciona como un libro de movimientos; los saldos no se editan directamente.
