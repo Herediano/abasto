@@ -21,6 +21,9 @@ table { width: 100%; border-collapse: collapse; white-space: nowrap; }
 th, td { padding: 12px; text-align: left; border-bottom: 1px solid #edf0f4; }
 th { color: #63708a; font-size: 12px; text-transform: uppercase; }
 .form { display: grid; max-width: 620px; gap: 16px; }
+.inline-form { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 12px; align-items: end; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #43516a; }
+.check input { width: auto; }
 .form label, .toolbar label { display: grid; gap: 6px; color: #43516a; font-weight: 600; }
 input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd3df; border-radius: 5px; background: white; }
 textarea { min-height: 80px; resize: vertical; }

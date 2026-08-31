@@ -20,6 +20,12 @@ curl -H "Authorization: Bearer <JWT>" http://localhost:3000/api/products
 
 Los endpoints protegidos usan el tenant derivado del JWT; ya no aceptan `x-tenant-id`.
 
+## Catálogo
+
+- `GET/POST /api/warehouses`: lista y crea depósitos.
+- `GET /api/suppliers`: lista proveedores activos para seleccionar en lotes.
+- `GET/POST /api/products/:productId/lots`: lista y crea lotes. La fecha de vencimiento es obligatoria para productos con `maneja_vencimiento`.
+
 ## Autenticación
 
 - `POST /api/auth/signup`: crea un tenant y su primer usuario en una transacción; devuelve un JWT.
