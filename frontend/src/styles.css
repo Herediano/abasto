@@ -6,6 +6,8 @@ button { cursor: pointer; }
 .shell { min-height: 100vh; }
 header { display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; color: white; background: #182b49; }
 header strong { font-size: 20px; }
+header .session { display: flex; align-items: center; gap: 14px; font-size: 14px; }
+header .session button { padding: 7px 11px; border: 1px solid #b7c5d9; border-radius: 5px; background: transparent; color: white; }
 header label { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 header select { min-width: 220px; }
 nav { display: flex; gap: 8px; padding: 12px 28px; background: white; border-bottom: 1px solid #dfe4eb; }
@@ -30,3 +32,6 @@ textarea { min-height: 80px; resize: vertical; }
 .toolbar label { width: 360px; }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 18px; color: #657189; }
 footer { padding: 20px 28px; color: #657189; font-size: 13px; text-align: center; }
+.auth-page { display: grid; min-height: 100vh; place-items: center; padding: 24px; }
+.auth-form { width: min(100%, 460px); margin: 0; }
+.link-button { border: 0; background: transparent; color: #1769d1; text-align: left; }

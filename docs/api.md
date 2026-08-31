@@ -8,17 +8,25 @@ La API corre en `http://localhost:3000` y usa el prefijo `/api`.
 - `GET /api/tenants`: lista tenants.
 - `GET /api/tenants/:id`: obtiene un tenant.
 - `POST /api/tenants`: crea un tenant. Body mínimo: `{ "name": "Mi mayorista" }`.
-- `GET /api/products`: lista productos del tenant indicado por `x-tenant-id`.
-- `GET /api/products/:id`: obtiene un producto del tenant indicado.
-- `POST /api/products`: crea un producto del tenant indicado.
+- `GET /api/products`: lista productos del tenant autenticado.
+- `GET /api/products/:id`: obtiene un producto del tenant autenticado.
+- `POST /api/products`: crea un producto en el tenant autenticado.
 
 Ejemplo:
 
 ```bash
-curl -H "x-tenant-id: <TENANT_UUID>" http://localhost:3000/api/products
+curl -H "Authorization: Bearer <JWT>" http://localhost:3000/api/products
 ```
 
-El header `x-tenant-id` es temporal para desarrollo. En producción deberá reemplazarse por el tenant derivado de la sesión autenticada.
+Los endpoints protegidos usan el tenant derivado del JWT; ya no aceptan `x-tenant-id`.
+
+## Autenticación
+
+- `POST /api/auth/signup`: crea un tenant y su primer usuario en una transacción; devuelve un JWT.
+- `POST /api/auth/login`: autentica por email y contraseña; devuelve un JWT válido por 8 horas.
+- `POST /api/users`: crea otro usuario dentro del tenant del JWT.
+
+Los endpoints de tenants, productos, stock, depósitos y lotes requieren `Authorization: Bearer <JWT>`. El tenant se obtiene del usuario autenticado; `x-tenant-id` ya no es aceptado ni utilizado. Las contraseñas se almacenan con Argon2id.
 
 ## Stock
 

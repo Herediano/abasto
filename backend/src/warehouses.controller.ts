@@ -1,15 +1,15 @@
-import { Controller, Get, Headers, Inject, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Inject, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
+import { JwtAuthGuard } from './auth.guard';
+import { AuthRequest } from './auth.types';
 
 @Controller('warehouses')
+@UseGuards(JwtAuthGuard)
 export class WarehousesController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   @Get()
-  list(@Headers() headers: Record<string, string | string[] | undefined>) {
-    const value = headers['x-tenant-id'];
-    const tenantId = Array.isArray(value) ? value[0] : value;
-    if (!tenantId) throw new BadRequestException('Falta el header x-tenant-id');
-    return this.prisma.warehouse.findMany({ where: { tenantId, isActive: true }, orderBy: { name: 'asc' } });
+  list(@Req() request: AuthRequest) {
+    return this.prisma.warehouse.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } });
   }
 }

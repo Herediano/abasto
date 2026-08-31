@@ -1,36 +1,32 @@
-import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
+import { JwtAuthGuard } from './auth.guard';
+import { AuthRequest } from './auth.types';
 
 @Controller('products')
+@UseGuards(JwtAuthGuard)
 export class ProductsController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  private tenantId(headers: Record<string, string | string[] | undefined>) {
-    const value = headers['x-tenant-id'];
-    const id = Array.isArray(value) ? value[0] : value;
-    if (!id) throw new BadRequestException('Falta el header x-tenant-id');
-    return id;
-  }
-
   @Get()
-  list(@Headers() headers: Record<string, string | string[] | undefined>) {
-    return this.prisma.product.findMany({ where: { tenantId: this.tenantId(headers) }, orderBy: { name: 'asc' } });
+  list(@Req() request: AuthRequest) {
+    return this.prisma.product.findMany({ where: { tenantId: request.user.tenantId }, orderBy: { name: 'asc' } });
   }
 
   @Get(':id')
-  get(@Headers() headers: Record<string, string | string[] | undefined>, @Param('id') id: string) {
-    return this.prisma.product.findFirstOrThrow({ where: { id, tenantId: this.tenantId(headers) } });
+  get(@Req() request: AuthRequest, @Param('id') id: string) {
+    return this.prisma.product.findFirstOrThrow({ where: { id, tenantId: request.user.tenantId } });
   }
 
   @Get(':id/lots')
-  lots(@Headers() headers: Record<string, string | string[] | undefined>, @Param('id') id: string) {
-    const tenantId = this.tenantId(headers);
+  lots(@Req() request: AuthRequest, @Param('id') id: string) {
+    const tenantId = request.user.tenantId;
     return this.prisma.productLot.findMany({ where: { tenantId, productId: id }, orderBy: { lotNumber: 'asc' } });
   }
 
   @Post()
-  create(@Headers() headers: Record<string, string | string[] | undefined>, @Body() body: Record<string, unknown>) {
-    const tenantId = this.tenantId(headers);
+  create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
+    const tenantId = request.user.tenantId;
     for (const field of ['sku', 'name', 'unit']) if (typeof body[field] !== 'string' || !(body[field] as string).trim()) throw new BadRequestException(`${field} es obligatorio`);
     return this.prisma.product.create({ data: {
       tenantId, sku: (body.sku as string).trim(), name: (body.name as string).trim(), unit: (body.unit as string).trim(),
