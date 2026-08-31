@@ -1,57 +1,53 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Boxes, ChevronDown, CircleHelp, LayoutDashboard, Package, Plus, Search, Settings, Store, Truck, Users, Warehouse, X } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
-type Tenant = { id: string; name: string; legalName?: string | null };
-type Product = { id: string; sku: string; name: string; category?: string | null; unit: string; brand?: string | null; manejaVencimiento: boolean; isActive: boolean };
+type Tenant = { id: string; name: string };
+type Product = { id: string; name: string; sku: string; manejaVencimiento: boolean };
+type Warehouse = { id: string; name: string; code: string };
+type Lot = { id: string; lotNumber: string; expirationDate?: string | null };
+type StockItem = { productId: string; productName: string; warehouseId: string; warehouseName: string; productLotId?: string | null; lotNumber?: string | null; expirationDate?: string | null; quantity: string };
+type Movement = { id: string; quantity: string; movementType: string; lotNumber?: string | null; warehouseName: string; occurredAt: string; notes?: string | null };
 
-async function api<T>(path: string, options?: RequestInit, tenantId?: string) {
-  const response = await fetch(`${API}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(tenantId ? { 'x-tenant-id': tenantId } : {}), ...options?.headers } });
-  if (!response.ok) throw new Error((await response.json().catch(() => null))?.message ?? 'No se pudo completar la operación');
+async function api<T>(path: string, options: RequestInit = {}, tenantId = '') {
+  const response = await fetch(`${API}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(tenantId ? { 'x-tenant-id': tenantId } : {}), ...options.headers } });
+  if (!response.ok) { const data = await response.json().catch(() => ({})); const error = new Error(data.message ?? 'No se pudo completar la operación'); (error as Error & { status?: number; data?: unknown }).status = response.status; (error as Error & { data?: unknown }).data = data; throw error; }
   return response.json() as Promise<T>;
 }
 
 function App() {
+  const [path, setPath] = useState(window.location.pathname || '/');
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [tenantId, setTenantId] = useState(localStorage.getItem('smart-erp-tenant') ?? '');
   const [error, setError] = useState('');
-  const [modal, setModal] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ sku: '', name: '', category: 'Almacén', unit: 'unidad', brand: '', manejaVencimiento: false });
-
-  useEffect(() => { api<Tenant[]>('/tenants').then(data => { setTenants(data); setTenantId(data[0]?.id ?? ''); }).catch(e => setError(e.message)); }, []);
-  useEffect(() => { if (!tenantId) return; setLoading(true); api<Product[]>('/products', undefined, tenantId).then(setProducts).catch(e => setError(e.message)).finally(() => setLoading(false)); }, [tenantId]);
-
-  const selectedTenant = tenants.find(t => t.id === tenantId);
-  const filtered = useMemo(() => products.filter(p => `${p.name} ${p.sku} ${p.category ?? ''}`.toLowerCase().includes(query.toLowerCase())), [products, query]);
-  async function createProduct(event: React.FormEvent) {
-    event.preventDefault(); setSaving(true); setError('');
-    try { const created = await api<Product>('/products', { method: 'POST', body: JSON.stringify(form) }, tenantId); setProducts(old => [...old, created]); setModal(false); setForm({ sku: '', name: '', category: 'Almacén', unit: 'unidad', brand: '', manejaVencimiento: false }); } catch (e) { setError((e as Error).message); } finally { setSaving(false); }
-  }
-
-  return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="brand"><div className="brand-mark"><Boxes size={20}/></div><div><strong>Mayorista</strong><span>ERP CONTROL</span></div></div>
-      <div className="tenant-picker"><span>EMPRESA ACTIVA</span><button onClick={() => setTenantId(tenants[(tenants.findIndex(t => t.id === tenantId) + 1) % Math.max(tenants.length, 1)]?.id ?? '')}>{selectedTenant?.name ?? 'Cargando...'}<ChevronDown size={16}/></button><small>Operación principal</small></div>
-      <nav><p>GESTIÓN</p><a className="active"><LayoutDashboard size={18}/> Resumen</a><a><Package size={18}/> Productos <em>{products.length}</em></a><a><Warehouse size={18}/> Inventario</a><a><Truck size={18}/> Proveedores</a><a><Users size={18}/> Clientes</a><p>CONFIGURACIÓN</p><a><Settings size={18}/> Preferencias</a></nav>
-      <div className="sidebar-footer"><div className="avatar">LM</div><div><strong>Luciano M.</strong><span>Administrador</span></div><CircleHelp size={17}/></div>
-    </aside>
-    <main className="main-content">
-      <header className="topbar"><div className="breadcrumb"><span>Inicio</span><b>/</b><strong>Resumen</strong></div><div className="top-actions"><span className="status-dot"><i/> Sistema operativo</span><button className="icon-button"><CircleHelp size={18}/></button><div className="user-avatar">LM</div></div></header>
-      <div className="page"><div className="page-heading"><div><div className="eyebrow">DOMINGO, 30 DE AGOSTO DE 2026</div><h1>Resumen general <span>👋</span></h1><p>Esto es lo que está pasando en tu operación hoy.</p></div><button className="primary" onClick={() => setModal(true)}><Plus size={18}/> Nuevo producto</button></div>
-        {error && <div className="alert"><strong>Atención:</strong> {error}<button onClick={() => setError('')}><X size={15}/></button></div>}
-        <section className="metrics"><Metric label="Productos activos" value={products.length.toString()} detail="en catálogo" icon={<Package/>} tone="blue"/><Metric label="Valor de inventario" value="$ 0" detail="pendiente de movimientos" icon={<Boxes/>} tone="violet"/><Metric label="Stock bajo" value="0" detail="requieren atención" icon={<Warehouse/>} tone="amber"/><Metric label="Clientes" value="—" detail="módulo próximo" icon={<Users/>} tone="green"/></section>
-        <section className="content-card"><div className="card-heading"><div><h2>Productos</h2><p>Catálogo de {selectedTenant?.name ?? 'la empresa'}</p></div><button className="ghost" onClick={() => setModal(true)}><Plus size={16}/> Agregar</button></div><div className="toolbar"><div className="search"><Search size={17}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar por nombre, SKU o categoría..."/></div><button className="filter">Todos los productos <ChevronDown size={16}/></button></div>{loading ? <div className="empty">Cargando productos...</div> : filtered.length === 0 ? <div className="empty">No hay productos que coincidan con la búsqueda.</div> : <div className="table-wrap"><table><thead><tr><th>PRODUCTO</th><th>SKU</th><th>CATEGORÍA</th><th>UNIDAD</th><th>VENCIMIENTO</th><th>ESTADO</th></tr></thead><tbody>{filtered.map(p => <tr key={p.id}><td><div className="product-cell"><div className="product-icon"><Package size={17}/></div><strong>{p.name}</strong></div></td><td><code>{p.sku}</code></td><td><span className="category">{p.category ?? 'Sin categoría'}</span></td><td>{p.unit}</td><td>{p.manejaVencimiento ? <span className="tag warning">Controlado</span> : <span className="muted">No aplica</span>}</td><td><span className="tag success"><i/>{p.isActive ? 'Activo' : 'Inactivo'}</span></td></tr>)}</tbody></table></div>}</section>
-        <div className="footnote"><span><Store size={15}/> {tenants.length} empresas configuradas</span><span>Datos sincronizados con la API local</span></div>
-      </div>
-    </main>
-    {modal && <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && setModal(false)}><form className="modal" onSubmit={createProduct}><div className="modal-head"><div><span className="eyebrow">CATÁLOGO</span><h2>Nuevo producto</h2></div><button type="button" className="icon-button" onClick={() => setModal(false)}><X size={18}/></button></div><label>Nombre<input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Ej. Yerba mate 1 kg"/></label><div className="form-grid"><label>SKU<input required value={form.sku} onChange={e => setForm({...form, sku: e.target.value})} placeholder="YERBA-001"/></label><label>Unidad<select value={form.unit} onChange={e => setForm({...form, unit: e.target.value})}><option>unidad</option><option>caja</option><option>kilo</option><option>litro</option></select></label></div><div className="form-grid"><label>Categoría<input value={form.category} onChange={e => setForm({...form, category: e.target.value})}/></label><label>Marca<input value={form.brand} onChange={e => setForm({...form, brand: e.target.value})}/></label></div><label className="check"><input type="checkbox" checked={form.manejaVencimiento} onChange={e => setForm({...form, manejaVencimiento: e.target.checked})}/> Requiere control de vencimiento</label><div className="modal-actions"><button type="button" className="ghost" onClick={() => setModal(false)}>Cancelar</button><button className="primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar producto'}</button></div></form></div>}
-  </div>
+  useEffect(() => { api<Tenant[]>('/tenants').then(data => { setTenants(data); if (!data.some(t => t.id === tenantId)) setTenantId(data[0]?.id ?? ''); }).catch(e => setError(e.message)); }, []);
+  useEffect(() => { if (tenantId) localStorage.setItem('smart-erp-tenant', tenantId); }, [tenantId]);
+  function navigate(next: string) { window.history.pushState({}, '', next); setPath(next); setError(''); }
+  useEffect(() => { const onPop = () => setPath(window.location.pathname); window.addEventListener('popstate', onPop); return () => window.removeEventListener('popstate', onPop); }, []);
+  const selected = tenants.find(t => t.id === tenantId);
+  return <div className="shell"><header><strong>Smart ERP</strong><label>Tenant <select value={tenantId} onChange={e => setTenantId(e.target.value)}><option value="">Seleccionar...</option>{tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label></header><nav><button className={path === '/' ? 'active' : ''} onClick={() => navigate('/')}>Stock actual</button><button className={path === '/stock/in' ? 'active' : ''} onClick={() => navigate('/stock/in')}>Ingreso</button><button className={path === '/stock/out' ? 'active' : ''} onClick={() => navigate('/stock/out')}>Egreso</button><button className={path === '/stock/history' ? 'active' : ''} onClick={() => navigate('/stock/history')}>Historial</button></nav><main>{error && <div className="alert">{error}<button onClick={() => setError('')}>×</button></div>}{!tenantId ? <section className="card"><h1>Seleccioná un tenant</h1><p>Elegí una empresa arriba para comenzar.</p></section> : path === '/stock/in' ? <MovementForm tenantId={tenantId} direction="in" onDone={() => navigate('/')} onError={setError} /> : path === '/stock/out' ? <MovementForm tenantId={tenantId} direction="out" onDone={() => navigate('/')} onError={setError} /> : path === '/stock/history' ? <History tenantId={tenantId} onError={setError} /> : <Stock tenantId={tenantId} onError={setError} />}</main><footer>{selected?.name ?? 'Sin tenant'} · API local</footer></div>;
 }
 
-function Metric({ label, value, detail, icon, tone }: { label: string; value: string; detail: string; icon: React.ReactNode; tone: string }) { return <div className="metric"><div className={`metric-icon ${tone}`}>{icon}</div><div><span>{label}</span><strong>{value}</strong><small>{detail}</small></div></div>; }
+function Stock({ tenantId, onError }: { tenantId: string; onError: (message: string) => void }) {
+  const [items, setItems] = useState<StockItem[]>([]); const [loading, setLoading] = useState(true);
+  useEffect(() => { setLoading(true); api<{ items: StockItem[] }>('/stock', {}, tenantId).then(r => setItems(r.items)).catch(e => onError(e.message)).finally(() => setLoading(false)); }, [tenantId]);
+  return <section><h1>Stock actual</h1><p>Existencias por depósito y lote.</p><div className="card">{loading ? <p>Cargando...</p> : items.length === 0 ? <p>No hay stock registrado.</p> : <table><thead><tr><th>Producto</th><th>Depósito</th><th>Lote</th><th>Vencimiento</th><th>Stock</th></tr></thead><tbody>{items.map(i => <tr key={`${i.productId}-${i.warehouseId}-${i.productLotId}`}><td>{i.productName}</td><td>{i.warehouseName}</td><td>{i.lotNumber ?? 'Sin lote'}</td><td>{i.expirationDate ? i.expirationDate.slice(0, 10) : '—'}</td><td><strong>{i.quantity}</strong></td></tr>)}</tbody></table>}</div></section>;
+}
+
+function MovementForm({ tenantId, direction, onDone, onError }: { tenantId: string; direction: 'in' | 'out'; onDone: () => void; onError: (message: string) => void }) {
+  const [products, setProducts] = useState<Product[]>([]); const [warehouses, setWarehouses] = useState<Warehouse[]>([]); const [lots, setLots] = useState<Lot[]>([]); const [saving, setSaving] = useState(false); const [productId, setProductId] = useState(''); const [productLotId, setProductLotId] = useState(''); const [form, setForm] = useState({ warehouseId: '', quantity: '', movementType: direction === 'in' ? 'purchase_in' : 'sale_out', notes: '' });
+  const product = products.find(p => p.id === productId);
+  useEffect(() => { Promise.all([api<Product[]>('/products', {}, tenantId), api<Warehouse[]>('/warehouses', {}, tenantId)]).then(([p, w]) => { setProducts(p); setWarehouses(w); setProductId(p[0]?.id ?? ''); setForm(f => ({ ...f, warehouseId: w[0]?.id ?? '' })); }).catch(e => onError(e.message)); }, [tenantId]);
+  useEffect(() => { if (productId) api<Lot[]>(`/products/${productId}/lots`, {}, tenantId).then(setLots).catch(e => onError(e.message)); else setLots([]); setProductLotId(''); }, [productId, tenantId]);
+  const types = direction === 'in' ? [['purchase_in', 'Compra'], ['transfer_in', 'Transferencia entrante'], ['adjustment_in', 'Ajuste positivo']] : [['sale_out', 'Venta'], ['transfer_out', 'Transferencia saliente'], ['adjustment_out', 'Ajuste negativo']];
+  async function submit(e: FormEvent) { e.preventDefault(); setSaving(true); onError(''); try { await api(`/stock/${direction}`, { method: 'POST', body: JSON.stringify({ productId, productLotId: productLotId || undefined, warehouseId: form.warehouseId, quantity: Number(form.quantity), movementType: form.movementType, notes: form.notes || undefined }) }, tenantId); onDone(); } catch (e) { const err = e as Error & { status?: number; data?: { available?: string; requested?: string } }; onError(err.status === 409 ? `${err.message}. Disponible: ${err.data?.available ?? '0'} · Solicitado: ${err.data?.requested ?? form.quantity}` : err.message); } finally { setSaving(false); } }
+  return <section><h1>{direction === 'in' ? 'Registrar ingreso' : 'Registrar egreso'}</h1><form className="card form" onSubmit={submit}><label>Producto<select required value={productId} onChange={e => setProductId(e.target.value)}>{products.map(p => <option key={p.id} value={p.id}>{p.name} · {p.sku}</option>)}</select></label><label>Depósito<select required value={form.warehouseId} onChange={e => setForm({ ...form, warehouseId: e.target.value })}>{warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label><label>Lote {product?.manejaVencimiento ? '(obligatorio)' : '(opcional)'}<select value={productLotId} required={!!product?.manejaVencimiento} onChange={e => setProductLotId(e.target.value)}><option value="">{product?.manejaVencimiento ? 'Seleccionar lote...' : 'Sin lote'}</option>{lots.map(l => <option key={l.id} value={l.id}>{l.lotNumber}{l.expirationDate ? ` · vence ${l.expirationDate.slice(0, 10)}` : ''}</option>)}</select></label><label>Cantidad<input required min="0.001" step="0.001" type="number" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></label><label>Tipo<select value={form.movementType} onChange={e => setForm({ ...form, movementType: e.target.value })}>{types.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Notas<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label><button className="primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar movimiento'}</button></form></section>;
+}
+
+function History({ tenantId, onError }: { tenantId: string; onError: (message: string) => void }) {
+  const [products, setProducts] = useState<Product[]>([]); const [productId, setProductId] = useState(''); const [items, setItems] = useState<Movement[]>([]); const [page, setPage] = useState(1); const [pagination, setPagination] = useState({ total: 0, totalPages: 0, pageSize: 20 });
+  useEffect(() => { api<Product[]>('/products', {}, tenantId).then(p => { setProducts(p); setProductId(p[0]?.id ?? ''); }).catch(e => onError(e.message)); }, [tenantId]);
+  useEffect(() => { if (!productId) return; api<{ items: Movement[]; pagination: typeof pagination }>(`/stock/products/${productId}/movements?page=${page}&pageSize=20`, {}, tenantId).then(r => { setItems(r.items); setPagination(r.pagination); }).catch(e => onError(e.message)); }, [tenantId, productId, page]);
+  return <section><h1>Historial</h1><div className="toolbar"><label>Producto<select value={productId} onChange={e => { setProductId(e.target.value); setPage(1); }}>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div><div className="card"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Depósito</th><th>Lote</th><th>Cantidad</th><th>Notas</th></tr></thead><tbody>{items.map(i => <tr key={i.id}><td>{new Date(i.occurredAt).toLocaleString()}</td><td>{i.movementType}</td><td>{i.warehouseName}</td><td>{i.lotNumber ?? 'Sin lote'}</td><td>{i.quantity}</td><td>{i.notes ?? '—'}</td></tr>)}</tbody></table><div className="pager"><button disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</button><span>Página {page} de {pagination.totalPages || 1} · {pagination.total} movimientos</span><button disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Siguiente</button></div></div></section>;
+}
 
 export default App;

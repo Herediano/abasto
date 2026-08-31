@@ -99,6 +99,21 @@ export class StockService {
     return { productId, items: rows.map(row => ({ ...row, quantity: row.quantity.toFixed(3) })) };
   }
 
+  async currentAll(tenantId: string) {
+    const rows = await this.prisma.$queryRaw<Array<{ productId: string; productName: string; warehouseId: string; warehouseName: string; productLotId: string | null; lotNumber: string | null; expirationDate: Date | null; quantity: Prisma.Decimal }>>`
+      SELECT sm.product_id AS "productId", p.name AS "productName", sm.warehouse_id AS "warehouseId", w.name AS "warehouseName",
+        sm.product_lot_id AS "productLotId", pl.lot_number AS "lotNumber", pl.expiration_date AS "expirationDate", SUM(sm.quantity) AS quantity
+      FROM stock_movements sm
+      JOIN products p ON p.id = sm.product_id AND p.tenant_id = sm.tenant_id
+      JOIN warehouses w ON w.id = sm.warehouse_id AND w.tenant_id = sm.tenant_id
+      LEFT JOIN product_lots pl ON pl.id = sm.product_lot_id AND pl.tenant_id = sm.tenant_id
+      WHERE sm.tenant_id = ${tenantId}::uuid
+      GROUP BY sm.product_id, p.name, sm.warehouse_id, w.name, sm.product_lot_id, pl.lot_number, pl.expiration_date
+      HAVING SUM(sm.quantity) <> 0 ORDER BY p.name, w.name, pl.lot_number
+    `;
+    return { items: rows.map(row => ({ ...row, quantity: row.quantity.toFixed(3) })) };
+  }
+
   async history(tenantId: string, productId: string, query: Record<string, string | undefined>) {
     if (!(await this.prisma.product.findFirst({ where: { id: productId, tenantId }, select: { id: true } }))) throw new NotFoundException('Producto no encontrado');
     const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);

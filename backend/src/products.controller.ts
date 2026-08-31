@@ -22,6 +22,12 @@ export class ProductsController {
     return this.prisma.product.findFirstOrThrow({ where: { id, tenantId: this.tenantId(headers) } });
   }
 
+  @Get(':id/lots')
+  lots(@Headers() headers: Record<string, string | string[] | undefined>, @Param('id') id: string) {
+    const tenantId = this.tenantId(headers);
+    return this.prisma.productLot.findMany({ where: { tenantId, productId: id }, orderBy: { lotNumber: 'asc' } });
+  }
+
   @Post()
   create(@Headers() headers: Record<string, string | string[] | undefined>, @Body() body: Record<string, unknown>) {
     const tenantId = this.tenantId(headers);

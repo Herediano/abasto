@@ -15,6 +15,7 @@ export class StockController {
 
   @Post('in') createIn(@Headers() headers: Record<string, string | string[] | undefined>, @Body() body: MovementInput) { return this.stock.createIn(this.tenantId(headers), body); }
   @Post('out') createOut(@Headers() headers: Record<string, string | string[] | undefined>, @Body() body: MovementInput) { return this.stock.createOut(this.tenantId(headers), body); }
+  @Get() all(@Headers() headers: Record<string, string | string[] | undefined>) { return this.stock.currentAll(this.tenantId(headers)); }
   @Get('products/:productId') current(@Headers() headers: Record<string, string | string[] | undefined>, @Param('productId') productId: string, @Query('warehouseId') warehouseId?: string, @Query('productLotId') productLotId?: string) { return this.stock.current(this.tenantId(headers), productId, warehouseId, productLotId); }
   @Get('products/:productId/movements') history(@Headers() headers: Record<string, string | string[] | undefined>, @Param('productId') productId: string, @Query() query: Record<string, string | undefined>) { return this.stock.history(this.tenantId(headers), productId, query); }
 }
