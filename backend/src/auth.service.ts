@@ -49,9 +49,9 @@ export class AuthService {
   async login(body: Record<string, unknown>) {
     const email = normalizeEmail(body.email);
     if (!email || typeof body.password !== 'string') throw new UnauthorizedException('Credenciales inválidas');
-    const user = await this.prisma.user.findUnique({ where: { email }, include: { tenant: true } });
+    const user = await this.prisma.user.findUnique({ where: { email }, include: { tenant: true, warehouse: true } });
     if (!user || !user.isActive || !(await argon2.verify(user.passwordHash, body.password))) throw new UnauthorizedException('Credenciales inválidas');
-    return { ...this.token(user), user: { id: user.id, name: user.name, email: user.email }, tenant: { id: user.tenant.id, name: user.tenant.name } };
+    return { ...this.token(user), user: { id: user.id, name: user.name, email: user.email, warehouseId: user.warehouseId }, tenant: { id: user.tenant.id, name: user.tenant.name } };
   }
 
   async createUser(tenantId: string, body: Record<string, unknown>) {
@@ -61,7 +61,9 @@ export class AuthService {
     validatePassword(body.password);
     const passwordHash = await argon2.hash(body.password as string, { type: argon2.argon2id });
     try {
-      const user = await this.prisma.user.create({ data: { tenantId, name, email, passwordHash } });
+      const warehouseId = typeof body.warehouseId === 'string' ? body.warehouseId : undefined;
+      if (warehouseId && !(await this.prisma.warehouse.findFirst({ where: { id: warehouseId, tenantId } }))) throw new UnprocessableEntityException('warehouseId no pertenece al tenant');
+      const user = await this.prisma.user.create({ data: { tenantId, name, email, passwordHash, warehouseId } });
       return { id: user.id, name: user.name, email: user.email, tenantId: user.tenantId, isActive: user.isActive };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El email ya está registrado');
@@ -75,7 +77,7 @@ export class AuthService {
       if (!payload.sub) throw new Error('Invalid token');
       const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
       if (!user || !user.isActive) throw new Error('Inactive user');
-      return { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email };
+      return { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email, warehouseId: user.warehouseId };
     } catch { throw new UnauthorizedException('Token inválido o vencido'); }
   }
 }

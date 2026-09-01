@@ -16,6 +16,21 @@ enum MovementType {
   adjustment_out
 }
 
+enum PurchaseInvoiceStatus {
+  draft
+  confirmed
+  cancelled
+}
+
+enum PurchaseInvoiceType {
+  A
+  B
+  C
+  E
+  M
+  other
+}
+
 model Tenant {
   id         String      @id @default(uuid()) @db.Uuid
   name       String
@@ -31,6 +46,8 @@ model Tenant {
   lots       ProductLot[]
   stockMovements StockMovement[]
   users      User[]
+  purchaseInvoices PurchaseInvoice[]
+  purchaseInvoiceLines PurchaseInvoiceLine[]
 
   @@map("tenants")
 }
@@ -45,6 +62,9 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
   tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  warehouseId  String?  @map("warehouse_id") @db.Uuid
+  warehouse    Warehouse? @relation(fields: [warehouseId], references: [id])
+  purchaseInvoices PurchaseInvoice[]
 
   @@index([tenantId])
   @@map("users")
@@ -67,6 +87,7 @@ model Product {
   tenant            Tenant      @relation(fields: [tenantId], references: [id])
   lots              ProductLot[]
   stockMovements    StockMovement[]
+  purchaseInvoiceLines PurchaseInvoiceLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, barcode])
@@ -89,6 +110,7 @@ model Supplier {
   updatedAt  DateTime    @updatedAt @map("updated_at")
   tenant     Tenant      @relation(fields: [tenantId], references: [id])
   lots       ProductLot[]
+  purchaseInvoices PurchaseInvoice[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -126,6 +148,8 @@ model Warehouse {
   tenant     Tenant      @relation(fields: [tenantId], references: [id])
   lots       ProductLot[]
   stockMovements StockMovement[]
+  purchaseInvoices PurchaseInvoice[]
+  users         User[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])
@@ -149,6 +173,7 @@ model ProductLot {
   warehouse      Warehouse @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
   supplier       Supplier? @relation(fields: [supplierId, tenantId], references: [id, tenantId])
   stockMovements StockMovement[]
+  purchaseInvoiceLines PurchaseInvoiceLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, productId, lotNumber])
@@ -181,4 +206,58 @@ model StockMovement {
   @@index([tenantId, productLotId, warehouseId])
   @@index([tenantId, occurredAt])
   @@map("stock_movements")
+}
+
+model PurchaseInvoice {
+  id            String                @id @default(uuid()) @db.Uuid
+  tenantId      String                @map("tenant_id") @db.Uuid
+  supplierId    String                @map("supplier_id") @db.Uuid
+  warehouseId   String                @map("warehouse_id") @db.Uuid
+  createdById   String                @map("created_by_id") @db.Uuid
+  invoiceType   PurchaseInvoiceType   @map("invoice_type")
+  pointOfSale   String                @map("point_of_sale")
+  invoiceNumber String                @map("invoice_number")
+  issueDate     DateTime              @map("issue_date") @db.Date
+  currency      String                @default("ARS")
+  subtotal      Decimal               @db.Decimal(14, 2)
+  taxTotal      Decimal               @map("tax_total") @db.Decimal(14, 2)
+  total         Decimal               @db.Decimal(14, 2)
+  status        PurchaseInvoiceStatus @default(draft)
+  notes         String?
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  tenant        Tenant                @relation(fields: [tenantId], references: [id])
+  supplier      Supplier              @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  warehouse     Warehouse             @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  createdBy     User                  @relation(fields: [createdById], references: [id])
+  lines         PurchaseInvoiceLine[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, invoiceType, pointOfSale, invoiceNumber])
+  @@index([tenantId, issueDate])
+  @@map("purchase_invoices")
+}
+
+model PurchaseInvoiceLine {
+  id           String          @id @default(uuid()) @db.Uuid
+  tenantId     String          @map("tenant_id") @db.Uuid
+  invoiceId    String          @map("invoice_id") @db.Uuid
+  productId    String          @map("product_id") @db.Uuid
+  productLotId String?         @map("product_lot_id") @db.Uuid
+  barcode      String
+  description  String
+  quantity     Decimal         @db.Decimal(14, 3)
+  unitCost     Decimal         @map("unit_cost") @db.Decimal(14, 2)
+  taxRate      Decimal         @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  lineSubtotal Decimal         @map("line_subtotal") @db.Decimal(14, 2)
+  lineTax      Decimal         @map("line_tax") @db.Decimal(14, 2)
+  lineTotal    Decimal         @map("line_total") @db.Decimal(14, 2)
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  invoice      PurchaseInvoice @relation(fields: [invoiceId, tenantId], references: [id, tenantId])
+  product      Product         @relation(fields: [productId, tenantId], references: [id, tenantId])
+  productLot   ProductLot?     @relation(fields: [productLotId, tenantId], references: [id, tenantId])
+
+  @@unique([id, tenantId])
+  @@index([tenantId, invoiceId])
+  @@map("purchase_invoice_lines")
 }
