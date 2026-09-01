@@ -34,14 +34,14 @@ async function main() {
   await findOrCreateCustomer(tenant.id);
 
   const rice = await prisma.product.upsert({
-    where: { tenantId_sku: { tenantId: tenant.id, sku: 'ARROZ-001' } },
+    where: { tenantId_barcode: { tenantId: tenant.id, barcode: '7790000000011' } },
     update: { barcode: '7790000000011', name: 'Arroz largo fino 1 kg', category: 'Almacén', unit: 'unidad', brand: 'Demo', manejaVencimiento: true, isActive: true },
-    create: { tenantId: tenant.id, sku: 'ARROZ-001', barcode: '7790000000011', name: 'Arroz largo fino 1 kg', category: 'Almacén', unit: 'unidad', brand: 'Demo', manejaVencimiento: true },
+    create: { tenantId: tenant.id, internalCode: 'ARROZ-001', barcode: '7790000000011', name: 'Arroz largo fino 1 kg', category: 'Almacén', unit: 'unidad', brand: 'Demo', manejaVencimiento: true },
   });
   await prisma.product.upsert({
-    where: { tenantId_sku: { tenantId: tenant.id, sku: 'BALDE-001' } },
+    where: { tenantId_internalCode: { tenantId: tenant.id, internalCode: 'BALDE-001' } },
     update: { name: 'Balde plástico 10 litros', category: 'Bazar', unit: 'unidad', brand: null, manejaVencimiento: false, isActive: true },
-    create: { tenantId: tenant.id, sku: 'BALDE-001', name: 'Balde plástico 10 litros', category: 'Bazar', unit: 'unidad', manejaVencimiento: false },
+    create: { tenantId: tenant.id, internalCode: 'BALDE-001', barcode: '7790000000028', name: 'Balde plástico 10 litros', category: 'Bazar', unit: 'unidad', manejaVencimiento: false },
   });
 
   await prisma.productLot.upsert({

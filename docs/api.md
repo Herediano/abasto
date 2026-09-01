@@ -24,6 +24,7 @@ Los endpoints protegidos usan el tenant derivado del JWT; ya no aceptan `x-tenan
 
 - `GET/POST /api/warehouses`: lista y crea depósitos.
 - `GET /api/suppliers`: lista proveedores activos para seleccionar en lotes.
+- `POST /api/suppliers`: crea un proveedor del tenant autenticado. Recibe `name` obligatorio y opcionalmente `legalName`, `taxId`, `email`, `phone` y `address`.
 - `GET/POST /api/products/:productId/lots`: lista y crea lotes. La fecha de vencimiento es obligatoria para productos con `maneja_vencimiento`.
 
 ## Autenticación

@@ -47,10 +47,9 @@ export class ProductsController {
   @Post()
   create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
-    for (const field of ['sku', 'name', 'unit']) if (typeof body[field] !== 'string' || !(body[field] as string).trim()) throw new BadRequestException(`${field} es obligatorio`);
+    for (const field of ['barcode', 'name', 'unit']) if (typeof body[field] !== 'string' || !(body[field] as string).trim()) throw new BadRequestException(`${field} es obligatorio`);
     return this.prisma.product.create({ data: {
-      tenantId, sku: (body.sku as string).trim(), name: (body.name as string).trim(), unit: (body.unit as string).trim(),
-      barcode: typeof body.barcode === 'string' ? body.barcode : undefined,
+      tenantId, internalCode: typeof body.internalCode === 'string' && body.internalCode.trim() ? body.internalCode.trim() : undefined, barcode: (body.barcode as string).trim(), name: (body.name as string).trim(), unit: (body.unit as string).trim(),
       category: typeof body.category === 'string' ? body.category : undefined,
       brand: typeof body.brand === 'string' ? body.brand : undefined,
       description: typeof body.description === 'string' ? body.description : undefined,

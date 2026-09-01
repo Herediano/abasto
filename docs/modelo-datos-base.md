@@ -17,14 +17,14 @@ Un único esquema de PostgreSQL con una columna `tenant_id` en cada tabla de neg
 
 - `id` UUID, PK
 - `tenant_id` UUID, FK a `tenants`
-- `sku`, `barcode`, `name`, `description`
+- `barcode` obligatorio (identificador principal para escaneo), `internal_code` opcional, `name`, `description`
 - `category` categoría o rubro, opcional
 - `unit`, `brand`
 - `maneja_vencimiento` booleano
 - `is_active`
 - `created_at`, `updated_at`
 
-Regla: `sku` único dentro de cada tenant.
+Reglas: `barcode` único dentro de cada tenant. `internal_code`, cuando se informa, también es único dentro del tenant.
 
 ### `suppliers`
 

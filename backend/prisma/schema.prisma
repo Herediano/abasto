@@ -53,8 +53,8 @@ model User {
 model Product {
   id                String      @id @default(uuid()) @db.Uuid
   tenantId          String      @map("tenant_id") @db.Uuid
-  sku               String
-  barcode           String?
+  internalCode      String?     @map("internal_code")
+  barcode           String
   name              String
   description       String?
   category          String?
@@ -69,7 +69,8 @@ model Product {
   stockMovements    StockMovement[]
 
   @@unique([id, tenantId])
-  @@unique([tenantId, sku])
+  @@unique([tenantId, barcode])
+  @@unique([tenantId, internalCode])
   @@index([tenantId])
   @@map("products")
 }
