@@ -39,10 +39,13 @@ export type Product = {
   categoryId?: string | null;
   categoryName?: string | null;
   unit: string;
+  purchaseUnit?: string | null;
+  unitsPerPurchase?: string | null;
   brand?: string | null;
   costPrice?: string | null;
   salePrice?: string | null;
   taxRate: string;
+  internalTaxRate?: string | null;
   minStock?: string | null;
   manejaVencimiento: boolean;
   isActive: boolean;
@@ -117,7 +120,7 @@ export type PurchaseInvoice = {
   total: string;
   notes?: string | null;
   supplier?: { name: string };
-  lines: Array<{ productId: string; productLotId?: string | null; barcode: string; description?: string | null; quantity: string; unitCost: string; taxRate: string }>;
+  lines: Array<{ productId: string; productLotId?: string | null; barcode: string; description?: string | null; quantity: string; unitFactor?: string; unitCost: string; taxRate: string }>;
 };
 
 export type Pagination = { page: number; pageSize: number; total: number; totalPages: number };

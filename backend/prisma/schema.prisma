@@ -116,10 +116,13 @@ model Product {
   description          String?
   categoryId           String?               @map("category_id") @db.Uuid
   unit                 String
+  purchaseUnit         String?               @map("purchase_unit")
+  unitsPerPurchase     Decimal               @default(1) @map("units_per_purchase") @db.Decimal(14, 3)
   brand                String?
   costPrice            Decimal?              @map("cost_price") @db.Decimal(14, 2)
   salePrice            Decimal?              @map("sale_price") @db.Decimal(14, 2)
   taxRate              Decimal               @default(21) @map("tax_rate") @db.Decimal(5, 2)
+  internalTaxRate      Decimal               @default(0) @map("internal_tax_rate") @db.Decimal(5, 2)
   minStock             Decimal?              @map("min_stock") @db.Decimal(14, 3)
   manejaVencimiento    Boolean               @default(false) @map("maneja_vencimiento")
   isActive             Boolean               @default(true) @map("is_active")
@@ -308,6 +311,10 @@ model PurchaseInvoiceLine {
   barcode      String
   description  String
   quantity     Decimal         @db.Decimal(14, 3)
+  // Factor congelado al confirmar: si el producto cambia de bulto despues, las
+  // reversiones de esta factura tienen que usar el factor original o el stock
+  // queda descuadrado.
+  unitFactor   Decimal         @default(1) @map("unit_factor") @db.Decimal(14, 3)
   unitCost     Decimal         @map("unit_cost") @db.Decimal(14, 2)
   taxRate      Decimal         @default(0) @map("tax_rate") @db.Decimal(5, 2)
   lineSubtotal Decimal         @map("line_subtotal") @db.Decimal(14, 2)

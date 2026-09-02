@@ -5,9 +5,11 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
@@ -23,8 +25,10 @@ const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'succ
   cancelled: { label: 'Cancelada', variant: 'destructive' },
 };
 
-type Line = { barcode: string; productName: string; productLotId: string; quantity: string; unitCost: string; taxRate: string };
-const EMPTY_LINE: Line = { barcode: '', productName: '', productLotId: '', quantity: '', unitCost: '', taxRate: '21' };
+// unitFactor sólo viaja al corregir una factura ya confirmada: manda el factor
+// con el que se confirmó, no el actual del producto (que pudo cambiar).
+type Line = { barcode: string; productName: string; productLotId: string; quantity: string; unitCost: string; taxRate: string; byPackage: boolean; packSize: string; unitFactor?: string };
+const EMPTY_LINE: Line = { barcode: '', productName: '', productLotId: '', quantity: '', unitCost: '', taxRate: '21', byPackage: false, packSize: '' };
 const EMPTY_HEADER = { supplierId: '', invoiceType: 'A', pointOfSale: '', invoiceNumber: '', issueDate: new Date().toISOString().slice(0, 10), notes: '' };
 
 type OtherTax = { label: string; amount: string };
@@ -128,7 +132,7 @@ export function StockInPage() {
         .then(r => {
           const found = r.items[0] ?? null;
           setProduct(found);
-          if (found) setLine(l => (l.barcode.trim() === barcode ? { ...l, taxRate: found.taxRate } : l));
+          if (found) setLine(l => (l.barcode.trim() === barcode ? { ...l, taxRate: found.taxRate, packSize: found.unitsPerPurchase ?? '1', byPackage: false } : l));
         })
         .catch(() => setProduct(null))
         .finally(() => setLookupPending(false));
@@ -256,7 +260,17 @@ export function StockInPage() {
     setCorrectionReason('');
     setError('');
     setHeader({ supplierId: invoice.supplierId, invoiceType: invoice.invoiceType, pointOfSale: invoice.pointOfSale, invoiceNumber: invoice.invoiceNumber, issueDate: invoice.issueDate.slice(0, 10), notes: invoice.notes ?? '' });
-    setLines(invoice.lines.map(l => ({ barcode: l.barcode, productName: l.description ?? l.barcode, productLotId: l.productLotId ?? '', quantity: l.quantity, unitCost: l.unitCost, taxRate: l.taxRate })));
+    setLines(invoice.lines.map(l => ({
+      barcode: l.barcode,
+      productName: l.description ?? l.barcode,
+      productLotId: l.productLotId ?? '',
+      quantity: l.quantity,
+      unitCost: l.unitCost,
+      taxRate: l.taxRate,
+      byPackage: Number(l.unitFactor ?? 1) > 1,
+      packSize: l.unitFactor ?? '1',
+      unitFactor: l.unitFactor ?? '1',
+    })));
     setOtherTaxes((invoice.otherTaxes ?? []).map(t => ({ label: t.label, amount: String(t.amount) })));
   }
 
@@ -345,13 +359,35 @@ export function StockInPage() {
                   <div className="col-span-2 flex items-end pb-2 text-sm text-muted-foreground">
                     {lookupPending ? 'Buscando...' : product ? `${product.name}${product.internalCode ? ` · ${product.internalCode}` : ''}` : ''}
                   </div>
-                  <Field label="Cantidad" htmlFor="line-quantity">
+                  <Field label={line.byPackage ? `Cantidad (${product?.purchaseUnit || 'bultos'})` : 'Cantidad'} htmlFor="line-quantity">
                     <Input id="line-quantity" min="0.001" step="0.001" type="number" value={line.quantity} onChange={e => setLine({ ...line, quantity: e.target.value })} />
                   </Field>
-                  <Field label="Precio unitario" htmlFor="line-unitCost">
+                  <Field label={line.byPackage ? `Precio por ${product?.purchaseUnit || 'bulto'}` : 'Precio unitario'} htmlFor="line-unitCost">
                     <Input id="line-unitCost" min="0" step="0.01" type="number" value={line.unitCost} onChange={e => setLine({ ...line, unitCost: e.target.value })} />
                   </Field>
                 </div>
+
+                {/* Solo tiene sentido ofrecer el bulto si el producto define un factor. */}
+                {product && Number(line.packSize) > 1 && (
+                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/40 p-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="line-byPackage"
+                        checked={line.byPackage}
+                        onCheckedChange={checked => setLine({ ...line, byPackage: checked === true })}
+                      />
+                      <Label htmlFor="line-byPackage" className="font-normal">
+                        Cargar por {product.purchaseUnit || 'bulto'} (x{Number(line.packSize)})
+                      </Label>
+                    </div>
+                    {line.byPackage && Number(line.quantity) > 0 && (
+                      <span className="text-sm text-muted-foreground">
+                        Ingresan {(Number(line.quantity) * Number(line.packSize)).toLocaleString('es-AR')} {product.unit}
+                        {Number(line.unitCost) > 0 && ` · costo unitario $${(Number(line.unitCost) / Number(line.packSize)).toFixed(2)}`}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {!lookupPending && !product && line.barcode.trim() && (
                   <div className="grid gap-3 rounded-md border border-border bg-card p-3">

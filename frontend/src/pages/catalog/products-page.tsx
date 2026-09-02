@@ -18,7 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { api, errorMessage, type Category, type Pagination, type Product } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
-const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', brand: '', costPrice: '', salePrice: '', taxRate: '21', minStock: '', manejaVencimiento: false };
+const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', brand: '', costPrice: '', salePrice: '', taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false };
+// Alicuotas vigentes en Argentina; el backend valida contra la misma lista.
+const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
 type FormState = typeof EMPTY_FORM;
 const NEW_CATEGORY = '__new__';
 
@@ -111,10 +113,13 @@ export function ProductsPage() {
       name: p.name,
       categoryId: p.categoryId ?? '',
       unit: p.unit,
+      purchaseUnit: p.purchaseUnit ?? '',
+      unitsPerPurchase: p.unitsPerPurchase ?? '1',
       brand: p.brand ?? '',
       costPrice: p.costPrice ?? '',
       salePrice: p.salePrice ?? '',
       taxRate: p.taxRate,
+      internalTaxRate: p.internalTaxRate ?? '0',
       minStock: p.minStock ?? '',
       manejaVencimiento: p.manejaVencimiento,
     });
@@ -299,8 +304,20 @@ export function ProductsPage() {
                   <option value={NEW_CATEGORY}>+ Nueva categoría...</option>
                 </Select>
               </Field>
-              <Field label="Unidad" htmlFor="unit">
+              <Field label="Unidad de venta" htmlFor="unit">
                 <Input id="unit" required value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Unidad de compra" htmlFor="purchaseUnit" hint="(opcional · bulto, caja, pack)">
+                <Input id="purchaseUnit" value={form.purchaseUnit} onChange={e => setForm({ ...form, purchaseUnit: e.target.value })} placeholder="bulto" />
+              </Field>
+              <Field
+                label={`Unidades de venta por ${form.purchaseUnit.trim() || 'bulto'}`}
+                htmlFor="unitsPerPurchase"
+                hint="(1 = se compra y se vende en la misma unidad)"
+              >
+                <Input id="unitsPerPurchase" min="0.001" step="0.001" type="number" value={form.unitsPerPurchase} onChange={e => setForm({ ...form, unitsPerPurchase: e.target.value })} />
               </Field>
             </div>
             {form.categoryId === NEW_CATEGORY && (
@@ -319,9 +336,14 @@ export function ProductsPage() {
                 <Input id="salePrice" min="0" step="0.01" type="number" value={form.salePrice} onChange={e => setForm({ ...form, salePrice: e.target.value })} />
               </Field>
               <Field label="IVA %" htmlFor="taxRate">
-                <Input id="taxRate" required min="0" step="0.01" type="number" value={form.taxRate} onChange={e => setForm({ ...form, taxRate: e.target.value })} />
+                <Select id="taxRate" value={form.taxRate} onChange={e => setForm({ ...form, taxRate: e.target.value })}>
+                  {TAX_RATES.map(rate => <option key={rate} value={rate}>{rate}%</option>)}
+                </Select>
               </Field>
             </div>
+            <Field label="Impuestos internos %" htmlFor="internalTaxRate" hint="(opcional · bebidas alcohólicas, cigarrillos)">
+              <Input id="internalTaxRate" min="0" step="0.01" type="number" value={form.internalTaxRate} onChange={e => setForm({ ...form, internalTaxRate: e.target.value })} />
+            </Field>
             <Field label="Stock mínimo" htmlFor="minStock" hint="(opcional · alerta de reposición cuando el stock total caiga por debajo)">
               <Input id="minStock" min="0" step="0.001" type="number" value={form.minStock} onChange={e => setForm({ ...form, minStock: e.target.value })} />
             </Field>

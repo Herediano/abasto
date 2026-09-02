@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import { Prisma, PurchaseInvoiceStatus, PurchaseInvoiceType } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 
-type InvoiceLineInput = { barcode?: unknown; productId?: unknown; productLotId?: unknown; quantity?: unknown; unitCost?: unknown; taxRate?: unknown };
+type InvoiceLineInput = { barcode?: unknown; productId?: unknown; productLotId?: unknown; quantity?: unknown; unitCost?: unknown; taxRate?: unknown; byPackage?: unknown; unitFactor?: unknown };
 type OtherTaxInput = { label?: unknown; amount?: unknown };
 type OtherTax = { label: string; amount: number };
 
@@ -41,7 +41,7 @@ export class PurchasesService {
     if (!supplier) throw new NotFoundException('Proveedor no encontrado');
     const warehouse = await this.prisma.warehouse.findFirst({ where: { id: user.warehouseId, tenantId: user.tenantId, isActive: true } });
     if (!warehouse) throw new UnprocessableEntityException('La sucursal/depósito asignado al usuario no existe');
-    const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitCost: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
+    const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitFactor: number; unitCost: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
     for (const line of rawLines) {
       const barcode = typeof line.barcode === 'string' ? line.barcode.trim() : '';
       const product = barcode ? await this.prisma.product.findFirst({ where: { tenantId: user.tenantId, barcode, isActive: true } }) : null;
@@ -53,9 +53,11 @@ export class PurchasesService {
       const productLotId = typeof line.productLotId === 'string' && line.productLotId ? line.productLotId : undefined;
       if (product.manejaVencimiento && !productLotId) throw new UnprocessableEntityException(`El producto ${product.name} requiere lote`);
       if (productLotId && !(await this.prisma.productLot.findFirst({ where: { id: productLotId, tenantId: user.tenantId, productId: product.id } }))) throw new UnprocessableEntityException('El lote no corresponde al producto');
+      // El factor se resuelve del producto, no del cliente, y queda congelado en la linea.
+      const unitFactor = line.byPackage === true ? Number(product.unitsPerPurchase) : 1;
       const lineSubtotal = Number((quantity * unitCost).toFixed(2));
       const lineTax = Number((lineSubtotal * taxRate / 100).toFixed(2));
-      lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitCost, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
+      lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitFactor, unitCost, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
     }
     const subtotal = lines.reduce((sum, line) => sum + line.lineSubtotal, 0);
     const taxTotal = lines.reduce((sum, line) => sum + line.lineTax, 0);
@@ -78,8 +80,14 @@ export class PurchasesService {
         if (!product) throw new UnprocessableEntityException('Un producto de la factura ya no existe');
         if (product.manejaVencimiento && !line.productLotId) throw new UnprocessableEntityException(`El producto ${product.name} requiere lote`);
         if (line.productLotId && !(await tx.productLot.findFirst({ where: { id: line.productLotId, tenantId, productId: line.productId } }))) throw new UnprocessableEntityException('Un lote de la factura no corresponde al producto');
-        if (product.costPrice === null) await tx.product.update({ where: { id: product.id }, data: { costPrice: line.unitCost } });
-        await tx.stockMovement.create({ data: { tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: line.quantity, movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoice.id, notes: `Factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}` } });
+        // La factura viene en la unidad del proveedor (bulto); el ledger guarda
+        // siempre la unidad base, asi que la conversion ocurre aca.
+        const baseQuantity = new Prisma.Decimal(line.quantity).mul(line.unitFactor);
+        if (product.costPrice === null) {
+          const costPerBaseUnit = new Prisma.Decimal(line.unitCost).div(line.unitFactor).toDecimalPlaces(2);
+          await tx.product.update({ where: { id: product.id }, data: { costPrice: costPerBaseUnit } });
+        }
+        await tx.stockMovement.create({ data: { tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: baseQuantity, movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoice.id, notes: `Factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}` } });
       }
       return tx.purchaseInvoice.update({ where: { id: invoice.id }, data: { status: PurchaseInvoiceStatus.confirmed }, include: { supplier: true, lines: true, warehouse: true } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -96,7 +104,7 @@ export class PurchasesService {
     if (!supplier) throw new NotFoundException('Proveedor no encontrado');
     const rawLines = Array.isArray(body.lines) ? body.lines as InvoiceLineInput[] : invoice.lines;
     if (!rawLines.length) throw new UnprocessableEntityException('La factura debe tener al menos una línea');
-    const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitCost: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
+    const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitFactor: number; unitCost: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
     for (const raw of rawLines) {
       const productId = typeof raw.productId === 'string' ? raw.productId : '';
       const barcode = typeof raw.barcode === 'string' ? raw.barcode.trim() : '';
@@ -107,8 +115,13 @@ export class PurchasesService {
       const productLotId = typeof raw.productLotId === 'string' && raw.productLotId ? raw.productLotId : undefined;
       if (product.manejaVencimiento && !productLotId) throw new UnprocessableEntityException(`El producto ${product.name} requiere lote`);
       if (productLotId && !(await this.prisma.productLot.findFirst({ where: { id: productLotId, tenantId: user.tenantId, productId: product.id } }))) throw new UnprocessableEntityException('El lote no corresponde al producto');
+      // rawLines puede venir del cliente (trae byPackage) o ser las lineas ya
+      // guardadas de la factura (traen unitFactor); en ese caso se preserva.
+      const stored = 'unitFactor' in raw && raw.unitFactor !== undefined && raw.unitFactor !== null ? Number(raw.unitFactor) : null;
+      const byPackage = 'byPackage' in raw && raw.byPackage === true;
+      const unitFactor = stored ?? (byPackage ? Number(product.unitsPerPurchase) : 1);
       const lineSubtotal = Number((quantity * unitCost).toFixed(2)); const lineTax = Number((lineSubtotal * taxRate / 100).toFixed(2));
-      lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitCost, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
+      lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitFactor, unitCost, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
     }
     const subtotal = lines.reduce((sum, line) => sum + line.lineSubtotal, 0); const taxTotal = lines.reduce((sum, line) => sum + line.lineTax, 0);
     const otherTaxes = this.parseOtherTaxes(body.otherTaxes);
@@ -118,10 +131,12 @@ export class PurchasesService {
       const current = await tx.purchaseInvoice.findFirst({ where: { id: invoiceId, tenantId: user.tenantId }, include: { lines: true } });
       if (!current || !CORRECTABLE_STATUSES.includes(current.status)) throw new ConflictException('La factura cambió de estado y debe recargarse');
       await tx.purchaseInvoiceRevision.create({ data: { tenantId: user.tenantId, invoiceId, createdById: user.id, reason, snapshot: { invoice: { supplierId: current.supplierId, invoiceType: current.invoiceType, pointOfSale: current.pointOfSale, invoiceNumber: current.invoiceNumber, issueDate: current.issueDate.toISOString(), currency: current.currency, subtotal: current.subtotal.toString(), taxTotal: current.taxTotal.toString(), otherTaxes: current.otherTaxes, otherTaxesTotal: current.otherTaxesTotal.toString(), total: current.total.toString(), notes: current.notes }, lines: current.lines.map(line => ({ productId: line.productId, productLotId: line.productLotId, barcode: line.barcode, description: line.description, quantity: line.quantity.toString(), unitCost: line.unitCost.toString(), taxRate: line.taxRate.toString(), lineSubtotal: line.lineSubtotal.toString(), lineTax: line.lineTax.toString(), lineTotal: line.lineTotal.toString() })) } } });
-      for (const line of current.lines) await tx.stockMovement.create({ data: { tenantId: user.tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: current.warehouseId, quantity: new Prisma.Decimal(line.quantity).negated(), movementType: 'adjustment_out', referenceType: 'purchase_invoice_correction', referenceId: invoiceId, notes: `Reversión por corrección de factura ${current.invoiceType} ${current.pointOfSale}-${current.invoiceNumber}` } });
+      // Se revierte con el unitFactor congelado en la linea, nunca con el actual
+      // del producto: si el bulto cambio, usar el nuevo dejaria el stock descuadrado.
+      for (const line of current.lines) await tx.stockMovement.create({ data: { tenantId: user.tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: current.warehouseId, quantity: new Prisma.Decimal(line.quantity).mul(line.unitFactor).negated(), movementType: 'adjustment_out', referenceType: 'purchase_invoice_correction', referenceId: invoiceId, notes: `Reversión por corrección de factura ${current.invoiceType} ${current.pointOfSale}-${current.invoiceNumber}` } });
       await tx.purchaseInvoiceLine.deleteMany({ where: { invoiceId, tenantId: user.tenantId } });
       const updated = await tx.purchaseInvoice.update({ where: { id: invoiceId }, data: { supplierId, invoiceType: typeof body.invoiceType === 'string' && Object.values(PurchaseInvoiceType).includes(body.invoiceType as PurchaseInvoiceType) ? body.invoiceType as PurchaseInvoiceType : current.invoiceType, pointOfSale: typeof body.pointOfSale === 'string' ? body.pointOfSale.trim() : current.pointOfSale, invoiceNumber: typeof body.invoiceNumber === 'string' ? body.invoiceNumber.trim() : current.invoiceNumber, issueDate: body.issueDate ? new Date(String(body.issueDate)) : current.issueDate, currency: typeof body.currency === 'string' ? body.currency : current.currency, subtotal, taxTotal, otherTaxes: otherTaxes.length ? otherTaxes : Prisma.JsonNull, otherTaxesTotal, total, status: PurchaseInvoiceStatus.corrected, notes: typeof body.notes === 'string' ? body.notes : current.notes, lines: { create: lines } }, include: { supplier: true, lines: true, warehouse: true } });
-      for (const line of lines) await tx.stockMovement.create({ data: { tenantId: user.tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: current.warehouseId, quantity: line.quantity, movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoiceId, notes: `Factura corregida ${updated.invoiceType} ${updated.pointOfSale}-${updated.invoiceNumber}` } });
+      for (const line of lines) await tx.stockMovement.create({ data: { tenantId: user.tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: current.warehouseId, quantity: new Prisma.Decimal(line.quantity).mul(line.unitFactor), movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoiceId, notes: `Factura corregida ${updated.invoiceType} ${updated.pointOfSale}-${updated.invoiceNumber}` } });
       return updated;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
@@ -134,7 +149,7 @@ export class PurchasesService {
       if (!invoice) throw new NotFoundException('Factura no encontrada');
       if (!CORRECTABLE_STATUSES.includes(invoice.status)) throw new ConflictException('Solo se pueden anular facturas confirmadas');
       await tx.purchaseInvoiceRevision.create({ data: { tenantId: user.tenantId, invoiceId, createdById: user.id, reason: `Anulación: ${reason}`, snapshot: { invoice: { supplierId: invoice.supplierId, invoiceType: invoice.invoiceType, pointOfSale: invoice.pointOfSale, invoiceNumber: invoice.invoiceNumber, issueDate: invoice.issueDate.toISOString(), currency: invoice.currency, subtotal: invoice.subtotal.toString(), taxTotal: invoice.taxTotal.toString(), total: invoice.total.toString(), notes: invoice.notes }, lines: invoice.lines.map(line => ({ productId: line.productId, productLotId: line.productLotId, barcode: line.barcode, description: line.description, quantity: line.quantity.toString(), unitCost: line.unitCost.toString(), taxRate: line.taxRate.toString(), lineSubtotal: line.lineSubtotal.toString(), lineTax: line.lineTax.toString(), lineTotal: line.lineTotal.toString() })) } } });
-      for (const line of invoice.lines) await tx.stockMovement.create({ data: { tenantId: user.tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: new Prisma.Decimal(line.quantity).negated(), movementType: 'adjustment_out', referenceType: 'purchase_invoice_cancellation', referenceId: invoiceId, notes: `Anulación de factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}: ${reason}` } });
+      for (const line of invoice.lines) await tx.stockMovement.create({ data: { tenantId: user.tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: new Prisma.Decimal(line.quantity).mul(line.unitFactor).negated(), movementType: 'adjustment_out', referenceType: 'purchase_invoice_cancellation', referenceId: invoiceId, notes: `Anulación de factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}: ${reason}` } });
       return tx.purchaseInvoice.update({ where: { id: invoiceId }, data: { status: PurchaseInvoiceStatus.cancelled }, include: { supplier: true, lines: true, warehouse: true } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }

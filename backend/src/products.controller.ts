@@ -10,12 +10,21 @@ import { AuthRequest } from './auth.types';
 import { AdminGuard } from './admin.guard';
 import { parsePricesFile } from './price-import.util';
 
+// Alicuotas de IVA vigentes en Argentina. El campo era decimal libre, lo que
+// habilitaba cargar valores que despues rompen la facturacion.
+export const TAX_RATES = [0, 2.5, 5, 10.5, 21, 27];
+
 function parseOptionalDecimal(value: unknown, field: string): number | null | undefined {
   if (value === undefined) return undefined;
   if (value === null || value === '') return null;
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) throw new UnprocessableEntityException(`${field} debe ser un número mayor o igual a cero`);
   return n;
+}
+
+function assertTaxRate(value: number | null | undefined) {
+  if (value === undefined || value === null) return;
+  if (!TAX_RATES.includes(value)) throw new UnprocessableEntityException(`La alícuota de IVA debe ser una de: ${TAX_RATES.join(', ')}`);
 }
 
 @Controller('products')
@@ -262,6 +271,10 @@ export class ProductsController {
     const salePrice = parseOptionalDecimal(body.salePrice, 'salePrice');
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
     const taxRate = body.taxRate === undefined ? undefined : parseOptionalDecimal(body.taxRate, 'taxRate') ?? undefined;
+    assertTaxRate(taxRate);
+    const internalTaxRate = parseOptionalDecimal(body.internalTaxRate, 'internalTaxRate');
+    const unitsPerPurchase = parseOptionalDecimal(body.unitsPerPurchase, 'unitsPerPurchase');
+    if (unitsPerPurchase !== undefined && unitsPerPurchase !== null && unitsPerPurchase <= 0) throw new UnprocessableEntityException('Las unidades por bulto deben ser mayores a cero');
     const categoryId = typeof body.categoryId === 'string' && body.categoryId ? body.categoryId : undefined;
     if (categoryId && !(await this.prisma.category.findFirst({ where: { id: categoryId, tenantId } }))) throw new BadRequestException('Categoría no encontrada');
 
@@ -275,6 +288,9 @@ export class ProductsController {
       brand: typeof body.brand === 'string' ? body.brand : undefined,
       description: typeof body.description === 'string' ? body.description : undefined,
       manejaVencimiento: body.manejaVencimiento === true,
+      purchaseUnit: typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : undefined,
+      unitsPerPurchase: unitsPerPurchase ?? undefined,
+      internalTaxRate: internalTaxRate ?? undefined,
       costPrice: costPrice ?? undefined, salePrice: salePrice ?? undefined, taxRate, minStock: minStock ?? undefined,
     } });
   }
@@ -293,6 +309,10 @@ export class ProductsController {
     const salePrice = parseOptionalDecimal(body.salePrice, 'salePrice');
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
     const taxRate = parseOptionalDecimal(body.taxRate, 'taxRate');
+    assertTaxRate(taxRate);
+    const internalTaxRate = parseOptionalDecimal(body.internalTaxRate, 'internalTaxRate');
+    const unitsPerPurchase = parseOptionalDecimal(body.unitsPerPurchase, 'unitsPerPurchase');
+    if (unitsPerPurchase !== undefined && unitsPerPurchase !== null && unitsPerPurchase <= 0) throw new UnprocessableEntityException('Las unidades por bulto deben ser mayores a cero');
     const categoryId = body.categoryId === null || body.categoryId === '' ? null : typeof body.categoryId === 'string' ? body.categoryId : current.categoryId;
     if (categoryId && !(await this.prisma.category.findFirst({ where: { id: categoryId, tenantId } }))) throw new BadRequestException('Categoría no encontrada');
     try { return await this.prisma.product.update({ where: { id }, data: {
@@ -302,6 +322,9 @@ export class ProductsController {
       description: typeof body.description === 'string' ? body.description.trim() : null,
       manejaVencimiento: typeof body.manejaVencimiento === 'boolean' ? body.manejaVencimiento : current.manejaVencimiento,
       isActive: typeof body.isActive === 'boolean' ? body.isActive : current.isActive,
+      purchaseUnit: body.purchaseUnit === undefined ? current.purchaseUnit : (typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : null),
+      unitsPerPurchase: unitsPerPurchase === undefined || unitsPerPurchase === null ? current.unitsPerPurchase : unitsPerPurchase,
+      internalTaxRate: internalTaxRate === undefined || internalTaxRate === null ? current.internalTaxRate : internalTaxRate,
       costPrice: costPrice === undefined ? current.costPrice : costPrice,
       salePrice: salePrice === undefined ? current.salePrice : salePrice,
       minStock: minStock === undefined ? current.minStock : minStock,
