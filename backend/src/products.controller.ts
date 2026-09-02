@@ -348,17 +348,22 @@ export class ProductsController {
       UPDATE tenants SET product_code_seq = product_code_seq + 1 WHERE id = ${tenantId}::uuid RETURNING product_code_seq
     `;
 
-    return this.prisma.product.create({ data: {
-      tenantId, internalCode: String(internalCode), barcode: (body.barcode as string).trim(), name: (body.name as string).trim(), unit: (body.unit as string).trim(),
-      categoryId,
-      brand: typeof body.brand === 'string' ? body.brand : undefined,
-      description: typeof body.description === 'string' ? body.description : undefined,
-      manejaVencimiento: body.manejaVencimiento === true,
-      purchaseUnit: typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : undefined,
-      unitsPerPurchase: unitsPerPurchase ?? undefined,
-      internalTaxRate: internalTaxRate ?? undefined,
-      costPrice: costPrice ?? undefined, salePrice: salePrice ?? undefined, taxRate, minStock: minStock ?? undefined,
-    } });
+    try {
+      return await this.prisma.product.create({ data: {
+        tenantId, internalCode: String(internalCode), barcode: (body.barcode as string).trim(), name: (body.name as string).trim(), unit: (body.unit as string).trim(),
+        categoryId,
+        brand: typeof body.brand === 'string' ? body.brand : undefined,
+        description: typeof body.description === 'string' ? body.description : undefined,
+        manejaVencimiento: body.manejaVencimiento === true,
+        purchaseUnit: typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : undefined,
+        unitsPerPurchase: unitsPerPurchase ?? undefined,
+        internalTaxRate: internalTaxRate ?? undefined,
+        costPrice: costPrice ?? undefined, salePrice: salePrice ?? undefined, taxRate, minStock: minStock ?? undefined,
+      } });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ya existe un producto con ese código de barras');
+      throw error;
+    }
   }
 
   @Put(':id')
