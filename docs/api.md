@@ -5,9 +5,8 @@ La API corre en `http://localhost:3000` y usa el prefijo `/api`.
 ## Endpoints
 
 - `GET /api/health`: verifica API y conexión a PostgreSQL.
-- `GET /api/tenants`: lista tenants.
-- `GET /api/tenants/:id`: obtiene un tenant.
-- `POST /api/tenants`: crea un tenant. Body mínimo: `{ "name": "Mi mayorista" }`.
+- `GET /api/tenants`: devuelve el tenant del usuario autenticado (siempre una lista de un elemento).
+- `GET /api/tenants/:id`: obtiene el tenant del usuario autenticado; 404 si el id no coincide.
 - `GET /api/products`: lista productos del tenant autenticado.
 - `GET /api/products/:id`: obtiene un producto del tenant autenticado.
 - `POST /api/products`: crea un producto en el tenant autenticado.
@@ -36,12 +35,8 @@ Los endpoints protegidos usan el tenant derivado del JWT; ya no aceptan `x-tenan
 
 ## Autenticación
 
-- `POST /api/auth/signup`: crea un tenant y su primer usuario en una transacción; devuelve un JWT.
+- `POST /api/auth/signup`: crea un tenant y su primer usuario (rol `admin`) en una transacción; devuelve un JWT. Es la única forma de crear un tenant nuevo.
 - `POST /api/auth/login`: autentica por email y contraseña; devuelve un JWT válido por 8 horas.
-- `POST /api/users`: crea otro usuario dentro del tenant del JWT.
+- `POST /api/users`: crea otro usuario dentro del tenant del JWT; requiere rol `admin`.
 
-Los endpoints de tenants, productos, stock, depósitos y lotes requieren `Authorization: Bearer <JWT>`. El tenant se obtiene del usuario autenticado; `x-tenant-id` ya no es aceptado ni utilizado. Las contraseñas se almacenan con Argon2id.
-
-## Stock
-
-El módulo de Stock usa `x-tenant-id` para seleccionar el tenant durante el desarrollo local. Este header todavía no está validado contra un usuario autenticado: cualquiera que lo envíe manualmente puede operar como ese tenant. Esto es aceptable mientras el sistema se use únicamente en local, pero antes de conectar un frontend real o exponer la API fuera de la máquina hay que implementar autenticación real (login + sesión/token) y derivar el tenant desde ella. Es el próximo tema grande pendiente después de estabilizar Stock.
+Todos los endpoints (salvo `/api/health` y `/api/auth/*`) requieren `Authorization: Bearer <JWT>`. El tenant se obtiene siempre del usuario autenticado; no existe ni se acepta ningún header `x-tenant-id`. Las contraseñas se almacenan con Argon2id.

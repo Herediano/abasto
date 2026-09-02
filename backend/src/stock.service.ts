@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { MovementType, Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
-import { IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementInput, MovementUpdateInput } from './stock.types';
+import { IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementInput } from './stock.types';
 
 type Scope = { tenantId: string; productId: string; productLotId?: string; warehouseId: string };
 
@@ -85,80 +85,87 @@ export class StockService {
   async current(tenantId: string, productId: string, warehouseId?: string, productLotId?: string) {
     const product = await this.prisma.product.findFirst({ where: { id: productId, tenantId } });
     if (!product) throw new NotFoundException('Producto no encontrado');
-    const rows = await this.prisma.$queryRaw<Array<{ warehouseId: string; warehouseName: string; productLotId: string | null; lotNumber: string | null; expirationDate: Date | null; quantity: Prisma.Decimal }>>`
+    const rows = await this.prisma.$queryRaw<Array<{ warehouseId: string; warehouseName: string; productLotId: string | null; lotNumber: string | null; expirationDate: Date | null; supplierName: string | null; quantity: Prisma.Decimal }>>`
       SELECT sm.warehouse_id AS "warehouseId", w.name AS "warehouseName", sm.product_lot_id AS "productLotId",
-        pl.lot_number AS "lotNumber", pl.expiration_date AS "expirationDate", SUM(sm.quantity) AS quantity
+        pl.lot_number AS "lotNumber", pl.expiration_date AS "expirationDate", s.name AS "supplierName", SUM(sm.quantity) AS quantity
       FROM stock_movements sm JOIN warehouses w ON w.id = sm.warehouse_id AND w.tenant_id = sm.tenant_id
       LEFT JOIN product_lots pl ON pl.id = sm.product_lot_id AND pl.tenant_id = sm.tenant_id
+      LEFT JOIN suppliers s ON s.id = pl.supplier_id AND s.tenant_id = sm.tenant_id
       WHERE sm.tenant_id = ${tenantId}::uuid AND sm.product_id = ${productId}::uuid
         ${warehouseId ? Prisma.sql`AND sm.warehouse_id = ${warehouseId}::uuid` : Prisma.empty}
         ${productLotId ? Prisma.sql`AND sm.product_lot_id = ${productLotId}::uuid` : Prisma.empty}
-      GROUP BY sm.warehouse_id, w.name, sm.product_lot_id, pl.lot_number, pl.expiration_date
+      GROUP BY sm.warehouse_id, w.name, sm.product_lot_id, pl.lot_number, pl.expiration_date, s.name
       HAVING SUM(sm.quantity) <> 0 ORDER BY w.name, pl.lot_number
     `;
     return { productId, items: rows.map(row => ({ ...row, quantity: row.quantity.toFixed(3) })) };
   }
 
   async currentAll(tenantId: string) {
-    const rows = await this.prisma.$queryRaw<Array<{ productId: string; productName: string; warehouseId: string; warehouseName: string; productLotId: string | null; lotNumber: string | null; expirationDate: Date | null; quantity: Prisma.Decimal }>>`
+    const rows = await this.prisma.$queryRaw<Array<{ productId: string; productName: string; warehouseId: string; warehouseName: string; productLotId: string | null; lotNumber: string | null; expirationDate: Date | null; supplierName: string | null; quantity: Prisma.Decimal }>>`
       SELECT sm.product_id AS "productId", p.name AS "productName", sm.warehouse_id AS "warehouseId", w.name AS "warehouseName",
-        sm.product_lot_id AS "productLotId", pl.lot_number AS "lotNumber", pl.expiration_date AS "expirationDate", SUM(sm.quantity) AS quantity
+        sm.product_lot_id AS "productLotId", pl.lot_number AS "lotNumber", pl.expiration_date AS "expirationDate", s.name AS "supplierName", SUM(sm.quantity) AS quantity
       FROM stock_movements sm
       JOIN products p ON p.id = sm.product_id AND p.tenant_id = sm.tenant_id
       JOIN warehouses w ON w.id = sm.warehouse_id AND w.tenant_id = sm.tenant_id
       LEFT JOIN product_lots pl ON pl.id = sm.product_lot_id AND pl.tenant_id = sm.tenant_id
+      LEFT JOIN suppliers s ON s.id = pl.supplier_id AND s.tenant_id = sm.tenant_id
       WHERE sm.tenant_id = ${tenantId}::uuid
-      GROUP BY sm.product_id, p.name, sm.warehouse_id, w.name, sm.product_lot_id, pl.lot_number, pl.expiration_date
+      GROUP BY sm.product_id, p.name, sm.warehouse_id, w.name, sm.product_lot_id, pl.lot_number, pl.expiration_date, s.name
       HAVING SUM(sm.quantity) <> 0 ORDER BY p.name, w.name, pl.lot_number
     `;
     return { items: rows.map(row => ({ ...row, quantity: row.quantity.toFixed(3) })) };
   }
 
-  async history(tenantId: string, productId: string, query: Record<string, string | undefined>) {
-    if (!(await this.prisma.product.findFirst({ where: { id: productId, tenantId }, select: { id: true } }))) throw new NotFoundException('Producto no encontrado');
+  async history(tenantId: string, query: Record<string, string | undefined>) {
     const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
-    const where: Prisma.StockMovementWhereInput = { tenantId, productId, warehouseId: query.warehouseId, productLotId: query.productLotId, movementType: query.movementType as MovementType | undefined };
+
+    const conditions: Prisma.StockMovementWhereInput[] = [{ tenantId }];
+    if (query.warehouseId) conditions.push({ warehouseId: query.warehouseId });
+    if (query.movementType) conditions.push({ movementType: query.movementType as MovementType });
+    if (query.fromDate || query.toDate) {
+      conditions.push({
+        occurredAt: {
+          gte: query.fromDate ? new Date(`${query.fromDate}T00:00:00`) : undefined,
+          lte: query.toDate ? new Date(`${query.toDate}T23:59:59.999`) : undefined,
+        },
+      });
+    }
+    if (query.search) {
+      conditions.push({ product: { OR: [{ name: { contains: query.search, mode: 'insensitive' } }, { barcode: { contains: query.search, mode: 'insensitive' } }] } });
+    }
+    if (query.supplierId) {
+      const [lots, invoices] = await Promise.all([
+        this.prisma.productLot.findMany({ where: { tenantId, supplierId: query.supplierId }, select: { id: true } }),
+        this.prisma.purchaseInvoice.findMany({ where: { tenantId, supplierId: query.supplierId }, select: { id: true } }),
+      ]);
+      conditions.push({ OR: [{ productLotId: { in: lots.map(l => l.id) } }, { referenceId: { in: invoices.map(i => i.id) } }] });
+    }
+    const where: Prisma.StockMovementWhereInput = { AND: conditions };
+
     const [items, total] = await this.prisma.$transaction([
-      this.prisma.stockMovement.findMany({ where, include: { productLot: { select: { lotNumber: true } }, warehouse: { select: { name: true } } }, orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }], skip: (page - 1) * pageSize, take: pageSize }),
+      this.prisma.stockMovement.findMany({
+        where,
+        include: { product: { select: { name: true, barcode: true } }, productLot: { select: { lotNumber: true, expirationDate: true } }, warehouse: { select: { name: true } } },
+        orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
       this.prisma.stockMovement.count({ where }),
     ]);
-    return { items: items.map(item => ({ ...item, lotNumber: item.productLot?.lotNumber ?? null, warehouseName: item.warehouse.name, productLot: undefined, warehouse: undefined })), pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } };
-  }
-
-  async update(tenantId: string, id: string, body: MovementUpdateInput) {
-    const existing = await this.prisma.stockMovement.findFirst({ where: { id, tenantId } });
-    if (!existing) throw new NotFoundException('Movimiento no encontrado');
-    if (existing.referenceType || existing.referenceId) throw new ConflictException('Este movimiento pertenece a un documento y no puede editarse por separado');
-    const type = typeof body.movementType === 'string' ? body.movementType : existing.movementType;
-    const allowed = [...IN_MOVEMENT_TYPES, ...OUT_MOVEMENT_TYPES];
-    if (!allowed.includes(type as MovementType)) throw new UnprocessableEntityException('movementType no es válido');
-    const quantity = body.quantity === undefined ? Math.abs(Number(existing.quantity)) : Number(body.quantity);
-    if (!Number.isFinite(quantity) || quantity <= 0) throw new UnprocessableEntityException('quantity debe ser mayor a cero');
-    const productId = typeof body.productId === 'string' ? body.productId : existing.productId;
-    const warehouseId = typeof body.warehouseId === 'string' ? body.warehouseId : existing.warehouseId;
-    const productLotId = body.productLotId === null ? undefined : typeof body.productLotId === 'string' ? body.productLotId : existing.productLotId ?? undefined;
-    const operationId = typeof body.operationId === 'string' ? body.operationId : existing.operationId ?? undefined;
-    if ((type === MovementType.transfer_in || type === MovementType.transfer_out) && !operationId) throw new UnprocessableEntityException('operationId es obligatorio para transferencias');
-    const signed = OUT_MOVEMENT_TYPES.includes(type as typeof OUT_MOVEMENT_TYPES[number]) ? -quantity : quantity;
-    const newScope = { tenantId, productId, productLotId, warehouseId };
-    return this.prisma.$transaction(async tx => {
-      await this.validateScope(tx, newScope);
-      const keys = [
-        [tenantId, existing.productId, existing.productLotId ?? 'no-lot', existing.warehouseId].join(':'),
-        [tenantId, productId, productLotId ?? 'no-lot', warehouseId].join(':'),
-      ].sort();
-      for (const key of keys) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`;
-      const scopes = new Map<string, Scope>();
-      scopes.set([existing.productId, existing.productLotId ?? 'no-lot', existing.warehouseId].join(':'), { tenantId, productId: existing.productId, productLotId: existing.productLotId ?? undefined, warehouseId: existing.warehouseId });
-      scopes.set([productId, productLotId ?? 'no-lot', warehouseId].join(':'), newScope);
-      for (const scope of scopes.values()) {
-        const current = await tx.stockMovement.aggregate({ where: { tenantId, productId: scope.productId, productLotId: scope.productLotId ?? null, warehouseId: scope.warehouseId, id: { not: id } }, _sum: { quantity: true } });
-        const base = Number(current._sum.quantity ?? 0);
-        const resulting = scope.productId === productId && scope.warehouseId === warehouseId && (scope.productLotId ?? null) === (productLotId ?? null) ? base + signed : base;
-        if (resulting < 0) throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: 'El cambio dejaría stock negativo', available: base.toFixed(3), requested: Math.abs(signed).toFixed(3) });
-      }
-      return tx.stockMovement.update({ where: { id }, data: { productId, productLotId, warehouseId, quantity: new Prisma.Decimal(signed), movementType: type as MovementType, operationId, occurredAt: body.occurredAt === undefined ? existing.occurredAt : new Date(String(body.occurredAt)), notes: typeof body.notes === 'string' ? body.notes : existing.notes } });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    return {
+      items: items.map(item => ({
+        ...item,
+        productName: item.product.name,
+        productBarcode: item.product.barcode,
+        lotNumber: item.productLot?.lotNumber ?? null,
+        expirationDate: item.productLot?.expirationDate ?? null,
+        warehouseName: item.warehouse.name,
+        product: undefined,
+        productLot: undefined,
+        warehouse: undefined,
+      })),
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    };
   }
 }

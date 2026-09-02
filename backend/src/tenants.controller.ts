@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Inject, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, NotFoundException, Param, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { AuthRequest } from './auth.types';
@@ -13,10 +13,4 @@ export class TenantsController {
 
   @Get(':id')
   get(@Req() request: AuthRequest, @Param('id') id: string) { if (id !== request.user.tenantId) throw new NotFoundException('Tenant no encontrado'); return this.prisma.tenant.findUniqueOrThrow({ where: { id } }); }
-
-  @Post()
-  create(@Body() body: { name?: string; legalName?: string; taxId?: string }) {
-    if (!body.name?.trim()) throw new BadRequestException('name es obligatorio');
-    return this.prisma.tenant.create({ data: { name: body.name.trim(), legalName: body.legalName, taxId: body.taxId } });
-  }
 }

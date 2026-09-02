@@ -33,15 +33,18 @@ async function main() {
   const supplier = await findOrCreateSupplier(tenant.id);
   await findOrCreateCustomer(tenant.id);
 
+  const almacen = await prisma.category.upsert({ where: { tenantId_name: { tenantId: tenant.id, name: 'Almacén' } }, update: {}, create: { tenantId: tenant.id, name: 'Almacén' } });
+  const bazar = await prisma.category.upsert({ where: { tenantId_name: { tenantId: tenant.id, name: 'Bazar' } }, update: {}, create: { tenantId: tenant.id, name: 'Bazar' } });
+
   const rice = await prisma.product.upsert({
     where: { tenantId_barcode: { tenantId: tenant.id, barcode: '7790000000011' } },
-    update: { barcode: '7790000000011', name: 'Arroz largo fino 1 kg', category: 'Almacén', unit: 'unidad', brand: 'Demo', manejaVencimiento: true, isActive: true },
-    create: { tenantId: tenant.id, internalCode: 'ARROZ-001', barcode: '7790000000011', name: 'Arroz largo fino 1 kg', category: 'Almacén', unit: 'unidad', brand: 'Demo', manejaVencimiento: true },
+    update: { name: 'Arroz largo fino 1 kg', categoryId: almacen.id, unit: 'unidad', brand: 'Demo', manejaVencimiento: true, isActive: true },
+    create: { tenantId: tenant.id, barcode: '7790000000011', name: 'Arroz largo fino 1 kg', categoryId: almacen.id, unit: 'unidad', brand: 'Demo', manejaVencimiento: true },
   });
   await prisma.product.upsert({
-    where: { tenantId_internalCode: { tenantId: tenant.id, internalCode: 'BALDE-001' } },
-    update: { name: 'Balde plástico 10 litros', category: 'Bazar', unit: 'unidad', brand: null, manejaVencimiento: false, isActive: true },
-    create: { tenantId: tenant.id, internalCode: 'BALDE-001', barcode: '7790000000028', name: 'Balde plástico 10 litros', category: 'Bazar', unit: 'unidad', manejaVencimiento: false },
+    where: { tenantId_barcode: { tenantId: tenant.id, barcode: '7790000000028' } },
+    update: { name: 'Balde plástico 10 litros', categoryId: bazar.id, unit: 'unidad', brand: null, manejaVencimiento: false, isActive: true },
+    create: { tenantId: tenant.id, barcode: '7790000000028', name: 'Balde plástico 10 litros', categoryId: bazar.id, unit: 'unidad', manejaVencimiento: false },
   });
 
   await prisma.productLot.upsert({

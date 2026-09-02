@@ -1,40 +1,57 @@
-:root { font-family: Arial, sans-serif; color: #172033; background: #f4f6f8; }
-* { box-sizing: border-box; }
-body { margin: 0; }
-button, input, select, textarea { font: inherit; }
-button { cursor: pointer; }
-.shell { min-height: 100vh; }
-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; color: white; background: #182b49; }
-header strong { font-size: 20px; }
-header .session { display: flex; align-items: center; gap: 14px; font-size: 14px; }
-header .session button { padding: 7px 11px; border: 1px solid #b7c5d9; border-radius: 5px; background: transparent; color: white; }
-header label { display: flex; align-items: center; gap: 10px; font-size: 14px; }
-header select { min-width: 220px; }
-nav { display: flex; gap: 8px; padding: 12px 28px; background: white; border-bottom: 1px solid #dfe4eb; }
-nav button, .pager button { padding: 8px 13px; border: 1px solid #cbd3df; border-radius: 5px; background: white; color: #27364f; }
-nav button.active { background: #e4edff; border-color: #7da4e8; color: #1452ad; }
-main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
-h1 { margin: 0 0 8px; font-size: 28px; }
-p { color: #657189; }
-.card { margin-top: 22px; padding: 22px; overflow-x: auto; background: white; border: 1px solid #dfe4eb; border-radius: 8px; box-shadow: 0 2px 8px #1c2e4a0d; }
-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
-th, td { padding: 12px; text-align: left; border-bottom: 1px solid #edf0f4; }
-th { color: #63708a; font-size: 12px; text-transform: uppercase; }
-.form { display: grid; max-width: 620px; gap: 16px; }
-.inline-form { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 12px; align-items: end; }
-.check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #43516a; }
-.check input { width: auto; }
-.form label, .toolbar label { display: grid; gap: 6px; color: #43516a; font-weight: 600; }
-input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd3df; border-radius: 5px; background: white; }
-textarea { min-height: 80px; resize: vertical; }
-.primary { width: fit-content; padding: 10px 16px; border: 0; border-radius: 5px; background: #1769d1; color: white; }
-.primary:disabled, button:disabled { cursor: not-allowed; opacity: .5; }
-.alert { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 20px; padding: 12px 14px; border: 1px solid #e2a7a7; border-radius: 5px; background: #fff0f0; color: #9e2525; }
-.alert button { border: 0; background: transparent; color: inherit; font-size: 20px; }
-.toolbar { display: flex; align-items: end; gap: 16px; margin-top: 20px; }
-.toolbar label { width: 360px; }
-.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 18px; color: #657189; }
-footer { padding: 20px 28px; color: #657189; font-size: 13px; text-align: center; }
-.auth-page { display: grid; min-height: 100vh; place-items: center; padding: 24px; }
-.auth-form { width: min(100%, 460px); margin: 0; }
-.link-button { border: 0; background: transparent; color: #1769d1; text-align: left; }
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: #f7f8fa;
+  --color-foreground: #1b2333;
+
+  --color-card: #ffffff;
+  --color-card-foreground: #1b2333;
+
+  --color-border: #e3e6ec;
+  --color-input: #dde1e8;
+  --color-ring: #2f6feb;
+
+  --color-primary: #2f6feb;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #f0f2f6;
+  --color-secondary-foreground: #1b2333;
+
+  --color-muted: #f0f2f6;
+  --color-muted-foreground: #6b7385;
+
+  --color-accent: #eef3ff;
+  --color-accent-foreground: #1a4fc4;
+
+  --color-destructive: #d13c3c;
+  --color-destructive-foreground: #ffffff;
+
+  --color-success: #1a8f5e;
+  --color-success-foreground: #ffffff;
+
+  --color-warning: #b45309;
+  --color-warning-foreground: #ffffff;
+
+  --color-sidebar: #14213a;
+  --color-sidebar-foreground: #cbd4e8;
+  --color-sidebar-active: #1f2f52;
+  --color-sidebar-active-foreground: #ffffff;
+
+  --radius-lg: 0.65rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+}

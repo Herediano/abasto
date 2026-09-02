@@ -16,7 +16,3 @@ export type MovementInput = {
   notes?: unknown;
 };
 
-export type MovementUpdateInput = MovementInput & {
-  quantity?: unknown;
-  occurredAt?: unknown;
-};

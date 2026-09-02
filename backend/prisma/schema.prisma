@@ -7,6 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Catálogo de referencia compartido entre todos los tenants (no pertenece a ningún tenant).
+// Se usa para autocompletar nombre/marca al cargar un producto por código de barras.
+model ProductReference {
+  ean            String   @id
+  name           String
+  brand          String?
+  suggestedPrice Decimal? @map("suggested_price") @db.Decimal(14, 2)
+  source         String   @default("sepa")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("product_reference")
+}
+
 enum MovementType {
   purchase_in
   sale_out
@@ -20,6 +33,7 @@ enum PurchaseInvoiceStatus {
   draft
   confirmed
   cancelled
+  corrected
 }
 
 enum PurchaseInvoiceType {
@@ -37,62 +51,84 @@ enum UserRole {
 }
 
 model Tenant {
-  id         String      @id @default(uuid()) @db.Uuid
-  name       String
-  legalName  String?     @map("legal_name")
-  taxId      String?     @unique @map("tax_id")
-  status     String      @default("active")
-  createdAt  DateTime    @default(now()) @map("created_at")
-  updatedAt  DateTime    @updatedAt @map("updated_at")
-  products   Product[]
-  suppliers  Supplier[]
-  customers  Customer[]
-  warehouses Warehouse[]
-  lots       ProductLot[]
-  stockMovements StockMovement[]
-  users      User[]
-  purchaseInvoices PurchaseInvoice[]
-  purchaseInvoiceLines PurchaseInvoiceLine[]
+  id                       String                    @id @default(uuid()) @db.Uuid
+  name                     String
+  legalName                String?                   @map("legal_name")
+  taxId                    String?                   @unique @map("tax_id")
+  status                   String                    @default("active")
+  productCodeSeq           Int                       @default(0) @map("product_code_seq")
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  products                 Product[]
+  categories               Category[]
+  suppliers                Supplier[]
+  customers                Customer[]
+  warehouses               Warehouse[]
+  lots                     ProductLot[]
+  stockMovements           StockMovement[]
+  users                    User[]
+  purchaseInvoices         PurchaseInvoice[]
+  purchaseInvoiceLines     PurchaseInvoiceLine[]
+  purchaseInvoiceRevisions PurchaseInvoiceRevision[]
 
   @@map("tenants")
 }
 
+model Category {
+  id        String    @id @default(uuid()) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  products  Product[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("categories")
+}
+
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  tenantId     String   @map("tenant_id") @db.Uuid
-  name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         UserRole @default(user)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  warehouseId  String?  @map("warehouse_id") @db.Uuid
-  warehouse    Warehouse? @relation(fields: [warehouseId], references: [id])
-  purchaseInvoices PurchaseInvoice[]
+  id                       String                    @id @default(uuid()) @db.Uuid
+  tenantId                 String                    @map("tenant_id") @db.Uuid
+  name                     String
+  email                    String                    @unique
+  passwordHash             String                    @map("password_hash")
+  role                     UserRole                  @default(user)
+  isActive                 Boolean                   @default(true) @map("is_active")
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
+  warehouseId              String?                   @map("warehouse_id") @db.Uuid
+  warehouse                Warehouse?                @relation(fields: [warehouseId], references: [id])
+  purchaseInvoices         PurchaseInvoice[]
+  purchaseInvoiceRevisions PurchaseInvoiceRevision[]
 
   @@index([tenantId])
   @@map("users")
 }
 
 model Product {
-  id                String      @id @default(uuid()) @db.Uuid
-  tenantId          String      @map("tenant_id") @db.Uuid
-  internalCode      String?     @map("internal_code")
-  barcode           String
-  name              String
-  description       String?
-  category          String?
-  unit              String
-  brand             String?
-  manejaVencimiento Boolean     @default(false) @map("maneja_vencimiento")
-  isActive          Boolean     @default(true) @map("is_active")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
-  tenant            Tenant      @relation(fields: [tenantId], references: [id])
-  lots              ProductLot[]
-  stockMovements    StockMovement[]
+  id                   String                @id @default(uuid()) @db.Uuid
+  tenantId             String                @map("tenant_id") @db.Uuid
+  internalCode         String?               @map("internal_code")
+  barcode              String
+  name                 String
+  description          String?
+  categoryId           String?               @map("category_id") @db.Uuid
+  unit                 String
+  brand                String?
+  costPrice            Decimal?              @map("cost_price") @db.Decimal(14, 2)
+  salePrice            Decimal?              @map("sale_price") @db.Decimal(14, 2)
+  taxRate              Decimal               @default(21) @map("tax_rate") @db.Decimal(5, 2)
+  minStock             Decimal?              @map("min_stock") @db.Decimal(14, 3)
+  manejaVencimiento    Boolean               @default(false) @map("maneja_vencimiento")
+  isActive             Boolean               @default(true) @map("is_active")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  category             Category?             @relation(fields: [categoryId], references: [id])
+  lots                 ProductLot[]
+  stockMovements       StockMovement[]
   purchaseInvoiceLines PurchaseInvoiceLine[]
 
   @@unique([id, tenantId])
@@ -103,19 +139,19 @@ model Product {
 }
 
 model Supplier {
-  id         String      @id @default(uuid()) @db.Uuid
-  tenantId   String      @map("tenant_id") @db.Uuid
-  name       String
-  legalName  String?     @map("legal_name")
-  taxId      String?     @map("tax_id")
-  email      String?
-  phone      String?
-  address    String?
-  isActive   Boolean     @default(true) @map("is_active")
-  createdAt  DateTime    @default(now()) @map("created_at")
-  updatedAt  DateTime    @updatedAt @map("updated_at")
-  tenant     Tenant      @relation(fields: [tenantId], references: [id])
-  lots       ProductLot[]
+  id               String            @id @default(uuid()) @db.Uuid
+  tenantId         String            @map("tenant_id") @db.Uuid
+  name             String
+  legalName        String?           @map("legal_name")
+  taxId            String?           @map("tax_id")
+  email            String?
+  phone            String?
+  address          String?
+  isActive         Boolean           @default(true) @map("is_active")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  lots             ProductLot[]
   purchaseInvoices PurchaseInvoice[]
 
   @@unique([id, tenantId])
@@ -124,18 +160,18 @@ model Supplier {
 }
 
 model Customer {
-  id         String   @id @default(uuid()) @db.Uuid
-  tenantId   String   @map("tenant_id") @db.Uuid
-  name       String
-  legalName  String?  @map("legal_name")
-  taxId      String?  @map("tax_id")
-  email      String?
-  phone      String?
-  address    String?
-  isActive   Boolean  @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  legalName String?  @map("legal_name")
+  taxId     String?  @map("tax_id")
+  email     String?
+  phone     String?
+  address   String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -143,19 +179,19 @@ model Customer {
 }
 
 model Warehouse {
-  id         String      @id @default(uuid()) @db.Uuid
-  tenantId   String      @map("tenant_id") @db.Uuid
-  name       String
-  code       String
-  address    String?
-  isActive   Boolean     @default(true) @map("is_active")
-  createdAt  DateTime    @default(now()) @map("created_at")
-  updatedAt  DateTime    @updatedAt @map("updated_at")
-  tenant     Tenant      @relation(fields: [tenantId], references: [id])
-  lots       ProductLot[]
-  stockMovements StockMovement[]
+  id               String            @id @default(uuid()) @db.Uuid
+  tenantId         String            @map("tenant_id") @db.Uuid
+  name             String
+  code             String
+  address          String?
+  isActive         Boolean           @default(true) @map("is_active")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  lots             ProductLot[]
+  stockMovements   StockMovement[]
   purchaseInvoices PurchaseInvoice[]
-  users         User[]
+  users            User[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])
@@ -164,21 +200,21 @@ model Warehouse {
 }
 
 model ProductLot {
-  id             String    @id @default(uuid()) @db.Uuid
-  tenantId       String    @map("tenant_id") @db.Uuid
-  productId      String    @map("product_id") @db.Uuid
-  warehouseId    String    @map("warehouse_id") @db.Uuid
-  supplierId     String?   @map("supplier_id") @db.Uuid
-  lotNumber      String    @map("lot_number")
-  expirationDate DateTime? @map("expiration_date") @db.Date
-  receivedAt     DateTime? @map("received_at") @db.Date
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  tenant         Tenant    @relation(fields: [tenantId], references: [id])
-  product        Product   @relation(fields: [productId, tenantId], references: [id, tenantId])
-  warehouse      Warehouse @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
-  supplier       Supplier? @relation(fields: [supplierId, tenantId], references: [id, tenantId])
-  stockMovements StockMovement[]
+  id                   String                @id @default(uuid()) @db.Uuid
+  tenantId             String                @map("tenant_id") @db.Uuid
+  productId            String                @map("product_id") @db.Uuid
+  warehouseId          String                @map("warehouse_id") @db.Uuid
+  supplierId           String?               @map("supplier_id") @db.Uuid
+  lotNumber            String                @map("lot_number")
+  expirationDate       DateTime?             @map("expiration_date") @db.Date
+  receivedAt           DateTime?             @map("received_at") @db.Date
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  product              Product               @relation(fields: [productId, tenantId], references: [id, tenantId])
+  warehouse            Warehouse             @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  supplier             Supplier?             @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  stockMovements       StockMovement[]
   purchaseInvoiceLines PurchaseInvoiceLine[]
 
   @@unique([id, tenantId])
@@ -215,33 +251,52 @@ model StockMovement {
 }
 
 model PurchaseInvoice {
-  id            String                @id @default(uuid()) @db.Uuid
-  tenantId      String                @map("tenant_id") @db.Uuid
-  supplierId    String                @map("supplier_id") @db.Uuid
-  warehouseId   String                @map("warehouse_id") @db.Uuid
-  createdById   String                @map("created_by_id") @db.Uuid
-  invoiceType   PurchaseInvoiceType   @map("invoice_type")
-  pointOfSale   String                @map("point_of_sale")
-  invoiceNumber String                @map("invoice_number")
-  issueDate     DateTime              @map("issue_date") @db.Date
-  currency      String                @default("ARS")
-  subtotal      Decimal               @db.Decimal(14, 2)
-  taxTotal      Decimal               @map("tax_total") @db.Decimal(14, 2)
-  total         Decimal               @db.Decimal(14, 2)
-  status        PurchaseInvoiceStatus @default(draft)
+  id            String                    @id @default(uuid()) @db.Uuid
+  tenantId      String                    @map("tenant_id") @db.Uuid
+  supplierId    String                    @map("supplier_id") @db.Uuid
+  warehouseId   String                    @map("warehouse_id") @db.Uuid
+  createdById   String                    @map("created_by_id") @db.Uuid
+  invoiceType   PurchaseInvoiceType       @map("invoice_type")
+  pointOfSale   String                    @map("point_of_sale")
+  invoiceNumber String                    @map("invoice_number")
+  issueDate     DateTime                  @map("issue_date") @db.Date
+  currency      String                    @default("ARS")
+  subtotal      Decimal                   @db.Decimal(14, 2)
+  taxTotal      Decimal                   @map("tax_total") @db.Decimal(14, 2)
+  otherTaxes    Json?                     @map("other_taxes")
+  otherTaxesTotal Decimal                 @default(0) @map("other_taxes_total") @db.Decimal(14, 2)
+  total         Decimal                   @db.Decimal(14, 2)
+  status        PurchaseInvoiceStatus     @default(draft)
   notes         String?
-  createdAt     DateTime              @default(now()) @map("created_at")
-  updatedAt     DateTime              @updatedAt @map("updated_at")
-  tenant        Tenant                @relation(fields: [tenantId], references: [id])
-  supplier      Supplier              @relation(fields: [supplierId, tenantId], references: [id, tenantId])
-  warehouse     Warehouse             @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
-  createdBy     User                  @relation(fields: [createdById], references: [id])
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  updatedAt     DateTime                  @updatedAt @map("updated_at")
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id])
+  supplier      Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  warehouse     Warehouse                 @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  createdBy     User                      @relation(fields: [createdById], references: [id])
   lines         PurchaseInvoiceLine[]
+  revisions     PurchaseInvoiceRevision[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, invoiceType, pointOfSale, invoiceNumber])
   @@index([tenantId, issueDate])
   @@map("purchase_invoices")
+}
+
+model PurchaseInvoiceRevision {
+  id          String          @id @default(uuid()) @db.Uuid
+  tenantId    String          @map("tenant_id") @db.Uuid
+  invoiceId   String          @map("invoice_id") @db.Uuid
+  createdById String          @map("created_by_id") @db.Uuid
+  reason      String
+  snapshot    Json
+  createdAt   DateTime        @default(now()) @map("created_at")
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  invoice     PurchaseInvoice @relation(fields: [invoiceId, tenantId], references: [id, tenantId])
+  createdBy   User            @relation(fields: [createdById], references: [id])
+
+  @@index([tenantId, invoiceId, createdAt])
+  @@map("purchase_invoice_revisions")
 }
 
 model PurchaseInvoiceLine {

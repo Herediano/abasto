@@ -11,13 +11,15 @@ import { UsersController } from './users.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './auth.guard';
 import { SuppliersController } from './suppliers.controller';
+import { CategoriesController } from './categories.controller';
+import { ProductReferenceController } from './product-reference.controller';
 import { PurchasesController } from './purchases.controller';
 import { PurchasesService } from './purchases.service';
 import { AdminGuard } from './admin.guard';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, AuthController, UsersController, PurchasesController],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController],
   providers: [StockService, AuthService, JwtAuthGuard, PurchasesService, AdminGuard],
 })
 export class AppModule {}
