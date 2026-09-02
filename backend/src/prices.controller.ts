@@ -4,6 +4,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { AuthRequest } from './auth.types';
 import { AdminGuard } from './admin.guard';
+import { priceChange } from './price-history.util';
 
 type ScopeType = 'all' | 'category' | 'brand' | 'ids';
 type Target = 'salePrice' | 'costPrice';
@@ -115,9 +116,16 @@ export class PricesController {
       return { affected: changes.length, skipped: skipped.length, skippedDetail: skipped.slice(0, PREVIEW_LIMIT), preview: changes.slice(0, PREVIEW_LIMIT), applied: false };
     }
 
+    const field = target === 'costPrice' ? 'cost' : 'sale';
     for (let i = 0; i < changes.length; i += 500) {
       const batch = changes.slice(i, i + 500);
-      await this.prisma.$transaction(batch.map(c => this.prisma.product.update({ where: { id: c.id }, data: { [target]: c.after } })));
+      const historia = batch
+        .map(c => priceChange({ tenantId, productId: c.id, field, before: c.before, after: c.after, source: 'bulk', userId: request.user.id }))
+        .filter((h): h is NonNullable<typeof h> => h !== null);
+      await this.prisma.$transaction([
+        ...batch.map(c => this.prisma.product.update({ where: { id: c.id }, data: { [target]: c.after } })),
+        ...(historia.length ? [this.prisma.productPriceHistory.createMany({ data: historia })] : []),
+      ]);
     }
 
     return { affected: changes.length, skipped: skipped.length, skippedDetail: skipped.slice(0, PREVIEW_LIMIT), preview: changes.slice(0, PREVIEW_LIMIT), applied: true };

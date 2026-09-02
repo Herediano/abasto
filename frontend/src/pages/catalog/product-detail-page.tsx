@@ -12,6 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { api, errorMessage, type Lot, type Product, type StockItem } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
+const PRICE_SOURCES: Record<string, string> = {
+  manual: 'Edición manual',
+  import: 'Importación',
+  bulk: 'Acción masiva',
+  invoice: 'Factura de compra',
+};
+
 function margin(costPrice?: string | null, salePrice?: string | null) {
   const cost = Number(costPrice);
   const sale = Number(salePrice);
@@ -235,6 +242,42 @@ export function ProductDetailPage() {
                     {/* slice en vez de toLocaleDateString: la fecha viene como
                         medianoche UTC y convertirla a hora local la corre un día. */}
                     <TableCell>{s.lastPurchaseAt ? s.lastPurchaseAt.slice(0, 10) : '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Historial de precios</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {(product.priceHistory ?? []).length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">Todavía no hubo cambios de precio registrados.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Precio</TableHead>
+                  <TableHead className="text-right">Antes</TableHead>
+                  <TableHead className="text-right">Después</TableHead>
+                  <TableHead>Origen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(product.priceHistory ?? []).map(h => (
+                  <TableRow key={h.id}>
+                    <TableCell className="whitespace-nowrap">{h.createdAt.slice(0, 10)}</TableCell>
+                    <TableCell>{h.field === 'cost' ? 'Costo' : 'Venta'}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{h.oldValue ? `$${Number(h.oldValue).toFixed(2)}` : '—'}</TableCell>
+                    <TableCell className="text-right font-medium">${Number(h.newValue).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{PRICE_SOURCES[h.source] ?? h.source}</Badge>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

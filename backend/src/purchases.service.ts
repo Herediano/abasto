@@ -86,6 +86,10 @@ export class PurchasesService {
         const costPerBaseUnit = new Prisma.Decimal(line.unitCost).div(line.unitFactor).toDecimalPlaces(2);
         if (product.costPrice === null) {
           await tx.product.update({ where: { id: product.id }, data: { costPrice: costPerBaseUnit } });
+          await tx.productPriceHistory.create({ data: {
+            tenantId, productId: product.id, field: 'cost', oldValue: null,
+            newValue: costPerBaseUnit, source: 'invoice', userId: invoice.createdById,
+          } });
         }
         // Se arma solo el historial de a quien le compramos cada producto.
         await tx.productSupplier.upsert({

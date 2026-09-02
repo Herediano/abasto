@@ -9,6 +9,7 @@ import { JwtAuthGuard } from './auth.guard';
 import { AuthRequest } from './auth.types';
 import { AdminGuard } from './admin.guard';
 import { parsePricesFile } from './price-import.util';
+import { priceChange, type PriceHistoryEntry } from './price-history.util';
 
 // Alicuotas de IVA vigentes en Argentina. El campo era decimal libre, lo que
 // habilitaba cargar valores que despues rompen la facturacion.
@@ -184,9 +185,10 @@ export class ProductsController {
     const invalid: string[] = [];
     for (let i = 0; i < rows.length; i += 500) {
       const batch = rows.slice(i, i + 500);
-      const products = await this.prisma.product.findMany({ where: { tenantId, barcode: { in: batch.map(r => r.barcode) } }, select: { id: true, barcode: true, name: true } });
+      const products = await this.prisma.product.findMany({ where: { tenantId, barcode: { in: batch.map(r => r.barcode) } }, select: { id: true, barcode: true, name: true, costPrice: true, salePrice: true } });
       const byBarcode = new Map(products.map(p => [p.barcode, p]));
       const updates: Prisma.PrismaPromise<unknown>[] = [];
+      const historia: PriceHistoryEntry[] = [];
       for (const row of batch) {
         const current = byBarcode.get(row.barcode);
         if (!current) {
@@ -204,6 +206,14 @@ export class ProductsController {
         }
         const name = updateNames && row.name && row.name !== current.name ? row.name : undefined;
         if (costPrice === undefined && salePrice === undefined && name === undefined) continue;
+        if (costPrice !== undefined) {
+          const h = priceChange({ tenantId, productId: current.id, field: 'cost', before: current.costPrice, after: costPrice, source: 'import', userId: request.user.id });
+          if (h) historia.push(h);
+        }
+        if (salePrice !== undefined) {
+          const h = priceChange({ tenantId, productId: current.id, field: 'sale', before: current.salePrice, after: salePrice, source: 'import', userId: request.user.id });
+          if (h) historia.push(h);
+        }
         updates.push(this.prisma.product.update({
           where: { id: current.id },
           data: { ...(costPrice !== undefined ? { costPrice } : {}), ...(salePrice !== undefined ? { salePrice } : {}), ...(name !== undefined ? { name } : {}) },
@@ -211,6 +221,7 @@ export class ProductsController {
         if (costPrice !== undefined || salePrice !== undefined) updated++;
         if (name !== undefined) renamed++;
       }
+      if (historia.length) updates.push(this.prisma.productPriceHistory.createMany({ data: historia }));
       if (updates.length) await this.prisma.$transaction(updates);
     }
     return { updated, renamed, notFound, invalid, matchedColumns };
@@ -224,6 +235,7 @@ export class ProductsController {
         category: { select: { name: true } },
         extraBarcodes: { orderBy: { createdAt: 'asc' } },
         suppliers: { include: { supplier: { select: { name: true } } }, orderBy: { lastPurchaseAt: 'desc' } },
+        priceHistory: { orderBy: { createdAt: 'desc' }, take: 50 },
       },
     });
     return {
@@ -369,21 +381,34 @@ export class ProductsController {
     if (unitsPerPurchase !== undefined && unitsPerPurchase !== null && unitsPerPurchase <= 0) throw new UnprocessableEntityException('Las unidades por bulto deben ser mayores a cero');
     const categoryId = body.categoryId === null || body.categoryId === '' ? null : typeof body.categoryId === 'string' ? body.categoryId : current.categoryId;
     if (categoryId && !(await this.prisma.category.findFirst({ where: { id: categoryId, tenantId } }))) throw new BadRequestException('Categoría no encontrada');
-    try { return await this.prisma.product.update({ where: { id }, data: {
-      barcode, name, unit,
-      categoryId,
-      brand: typeof body.brand === 'string' ? body.brand.trim() : null,
-      description: typeof body.description === 'string' ? body.description.trim() : null,
-      manejaVencimiento: typeof body.manejaVencimiento === 'boolean' ? body.manejaVencimiento : current.manejaVencimiento,
-      isActive: typeof body.isActive === 'boolean' ? body.isActive : current.isActive,
-      purchaseUnit: body.purchaseUnit === undefined ? current.purchaseUnit : (typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : null),
-      unitsPerPurchase: unitsPerPurchase === undefined || unitsPerPurchase === null ? current.unitsPerPurchase : unitsPerPurchase,
-      internalTaxRate: internalTaxRate === undefined || internalTaxRate === null ? current.internalTaxRate : internalTaxRate,
-      costPrice: costPrice === undefined ? current.costPrice : costPrice,
-      salePrice: salePrice === undefined ? current.salePrice : salePrice,
-      minStock: minStock === undefined ? current.minStock : minStock,
-      taxRate: taxRate === undefined ? current.taxRate : (taxRate ?? current.taxRate),
-    } }); }
+    const nextCost = costPrice === undefined ? current.costPrice : costPrice;
+    const nextSale = salePrice === undefined ? current.salePrice : salePrice;
+    const historia = [
+      priceChange({ tenantId, productId: id, field: 'cost', before: current.costPrice, after: nextCost, source: 'manual', userId: request.user.id }),
+      priceChange({ tenantId, productId: id, field: 'sale', before: current.salePrice, after: nextSale, source: 'manual', userId: request.user.id }),
+    ].filter((h): h is NonNullable<typeof h> => h !== null);
+
+    try {
+      const [updated] = await this.prisma.$transaction([
+        this.prisma.product.update({ where: { id }, data: {
+          barcode, name, unit,
+          categoryId,
+          brand: typeof body.brand === 'string' ? body.brand.trim() : null,
+          description: typeof body.description === 'string' ? body.description.trim() : null,
+          manejaVencimiento: typeof body.manejaVencimiento === 'boolean' ? body.manejaVencimiento : current.manejaVencimiento,
+          isActive: typeof body.isActive === 'boolean' ? body.isActive : current.isActive,
+          purchaseUnit: body.purchaseUnit === undefined ? current.purchaseUnit : (typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : null),
+          unitsPerPurchase: unitsPerPurchase === undefined || unitsPerPurchase === null ? current.unitsPerPurchase : unitsPerPurchase,
+          internalTaxRate: internalTaxRate === undefined || internalTaxRate === null ? current.internalTaxRate : internalTaxRate,
+          costPrice: nextCost,
+          salePrice: nextSale,
+          minStock: minStock === undefined ? current.minStock : minStock,
+          taxRate: taxRate === undefined ? current.taxRate : (taxRate ?? current.taxRate),
+        } }),
+        ...(historia.length ? [this.prisma.productPriceHistory.createMany({ data: historia })] : []),
+      ]);
+      return updated;
+    }
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El barcode ya existe'); throw error; }
   }
 }

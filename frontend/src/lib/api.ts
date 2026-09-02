@@ -52,6 +52,16 @@ export type Product = {
   // Sólo vienen en el detalle (GET /products/:id), no en el listado.
   extraBarcodes?: ProductBarcode[];
   suppliers?: ProductSupplierLink[];
+  priceHistory?: PriceHistoryRow[];
+};
+
+export type PriceHistoryRow = {
+  id: string;
+  field: 'cost' | 'sale';
+  oldValue?: string | null;
+  newValue: string;
+  source: 'manual' | 'import' | 'bulk' | 'invoice';
+  createdAt: string;
 };
 
 export type ProductBarcode = { id: string; barcode: string };

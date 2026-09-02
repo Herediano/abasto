@@ -72,6 +72,7 @@ model Tenant {
   purchaseInvoiceRevisions PurchaseInvoiceRevision[]
   productBarcodes          ProductBarcode[]
   productSuppliers         ProductSupplier[]
+  productPriceHistory      ProductPriceHistory[]
 
   @@map("tenants")
 }
@@ -137,6 +138,7 @@ model Product {
   purchaseInvoiceLines PurchaseInvoiceLine[]
   extraBarcodes        ProductBarcode[]
   suppliers            ProductSupplier[]
+  priceHistory         ProductPriceHistory[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, barcode])
@@ -202,6 +204,25 @@ model ProductSupplier {
   @@unique([tenantId, productId, supplierId])
   @@index([tenantId, productId])
   @@map("product_suppliers")
+}
+
+// Append-only, misma filosofia que stock_movements: nunca se edita ni se borra.
+// Deja rastro de cada cambio de precio y de donde vino.
+model ProductPriceHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  field     String // 'cost' | 'sale'
+  oldValue  Decimal? @map("old_value") @db.Decimal(14, 2)
+  newValue  Decimal  @map("new_value") @db.Decimal(14, 2)
+  source    String // 'manual' | 'import' | 'bulk' | 'invoice'
+  userId    String?  @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  product   Product  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([tenantId, productId, createdAt])
+  @@map("product_price_history")
 }
 
 model Customer {
