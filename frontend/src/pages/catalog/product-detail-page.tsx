@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Package } from 'lucide-react';
+import { ArrowLeft, Package, Plus, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/empty-state';
-import { PageSpinner } from '@/components/spinner';
+import { Input } from '@/components/ui/input';
+import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type Lot, type Product, type StockItem, type Supplier } from '@/lib/api';
+import { api, errorMessage, type Lot, type Product, type StockItem } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 function margin(costPrice?: string | null, salePrice?: string | null) {
@@ -26,9 +27,13 @@ export function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [stock, setStock] = useState<StockItem[]>([]);
   const [lots, setLots] = useState<Lot[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [newBarcode, setNewBarcode] = useState('');
+  const [savingBarcode, setSavingBarcode] = useState(false);
+  const isAdmin = session!.user.role === 'admin';
+
+  const loadProduct = () => api<Product>(`/products/${id}`, {}, token).then(setProduct);
 
   useEffect(() => {
     if (!id) return;
@@ -37,17 +42,41 @@ export function ProductDetailPage() {
       api<Product>(`/products/${id}`, {}, token),
       api<{ productId: string; items: StockItem[] }>(`/stock/products/${id}`, {}, token),
       api<Lot[]>(`/products/${id}/lots`, {}, token),
-      api<Supplier[]>('/suppliers', {}, token),
     ])
-      .then(([p, s, l, sup]) => {
+      .then(([p, s, l]) => {
         setProduct(p);
         setStock(s.items);
         setLots(l);
-        setSuppliers(sup);
       })
       .catch(e => setError(errorMessage(e)))
       .finally(() => setLoading(false));
   }, [id, token]);
+
+  async function addBarcode() {
+    const barcode = newBarcode.trim();
+    if (!barcode) return;
+    setSavingBarcode(true);
+    setError('');
+    try {
+      await api(`/products/${id}/barcodes`, { method: 'POST', body: JSON.stringify({ barcode }) }, token);
+      setNewBarcode('');
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingBarcode(false);
+    }
+  }
+
+  async function removeBarcode(barcodeId: string) {
+    setError('');
+    try {
+      await api(`/products/${id}/barcodes/${barcodeId}`, { method: 'DELETE' }, token);
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
 
   if (loading) return <PageSpinner />;
   if (error) return <Alert variant="destructive">{error}</Alert>;
@@ -55,7 +84,6 @@ export function ProductDetailPage() {
 
   const totalStock = stock.reduce((sum, s) => sum + Number(s.quantity), 0);
   const m = margin(product.costPrice, product.salePrice);
-  const supplierNames = Array.from(new Set(lots.map(l => l.supplierId).filter((v): v is string => !!v).map(sid => suppliers.find(s => s.id === sid)?.name).filter((v): v is string => !!v)));
 
   return (
     <>
@@ -141,19 +169,76 @@ export function ProductDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Proveedores</CardTitle>
+          <CardTitle>Códigos de barras</CardTitle>
         </CardHeader>
-        <CardContent>
-          {supplierNames.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Todavía no se registraron compras de este producto.</p>
-          ) : (
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="font-mono">
+              {product.barcode}
+            </Badge>
+            <span className="text-xs text-muted-foreground">principal</span>
+          </div>
+
+          {(product.extraBarcodes ?? []).length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {supplierNames.map(name => (
-                <Badge key={name} variant="outline">
-                  {name}
-                </Badge>
+              {(product.extraBarcodes ?? []).map(b => (
+                <span key={b.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-xs">
+                  {b.barcode}
+                  {isAdmin && (
+                    <button type="button" onClick={() => removeBarcode(b.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${b.barcode}`}>
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </span>
               ))}
             </div>
+          )}
+
+          {isAdmin && (
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={e => {
+                e.preventDefault();
+                void addBarcode();
+              }}
+            >
+              <Input value={newBarcode} onChange={e => setNewBarcode(e.target.value)} placeholder="Agregar otro código" className="max-w-xs" />
+              <Button type="submit" variant="outline" size="sm" disabled={savingBarcode || !newBarcode.trim()}>
+                {savingBarcode ? <Spinner /> : <Plus />} Agregar
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Proveedores</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {(product.suppliers ?? []).length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">Todavía no se registraron compras de este producto.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Proveedor</TableHead>
+                  <TableHead className="text-right">Último costo</TableHead>
+                  <TableHead>Última compra</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(product.suppliers ?? []).map(s => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{s.supplierName}</TableCell>
+                    <TableCell className="text-right">{s.lastCost ? `$${Number(s.lastCost).toFixed(2)}` : '—'}</TableCell>
+                    {/* slice en vez de toLocaleDateString: la fecha viene como
+                        medianoche UTC y convertirla a hora local la corre un día. */}
+                    <TableCell>{s.lastPurchaseAt ? s.lastPurchaseAt.slice(0, 10) : '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

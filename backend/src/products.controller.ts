@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Query, Req, Res, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Prisma } from '@prisma/client';
 import ExcelJS from 'exceljs';
@@ -44,12 +44,27 @@ export class ProductsController {
     const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
     const search = query.search?.trim();
+    // Se acumulan en AND porque barcode y search pueden venir juntos y cada uno
+    // aporta su propio OR: puestos como claves sueltas, el segundo pisaría al primero.
+    const filters: Prisma.ProductWhereInput[] = [];
+    // Un producto puede tener codigos adicionales: el escaneo tiene que
+    // encontrarlo tanto por el principal como por cualquiera de los otros.
+    if (query.barcode) filters.push({ OR: [{ barcode: query.barcode }, { extraBarcodes: { some: { barcode: query.barcode } } }] });
+    if (search) {
+      filters.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { barcode: { contains: search, mode: 'insensitive' } },
+          { internalCode: { contains: search, mode: 'insensitive' } },
+          { extraBarcodes: { some: { barcode: { contains: search, mode: 'insensitive' } } } },
+        ],
+      });
+    }
     const where: Prisma.ProductWhereInput = {
       tenantId,
       ...(query.status === 'inactive' ? { isActive: false } : query.status === 'all' ? {} : { isActive: true }),
       ...(query.categoryId ? { categoryId: query.categoryId } : {}),
-      ...(query.barcode ? { barcode: query.barcode } : {}),
-      ...(search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { barcode: { contains: search, mode: 'insensitive' } }, { internalCode: { contains: search, mode: 'insensitive' } }] } : {}),
+      ...(filters.length ? { AND: filters } : {}),
     };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({ where, include: { category: { select: { name: true } } }, orderBy: { name: 'asc' }, skip: (page - 1) * pageSize, take: pageSize }),
@@ -203,8 +218,47 @@ export class ProductsController {
 
   @Get(':id')
   async get(@Req() request: AuthRequest, @Param('id') id: string) {
-    const product = await this.prisma.product.findFirstOrThrow({ where: { id, tenantId: request.user.tenantId }, include: { category: { select: { name: true } } } });
-    return { ...product, categoryName: product.category?.name ?? null, category: undefined };
+    const product = await this.prisma.product.findFirstOrThrow({
+      where: { id, tenantId: request.user.tenantId },
+      include: {
+        category: { select: { name: true } },
+        extraBarcodes: { orderBy: { createdAt: 'asc' } },
+        suppliers: { include: { supplier: { select: { name: true } } }, orderBy: { lastPurchaseAt: 'desc' } },
+      },
+    });
+    return {
+      ...product,
+      categoryName: product.category?.name ?? null,
+      category: undefined,
+      suppliers: product.suppliers.map(s => ({ id: s.id, supplierId: s.supplierId, supplierName: s.supplier.name, supplierCode: s.supplierCode, lastCost: s.lastCost, lastPurchaseAt: s.lastPurchaseAt })),
+    };
+  }
+
+  @Post(':id/barcodes')
+  @UseGuards(AdminGuard)
+  async addBarcode(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: { barcode?: unknown }) {
+    const tenantId = request.user.tenantId;
+    const barcode = typeof body.barcode === 'string' ? body.barcode.trim() : '';
+    if (!barcode) throw new BadRequestException('El código de barras es obligatorio');
+    const product = await this.prisma.product.findFirst({ where: { id, tenantId } });
+    if (!product) throw new BadRequestException('Producto no encontrado');
+    if (product.barcode === barcode) throw new ConflictException('Ese ya es el código principal del producto');
+    try {
+      return await this.prisma.productBarcode.create({ data: { tenantId, productId: id, barcode } });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ese código de barras ya está en uso');
+      throw error;
+    }
+  }
+
+  @Delete(':id/barcodes/:barcodeId')
+  @UseGuards(AdminGuard)
+  async removeBarcode(@Req() request: AuthRequest, @Param('id') id: string, @Param('barcodeId') barcodeId: string) {
+    const tenantId = request.user.tenantId;
+    const found = await this.prisma.productBarcode.findFirst({ where: { id: barcodeId, tenantId, productId: id } });
+    if (!found) throw new BadRequestException('Código de barras no encontrado');
+    await this.prisma.productBarcode.delete({ where: { id: barcodeId } });
+    return { deleted: true };
   }
 
   @Get(':id/lots')

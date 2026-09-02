@@ -49,6 +49,20 @@ export type Product = {
   minStock?: string | null;
   manejaVencimiento: boolean;
   isActive: boolean;
+  // Sólo vienen en el detalle (GET /products/:id), no en el listado.
+  extraBarcodes?: ProductBarcode[];
+  suppliers?: ProductSupplierLink[];
+};
+
+export type ProductBarcode = { id: string; barcode: string };
+
+export type ProductSupplierLink = {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  supplierCode?: string | null;
+  lastCost?: string | null;
+  lastPurchaseAt?: string | null;
 };
 
 export type LowStockProduct = Product & { currentStock: number };

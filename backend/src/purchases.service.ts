@@ -83,10 +83,16 @@ export class PurchasesService {
         // La factura viene en la unidad del proveedor (bulto); el ledger guarda
         // siempre la unidad base, asi que la conversion ocurre aca.
         const baseQuantity = new Prisma.Decimal(line.quantity).mul(line.unitFactor);
+        const costPerBaseUnit = new Prisma.Decimal(line.unitCost).div(line.unitFactor).toDecimalPlaces(2);
         if (product.costPrice === null) {
-          const costPerBaseUnit = new Prisma.Decimal(line.unitCost).div(line.unitFactor).toDecimalPlaces(2);
           await tx.product.update({ where: { id: product.id }, data: { costPrice: costPerBaseUnit } });
         }
+        // Se arma solo el historial de a quien le compramos cada producto.
+        await tx.productSupplier.upsert({
+          where: { tenantId_productId_supplierId: { tenantId, productId: line.productId, supplierId: invoice.supplierId } },
+          create: { tenantId, productId: line.productId, supplierId: invoice.supplierId, lastCost: costPerBaseUnit, lastPurchaseAt: invoice.issueDate },
+          update: { lastCost: costPerBaseUnit, lastPurchaseAt: invoice.issueDate },
+        });
         await tx.stockMovement.create({ data: { tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: baseQuantity, movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoice.id, notes: `Factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}` } });
       }
       return tx.purchaseInvoice.update({ where: { id: invoice.id }, data: { status: PurchaseInvoiceStatus.confirmed }, include: { supplier: true, lines: true, warehouse: true } });

@@ -70,6 +70,8 @@ model Tenant {
   purchaseInvoices         PurchaseInvoice[]
   purchaseInvoiceLines     PurchaseInvoiceLine[]
   purchaseInvoiceRevisions PurchaseInvoiceRevision[]
+  productBarcodes          ProductBarcode[]
+  productSuppliers         ProductSupplier[]
 
   @@map("tenants")
 }
@@ -133,6 +135,8 @@ model Product {
   lots                 ProductLot[]
   stockMovements       StockMovement[]
   purchaseInvoiceLines PurchaseInvoiceLine[]
+  extraBarcodes        ProductBarcode[]
+  suppliers            ProductSupplier[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, barcode])
@@ -156,10 +160,48 @@ model Supplier {
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
   lots             ProductLot[]
   purchaseInvoices PurchaseInvoice[]
+  products         ProductSupplier[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
   @@map("suppliers")
+}
+
+// Codigos adicionales: un mismo producto puede venir con distintos EAN segun
+// presentacion o proveedor. Product.barcode sigue siendo el principal.
+model ProductBarcode {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  barcode   String
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  product   Product  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, barcode])
+  @@index([tenantId, productId])
+  @@map("product_barcodes")
+}
+
+// Se completa sola al confirmar cada factura de compra: quien nos vende cada
+// producto, a que codigo lo pide el proveedor y a cuanto fue la ultima compra.
+model ProductSupplier {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  productId      String    @map("product_id") @db.Uuid
+  supplierId     String    @map("supplier_id") @db.Uuid
+  supplierCode   String?   @map("supplier_code")
+  lastCost       Decimal?  @map("last_cost") @db.Decimal(14, 2)
+  lastPurchaseAt DateTime? @map("last_purchase_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  product        Product   @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  supplier       Supplier  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+
+  @@unique([tenantId, productId, supplierId])
+  @@index([tenantId, productId])
+  @@map("product_suppliers")
 }
 
 model Customer {
