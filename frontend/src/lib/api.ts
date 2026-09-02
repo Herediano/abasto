@@ -1,8 +1,9 @@
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 
-export async function uploadFile<T>(path: string, token: string, file: File): Promise<T> {
+export async function uploadFile<T>(path: string, token: string, file: File, fields: Record<string, string> = {}): Promise<T> {
   const formData = new FormData();
   formData.append('file', file);
+  for (const [key, value] of Object.entries(fields)) formData.append(key, value);
   const response = await fetch(`${API}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new ApiError(response.status, data);

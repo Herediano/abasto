@@ -14,6 +14,7 @@ import { ProductsPage } from '@/pages/catalog/products-page';
 import { ProductDetailPage } from '@/pages/catalog/product-detail-page';
 import { WarehousesPage } from '@/pages/catalog/warehouses-page';
 import { SuppliersPage } from '@/pages/catalog/suppliers-page';
+import { PricesPage } from '@/pages/prices/prices-page';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="/catalog/warehouses" element={<WarehousesPage />} />
         <Route path="/catalog/suppliers" element={<SuppliersPage />} />
         <Route element={<AdminRoute />}>
+          <Route path="/precios" element={<PricesPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
         </Route>
       </Route>

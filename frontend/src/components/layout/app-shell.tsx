@@ -1,4 +1,4 @@
-import { LogOut, Package, ArrowDownToLine, ArrowUpFromLine, History, CalendarClock, PackageMinus, Boxes, Warehouse, Truck, Users } from 'lucide-react';
+import { LogOut, Package, ArrowDownToLine, ArrowUpFromLine, History, CalendarClock, PackageMinus, Boxes, Warehouse, Truck, Users, Tags } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
@@ -30,7 +30,14 @@ export function AppShell() {
   const { session, isAdmin, logout } = useAuth();
   if (!session) return null;
 
-  const groups = isAdmin ? [...NAV_GROUPS, { label: 'Administración', items: [{ to: '/admin/users', label: 'Usuarios', icon: Users }] }] : NAV_GROUPS;
+  // Precios y Administración son admin-only, igual que sus rutas (AdminRoute en App.tsx).
+  const groups = isAdmin
+    ? [
+        ...NAV_GROUPS,
+        { label: 'Precios', items: [{ to: '/precios', label: 'Precios', icon: Tags }] },
+        { label: 'Administración', items: [{ to: '/admin/users', label: 'Usuarios', icon: Users }] },
+      ]
+    : NAV_GROUPS;
 
   return (
     <div className="flex min-h-screen">

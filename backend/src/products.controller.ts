@@ -143,24 +143,29 @@ export class ProductsController {
   @Post('import-prices')
   @UseGuards(AdminGuard)
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } }))
-  async importPrices(@Req() request: AuthRequest, @UploadedFile() file: Express.Multer.File) {
+  async importPrices(@Req() request: AuthRequest, @UploadedFile() file: Express.Multer.File, @Body() body: { updateNames?: string }) {
     if (!file) throw new BadRequestException('Subí un archivo .csv o .xlsx');
     const tenantId = request.user.tenantId;
+    // Los nombres solo se tocan si el pedido lo pide explicitamente: un archivo de
+    // precios que ademas traiga nombres no debe reescribir el catalogo por accidente.
+    const updateNames = body?.updateNames === 'true';
     const { rows, matchedColumns } = await parsePricesFile(file.buffer, file.originalname);
     if (!matchedColumns.barcode) throw new UnprocessableEntityException('No pudimos identificar una columna de código de barras en el archivo. Revisá que tenga un encabezado como "Código de barras", "EAN" o "Barcode".');
-    if (!matchedColumns.costPrice && !matchedColumns.salePrice) throw new UnprocessableEntityException('No pudimos identificar ninguna columna de precio en el archivo. Revisá que tenga un encabezado como "Precio de costo" y/o "Precio de venta".');
+    if (updateNames && !matchedColumns.name) throw new UnprocessableEntityException('Pediste actualizar los nombres pero no encontramos una columna de nombre. Revisá que tenga un encabezado como "Nombre nuevo", "Producto" o "Descripción".');
+    if (!updateNames && !matchedColumns.costPrice && !matchedColumns.salePrice) throw new UnprocessableEntityException('No pudimos identificar ninguna columna de precio en el archivo. Revisá que tenga un encabezado como "Precio de costo" y/o "Precio de venta".');
 
     let updated = 0;
+    let renamed = 0;
     const notFound: string[] = [];
     const invalid: string[] = [];
     for (let i = 0; i < rows.length; i += 500) {
       const batch = rows.slice(i, i + 500);
-      const products = await this.prisma.product.findMany({ where: { tenantId, barcode: { in: batch.map(r => r.barcode) } }, select: { id: true, barcode: true } });
-      const byBarcode = new Map(products.map(p => [p.barcode, p.id]));
+      const products = await this.prisma.product.findMany({ where: { tenantId, barcode: { in: batch.map(r => r.barcode) } }, select: { id: true, barcode: true, name: true } });
+      const byBarcode = new Map(products.map(p => [p.barcode, p]));
       const updates: Prisma.PrismaPromise<unknown>[] = [];
       for (const row of batch) {
-        const id = byBarcode.get(row.barcode);
-        if (!id) {
+        const current = byBarcode.get(row.barcode);
+        if (!current) {
           notFound.push(row.barcode);
           continue;
         }
@@ -173,13 +178,18 @@ export class ProductsController {
           invalid.push(row.barcode);
           continue;
         }
-        if (costPrice === undefined && salePrice === undefined) continue;
-        updates.push(this.prisma.product.update({ where: { id }, data: { ...(costPrice !== undefined ? { costPrice } : {}), ...(salePrice !== undefined ? { salePrice } : {}) } }));
-        updated++;
+        const name = updateNames && row.name && row.name !== current.name ? row.name : undefined;
+        if (costPrice === undefined && salePrice === undefined && name === undefined) continue;
+        updates.push(this.prisma.product.update({
+          where: { id: current.id },
+          data: { ...(costPrice !== undefined ? { costPrice } : {}), ...(salePrice !== undefined ? { salePrice } : {}), ...(name !== undefined ? { name } : {}) },
+        }));
+        if (costPrice !== undefined || salePrice !== undefined) updated++;
+        if (name !== undefined) renamed++;
       }
       if (updates.length) await this.prisma.$transaction(updates);
     }
-    return { updated, notFound, invalid, matchedColumns };
+    return { updated, renamed, notFound, invalid, matchedColumns };
   }
 
   @Get(':id')
