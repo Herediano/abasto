@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { MovementType, Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
-import { IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementInput } from './stock.types';
+import { IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementInput, MovementUpdateInput } from './stock.types';
 
 type Scope = { tenantId: string; productId: string; productLotId?: string; warehouseId: string };
 
@@ -124,5 +124,41 @@ export class StockService {
       this.prisma.stockMovement.count({ where }),
     ]);
     return { items: items.map(item => ({ ...item, lotNumber: item.productLot?.lotNumber ?? null, warehouseName: item.warehouse.name, productLot: undefined, warehouse: undefined })), pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } };
+  }
+
+  async update(tenantId: string, id: string, body: MovementUpdateInput) {
+    const existing = await this.prisma.stockMovement.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new NotFoundException('Movimiento no encontrado');
+    if (existing.referenceType || existing.referenceId) throw new ConflictException('Este movimiento pertenece a un documento y no puede editarse por separado');
+    const type = typeof body.movementType === 'string' ? body.movementType : existing.movementType;
+    const allowed = [...IN_MOVEMENT_TYPES, ...OUT_MOVEMENT_TYPES];
+    if (!allowed.includes(type as MovementType)) throw new UnprocessableEntityException('movementType no es válido');
+    const quantity = body.quantity === undefined ? Math.abs(Number(existing.quantity)) : Number(body.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) throw new UnprocessableEntityException('quantity debe ser mayor a cero');
+    const productId = typeof body.productId === 'string' ? body.productId : existing.productId;
+    const warehouseId = typeof body.warehouseId === 'string' ? body.warehouseId : existing.warehouseId;
+    const productLotId = body.productLotId === null ? undefined : typeof body.productLotId === 'string' ? body.productLotId : existing.productLotId ?? undefined;
+    const operationId = typeof body.operationId === 'string' ? body.operationId : existing.operationId ?? undefined;
+    if ((type === MovementType.transfer_in || type === MovementType.transfer_out) && !operationId) throw new UnprocessableEntityException('operationId es obligatorio para transferencias');
+    const signed = OUT_MOVEMENT_TYPES.includes(type as typeof OUT_MOVEMENT_TYPES[number]) ? -quantity : quantity;
+    const newScope = { tenantId, productId, productLotId, warehouseId };
+    return this.prisma.$transaction(async tx => {
+      await this.validateScope(tx, newScope);
+      const keys = [
+        [tenantId, existing.productId, existing.productLotId ?? 'no-lot', existing.warehouseId].join(':'),
+        [tenantId, productId, productLotId ?? 'no-lot', warehouseId].join(':'),
+      ].sort();
+      for (const key of keys) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`;
+      const scopes = new Map<string, Scope>();
+      scopes.set([existing.productId, existing.productLotId ?? 'no-lot', existing.warehouseId].join(':'), { tenantId, productId: existing.productId, productLotId: existing.productLotId ?? undefined, warehouseId: existing.warehouseId });
+      scopes.set([productId, productLotId ?? 'no-lot', warehouseId].join(':'), newScope);
+      for (const scope of scopes.values()) {
+        const current = await tx.stockMovement.aggregate({ where: { tenantId, productId: scope.productId, productLotId: scope.productLotId ?? null, warehouseId: scope.warehouseId, id: { not: id } }, _sum: { quantity: true } });
+        const base = Number(current._sum.quantity ?? 0);
+        const resulting = scope.productId === productId && scope.warehouseId === warehouseId && (scope.productLotId ?? null) === (productLotId ?? null) ? base + signed : base;
+        if (resulting < 0) throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: 'El cambio dejaría stock negativo', available: base.toFixed(3), requested: Math.abs(signed).toFixed(3) });
+      }
+      return tx.stockMovement.update({ where: { id }, data: { productId, productLotId, warehouseId, quantity: new Prisma.Decimal(signed), movementType: type as MovementType, operationId, occurredAt: body.occurredAt === undefined ? existing.occurredAt : new Date(String(body.occurredAt)), notes: typeof body.notes === 'string' ? body.notes : existing.notes } });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 }
