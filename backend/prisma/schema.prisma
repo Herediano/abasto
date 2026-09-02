@@ -31,6 +31,11 @@ enum PurchaseInvoiceType {
   other
 }
 
+enum UserRole {
+  admin
+  user
+}
+
 model Tenant {
   id         String      @id @default(uuid()) @db.Uuid
   name       String
@@ -58,6 +63,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String   @map("password_hash")
+  role         UserRole @default(user)
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

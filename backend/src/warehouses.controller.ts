@@ -1,7 +1,8 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { AuthRequest } from './auth.types';
+import { AdminGuard } from './admin.guard';
 
 @Controller('warehouses')
 @UseGuards(JwtAuthGuard)
@@ -21,5 +22,14 @@ export class WarehousesController {
     if (!name || !code) throw new BadRequestException('name y code son obligatorios');
     try { return await this.prisma.warehouse.create({ data: { tenantId: request.user.tenantId, name, code, address } }); }
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El code ya existe en este tenant'); throw error; }
+  }
+  @Put(':id')
+  @UseGuards(AdminGuard)
+  async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    const code = typeof body.code === 'string' ? body.code.trim() : '';
+    if (!name || !code) throw new BadRequestException('name y code son obligatorios');
+    try { return await this.prisma.warehouse.updateMany({ where: { id, tenantId: request.user.tenantId, isActive: true }, data: { name, code, address: typeof body.address === 'string' ? body.address.trim() : null } }).then(async result => { if (!result.count) throw new BadRequestException('Depósito no encontrado'); return this.prisma.warehouse.findFirstOrThrow({ where: { id, tenantId: request.user.tenantId } }); }); }
+    catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El código de depósito ya existe'); throw error; }
   }
 }

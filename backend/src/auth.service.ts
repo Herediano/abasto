@@ -18,8 +18,8 @@ function validatePassword(password: unknown) {
 export class AuthService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  private token(user: { id: string; tenantId: string; email: string }) {
-    return { accessToken: jwt.sign({ sub: user.id, tenantId: user.tenantId, email: user.email }, JWT_SECRET, { expiresIn: EXPIRES_IN_SECONDS }), expiresIn: EXPIRES_IN_SECONDS };
+  private token(user: { id: string; tenantId: string; email: string; role: 'admin' | 'user' }) {
+    return { accessToken: jwt.sign({ sub: user.id, tenantId: user.tenantId, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: EXPIRES_IN_SECONDS }), expiresIn: EXPIRES_IN_SECONDS };
   }
 
   async signup(body: Record<string, unknown>) {
@@ -36,10 +36,10 @@ export class AuthService {
     try {
       const created = await this.prisma.$transaction(async tx => {
         const tenantCreated = await tx.tenant.create({ data: { name: tenantName, legalName: typeof tenant?.legalName === 'string' ? tenant.legalName.trim() : undefined, taxId } });
-        const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash } });
+        const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash, role: 'admin' } });
         return { tenant: tenantCreated, user: userCreated };
       });
-      return { ...this.token(created.user), user: { id: created.user.id, name: created.user.name, email: created.user.email }, tenant: { id: created.tenant.id, name: created.tenant.name } };
+      return { ...this.token(created.user), user: { id: created.user.id, name: created.user.name, email: created.user.email, role: created.user.role }, tenant: { id: created.tenant.id, name: created.tenant.name } };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El taxId o email ya está registrado');
       throw error;
@@ -51,7 +51,7 @@ export class AuthService {
     if (!email || typeof body.password !== 'string') throw new UnauthorizedException('Credenciales inválidas');
     const user = await this.prisma.user.findUnique({ where: { email }, include: { tenant: true, warehouse: true } });
     if (!user || !user.isActive || !(await argon2.verify(user.passwordHash, body.password))) throw new UnauthorizedException('Credenciales inválidas');
-    return { ...this.token(user), user: { id: user.id, name: user.name, email: user.email, warehouseId: user.warehouseId }, tenant: { id: user.tenant.id, name: user.tenant.name } };
+    return { ...this.token(user), user: { id: user.id, name: user.name, email: user.email, role: user.role, warehouseId: user.warehouseId }, tenant: { id: user.tenant.id, name: user.tenant.name } };
   }
 
   async createUser(tenantId: string, body: Record<string, unknown>) {
@@ -64,7 +64,7 @@ export class AuthService {
       const warehouseId = typeof body.warehouseId === 'string' ? body.warehouseId : undefined;
       if (warehouseId && !(await this.prisma.warehouse.findFirst({ where: { id: warehouseId, tenantId } }))) throw new UnprocessableEntityException('warehouseId no pertenece al tenant');
       const user = await this.prisma.user.create({ data: { tenantId, name, email, passwordHash, warehouseId } });
-      return { id: user.id, name: user.name, email: user.email, tenantId: user.tenantId, isActive: user.isActive };
+      return { id: user.id, name: user.name, email: user.email, tenantId: user.tenantId, role: user.role, isActive: user.isActive };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El email ya está registrado');
       throw error;
@@ -77,7 +77,7 @@ export class AuthService {
       if (!payload.sub) throw new Error('Invalid token');
       const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
       if (!user || !user.isActive) throw new Error('Inactive user');
-      return { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email, warehouseId: user.warehouseId };
+      return { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email, role: user.role, warehouseId: user.warehouseId };
     } catch { throw new UnauthorizedException('Token inválido o vencido'); }
   }
 }

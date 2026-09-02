@@ -72,6 +72,10 @@ Regla: `lot_number` único por producto dentro de cada tenant. Un mismo lote fí
 
 Hoy `suppliers` y `customers` son tablas separadas con campos casi idénticos. Si en algún momento confirmamos que una misma empresa puede ser cliente y proveedor a la vez, evaluaremos unificarlas en una sola tabla con un rol. Por ahora seguimos con las dos tablas separadas.
 
+## Usuarios, sucursal y permisos
+
+Cada usuario pertenece a un tenant y puede tener una sucursal/depósito asignado. El rol inicial es `admin` para el primer usuario creado durante el self-signup y `user` para usuarios adicionales. Los administradores pueden modificar datos maestros del catálogo; los usuarios normales solo pueden consultarlos y operar los flujos que tengan habilitados. Las facturas confirmadas y los movimientos de stock son históricos y no se editan directamente.
+
 ## `stock_movements`
 
 La existencia se calculará como la suma de movimientos por tenant, producto, lote y depósito. `quantity` será positiva para ingresos y negativa para egresos. `warehouse_id` representa el depósito donde impacta el movimiento; una transferencia se registrará con dos filas vinculadas por `operation_id`.

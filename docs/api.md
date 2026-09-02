@@ -25,6 +25,10 @@ Los endpoints protegidos usan el tenant derivado del JWT; ya no aceptan `x-tenan
 - `GET/POST /api/warehouses`: lista y crea depósitos.
 - `GET /api/suppliers`: lista proveedores activos para seleccionar en lotes.
 - `POST /api/suppliers`: crea un proveedor del tenant autenticado. Recibe `name` obligatorio y opcionalmente `legalName`, `taxId`, `email`, `phone` y `address`.
+- `PUT /api/suppliers/:id`: modifica un proveedor; requiere rol `admin`.
+- `PUT /api/products/:id`: modifica barcode, código interno, nombre, categoría, unidad, marca y vencimiento; requiere rol `admin`.
+- `PUT /api/warehouses/:id`: modifica nombre, código y dirección; requiere rol `admin`.
+- `PUT /api/products/:productId/lots/:lotId`: modifica número de lote, vencimiento, proveedor y depósito; requiere rol `admin`.
 - `GET /api/purchases/invoices`: lista facturas de compra del tenant.
 - `POST /api/purchases/invoices`: crea una factura en borrador. Recibe proveedor, tipo A/B/C/E/M/other, punto de venta, número, fecha y líneas con `barcode`, `quantity`, `unitCost`, `taxRate` y lote opcional/obligatorio según el producto. El depósito se toma del usuario autenticado.
 - `POST /api/purchases/invoices/:id/confirm`: confirma la recepción; genera los movimientos `purchase_in` y actualiza el stock de la sucursal. No permite confirmar dos veces.

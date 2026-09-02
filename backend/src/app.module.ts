@@ -13,10 +13,11 @@ import { JwtAuthGuard } from './auth.guard';
 import { SuppliersController } from './suppliers.controller';
 import { PurchasesController } from './purchases.controller';
 import { PurchasesService } from './purchases.service';
+import { AdminGuard } from './admin.guard';
 
 @Module({
   imports: [PrismaModule],
   controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, AuthController, UsersController, PurchasesController],
-  providers: [StockService, AuthService, JwtAuthGuard, PurchasesService],
+  providers: [StockService, AuthService, JwtAuthGuard, PurchasesService, AdminGuard],
 })
 export class AppModule {}
