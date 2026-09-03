@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/page-header';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList, type PriceRule, type RoundingRule, type ScheduledChange } from '@/lib/api';
+import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList, type PriceRule, type RoundingRule, type ScheduledChange, type Promotion } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 type ScopeType = 'all' | 'category' | 'brand';
@@ -79,6 +79,17 @@ export function PricesPage() {
   const [ruleName, setRuleName] = useState('');
   const [tramo, setTramo] = useState({ fromAmount: '', toAmount: '', mode: 'nearest10' });
 
+  // promociones: se configuran ahora, las aplica Ventas
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [savingPromo, setSavingPromo] = useState(false);
+  const [promoForm, setPromoForm] = useState({
+    name: '', type: 'nxm' as Promotion['type'],
+    n: '3', m: '2', buyQty: '2', getQty: '1', percent: '50', desdeUnidad: '2', amount: '500', price: '',
+    scopeType: 'all' as ScopeType, scopeValue: '',
+    validFrom: new Date().toISOString().slice(0, 10), validTo: '',
+  });
+
   const [scopeType, setScopeType] = useState<ScopeType>('all');
   const [scopeValue, setScopeValue] = useState('');
   const [target, setTarget] = useState<Target>('salePrice');
@@ -100,6 +111,65 @@ export function PricesPage() {
   const loadRules = () => api<PriceRule[]>('/price-rules', {}, token).then(setRules).catch(() => {});
   const loadRounding = () => api<RoundingRule[]>('/prices/rounding-rules', {}, token).then(setRoundingRules).catch(() => {});
   const loadScheduled = () => api<ScheduledChange[]>('/prices/scheduled', {}, token).then(setScheduled).catch(() => {});
+  const loadPromotions = () => api<Promotion[]>('/promotions', {}, token).then(setPromotions).catch(() => {});
+
+  /** Arma el config según el tipo: cada promoción tiene sus propios parámetros. */
+  function promoConfig() {
+    const f = promoForm;
+    switch (f.type) {
+      case 'nxm': return { n: Number(f.n), m: Number(f.m) };
+      case 'a_plus_b': return { buyQty: Number(f.buyQty), getQty: Number(f.getQty) };
+      case 'percent': return { percent: Number(f.percent), desdeUnidad: Number(f.desdeUnidad) };
+      case 'amount': return { amount: Number(f.amount) };
+      case 'special_price': return { price: Number(f.price) };
+    }
+  }
+
+  async function savePromo(e: FormEvent) {
+    e.preventDefault();
+    setSavingPromo(true);
+    setError('');
+    try {
+      await api('/promotions', { method: 'POST', body: JSON.stringify({
+        name: promoForm.name.trim(),
+        type: promoForm.type,
+        config: promoConfig(),
+        scopeType: promoForm.scopeType,
+        scopeValue: promoForm.scopeType === 'all' ? null : promoForm.scopeValue,
+        validFrom: new Date(`${promoForm.validFrom}T00:00:00`).toISOString(),
+        validTo: promoForm.validTo ? new Date(`${promoForm.validTo}T23:59:59`).toISOString() : null,
+      }) }, token);
+      setPromoOpen(false);
+      setPromoForm({ ...promoForm, name: '' });
+      await loadPromotions();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingPromo(false);
+    }
+  }
+
+  async function deletePromo(id: string) {
+    try {
+      await api(`/promotions/${id}`, { method: 'DELETE' }, token);
+      await loadPromotions();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  /** Texto legible de la promoción, para no mostrar el JSON crudo. */
+  function describirPromo(p: Promotion) {
+    const c = p.config;
+    switch (p.type) {
+      case 'nxm': return `Llevá ${c.n}, pagá ${c.m}`;
+      case 'a_plus_b': return `Comprá ${c.buyQty}, llevate ${c.getQty} de regalo`;
+      case 'percent': return c.desdeUnidad > 1 ? `${c.percent}% off desde la unidad ${c.desdeUnidad}` : `${c.percent}% de descuento`;
+      case 'amount': return `$${c.amount} de descuento`;
+      case 'special_price': return `Precio especial $${c.price}`;
+      default: return JSON.stringify(c);
+    }
+  }
 
   useEffect(() => {
     api<Category[]>('/categories', {}, token).then(setCategories).catch(e => setError(errorMessage(e)));
@@ -107,6 +177,7 @@ export function PricesPage() {
     void loadRules();
     void loadRounding();
     void loadScheduled();
+    void loadPromotions();
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Guarda la configuración actual del formulario como criterio reutilizable. */
@@ -730,6 +801,141 @@ export function PricesPage() {
           </form>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">Promociones</h2>
+              <p className="text-sm text-muted-foreground">
+                Se configuran acá y quedan listas. <strong>Todavía no se aplican</strong>: hace falta el módulo de ventas para que
+                se descuenten al cobrar.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setPromoOpen(true)}>
+              <Plus /> Nueva promoción
+            </Button>
+          </div>
+
+          {promotions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Todavía no cargaste ninguna.</p>
+          ) : (
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Promoción</TableHead>
+                    <TableHead>Qué hace</TableHead>
+                    <TableHead>Vigencia</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {promotions.map(p => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {describirPromo(p)}
+                        {p.scopeType !== 'all' && ` · sólo ${p.scopeType === 'brand' ? p.scopeValue : categories.find(c => c.id === p.scopeValue)?.name ?? 'una categoría'}`}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {p.validFrom.slice(0, 10)} {p.validTo ? `→ ${p.validTo.slice(0, 10)}` : '→ sin fin'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => deletePromo(p.id)} aria-label={`Borrar ${p.name}`}>
+                          <Trash2 />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={promoOpen} onOpenChange={setPromoOpen}>
+        <DialogContent>
+          <form onSubmit={savePromo} className="flex flex-col gap-4">
+            <DialogHeader>
+              <DialogTitle>Nueva promoción</DialogTitle>
+            </DialogHeader>
+
+            <Field label="Nombre" htmlFor="promo-name">
+              <Input id="promo-name" required value={promoForm.name} onChange={e => setPromoForm({ ...promoForm, name: e.target.value })} placeholder="3x2 en gaseosas" />
+            </Field>
+
+            <Field label="Tipo" htmlFor="promo-type">
+              <Select id="promo-type" value={promoForm.type} onChange={e => setPromoForm({ ...promoForm, type: e.target.value as Promotion['type'] })}>
+                <option value="nxm">NxM — llevá 3, pagá 2</option>
+                <option value="a_plus_b">A+B — comprá 2, llevate 1</option>
+                <option value="percent">Descuento %</option>
+                <option value="amount">Descuento en $</option>
+                <option value="special_price">Precio especial</option>
+              </Select>
+            </Field>
+
+            {promoForm.type === 'nxm' && (
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Se lleva" htmlFor="promo-n"><Input id="promo-n" required type="number" min="2" value={promoForm.n} onChange={e => setPromoForm({ ...promoForm, n: e.target.value })} /></Field>
+                <Field label="Paga" htmlFor="promo-m"><Input id="promo-m" required type="number" min="1" value={promoForm.m} onChange={e => setPromoForm({ ...promoForm, m: e.target.value })} /></Field>
+              </div>
+            )}
+            {promoForm.type === 'a_plus_b' && (
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Compra" htmlFor="promo-buy"><Input id="promo-buy" required type="number" min="1" value={promoForm.buyQty} onChange={e => setPromoForm({ ...promoForm, buyQty: e.target.value })} /></Field>
+                <Field label="Se lleva gratis" htmlFor="promo-get"><Input id="promo-get" required type="number" min="1" value={promoForm.getQty} onChange={e => setPromoForm({ ...promoForm, getQty: e.target.value })} /></Field>
+              </div>
+            )}
+            {promoForm.type === 'percent' && (
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Descuento %" htmlFor="promo-pct"><Input id="promo-pct" required type="number" min="1" max="99" value={promoForm.percent} onChange={e => setPromoForm({ ...promoForm, percent: e.target.value })} /></Field>
+                <Field label="Desde la unidad" htmlFor="promo-desde" hint="(2 = la segunda)">
+                  <Input id="promo-desde" required type="number" min="1" value={promoForm.desdeUnidad} onChange={e => setPromoForm({ ...promoForm, desdeUnidad: e.target.value })} />
+                </Field>
+              </div>
+            )}
+            {promoForm.type === 'amount' && (
+              <Field label="Descuento en $" htmlFor="promo-amount"><Input id="promo-amount" required type="number" min="1" step="0.01" value={promoForm.amount} onChange={e => setPromoForm({ ...promoForm, amount: e.target.value })} /></Field>
+            )}
+            {promoForm.type === 'special_price' && (
+              <Field label="Precio especial $" htmlFor="promo-price"><Input id="promo-price" required type="number" min="0.01" step="0.01" value={promoForm.price} onChange={e => setPromoForm({ ...promoForm, price: e.target.value })} /></Field>
+            )}
+
+            <Field label="Aplicar a" htmlFor="promo-scope">
+              <Select id="promo-scope" value={promoForm.scopeType} onChange={e => setPromoForm({ ...promoForm, scopeType: e.target.value as ScopeType, scopeValue: '' })}>
+                <option value="all">Todos los productos</option>
+                <option value="category">Una categoría</option>
+                <option value="brand">Una marca</option>
+              </Select>
+            </Field>
+            {promoForm.scopeType === 'category' && (
+              <Field label="Categoría" htmlFor="promo-cat">
+                <Select id="promo-cat" required value={promoForm.scopeValue} onChange={e => setPromoForm({ ...promoForm, scopeValue: e.target.value })}>
+                  <option value="">Elegí una…</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Select>
+              </Field>
+            )}
+            {promoForm.scopeType === 'brand' && (
+              <Field label="Marca" htmlFor="promo-brand">
+                <Input id="promo-brand" required value={promoForm.scopeValue} onChange={e => setPromoForm({ ...promoForm, scopeValue: e.target.value })} />
+              </Field>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Desde" htmlFor="promo-from"><Input id="promo-from" required type="date" value={promoForm.validFrom} onChange={e => setPromoForm({ ...promoForm, validFrom: e.target.value })} /></Field>
+              <Field label="Hasta" htmlFor="promo-to" hint="(vacío = sin fin)"><Input id="promo-to" type="date" value={promoForm.validTo} onChange={e => setPromoForm({ ...promoForm, validTo: e.target.value })} /></Field>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setPromoOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={savingPromo}>{savingPromo && <Spinner />} Crear promoción</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={listDialogOpen} onOpenChange={setListDialogOpen}>
         <DialogContent>

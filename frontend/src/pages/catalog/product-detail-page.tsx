@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/empty-state';
+import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageSpinner, Spinner } from '@/components/spinner';
+import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type Lot, type Product, type StockItem } from '@/lib/api';
+import { api, errorMessage, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 const PRICE_SOURCES: Record<string, string> = {
@@ -38,6 +40,10 @@ export function ProductDetailPage() {
   const [error, setError] = useState('');
   const [newBarcode, setNewBarcode] = useState('');
   const [savingBarcode, setSavingBarcode] = useState(false);
+  const [tiers, setTiers] = useState<PriceTier[]>([]);
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
+  const [tierForm, setTierForm] = useState({ minQty: '', price: '', priceListId: '' });
+  const [savingTier, setSavingTier] = useState(false);
   const isAdmin = session!.user.role === 'admin';
 
   const loadProduct = () => api<Product>(`/products/${id}`, {}, token).then(setProduct);
@@ -72,6 +78,42 @@ export function ProductDetailPage() {
       setError(errorMessage(err));
     } finally {
       setSavingBarcode(false);
+    }
+  }
+
+  const loadTiers = () => api<PriceTier[]>(`/products/${id}/tiers`, {}, token).then(setTiers).catch(() => {});
+
+  useEffect(() => {
+    if (!id) return;
+    void loadTiers();
+    api<PriceList[]>('/price-lists', {}, token).then(setPriceLists).catch(() => {});
+  }, [id, token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function addTier() {
+    setSavingTier(true);
+    setError('');
+    try {
+      await api(`/products/${id}/tiers`, { method: 'POST', body: JSON.stringify({
+        minQty: Number(tierForm.minQty),
+        price: Number(tierForm.price),
+        priceListId: tierForm.priceListId || undefined,
+      }) }, token);
+      setTierForm({ minQty: '', price: '', priceListId: tierForm.priceListId });
+      await loadTiers();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingTier(false);
+    }
+  }
+
+  async function removeTier(tierId: string) {
+    setError('');
+    try {
+      await api(`/products/${id}/tiers/${tierId}`, { method: 'DELETE' }, token);
+      await loadTiers();
+    } catch (err) {
+      setError(errorMessage(err));
     }
   }
 
@@ -246,6 +288,58 @@ export function ProductDetailPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Escalas por cantidad</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">
+            A partir de cierta cantidad rige otro precio. <strong>Todavía no se aplican</strong>: las va a usar el módulo de ventas.
+          </p>
+
+          {tiers.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {tiers.map(t => (
+                <span key={t.id} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
+                  Desde {Number(t.minQty)} u. → ${Number(t.price).toFixed(2)}
+                  <Badge variant="outline">{t.priceListName}</Badge>
+                  {isAdmin && (
+                    <button type="button" onClick={() => removeTier(t.id)} className="text-muted-foreground hover:text-destructive" aria-label="Quitar escala">
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {isAdmin && (
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={e => {
+                e.preventDefault();
+                void addTier();
+              }}
+            >
+              <Field label="Desde cantidad" htmlFor="tier-qty" className="max-w-36">
+                <Input id="tier-qty" required type="number" min="2" step="0.001" value={tierForm.minQty} onChange={e => setTierForm({ ...tierForm, minQty: e.target.value })} />
+              </Field>
+              <Field label="Precio" htmlFor="tier-price" className="max-w-36">
+                <Input id="tier-price" required type="number" min="0" step="0.01" value={tierForm.price} onChange={e => setTierForm({ ...tierForm, price: e.target.value })} />
+              </Field>
+              <Field label="Lista" htmlFor="tier-list" className="max-w-48">
+                <Select id="tier-list" value={tierForm.priceListId} onChange={e => setTierForm({ ...tierForm, priceListId: e.target.value })}>
+                  {priceLists.map(l => <option key={l.id} value={l.isDefault ? '' : l.id}>{l.name}</option>)}
+                </Select>
+              </Field>
+              <Button type="submit" variant="outline" size="sm" disabled={savingTier}>
+                {savingTier ? <Spinner /> : <Plus />} Agregar
+              </Button>
+            </form>
           )}
         </CardContent>
       </Card>

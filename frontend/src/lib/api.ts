@@ -109,6 +109,33 @@ export type RoundingRule = { id: string; fromAmount: string; toAmount?: string |
 
 export type ScheduledChange = { priceListId: string; priceListName: string; validFrom: string; products: number; source: string };
 
+export type Promotion = {
+  id: string;
+  name: string;
+  type: 'nxm' | 'a_plus_b' | 'percent' | 'amount' | 'special_price';
+  config: Record<string, number>;
+  scopeType: 'all' | 'category' | 'brand';
+  scopeValue?: string | null;
+  validFrom: string;
+  validTo?: string | null;
+  isActive: boolean;
+};
+
+export type Customer = {
+  id: string;
+  name: string;
+  legalName?: string | null;
+  taxId?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  priceListId?: string | null;
+  priceListName?: string | null;
+  isActive: boolean;
+};
+
+export type PriceTier = { id: string; priceListId: string; priceListName: string; minQty: string; price: string };
+
 export type Warehouse = { id: string; name: string; code: string; address?: string | null };
 
 export type Supplier = {

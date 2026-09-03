@@ -452,6 +452,53 @@ export class ProductsController {
     return { deleted: true };
   }
 
+  /**
+   * Escalas por cantidad: a partir de minQty rige otro precio. Se configuran acá
+   * y las consume Ventas; hoy no afectan ningún cálculo.
+   */
+  @Get(':id/tiers')
+  async tiers(@Req() request: AuthRequest, @Param('id') id: string) {
+    const tenantId = request.user.tenantId;
+    const filas = await this.prisma.priceTier.findMany({
+      where: { tenantId, productId: id },
+      include: { priceList: { select: { name: true } } },
+      orderBy: [{ priceListId: 'asc' }, { minQty: 'asc' }],
+    });
+    return filas.map(f => ({ id: f.id, priceListId: f.priceListId, priceListName: f.priceList.name, minQty: f.minQty, price: f.price }));
+  }
+
+  @Post(':id/tiers')
+  @UseGuards(AdminGuard)
+  async createTier(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
+    const tenantId = request.user.tenantId;
+    if (!(await this.prisma.product.findFirst({ where: { id, tenantId } }))) throw new BadRequestException('Producto no encontrado');
+    const priceListId = typeof body.priceListId === 'string' && body.priceListId
+      ? body.priceListId
+      : (await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true } }))?.id;
+    if (!priceListId || !(await this.prisma.priceList.findFirst({ where: { id: priceListId, tenantId } }))) {
+      throw new BadRequestException('Lista de precios no encontrada');
+    }
+    const minQty = Number(body.minQty);
+    if (!Number.isFinite(minQty) || minQty <= 1) throw new UnprocessableEntityException('La cantidad mínima tiene que ser mayor a 1');
+    const price = Number(body.price);
+    if (!Number.isFinite(price) || price < 0) throw new UnprocessableEntityException('El precio debe ser un número mayor o igual a cero');
+    try {
+      return await this.prisma.priceTier.create({ data: { tenantId, productId: id, priceListId, minQty, price } });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ya hay una escala para esa cantidad en esa lista');
+      throw error;
+    }
+  }
+
+  @Delete(':id/tiers/:tierId')
+  @UseGuards(AdminGuard)
+  async deleteTier(@Req() request: AuthRequest, @Param('id') id: string, @Param('tierId') tierId: string) {
+    const fila = await this.prisma.priceTier.findFirst({ where: { id: tierId, tenantId: request.user.tenantId, productId: id } });
+    if (!fila) throw new BadRequestException('Escala no encontrada');
+    await this.prisma.priceTier.delete({ where: { id: tierId } });
+    return { deleted: true };
+  }
+
   @Get(':id/lots')
   lots(@Req() request: AuthRequest, @Param('id') id: string) {
     const tenantId = request.user.tenantId;

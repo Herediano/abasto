@@ -23,6 +23,7 @@ const NAV_GROUPS = [
       { to: '/catalog/categories', label: 'Categorías', icon: Shapes },
       { to: '/catalog/warehouses', label: 'Depósitos', icon: Warehouse },
       { to: '/catalog/suppliers', label: 'Proveedores', icon: Truck },
+      { to: '/catalog/customers', label: 'Clientes', icon: Users },
     ],
   },
 ];
