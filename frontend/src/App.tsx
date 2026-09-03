@@ -16,6 +16,8 @@ import { CategoriesPage } from '@/pages/catalog/categories-page';
 import { WarehousesPage } from '@/pages/catalog/warehouses-page';
 import { SuppliersPage } from '@/pages/catalog/suppliers-page';
 import { CustomersPage } from '@/pages/catalog/customers-page';
+import { PosPage } from '@/pages/sales/pos-page';
+import { SalesHistoryPage } from '@/pages/sales/sales-history-page';
 import { PricesPage } from '@/pages/prices/prices-page';
 
 function App() {
@@ -36,6 +38,8 @@ function App() {
         <Route path="/catalog/warehouses" element={<WarehousesPage />} />
         <Route path="/catalog/suppliers" element={<SuppliersPage />} />
         <Route path="/catalog/customers" element={<CustomersPage />} />
+        <Route path="/ventas" element={<PosPage />} />
+        <Route path="/ventas/historial" element={<SalesHistoryPage />} />
         <Route element={<AdminRoute />}>
           <Route path="/precios" element={<PricesPage />} />
           <Route path="/admin/users" element={<UsersPage />} />

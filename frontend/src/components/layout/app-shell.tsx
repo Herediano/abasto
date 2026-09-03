@@ -1,10 +1,12 @@
-import { LogOut, Package, ArrowDownToLine, ArrowUpFromLine, History, CalendarClock, PackageMinus, Boxes, Warehouse, Truck, Users, Tags, Shapes } from 'lucide-react';
+import { LogOut, Package, ArrowDownToLine, ArrowUpFromLine, History, CalendarClock, PackageMinus, Boxes, Warehouse, Truck, Users, Tags, Shapes, ShoppingCart, Receipt, type LucideIcon } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
-const NAV_GROUPS = [
+type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
+
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Stock',
     items: [
@@ -14,6 +16,13 @@ const NAV_GROUPS = [
       { to: '/stock/history', label: 'Historial', icon: History },
       { to: '/stock/expirations', label: 'Vencimientos', icon: CalendarClock },
       { to: '/stock/restock', label: 'Reposición', icon: PackageMinus },
+    ],
+  },
+  {
+    label: 'Ventas',
+    items: [
+      { to: '/ventas', label: 'Mostrador', icon: ShoppingCart, end: true },
+      { to: '/ventas/historial', label: 'Ventas', icon: Receipt },
     ],
   },
   {

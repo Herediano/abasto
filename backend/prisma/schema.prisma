@@ -83,6 +83,9 @@ model Tenant {
   roundingRules            RoundingRule[]
   priceTiers               PriceTier[]
   promotions               Promotion[]
+  sales                    Sale[]
+  saleLines                SaleLine[]
+  saleSequences            SaleSequence[]
 
   @@map("tenants")
 }
@@ -228,6 +231,85 @@ model Promotion {
   @@map("promotions")
 }
 
+// Venta de mostrador. Los campos de comprobante tienen forma AFIP desde el
+// principio (tipo, punto de venta, numero, CAE) aunque hoy docType sea siempre
+// "internal": conectar el web service despues es completar cae/caeExpiresAt,
+// no rehacer el modelo.
+model Sale {
+  id            String     @id @default(uuid()) @db.Uuid
+  tenantId      String     @map("tenant_id") @db.Uuid
+  warehouseId   String     @map("warehouse_id") @db.Uuid
+  customerId    String?    @map("customer_id") @db.Uuid
+  userId        String     @map("user_id") @db.Uuid
+  priceListId   String     @map("price_list_id") @db.Uuid
+  docType       String     @default("internal") @map("doc_type")
+  pointOfSale   String     @map("point_of_sale")
+  number        Int
+  cae           String?
+  caeExpiresAt  DateTime?  @map("cae_expires_at")
+  subtotal      Decimal    @db.Decimal(14, 2)
+  discountTotal Decimal    @default(0) @map("discount_total") @db.Decimal(14, 2)
+  taxTotal      Decimal    @map("tax_total") @db.Decimal(14, 2)
+  total         Decimal    @db.Decimal(14, 2)
+  paymentMethod String     @map("payment_method") // cash | card | transfer
+  status        String     @default("confirmed") // confirmed | cancelled
+  cancelReason  String?    @map("cancel_reason")
+  occurredAt    DateTime   @default(now()) @map("occurred_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  tenant        Tenant     @relation(fields: [tenantId], references: [id])
+  warehouse     Warehouse  @relation(fields: [warehouseId], references: [id])
+  customer      Customer?  @relation(fields: [customerId, tenantId], references: [id, tenantId])
+  user          User       @relation(fields: [userId], references: [id])
+  lines         SaleLine[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, docType, pointOfSale, number])
+  @@index([tenantId, occurredAt])
+  @@map("sales")
+}
+
+model SaleLine {
+  id             String  @id @default(uuid()) @db.Uuid
+  tenantId       String  @map("tenant_id") @db.Uuid
+  saleId         String  @map("sale_id") @db.Uuid
+  productId      String  @map("product_id") @db.Uuid
+  productLotId   String? @map("product_lot_id") @db.Uuid
+  barcode        String
+  description    String
+  quantity       Decimal @db.Decimal(14, 3)
+  // listPrice y discountAmount se guardan aunque sean derivables: son la unica
+  // forma de mostrar despues cuanto se desconto, porque las promos cambian.
+  listPrice      Decimal @map("list_price") @db.Decimal(14, 2)
+  unitPrice      Decimal @map("unit_price") @db.Decimal(14, 2)
+  discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  promotionId    String? @map("promotion_id") @db.Uuid
+  promotionName  String? @map("promotion_name")
+  taxRate        Decimal @default(21) @map("tax_rate") @db.Decimal(5, 2)
+  lineSubtotal   Decimal @map("line_subtotal") @db.Decimal(14, 2)
+  lineTax        Decimal @map("line_tax") @db.Decimal(14, 2)
+  lineTotal      Decimal @map("line_total") @db.Decimal(14, 2)
+  tenant         Tenant  @relation(fields: [tenantId], references: [id])
+  sale           Sale    @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product        Product @relation(fields: [productId, tenantId], references: [id, tenantId])
+
+  @@index([tenantId, saleId])
+  @@map("sale_lines")
+}
+
+// Numeracion por (tipo, punto de venta): AFIP exige una serie propia sin huecos
+// para cada combinacion.
+model SaleSequence {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  docType     String @map("doc_type")
+  pointOfSale String @map("point_of_sale")
+  lastNumber  Int    @default(0) @map("last_number")
+  tenant      Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, docType, pointOfSale])
+  @@map("sale_sequences")
+}
+
 model User {
   id                       String                    @id @default(uuid()) @db.Uuid
   tenantId                 String                    @map("tenant_id") @db.Uuid
@@ -243,6 +325,7 @@ model User {
   warehouse                Warehouse?                @relation(fields: [warehouseId], references: [id])
   purchaseInvoices         PurchaseInvoice[]
   purchaseInvoiceRevisions PurchaseInvoiceRevision[]
+  sales                    Sale[]
 
   @@index([tenantId])
   @@map("users")
@@ -283,6 +366,7 @@ model Product {
   priceHistory         ProductPriceHistory[]
   prices               ProductPrice[]
   priceTiers           PriceTier[]
+  saleLines            SaleLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, barcode])
@@ -383,6 +467,7 @@ model Customer {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  sales       Sale[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -403,6 +488,7 @@ model Warehouse {
   stockMovements   StockMovement[]
   purchaseInvoices PurchaseInvoice[]
   users            User[]
+  sales            Sale[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])

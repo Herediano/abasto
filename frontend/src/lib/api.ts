@@ -218,6 +218,38 @@ export type PurchaseInvoice = {
   lines: Array<{ productId: string; productLotId?: string | null; barcode: string; description?: string | null; quantity: string; unitFactor?: string; unitCost: string; taxRate: string }>;
 };
 
+export type Sale = {
+  id: string;
+  docType: string;
+  pointOfSale: string;
+  number: number;
+  customerId?: string | null;
+  customerName?: string | null;
+  userName?: string;
+  paymentMethod: string;
+  status: string;
+  subtotal: string;
+  discountTotal: string;
+  taxTotal: string;
+  total: string;
+  occurredAt: string;
+  lineCount?: number;
+};
+
+export type SaleLine = {
+  id: string;
+  productId: string;
+  description: string;
+  quantity: string;
+  listPrice: string;
+  unitPrice: string;
+  discountAmount: string;
+  promotionName?: string | null;
+  lineTotal: string;
+};
+
+export type SaleDetail = Sale & { lines: SaleLine[]; warehouseName: string; cancelReason?: string | null };
+
 export type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
 
 export type TeamUser = {
