@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Calculator, Download, Eye, PackagePlus, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { Calculator, Download, Eye, PackagePlus, Pencil, Play, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,13 @@ import { PageHeader } from '@/components/page-header';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList } from '@/lib/api';
+import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList, type PriceRule, type RoundingRule, type ScheduledChange } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 type ScopeType = 'all' | 'category' | 'brand';
 type Target = 'salePrice' | 'costPrice';
 type OperationType = 'percent' | 'margin' | 'round';
-type Rounding = 'nearest10' | 'nearest100' | 'ending99';
+type Rounding = 'nearest10' | 'nearest100' | 'ending99' | 'byRules';
 
 type BulkResult = {
   affected: number;
@@ -26,6 +26,16 @@ type BulkResult = {
   skippedDetail: Array<{ id: string; name: string; reason: string }>;
   preview: Array<{ id: string; name: string; before: number | null; after: number }>;
   applied: boolean;
+  scheduled: boolean;
+  validFrom: string;
+  priceList: { id: string; name: string };
+};
+
+const MODOS_REDONDEO: Record<string, string> = {
+  nearest10: 'A la decena',
+  nearest100: 'A la centena',
+  ending99: 'Terminación 99',
+  none: 'Sin redondear',
 };
 
 function money(value: number | null) {
@@ -60,6 +70,15 @@ export function PricesPage() {
   // vigencia: vacío = ahora
   const [validFrom, setValidFrom] = useState('');
 
+  // criterios guardados, tramos de redondeo y cambios programados
+  const [rules, setRules] = useState<PriceRule[]>([]);
+  const [roundingRules, setRoundingRules] = useState<RoundingRule[]>([]);
+  const [scheduled, setScheduled] = useState<ScheduledChange[]>([]);
+  const [savingRule, setSavingRule] = useState(false);
+  const [runningRule, setRunningRule] = useState('');
+  const [ruleName, setRuleName] = useState('');
+  const [tramo, setTramo] = useState({ fromAmount: '', toAmount: '', mode: 'nearest10' });
+
   const [scopeType, setScopeType] = useState<ScopeType>('all');
   const [scopeValue, setScopeValue] = useState('');
   const [target, setTarget] = useState<Target>('salePrice');
@@ -78,10 +97,103 @@ export function PricesPage() {
       })
       .catch(e => setError(errorMessage(e)));
 
+  const loadRules = () => api<PriceRule[]>('/price-rules', {}, token).then(setRules).catch(() => {});
+  const loadRounding = () => api<RoundingRule[]>('/prices/rounding-rules', {}, token).then(setRoundingRules).catch(() => {});
+  const loadScheduled = () => api<ScheduledChange[]>('/prices/scheduled', {}, token).then(setScheduled).catch(() => {});
+
   useEffect(() => {
     api<Category[]>('/categories', {}, token).then(setCategories).catch(e => setError(errorMessage(e)));
     void loadLists();
+    void loadRules();
+    void loadRounding();
+    void loadScheduled();
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Guarda la configuración actual del formulario como criterio reutilizable. */
+  async function saveRule() {
+    if (!ruleName.trim()) { setError('Poné un nombre al criterio'); return; }
+    setSavingRule(true);
+    setError('');
+    try {
+      await api('/price-rules', { method: 'POST', body: JSON.stringify({
+        name: ruleName.trim(),
+        priceListId,
+        scopeType,
+        scopeValue: scopeType === 'all' ? null : scopeValue,
+        target,
+        operationType,
+        operationValue: operationType === 'round' ? null : Number(operationValue),
+        rounding: operationType === 'round' ? rounding : null,
+      }) }, token);
+      setRuleName('');
+      setToolsMessage('Criterio guardado. Podés volver a aplicarlo cuando quieras.');
+      await loadRules();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingRule(false);
+    }
+  }
+
+  async function runRule(rule: PriceRule) {
+    setRunningRule(rule.id);
+    setError('');
+    setToolsMessage('');
+    try {
+      const r = await api<BulkResult & { rule: { name: string } }>(`/price-rules/${rule.id}/run`, { method: 'POST', body: JSON.stringify({ dryRun: false }) }, token);
+      setToolsMessage(`«${rule.name}»: ${r.affected} precios actualizados.${r.skipped ? ` ${r.skipped} salteados.` : ''}`);
+      await Promise.all([loadRules(), loadScheduled()]);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setRunningRule('');
+    }
+  }
+
+  async function deleteRule(id: string) {
+    try {
+      await api(`/price-rules/${id}`, { method: 'DELETE' }, token);
+      await loadRules();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function addTramo(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    try {
+      await api('/prices/rounding-rules', { method: 'POST', body: JSON.stringify({
+        fromAmount: Number(tramo.fromAmount),
+        toAmount: tramo.toAmount === '' ? null : Number(tramo.toAmount),
+        mode: tramo.mode,
+      }) }, token);
+      setTramo({ fromAmount: '', toAmount: '', mode: 'nearest10' });
+      await loadRounding();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function deleteTramo(id: string) {
+    try {
+      await api(`/prices/rounding-rules/${id}`, { method: 'DELETE' }, token);
+      await loadRounding();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function cancelScheduled(c: ScheduledChange) {
+    setError('');
+    try {
+      await api(`/prices/scheduled?priceListId=${c.priceListId}&validFrom=${encodeURIComponent(c.validFrom)}`, { method: 'DELETE' }, token);
+      setToolsMessage('Cambio programado cancelado.');
+      await loadScheduled();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
 
   // Cualquier cambio en los parametros invalida la vista previa: aplicar sin
   // recalcular escribiria valores distintos a los que el usuario vio.
@@ -228,8 +340,13 @@ export function PricesPage() {
     setError('');
     try {
       const result = await api<BulkResult>('/prices/bulk', { method: 'POST', body: buildBody(false) }, token);
-      setToolsMessage(`Listo: ${result.affected} precios actualizados.${result.skipped ? ` ${result.skipped} salteados.` : ''}`);
+      setToolsMessage(
+        result.scheduled
+          ? `Programado: ${result.affected} precios van a entrar en vigencia el ${result.validFrom.slice(0, 10)}.`
+          : `Listo: ${result.affected} precios actualizados.${result.skipped ? ` ${result.skipped} salteados.` : ''}`,
+      );
       setPreview(null);
+      await loadScheduled();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -394,6 +511,7 @@ export function PricesPage() {
                   <option value="nearest10">A la decena más cercana</option>
                   <option value="nearest100">A la centena más cercana</option>
                   <option value="ending99">A terminación 99</option>
+                  <option value="byRules">Según los tramos configurados</option>
                 </Select>
               </Field>
             )}
@@ -426,6 +544,19 @@ export function PricesPage() {
             <Button onClick={apply} disabled={!preview || preview.affected === 0 || applying || (listaEsDerivada && target === 'salePrice')}>
               {applying ? <Spinner /> : <Calculator />} Aplicar {preview ? `a ${preview.affected}` : ''}
             </Button>
+
+            {/* Guardar esta misma configuración como criterio reutilizable. */}
+            <div className="ml-auto flex items-end gap-2">
+              <Input
+                value={ruleName}
+                onChange={e => setRuleName(e.target.value)}
+                placeholder="Guardar como criterio…"
+                className="max-w-48"
+              />
+              <Button variant="outline" onClick={saveRule} disabled={savingRule || !ruleName.trim() || !scopeReady}>
+                {savingRule ? <Spinner /> : <Save />} Guardar
+              </Button>
+            </div>
           </div>
 
           {preview && (
@@ -462,6 +593,141 @@ export function PricesPage() {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {scheduled.length > 0 && (
+        <Card>
+          <CardContent className="flex flex-col gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">Cambios programados</h2>
+              <p className="text-sm text-muted-foreground">
+                Todavía no rigen. Entran solos en la fecha indicada; hasta entonces se pueden cancelar.
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Entra en vigencia</TableHead>
+                    <TableHead>Lista</TableHead>
+                    <TableHead className="text-right">Productos</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {scheduled.map(c => (
+                    <TableRow key={`${c.priceListId}-${c.validFrom}`}>
+                      <TableCell className="font-medium">{c.validFrom.slice(0, 10)}</TableCell>
+                      <TableCell>{c.priceListName}</TableCell>
+                      <TableCell className="text-right">{c.products}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => cancelScheduled(c)}>
+                          Cancelar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Criterios guardados</h2>
+            <p className="text-sm text-muted-foreground">
+              Configuraciones que se vuelven a aplicar con un clic. Recalculan con los valores del momento, no repiten los precios de la vez pasada.
+            </p>
+          </div>
+          {rules.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Todavía no guardaste ninguno. Configurá una actualización arriba y ponele nombre.
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Criterio</TableHead>
+                    <TableHead>Qué hace</TableHead>
+                    <TableHead>Última vez</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rules.map(r => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {r.target === 'salePrice' ? 'Venta' : 'Costo'} · {r.priceListName} ·{' '}
+                        {r.operationType === 'percent' ? `${Number(r.operationValue) >= 0 ? '+' : ''}${Number(r.operationValue)}%`
+                          : r.operationType === 'margin' ? `margen ${Number(r.operationValue)}%`
+                          : `redondeo ${MODOS_REDONDEO[r.rounding ?? ''] ?? r.rounding}`}
+                        {r.scopeType !== 'all' && ` · sólo ${r.scopeType === 'brand' ? r.scopeValue : categories.find(c => c.id === r.scopeValue)?.name ?? 'una categoría'}`}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{r.lastRunAt ? r.lastRunAt.slice(0, 10) : 'nunca'}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="outline" size="sm" onClick={() => runRule(r)} disabled={runningRule === r.id}>
+                            {runningRule === r.id ? <Spinner /> : <Play />} Aplicar
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteRule(r.id)} aria-label={`Borrar ${r.name}`}>
+                            <Trash2 />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Política de redondeo</h2>
+            <p className="text-sm text-muted-foreground">
+              Tramos por monto: un producto de $500 y otro de $50.000 no se redondean igual. Se usan al elegir «Según los tramos configurados».
+            </p>
+          </div>
+
+          {roundingRules.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {roundingRules.map(t => (
+                <span key={t.id} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
+                  ${Number(t.fromAmount).toLocaleString('es-AR')} – {t.toAmount ? `$${Number(t.toAmount).toLocaleString('es-AR')}` : '∞'}
+                  <Badge variant="outline">{MODOS_REDONDEO[t.mode] ?? t.mode}</Badge>
+                  <button type="button" onClick={() => deleteTramo(t.id)} className="text-muted-foreground hover:text-destructive" aria-label="Quitar tramo">
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={addTramo} className="flex flex-wrap items-end gap-2">
+            <Field label="Desde $" htmlFor="tramo-desde" className="max-w-32">
+              <Input id="tramo-desde" required type="number" min="0" step="0.01" value={tramo.fromAmount} onChange={e => setTramo({ ...tramo, fromAmount: e.target.value })} />
+            </Field>
+            <Field label="Hasta $" htmlFor="tramo-hasta" hint="(vacío = sin tope)" className="max-w-32">
+              <Input id="tramo-hasta" type="number" min="0" step="0.01" value={tramo.toAmount} onChange={e => setTramo({ ...tramo, toAmount: e.target.value })} />
+            </Field>
+            <Field label="Redondear" htmlFor="tramo-modo" className="max-w-48">
+              <Select id="tramo-modo" value={tramo.mode} onChange={e => setTramo({ ...tramo, mode: e.target.value })}>
+                {Object.entries(MODOS_REDONDEO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </Select>
+            </Field>
+            <Button type="submit" variant="outline">
+              <Plus /> Agregar tramo
+            </Button>
+          </form>
         </CardContent>
       </Card>
 

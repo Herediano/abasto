@@ -18,12 +18,14 @@ import { PurchasesController } from './purchases.controller';
 import { PurchasesService } from './purchases.service';
 import { PricesController } from './prices.controller';
 import { PriceListsController } from './price-lists.controller';
+import { PriceRulesController } from './price-rules.controller';
+import { PricesService } from './prices.service';
 import { AdminGuard } from './admin.guard';
 import { PriceActivationService } from './price-activation.service';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController],
-  providers: [StockService, AuthService, JwtAuthGuard, PurchasesService, AdminGuard, PriceActivationService],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController],
+  providers: [StockService, AuthService, JwtAuthGuard, PurchasesService, AdminGuard, PriceActivationService, PricesService],
 })
 export class AppModule {}

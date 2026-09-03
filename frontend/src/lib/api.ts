@@ -91,6 +91,24 @@ export type PriceList = {
   priceCount?: number;
 };
 
+export type PriceRule = {
+  id: string;
+  name: string;
+  priceListId: string;
+  priceListName?: string;
+  target: 'salePrice' | 'costPrice';
+  scopeType: 'all' | 'category' | 'brand';
+  scopeValue?: string | null;
+  operationType: 'percent' | 'margin' | 'round';
+  operationValue?: string | null;
+  rounding?: string | null;
+  lastRunAt?: string | null;
+};
+
+export type RoundingRule = { id: string; fromAmount: string; toAmount?: string | null; mode: string };
+
+export type ScheduledChange = { priceListId: string; priceListName: string; validFrom: string; products: number; source: string };
+
 export type Warehouse = { id: string; name: string; code: string; address?: string | null };
 
 export type Supplier = {
