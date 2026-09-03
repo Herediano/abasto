@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Customer, type Product } from '@/lib/api';
+import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 type Item = { productId: string; name: string; barcode: string; quantity: number };
@@ -41,7 +42,6 @@ type Quote = {
 
 const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia' };
 
-const money = (n: number) => `$${n.toFixed(2)}`;
 
 export function PosPage() {
   const { session } = useAuth();
@@ -134,7 +134,7 @@ export function PosPage() {
       setCobrarOpen(false);
       setItems([]);
       setQuote(null);
-      setAviso(`Venta ${venta.pointOfSale}-${String(venta.number).padStart(8, '0')} cobrada por $${Number(venta.total).toFixed(2)}.`);
+      setAviso(`Venta ${venta.pointOfSale}-${String(venta.number).padStart(8, '0')} cobrada por ${money(Number(venta.total))}.`);
     } catch (err) {
       setError(errorMessage(err));
       setCobrarOpen(false);

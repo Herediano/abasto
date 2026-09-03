@@ -13,10 +13,10 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Pagination, type Sale, type SaleDetail } from '@/lib/api';
+import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia' };
-const money = (v: string | number) => `$${Number(v).toFixed(2)}`;
 const comprobante = (s: { pointOfSale: string; number: number }) => `${s.pointOfSale}-${String(s.number).padStart(8, '0')}`;
 // occurredAt es un timestamp, no una fecha pura: hay que pasarlo a hora local o
 // una venta de la noche aparece con la fecha del día siguiente.

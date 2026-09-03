@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList, type PriceRule, type RoundingRule, type ScheduledChange, type Promotion, type PriceAuditRow } from '@/lib/api';
+import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 type ScopeType = 'all' | 'category' | 'brand';
@@ -45,10 +46,6 @@ const MODOS_REDONDEO: Record<string, string> = {
   ending99: 'Terminación 99',
   none: 'Sin redondear',
 };
-
-function money(value: number | null) {
-  return value === null ? '—' : `$${value.toFixed(2)}`;
-}
 
 export function PricesPage() {
   const { session } = useAuth();
@@ -945,8 +942,8 @@ export function PricesPage() {
                         {a.field === 'cost' ? 'Costo' : 'Venta'}
                         {a.scope && <span className="text-muted-foreground"> · {a.scope}</span>}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">{a.before === null ? '—' : `$${a.before.toFixed(2)}`}</TableCell>
-                      <TableCell className="text-right font-medium">${a.after.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{a.before === null ? '—' : money(a.before)}</TableCell>
+                      <TableCell className="text-right font-medium">{money(a.after)}</TableCell>
                       <TableCell><Badge variant="outline">{PRICE_SOURCES[a.source] ?? a.source}</Badge></TableCell>
                       <TableCell className="text-muted-foreground">{a.userName ?? '—'}</TableCell>
                     </TableRow>

@@ -12,6 +12,7 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
+import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PRICE_SOURCES: Record<string, string> = {
@@ -165,13 +166,13 @@ export function ProductDetailPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Costo</p>
-            <p className="text-xl font-semibold">{product.costPrice ? `$${Number(product.costPrice).toFixed(2)}` : '—'}</p>
+            <p className="text-xl font-semibold">{product.costPrice ? money(Number(product.costPrice)) : '—'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Precio de venta</p>
-            <p className="text-xl font-semibold">{product.salePrice ? `$${Number(product.salePrice).toFixed(2)}` : '—'}</p>
+            <p className="text-xl font-semibold">{product.salePrice ? money(Number(product.salePrice)) : '—'}</p>
           </CardContent>
         </Card>
         <Card>
@@ -280,7 +281,7 @@ export function ProductDetailPage() {
                 {(product.suppliers ?? []).map(s => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.supplierName}</TableCell>
-                    <TableCell className="text-right">{s.lastCost ? `$${Number(s.lastCost).toFixed(2)}` : '—'}</TableCell>
+                    <TableCell className="text-right">{s.lastCost ? money(Number(s.lastCost)) : '—'}</TableCell>
                     {/* slice en vez de toLocaleDateString: la fecha viene como
                         medianoche UTC y convertirla a hora local la corre un día. */}
                     <TableCell>{s.lastPurchaseAt ? s.lastPurchaseAt.slice(0, 10) : '—'}</TableCell>
@@ -305,7 +306,7 @@ export function ProductDetailPage() {
             <div className="flex flex-wrap gap-2">
               {tiers.map(t => (
                 <span key={t.id} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
-                  Desde {Number(t.minQty)} u. → ${Number(t.price).toFixed(2)}
+                  Desde {Number(t.minQty)} u. → {money(Number(t.price))}
                   <Badge variant="outline">{t.priceListName}</Badge>
                   {isAdmin && (
                     <button type="button" onClick={() => removeTier(t.id)} className="text-muted-foreground hover:text-destructive" aria-label="Quitar escala">
@@ -367,8 +368,8 @@ export function ProductDetailPage() {
                   <TableRow key={h.id}>
                     <TableCell className="whitespace-nowrap">{h.createdAt.slice(0, 10)}</TableCell>
                     <TableCell>{h.field === 'cost' ? 'Costo' : 'Venta'}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">{h.oldValue ? `$${Number(h.oldValue).toFixed(2)}` : '—'}</TableCell>
-                    <TableCell className="text-right font-medium">${Number(h.newValue).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{h.oldValue ? money(Number(h.oldValue)) : '—'}</TableCell>
+                    <TableCell className="text-right font-medium">{money(Number(h.newValue))}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{PRICE_SOURCES[h.source] ?? h.source}</Badge>
                     </TableCell>

@@ -16,6 +16,7 @@ import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { api, errorMessage, type Lot, type Product, type PurchaseInvoice, type Supplier, type TeamUser } from '@/lib/api';
+import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'success' | 'destructive' }> = {
@@ -383,7 +384,7 @@ export function StockInPage() {
                     {line.byPackage && Number(line.quantity) > 0 && (
                       <span className="text-sm text-muted-foreground">
                         Ingresan {(Number(line.quantity) * Number(line.packSize)).toLocaleString('es-AR')} {product.unit}
-                        {Number(line.unitCost) > 0 && ` · costo unitario $${(Number(line.unitCost) / Number(line.packSize)).toFixed(2)}`}
+                        {Number(line.unitCost) > 0 && ` · costo unitario ${money(Number(line.unitCost) / Number(line.packSize))}`}
                       </span>
                     )}
                   </div>
@@ -453,8 +454,8 @@ export function StockInPage() {
                           <TableCell className="font-mono text-xs">{l.barcode}</TableCell>
                           <TableCell>{l.productName}</TableCell>
                           <TableCell className="text-right">{l.quantity}</TableCell>
-                          <TableCell className="text-right">{Number(l.unitCost).toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-medium">{(Number(l.quantity) * Number(l.unitCost) * (1 + Number(l.taxRate) / 100)).toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{money(Number(l.unitCost))}</TableCell>
+                          <TableCell className="text-right font-medium">{money(Number(l.quantity) * Number(l.unitCost) * (1 + Number(l.taxRate) / 100))}</TableCell>
                           <TableCell>
                             <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)}>
                               <Trash2 />
@@ -495,18 +496,18 @@ export function StockInPage() {
 
             <div className="flex flex-wrap justify-end gap-8 text-sm">
               <div>
-                Subtotal: <strong>${subtotal.toFixed(2)}</strong>
+                Subtotal: <strong>{money(subtotal)}</strong>
               </div>
               <div>
-                IVA: <strong>${tax.toFixed(2)}</strong>
+                IVA: <strong>{money(tax)}</strong>
               </div>
               {otherTaxesTotal > 0 && (
                 <div>
-                  Otros impuestos: <strong>${otherTaxesTotal.toFixed(2)}</strong>
+                  Otros impuestos: <strong>{money(otherTaxesTotal)}</strong>
                 </div>
               )}
               <div>
-                Total: <strong>${(subtotal + tax + otherTaxesTotal).toFixed(2)}</strong>
+                Total: <strong>{money(subtotal + tax + otherTaxesTotal)}</strong>
               </div>
             </div>
 
@@ -558,7 +559,7 @@ export function StockInPage() {
                   <TableCell>
                     {i.invoiceType} {i.pointOfSale}-{i.invoiceNumber}
                   </TableCell>
-                  <TableCell className="text-right font-medium">${Number(i.total).toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">{money(Number(i.total))}</TableCell>
                   <TableCell>
                     <Badge variant={STATUS_LABEL[i.status]?.variant ?? 'secondary'}>{STATUS_LABEL[i.status]?.label ?? i.status}</Badge>
                   </TableCell>
@@ -588,7 +589,7 @@ export function StockInPage() {
           </DialogHeader>
           {cancellingInvoice && (
             <p className="text-sm text-muted-foreground">
-              {cancellingInvoice.invoiceType} {cancellingInvoice.pointOfSale}-{cancellingInvoice.invoiceNumber} · {cancellingInvoice.supplier?.name} · ${Number(cancellingInvoice.total).toFixed(2)}
+              {cancellingInvoice.invoiceType} {cancellingInvoice.pointOfSale}-{cancellingInvoice.invoiceNumber} · {cancellingInvoice.supplier?.name} · {money(Number(cancellingInvoice.total))}
             </p>
           )}
           <Alert variant="destructive">Esto revierte todo el stock que generó esta factura y la marca como anulada. La factura original queda en el historial, no se borra.</Alert>

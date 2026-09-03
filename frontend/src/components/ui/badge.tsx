@@ -11,6 +11,8 @@ const badgeVariants = cva('inline-flex items-center rounded-full border px-2.5 p
       warning: 'border-transparent bg-warning/10 text-warning',
       destructive: 'border-transparent bg-destructive/10 text-destructive',
       outline: 'border-border text-foreground',
+      // Ahorro / descuento mayorista: ambar suave, sin competir con el CTA.
+      accent: 'border-transparent bg-accent text-accent-foreground',
     },
   },
   defaultVariants: { variant: 'default' },

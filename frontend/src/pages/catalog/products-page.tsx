@@ -16,6 +16,7 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, downloadFile, errorMessage, type Category, type Pagination, type PriceList, type Product } from '@/lib/api';
+import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', brand: '', costPrice: '', salePrice: '', taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false };
@@ -342,7 +343,7 @@ export function ProductsPage() {
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell>{p.brand ?? '—'}</TableCell>
                         <TableCell>{p.categoryName ?? '—'}</TableCell>
-                        <TableCell className="text-right">{p.salePrice ? `$${Number(p.salePrice).toFixed(2)}` : '—'}</TableCell>
+                        <TableCell className="text-right">{p.salePrice ? `${money(Number(p.salePrice))}` : '—'}</TableCell>
                         <TableCell className="text-right">{m === null ? '—' : `${m.toFixed(0)}%`}</TableCell>
                         <TableCell className={`text-right tabular-nums ${p.currentStock !== undefined && p.minStock != null && p.currentStock < Number(p.minStock) ? 'font-medium text-destructive' : ''}`}>
                           {p.currentStock === undefined ? '—' : Number.isInteger(p.currentStock) ? p.currentStock : p.currentStock.toFixed(3)}

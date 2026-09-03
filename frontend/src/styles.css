@@ -1,44 +1,60 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
+/*
+ * Sistema de diseño "Charcoal & Amber Gold".
+ * Sidebar grafito de alto contraste, area de trabajo clara antifatiga y el
+ * ambar reservado para acciones y foco: si el ambar aparece, se puede tocar.
+ */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --color-background: #f7f8fa;
-  --color-foreground: #1b2333;
+  /* Area de trabajo */
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
 
   --color-card: #ffffff;
-  --color-card-foreground: #1b2333;
+  --color-card-foreground: #0f172a;
 
-  --color-border: #e3e6ec;
-  --color-input: #dde1e8;
-  --color-ring: #2f6feb;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #d97706;
 
-  --color-primary: #2f6feb;
+  /* Accion primaria: el unico ambar solido de la pantalla */
+  --color-primary: #d97706;
   --color-primary-foreground: #ffffff;
 
-  --color-secondary: #f0f2f6;
-  --color-secondary-foreground: #1b2333;
+  /* Superficies secundarias (chips neutros, atajos de teclado) */
+  --color-secondary: #f1f3f5;
+  --color-secondary-foreground: #475569;
 
-  --color-muted: #f0f2f6;
-  --color-muted-foreground: #6b7385;
+  --color-muted: #f1f3f5;
+  /* Texto secundario: etiquetas, descripciones, cabeceras de tabla. */
+  --color-muted-foreground: #475569;
+  /* Texto terciario: placeholders, SKU secundarios, timestamps. */
+  --color-placeholder: #94a3b8;
 
-  --color-accent: #eef3ff;
-  --color-accent-foreground: #1a4fc4;
+  /* Tag mayorista / ahorro: ambar suave, sin competir con el CTA */
+  --color-accent: #fef3c7;
+  --color-accent-foreground: #b45309;
 
-  --color-destructive: #d13c3c;
+  /* Semantica operativa */
+  --color-destructive: #ef4444;
   --color-destructive-foreground: #ffffff;
 
-  --color-success: #1a8f5e;
+  --color-success: #10b981;
   --color-success-foreground: #ffffff;
 
-  --color-warning: #b45309;
+  --color-warning: #f59e0b;
   --color-warning-foreground: #ffffff;
 
-  --color-sidebar: #14213a;
-  --color-sidebar-foreground: #cbd4e8;
-  --color-sidebar-active: #1f2f52;
+  /* Superficies oscuras */
+  --color-sidebar: #12151a;
+  --color-sidebar-foreground: #8e9aa8;
+  --color-sidebar-hover: #1c2129;
+  --color-sidebar-active: #262c36;
   --color-sidebar-active-foreground: #ffffff;
+  --color-sidebar-border: #1f242d;
 
   --radius-lg: 0.65rem;
   --radius-md: 0.5rem;
