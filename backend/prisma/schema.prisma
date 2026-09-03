@@ -14,6 +14,10 @@ model ProductReference {
   name           String
   brand          String?
   suggestedPrice Decimal? @map("suggested_price") @db.Decimal(14, 2)
+  // Rubro canonico (Almacen, Limpieza, Perfumeria, ...). Se completa aparte con
+  // scripts/enrich-reference-categories.ts a partir del arbol de Precios Claros;
+  // products/import-reference lo mapea a una Category del tenant al cargar el catalogo.
+  category       String?
   source         String   @default("sepa")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -73,6 +77,12 @@ model Tenant {
   productBarcodes          ProductBarcode[]
   productSuppliers         ProductSupplier[]
   productPriceHistory      ProductPriceHistory[]
+  priceLists               PriceList[]
+  productPrices            ProductPrice[]
+  priceRules               PriceRule[]
+  roundingRules            RoundingRule[]
+  priceTiers               PriceTier[]
+  promotions               Promotion[]
 
   @@map("tenants")
 }
@@ -88,6 +98,134 @@ model Category {
   @@unique([tenantId, name])
   @@index([tenantId])
   @@map("categories")
+}
+
+// Una lista puede tener precios propios o derivarse de otra con un recargo
+// ("Minorista = General +40%"). Si deriva, igual admite precios explicitos que
+// pisan el calculo para productos puntuales.
+model PriceList {
+  id            String         @id @default(uuid()) @db.Uuid
+  tenantId      String         @map("tenant_id") @db.Uuid
+  name          String
+  isDefault     Boolean        @default(false) @map("is_default")
+  derivesFromId String?        @map("derives_from_id") @db.Uuid
+  markupPercent Decimal?       @map("markup_percent") @db.Decimal(6, 2)
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  derivesFrom   PriceList?     @relation("PriceListDerivation", fields: [derivesFromId], references: [id])
+  derivedLists  PriceList[]    @relation("PriceListDerivation")
+  prices        ProductPrice[]
+  priceRules    PriceRule[]
+  priceTiers    PriceTier[]
+
+  @@unique([tenantId, name])
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("price_lists")
+}
+
+// Append-only, misma filosofia que stock_movements: nunca se edita ni se borra.
+// El precio vigente es la fila con validFrom mas alto que ya paso; cargar una
+// fila con fecha futura ES programar el cambio, se activa sola.
+model ProductPrice {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  priceListId String    @map("price_list_id") @db.Uuid
+  price       Decimal   @db.Decimal(14, 2)
+  validFrom   DateTime  @default(now()) @map("valid_from")
+  source      String // manual | import | bulk | rule
+  userId      String?   @map("user_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  product     Product   @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  priceList   PriceList @relation(fields: [priceListId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([tenantId, priceListId, productId, validFrom])
+  @@index([tenantId, validFrom])
+  @@map("product_prices")
+}
+
+// Criterio de actualizacion guardado: es el cuerpo de POST /prices/bulk con
+// nombre, para re-aplicarlo ("Bebidas = costo +35%") sin reconfigurarlo.
+model PriceRule {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  name           String
+  priceListId    String    @map("price_list_id") @db.Uuid
+  target         String // salePrice | costPrice
+  scopeType      String    @map("scope_type") // all | category | brand
+  scopeValue     String?   @map("scope_value")
+  operationType  String    @map("operation_type") // percent | margin | round
+  operationValue Decimal?  @map("operation_value") @db.Decimal(10, 2)
+  rounding       String?
+  lastRunAt      DateTime? @map("last_run_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  priceList      PriceList @relation(fields: [priceListId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("price_rules")
+}
+
+// Politica de redondeo por tramo de precio: un producto de $500 y otro de
+// $50.000 no se redondean igual. Sin reglas cargadas no se redondea nada.
+model RoundingRule {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  fromAmount Decimal  @map("from_amount") @db.Decimal(14, 2)
+  toAmount   Decimal? @map("to_amount") @db.Decimal(14, 2)
+  mode       String // nearest10 | nearest100 | ending99 | none
+  createdAt  DateTime @default(now()) @map("created_at")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, fromAmount])
+  @@map("rounding_rules")
+}
+
+// Escala por cantidad: a partir de minQty rige este precio. Se configura ahora
+// y lo consume Ventas cuando exista.
+model PriceTier {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  priceListId String    @map("price_list_id") @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  minQty      Decimal   @map("min_qty") @db.Decimal(14, 3)
+  price       Decimal   @db.Decimal(14, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  priceList   PriceList @relation(fields: [priceListId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product     Product   @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, priceListId, productId, minQty])
+  @@index([tenantId, productId])
+  @@map("price_tiers")
+}
+
+// Promocion. config va en Json porque cada tipo tiene parametros distintos y
+// columnas separadas quedarian casi siempre nulas (mismo criterio que
+// PurchaseInvoice.otherTaxes). Se configura ahora, la aplica Ventas.
+model Promotion {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  name       String
+  type       String // nxm | a_plus_b | percent | amount | special_price
+  config     Json
+  scopeType  String    @map("scope_type") // all | category | brand | ids
+  scopeValue String?   @map("scope_value")
+  validFrom  DateTime  @map("valid_from")
+  validTo    DateTime? @map("valid_to")
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, validFrom, validTo])
+  @@map("promotions")
 }
 
 model User {
@@ -123,6 +261,10 @@ model Product {
   unitsPerPurchase     Decimal               @default(1) @map("units_per_purchase") @db.Decimal(14, 3)
   brand                String?
   costPrice            Decimal?              @map("cost_price") @db.Decimal(14, 2)
+  // CACHE del precio vigente en la lista base. La fuente de verdad es
+  // ProductPrice; esto existe para que el listado pueda filtrar y ordenar por
+  // precio sin resolver la vigencia fila por fila. Lo escribe unicamente
+  // price-resolver.util.ts (al guardar un precio y al activar uno programado).
   salePrice            Decimal?              @map("sale_price") @db.Decimal(14, 2)
   taxRate              Decimal               @default(21) @map("tax_rate") @db.Decimal(5, 2)
   internalTaxRate      Decimal               @default(0) @map("internal_tax_rate") @db.Decimal(5, 2)
@@ -139,6 +281,8 @@ model Product {
   extraBarcodes        ProductBarcode[]
   suppliers            ProductSupplier[]
   priceHistory         ProductPriceHistory[]
+  prices               ProductPrice[]
+  priceTiers           PriceTier[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, barcode])
@@ -226,18 +370,19 @@ model ProductPriceHistory {
 }
 
 model Customer {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  name      String
-  legalName String?  @map("legal_name")
-  taxId     String?  @map("tax_id")
-  email     String?
-  phone     String?
-  address   String?
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  legalName   String?  @map("legal_name")
+  taxId       String?  @map("tax_id")
+  email       String?
+  phone       String?
+  address     String?
+  priceListId String?  @map("price_list_id") @db.Uuid
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -317,31 +462,31 @@ model StockMovement {
 }
 
 model PurchaseInvoice {
-  id            String                    @id @default(uuid()) @db.Uuid
-  tenantId      String                    @map("tenant_id") @db.Uuid
-  supplierId    String                    @map("supplier_id") @db.Uuid
-  warehouseId   String                    @map("warehouse_id") @db.Uuid
-  createdById   String                    @map("created_by_id") @db.Uuid
-  invoiceType   PurchaseInvoiceType       @map("invoice_type")
-  pointOfSale   String                    @map("point_of_sale")
-  invoiceNumber String                    @map("invoice_number")
-  issueDate     DateTime                  @map("issue_date") @db.Date
-  currency      String                    @default("ARS")
-  subtotal      Decimal                   @db.Decimal(14, 2)
-  taxTotal      Decimal                   @map("tax_total") @db.Decimal(14, 2)
-  otherTaxes    Json?                     @map("other_taxes")
-  otherTaxesTotal Decimal                 @default(0) @map("other_taxes_total") @db.Decimal(14, 2)
-  total         Decimal                   @db.Decimal(14, 2)
-  status        PurchaseInvoiceStatus     @default(draft)
-  notes         String?
-  createdAt     DateTime                  @default(now()) @map("created_at")
-  updatedAt     DateTime                  @updatedAt @map("updated_at")
-  tenant        Tenant                    @relation(fields: [tenantId], references: [id])
-  supplier      Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
-  warehouse     Warehouse                 @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
-  createdBy     User                      @relation(fields: [createdById], references: [id])
-  lines         PurchaseInvoiceLine[]
-  revisions     PurchaseInvoiceRevision[]
+  id              String                    @id @default(uuid()) @db.Uuid
+  tenantId        String                    @map("tenant_id") @db.Uuid
+  supplierId      String                    @map("supplier_id") @db.Uuid
+  warehouseId     String                    @map("warehouse_id") @db.Uuid
+  createdById     String                    @map("created_by_id") @db.Uuid
+  invoiceType     PurchaseInvoiceType       @map("invoice_type")
+  pointOfSale     String                    @map("point_of_sale")
+  invoiceNumber   String                    @map("invoice_number")
+  issueDate       DateTime                  @map("issue_date") @db.Date
+  currency        String                    @default("ARS")
+  subtotal        Decimal                   @db.Decimal(14, 2)
+  taxTotal        Decimal                   @map("tax_total") @db.Decimal(14, 2)
+  otherTaxes      Json?                     @map("other_taxes")
+  otherTaxesTotal Decimal                   @default(0) @map("other_taxes_total") @db.Decimal(14, 2)
+  total           Decimal                   @db.Decimal(14, 2)
+  status          PurchaseInvoiceStatus     @default(draft)
+  notes           String?
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  tenant          Tenant                    @relation(fields: [tenantId], references: [id])
+  supplier        Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  warehouse       Warehouse                 @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  createdBy       User                      @relation(fields: [createdById], references: [id])
+  lines           PurchaseInvoiceLine[]
+  revisions       PurchaseInvoiceRevision[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, invoiceType, pointOfSale, invoiceNumber])

@@ -10,6 +10,7 @@ import { AuthRequest } from './auth.types';
 import { AdminGuard } from './admin.guard';
 import { parsePricesFile } from './price-import.util';
 import { priceChange, type PriceHistoryEntry } from './price-history.util';
+import { resolverPrecios } from './price-resolver.util';
 
 // Alicuotas de IVA vigentes en Argentina. El campo era decimal libre, lo que
 // habilitaba cargar valores que despues rompen la facturacion.
@@ -39,11 +40,9 @@ export class ProductsController {
     return n;
   }
 
-  @Get()
-  async list(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
-    const tenantId = request.user.tenantId;
-    const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
+  // Filtros compartidos entre el listado y la exportacion, para que "Exportar a
+  // Excel" respete exactamente lo que el usuario esta viendo en pantalla.
+  private listWhere(tenantId: string, query: Record<string, string | undefined>): Prisma.ProductWhereInput {
     const search = query.search?.trim();
     // Se acumulan en AND porque barcode y search pueden venir juntos y cada uno
     // aporta su propio OR: puestos como claves sueltas, el segundo pisaría al primero.
@@ -61,17 +60,97 @@ export class ProductsController {
         ],
       });
     }
-    const where: Prisma.ProductWhereInput = {
+    return {
       tenantId,
       ...(query.status === 'inactive' ? { isActive: false } : query.status === 'all' ? {} : { isActive: true }),
-      ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+      ...(query.categoryId === 'none' ? { categoryId: null } : query.categoryId ? { categoryId: query.categoryId } : {}),
+      ...(query.brand ? { brand: query.brand } : {}),
+      ...(query.priced === 'yes' ? { salePrice: { not: null } } : query.priced === 'no' ? { salePrice: null } : {}),
       ...(filters.length ? { AND: filters } : {}),
     };
+  }
+
+  private listOrderBy(sort: string | undefined): Prisma.ProductOrderByWithRelationInput {
+    switch (sort) {
+      case 'newest': return { createdAt: 'desc' };
+      case 'updated': return { updatedAt: 'desc' };
+      case 'price_asc': return { salePrice: 'asc' };
+      case 'price_desc': return { salePrice: 'desc' };
+      default: return { name: 'asc' };
+    }
+  }
+
+  // Stock actual = SUM(quantity) del ledger. Una sola consulta agrupada para todo
+  // el conjunto de ids que se pida.
+  private async stockMap(tenantId: string, productIds: string[]): Promise<Map<string, number>> {
+    if (!productIds.length) return new Map();
+    const sums = await this.prisma.stockMovement.groupBy({ by: ['productId'], where: { tenantId, productId: { in: productIds } }, _sum: { quantity: true } });
+    return new Map(sums.map(s => [s.productId, Number(s._sum.quantity ?? 0)]));
+  }
+
+  @Get()
+  async list(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
+    const tenantId = request.user.tenantId;
+    const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
+    const where = this.listWhere(tenantId, query);
+    const orderBy = this.listOrderBy(query.sort);
+    const stockFilter = query.stock === 'low' || query.stock === 'out' ? query.stock : undefined;
+
+    // Con priceListId se muestra el precio de esa lista (resuelto, incluida la
+    // derivacion) en vez del de la lista base que cachea Product.salePrice.
+    const listaPedida = query.priceListId
+      ? await this.prisma.priceList.findFirst({ where: { id: query.priceListId, tenantId }, select: { id: true, isDefault: true } })
+      : null;
+    if (query.priceListId && !listaPedida) throw new BadRequestException('Lista de precios no encontrada');
+
+    const shape = async (items: Array<{ id: string; category?: { name: string } | null }>, stock: Map<string, number>, total: number) => {
+      const deLista = listaPedida && !listaPedida.isDefault
+        ? await resolverPrecios(this.prisma, tenantId, items.map(i => i.id), listaPedida.id)
+        : null;
+      return {
+        items: items.map(p => ({
+          ...p,
+          categoryName: p.category?.name ?? null,
+          category: undefined,
+          currentStock: stock.get(p.id) ?? 0,
+          ...(deLista ? { salePrice: deLista.get(p.id) ?? null } : {}),
+        })),
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      };
+    };
+
+    // "Stock bajo" / "Sin stock" dependen de un SUM que no vive en la tabla, asi
+    // que se resuelve el universo completo, se filtra en memoria y recien ahi se pagina.
+    if (stockFilter) {
+      const candidates = await this.prisma.product.findMany({ where, select: { id: true, minStock: true } });
+      const stockAll = await this.stockMap(tenantId, candidates.map(c => c.id));
+      const matchIds = candidates
+        .filter(c => {
+          const s = stockAll.get(c.id) ?? 0;
+          return stockFilter === 'out' ? s <= 0 : c.minStock != null && s < Number(c.minStock);
+        })
+        .map(c => c.id);
+      const items = await this.prisma.product.findMany({ where: { id: { in: matchIds } }, include: { category: { select: { name: true } } }, orderBy, skip: (page - 1) * pageSize, take: pageSize });
+      return await shape(items, stockAll, matchIds.length);
+    }
+
     const [items, total] = await this.prisma.$transaction([
-      this.prisma.product.findMany({ where, include: { category: { select: { name: true } } }, orderBy: { name: 'asc' }, skip: (page - 1) * pageSize, take: pageSize }),
+      this.prisma.product.findMany({ where, include: { category: { select: { name: true } } }, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
       this.prisma.product.count({ where }),
     ]);
-    return { items: items.map(p => ({ ...p, categoryName: p.category?.name ?? null, category: undefined })), pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } };
+    return await shape(items, await this.stockMap(tenantId, items.map(i => i.id)), total);
+  }
+
+  @Get('brands')
+  async brands(@Req() request: AuthRequest) {
+    const rows = await this.prisma.product.findMany({
+      where: { tenantId: request.user.tenantId, brand: { not: null } },
+      select: { brand: true },
+      distinct: ['brand'],
+      orderBy: { brand: 'asc' },
+    });
+    return rows.map(r => r.brand).filter((b): b is string => !!b);
   }
 
   @Get('low-stock')
@@ -93,48 +172,125 @@ export class ProductsController {
     const tenantId = request.user.tenantId;
     const [reference, existing] = await Promise.all([
       this.prisma.productReference.findMany(),
-      this.prisma.product.findMany({ where: { tenantId }, select: { barcode: true } }),
+      this.prisma.product.findMany({ where: { tenantId }, select: { id: true, barcode: true, categoryId: true } }),
     ]);
-    const existingBarcodes = new Set(existing.map(p => p.barcode));
-    const toCreate = reference.filter(r => !existingBarcodes.has(r.ean));
-    if (!toCreate.length) return { created: 0, skipped: reference.length };
+    const existingByBarcode = new Map(existing.map(p => [p.barcode, p]));
+    const toCreate = reference.filter(r => !existingByBarcode.has(r.ean));
 
-    const [{ product_code_seq: newSeq }] = await this.prisma.$queryRaw<Array<{ product_code_seq: number }>>`
-      UPDATE tenants SET product_code_seq = product_code_seq + ${toCreate.length} WHERE id = ${tenantId}::uuid RETURNING product_code_seq
-    `;
-    const startCode = newSeq - toCreate.length + 1;
+    // Rubro (product_reference.category) -> Category del tenant. Se necesita tanto
+    // para los productos nuevos como para completar la categoria de los que ya
+    // existen sin una. Se reusa la Category que exista (sin distinguir mayusculas,
+    // igual que categories.controller) y se crean las que falten.
+    const rubroByEan = new Map(reference.filter(r => r.category?.trim()).map(r => [r.ean, r.category!.trim()]));
+    const rubrosNecesarios = new Set<string>();
+    for (const r of toCreate) if (r.category?.trim()) rubrosNecesarios.add(r.category.trim());
+    for (const p of existing) {
+      const rubro = rubroByEan.get(p.barcode);
+      if (rubro && !p.categoryId) rubrosNecesarios.add(rubro);
+    }
 
-    await this.prisma.product.createMany({
-      data: toCreate.map((r, i) => ({
-        tenantId,
-        internalCode: String(startCode + i),
-        barcode: r.ean,
-        name: r.name,
-        brand: r.brand ?? undefined,
-        unit: 'unidad',
-        salePrice: r.suggestedPrice ?? undefined,
-        manejaVencimiento: false,
-      })),
-    });
-    return { created: toCreate.length, skipped: reference.length - toCreate.length };
+    const categoryByRubro = new Map<string, string>();
+    if (rubrosNecesarios.size) {
+      const tenantCategories = await this.prisma.category.findMany({ where: { tenantId }, select: { id: true, name: true } });
+      const byLowerName = new Map(tenantCategories.map(c => [c.name.toLowerCase(), c.id]));
+      for (const rubro of rubrosNecesarios) {
+        const found = byLowerName.get(rubro.toLowerCase());
+        if (found) { categoryByRubro.set(rubro, found); continue; }
+        const created = await this.prisma.category.create({ data: { tenantId, name: rubro } });
+        byLowerName.set(rubro.toLowerCase(), created.id);
+        categoryByRubro.set(rubro, created.id);
+      }
+    }
+
+    // Completar la categoria de los productos que ya existian sin una.
+    let categorized = 0;
+    const idsPorCategoria = new Map<string, string[]>();
+    for (const p of existing) {
+      if (p.categoryId) continue;
+      const rubro = rubroByEan.get(p.barcode);
+      const categoryId = rubro && categoryByRubro.get(rubro);
+      if (!categoryId) continue;
+      const list = idsPorCategoria.get(categoryId) ?? [];
+      list.push(p.id);
+      idsPorCategoria.set(categoryId, list);
+    }
+    for (const [categoryId, ids] of idsPorCategoria) {
+      const { count } = await this.prisma.product.updateMany({ where: { tenantId, id: { in: ids } }, data: { categoryId } });
+      categorized += count;
+    }
+
+    if (toCreate.length) {
+      const [{ product_code_seq: newSeq }] = await this.prisma.$queryRaw<Array<{ product_code_seq: number }>>`
+        UPDATE tenants SET product_code_seq = product_code_seq + ${toCreate.length} WHERE id = ${tenantId}::uuid RETURNING product_code_seq
+      `;
+      const startCode = newSeq - toCreate.length + 1;
+      await this.prisma.product.createMany({
+        data: toCreate.map((r, i) => ({
+          tenantId,
+          internalCode: String(startCode + i),
+          barcode: r.ean,
+          name: r.name,
+          brand: r.brand ?? undefined,
+          categoryId: r.category ? categoryByRubro.get(r.category.trim()) : undefined,
+          unit: 'unidad',
+          salePrice: r.suggestedPrice ?? undefined,
+          manejaVencimiento: false,
+        })),
+      });
+    }
+    return { created: toCreate.length, skipped: reference.length - toCreate.length, categories: categoryByRubro.size, categorized };
   }
 
   @Get('export')
   @UseGuards(AdminGuard)
-  async export(@Req() request: AuthRequest, @Res() res: Response) {
-    const products = await this.prisma.product.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } });
+  async export(@Req() request: AuthRequest, @Res() res: Response, @Query() query: Record<string, string | undefined>) {
+    const tenantId = request.user.tenantId;
+    const where = this.listWhere(tenantId, query);
+    const orderBy = this.listOrderBy(query.sort);
+    let products = await this.prisma.product.findMany({
+      where,
+      include: { category: { select: { name: true } }, extraBarcodes: { select: { barcode: true }, orderBy: { createdAt: 'asc' } } },
+      orderBy,
+    });
+    const stock = await this.stockMap(tenantId, products.map(p => p.id));
+    if (query.stock === 'low' || query.stock === 'out') {
+      products = products.filter(p => {
+        const s = stock.get(p.id) ?? 0;
+        return query.stock === 'out' ? s <= 0 : p.minStock != null && s < Number(p.minStock);
+      });
+    }
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Mayorista ERP';
     workbook.created = new Date();
-    const sheet = workbook.addWorksheet('Precios', { views: [{ state: 'frozen', ySplit: 1 }] });
+    const sheet = workbook.addWorksheet('Productos', { views: [{ state: 'frozen', ySplit: 1 }] });
 
+    // "Código de barras", "Producto", "Precio de costo" y "Precio de venta"
+    // conservan su encabezado exacto para que la planilla siga sirviendo como
+    // base del reimporte de precios (products/import-prices).
     sheet.columns = [
-      { header: 'Código de barras', key: 'barcode', width: 20 },
+      { header: 'Código interno', key: 'internalCode', width: 14 },
+      { header: 'Código de barras', key: 'barcode', width: 18 },
+      { header: 'Códigos adicionales', key: 'extraBarcodes', width: 24 },
       { header: 'Producto', key: 'name', width: 42 },
-      { header: 'Precio de costo', key: 'costPrice', width: 18 },
-      { header: 'Precio de venta', key: 'salePrice', width: 18 },
+      { header: 'Marca', key: 'brand', width: 18 },
+      { header: 'Categoría', key: 'category', width: 20 },
+      { header: 'Unidad de venta', key: 'unit', width: 14 },
+      { header: 'Unidad de compra', key: 'purchaseUnit', width: 16 },
+      { header: 'Unidades por bulto', key: 'unitsPerPurchase', width: 16 },
+      { header: 'Precio de costo', key: 'costPrice', width: 16 },
+      { header: 'Precio de venta', key: 'salePrice', width: 16 },
+      { header: 'Margen %', key: 'margin', width: 12 },
+      { header: 'IVA %', key: 'taxRate', width: 10 },
+      { header: 'Imp. internos %', key: 'internalTaxRate', width: 14 },
+      { header: 'Stock actual', key: 'currentStock', width: 13 },
+      { header: 'Stock mínimo', key: 'minStock', width: 13 },
+      { header: 'Maneja vencimiento', key: 'manejaVencimiento', width: 18 },
+      { header: 'Estado', key: 'status', width: 12 },
+      { header: 'Creado', key: 'createdAt', width: 18 },
+      { header: 'Actualizado', key: 'updatedAt', width: 18 },
     ];
+    const lastCol = sheet.columnCount;
 
     const headerRow = sheet.getRow(1);
     headerRow.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -143,18 +299,41 @@ export class ProductsController {
     headerRow.height = 22;
 
     for (const p of products) {
+      const cost = p.costPrice ? Number(p.costPrice) : null;
+      const sale = p.salePrice ? Number(p.salePrice) : null;
       const row = sheet.addRow({
+        internalCode: p.internalCode ?? '',
         barcode: p.barcode,
+        extraBarcodes: p.extraBarcodes.map(b => b.barcode).join(' / '),
         name: p.name,
-        costPrice: p.costPrice ? Number(p.costPrice) : null,
-        salePrice: p.salePrice ? Number(p.salePrice) : null,
+        brand: p.brand ?? '',
+        category: p.category?.name ?? '',
+        unit: p.unit,
+        purchaseUnit: p.purchaseUnit ?? '',
+        unitsPerPurchase: Number(p.unitsPerPurchase),
+        costPrice: cost,
+        salePrice: sale,
+        margin: cost != null && sale != null && sale > 0 ? (sale - cost) / sale : null,
+        taxRate: Number(p.taxRate),
+        internalTaxRate: Number(p.internalTaxRate),
+        currentStock: stock.get(p.id) ?? 0,
+        minStock: p.minStock != null ? Number(p.minStock) : null,
+        manejaVencimiento: p.manejaVencimiento ? 'Sí' : 'No',
+        status: p.isActive ? 'Activo' : 'Inactivo',
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
       });
       row.getCell('costPrice').numFmt = '#,##0.00';
       row.getCell('salePrice').numFmt = '#,##0.00';
+      row.getCell('margin').numFmt = '0.0%';
+      row.getCell('currentStock').numFmt = '#,##0.###';
+      row.getCell('minStock').numFmt = '#,##0.###';
+      row.getCell('createdAt').numFmt = 'dd/mm/yyyy';
+      row.getCell('updatedAt').numFmt = 'dd/mm/yyyy';
       row.font = { name: 'Calibri', size: 11 };
     }
 
-    sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 4 } };
+    sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: lastCol } };
     for (let i = 2; i <= products.length + 1; i += 2) {
       sheet.getRow(i).eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
     }

@@ -1,10 +1,11 @@
-import { Body, Controller, Inject, Post, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Inject, Post, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { AuthRequest } from './auth.types';
 import { AdminGuard } from './admin.guard';
 import { priceChange } from './price-history.util';
+import { guardarPrecio, resolverPrecios } from './price-resolver.util';
 
 type ScopeType = 'all' | 'category' | 'brand' | 'ids';
 type Target = 'salePrice' | 'costPrice';
@@ -16,6 +17,8 @@ type BulkBody = {
   target?: string;
   operation?: { type?: string; value?: unknown; rounding?: string };
   dryRun?: boolean;
+  priceListId?: string;
+  validFrom?: string;
 };
 
 const SCOPES: ScopeType[] = ['all', 'category', 'brand', 'ids'];
@@ -47,6 +50,15 @@ function applyRounding(value: number, rounding: Rounding) {
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class PricesController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
+  /** Lista sobre la que opera el pedido: la indicada o, si no vino, la base del tenant. */
+  private async resolverLista(tenantId: string, priceListId?: string) {
+    const lista = priceListId
+      ? await this.prisma.priceList.findFirst({ where: { id: priceListId, tenantId } })
+      : await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true } });
+    if (!lista) throw new BadRequestException('Lista de precios no encontrada');
+    return lista;
+  }
 
   @Post('bulk')
   async bulk(@Req() request: AuthRequest, @Body() body: BulkBody) {
@@ -81,19 +93,41 @@ export class PricesController {
       ...(scopeType === 'ids' ? { id: { in: ids } } : {}),
     };
 
+    const lista = await this.resolverLista(tenantId, body.priceListId);
+    // Aumentar una lista derivada crearia precios explicitos para cada producto,
+    // congelandolos y rompiendo la derivacion sin que se note. Mejor frenarlo.
+    if (target === 'salePrice' && lista.derivesFromId) {
+      const padre = await this.prisma.priceList.findFirst({ where: { id: lista.derivesFromId }, select: { name: true } });
+      throw new UnprocessableEntityException(
+        `"${lista.name}" se calcula automáticamente desde "${padre?.name ?? 'otra lista'}". Actualizá esa lista y ésta se mueve sola, o convertila en lista independiente si querés precios propios.`,
+      );
+    }
+
+    const validFrom = body.validFrom ? new Date(body.validFrom) : new Date();
+    if (Number.isNaN(validFrom.getTime())) throw new UnprocessableEntityException('La fecha de aplicación no es válida');
+
     const products = await this.prisma.product.findMany({
       where,
       select: { id: true, name: true, costPrice: true, salePrice: true },
       orderBy: { name: 'asc' },
     });
 
+    // Para precio de venta el valor actual sale de la lista, no de la cache.
+    const preciosLista = target === 'salePrice'
+      ? await resolverPrecios(this.prisma, tenantId, products.map(p => p.id), lista.id, validFrom)
+      : new Map<string, Prisma.Decimal>();
+
+    const actual = (p: { id: string; costPrice: Prisma.Decimal | null; salePrice: Prisma.Decimal | null }) =>
+      target === 'costPrice' ? p.costPrice : preciosLista.get(p.id) ?? null;
+
     const changes: Array<{ id: string; name: string; before: number | null; after: number }> = [];
     // Productos que no se pueden calcular: no se inventan valores, se reportan.
     const skipped: Array<{ id: string; name: string; reason: string }> = [];
 
     for (const p of products) {
-      // El margen se calcula sobre el costo; el resto, sobre el campo que se va a pisar.
-      const source = operationType === 'margin' ? p.costPrice : p[target];
+      const vigente = actual(p);
+      // El margen se calcula sobre el costo; el resto, sobre el valor que se va a pisar.
+      const source = operationType === 'margin' ? p.costPrice : vigente;
       if (source === null) {
         skipped.push({ id: p.id, name: p.name, reason: operationType === 'margin' ? 'sin precio de costo' : 'sin precio de origen' });
         continue;
@@ -105,29 +139,40 @@ export class PricesController {
         skipped.push({ id: p.id, name: p.name, reason: 'el resultado sería negativo' });
         continue;
       }
-      // "before" siempre es el valor actual del campo que se pisa, aunque el calculo
+      // "before" siempre es el valor actual de lo que se pisa, aunque el calculo
       // haya salido de otro campo (caso margen).
-      const before = p[target] === null ? null : Number(p[target]);
+      const before = vigente === null ? null : Number(vigente);
       if (before !== null && round2(before) === after) continue;
       changes.push({ id: p.id, name: p.name, before, after });
     }
 
-    if (body.dryRun) {
-      return { affected: changes.length, skipped: skipped.length, skippedDetail: skipped.slice(0, PREVIEW_LIMIT), preview: changes.slice(0, PREVIEW_LIMIT), applied: false };
-    }
+    const resumen = {
+      affected: changes.length,
+      skipped: skipped.length,
+      skippedDetail: skipped.slice(0, PREVIEW_LIMIT),
+      preview: changes.slice(0, PREVIEW_LIMIT),
+      priceList: { id: lista.id, name: lista.name },
+      scheduled: validFrom > new Date(),
+      validFrom: validFrom.toISOString(),
+    };
+    if (body.dryRun) return { ...resumen, applied: false };
 
-    const field = target === 'costPrice' ? 'cost' : 'sale';
     for (let i = 0; i < changes.length; i += 500) {
       const batch = changes.slice(i, i + 500);
-      const historia = batch
-        .map(c => priceChange({ tenantId, productId: c.id, field, before: c.before, after: c.after, source: 'bulk', userId: request.user.id }))
-        .filter((h): h is NonNullable<typeof h> => h !== null);
-      await this.prisma.$transaction([
-        ...batch.map(c => this.prisma.product.update({ where: { id: c.id }, data: { [target]: c.after } })),
-        ...(historia.length ? [this.prisma.productPriceHistory.createMany({ data: historia })] : []),
-      ]);
+      await this.prisma.$transaction(async tx => {
+        for (const c of batch) {
+          if (target === 'costPrice') {
+            // El costo no vive en listas: sigue en el producto, con su historial.
+            await tx.product.update({ where: { id: c.id }, data: { costPrice: c.after } });
+            const h = priceChange({ tenantId, productId: c.id, field: 'cost', before: c.before, after: c.after, source: 'bulk', userId: request.user.id });
+            if (h) await tx.productPriceHistory.create({ data: h });
+          } else {
+            await guardarPrecio(tx, { tenantId, productId: c.id, priceListId: lista.id, price: c.after, validFrom, source: 'bulk', userId: request.user.id });
+          }
+        }
+      });
     }
 
-    return { affected: changes.length, skipped: skipped.length, skippedDetail: skipped.slice(0, PREVIEW_LIMIT), preview: changes.slice(0, PREVIEW_LIMIT), applied: true };
+    return { ...resumen, applied: true };
   }
 }

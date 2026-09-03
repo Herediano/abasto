@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { Calculator, Download, Eye, PackagePlus, Upload } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Calculator, Download, Eye, PackagePlus, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,7 +12,7 @@ import { PageHeader } from '@/components/page-header';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, downloadFile, errorMessage, uploadFile, type Category } from '@/lib/api';
+import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 type ScopeType = 'all' | 'category' | 'brand';
@@ -48,6 +49,17 @@ export function PricesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // accion masiva
+  // listas de precios
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
+  const [priceListId, setPriceListId] = useState('');
+  const [listDialogOpen, setListDialogOpen] = useState(false);
+  const [editingList, setEditingList] = useState<PriceList | null>(null);
+  const [listForm, setListForm] = useState({ name: '', derivesFromId: '', markupPercent: '' });
+  const [savingList, setSavingList] = useState(false);
+
+  // vigencia: vacío = ahora
+  const [validFrom, setValidFrom] = useState('');
+
   const [scopeType, setScopeType] = useState<ScopeType>('all');
   const [scopeValue, setScopeValue] = useState('');
   const [target, setTarget] = useState<Target>('salePrice');
@@ -58,15 +70,70 @@ export function PricesPage() {
   const [calculating, setCalculating] = useState(false);
   const [applying, setApplying] = useState(false);
 
+  const loadLists = () =>
+    api<PriceList[]>('/price-lists', {}, token)
+      .then(l => {
+        setPriceLists(l);
+        setPriceListId(prev => prev || l.find(x => x.isDefault)?.id || l[0]?.id || '');
+      })
+      .catch(e => setError(errorMessage(e)));
+
   useEffect(() => {
     api<Category[]>('/categories', {}, token).then(setCategories).catch(e => setError(errorMessage(e)));
-  }, [token]);
+    void loadLists();
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cualquier cambio en los parametros invalida la vista previa: aplicar sin
   // recalcular escribiria valores distintos a los que el usuario vio.
   useEffect(() => {
     setPreview(null);
-  }, [scopeType, scopeValue, target, operationType, operationValue, rounding]);
+  }, [scopeType, scopeValue, target, operationType, operationValue, rounding, priceListId, validFrom]);
+
+  const listaElegida = priceLists.find(l => l.id === priceListId);
+  const listaEsDerivada = Boolean(listaElegida?.derivesFromId);
+
+  function openListDialog(lista: PriceList | null) {
+    setEditingList(lista);
+    setListForm({
+      name: lista?.name ?? '',
+      derivesFromId: lista?.derivesFromId ?? '',
+      markupPercent: lista?.markupPercent ?? '',
+    });
+    setError('');
+    setListDialogOpen(true);
+  }
+
+  async function saveList(e: FormEvent) {
+    e.preventDefault();
+    setSavingList(true);
+    setError('');
+    try {
+      const body = {
+        name: listForm.name.trim(),
+        derivesFromId: listForm.derivesFromId || null,
+        markupPercent: listForm.derivesFromId ? listForm.markupPercent : null,
+      };
+      if (editingList) await api(`/price-lists/${editingList.id}`, { method: 'PUT', body: JSON.stringify(body) }, token);
+      else await api('/price-lists', { method: 'POST', body: JSON.stringify(body) }, token);
+      setListDialogOpen(false);
+      await loadLists();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingList(false);
+    }
+  }
+
+  async function deleteList(lista: PriceList) {
+    setError('');
+    try {
+      await api(`/price-lists/${lista.id}`, { method: 'DELETE' }, token);
+      if (priceListId === lista.id) setPriceListId('');
+      await loadLists();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
 
   async function importCatalog() {
     setConfirmingCatalog(false);
@@ -74,8 +141,10 @@ export function PricesPage() {
     setToolsMessage('');
     setError('');
     try {
-      const result = await api<{ created: number; skipped: number }>('/products/import-reference', { method: 'POST' }, token);
-      setToolsMessage(`Catálogo cargado: ${result.created} productos nuevos, ${result.skipped} ya existían.`);
+      const result = await api<{ created: number; skipped: number; categories: number; categorized: number }>('/products/import-reference', { method: 'POST' }, token);
+      const cats = result.categories ? ` ${result.categories} rubros como categorías` : '';
+      const cat = result.categorized ? `, ${result.categorized} productos ya existentes recibieron categoría` : '';
+      setToolsMessage(`Catálogo cargado: ${result.created} productos nuevos, ${result.skipped} ya existían.${cats}${cat}.`);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -127,6 +196,9 @@ export function PricesPage() {
 
   function buildBody(dryRun: boolean) {
     return JSON.stringify({
+      priceListId: priceListId || undefined,
+      // El input date da fecha sin hora; se aplica a las 00:00 de ese día.
+      validFrom: validFrom ? new Date(`${validFrom}T00:00:00`).toISOString() : undefined,
       scope: { type: scopeType, value: scopeType === 'all' ? undefined : scopeValue },
       target,
       operation: {
@@ -176,6 +248,60 @@ export function PricesPage() {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">Listas de precios</h2>
+              <p className="text-sm text-muted-foreground">
+                Una lista puede tener precios propios o calcularse desde otra con un recargo.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => openListDialog(null)}>
+              <Plus /> Nueva lista
+            </Button>
+          </div>
+
+          <div className="overflow-hidden rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Lista</TableHead>
+                  <TableHead>Cómo se calcula</TableHead>
+                  <TableHead className="text-right">Precios propios</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {priceLists.map(l => (
+                  <TableRow key={l.id}>
+                    <TableCell className="font-medium">
+                      {l.name} {l.isDefault && <Badge variant="secondary">base</Badge>}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {l.derivesFromName ? `${l.derivesFromName} ${Number(l.markupPercent) >= 0 ? '+' : ''}${Number(l.markupPercent)}%` : 'Precios propios'}
+                    </TableCell>
+                    <TableCell className="text-right">{l.priceCount ?? 0}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openListDialog(l)} aria-label={`Editar ${l.name}`}>
+                          <Pencil />
+                        </Button>
+                        {!l.isDefault && (
+                          <Button variant="ghost" size="icon" onClick={() => deleteList(l)} aria-label={`Borrar ${l.name}`}>
+                            <Trash2 />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
           <div>
             <h2 className="text-sm font-semibold">Catálogo y planillas</h2>
             <p className="text-sm text-muted-foreground">Cargá el catálogo regional o movés precios con Excel.</p>
@@ -203,6 +329,16 @@ export function PricesPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Lista de precios" htmlFor="priceList">
+              <Select id="priceList" value={priceListId} onChange={e => setPriceListId(e.target.value)}>
+                {priceLists.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </Select>
+            </Field>
+
+            <Field label="Aplicar desde" htmlFor="validFrom" hint="(vacío = ahora)">
+              <Input id="validFrom" type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} min={new Date().toISOString().slice(0, 10)} />
+            </Field>
+
             <Field label="Aplicar a" htmlFor="scope">
               <Select id="scope" value={scopeType} onChange={e => { setScopeType(e.target.value as ScopeType); setScopeValue(''); }}>
                 <option value="all">Todos los productos</option>
@@ -269,11 +405,25 @@ export function PricesPage() {
             </p>
           )}
 
+          {/* Se avisa antes de calcular, para que no lo descubra recién al recibir el error. */}
+          {listaEsDerivada && target === 'salePrice' && (
+            <Alert variant="destructive">
+              «{listaElegida?.name}» se calcula desde «{listaElegida?.derivesFromName}». Actualizá esa lista y ésta se mueve sola,
+              o editala para que tenga precios propios.
+            </Alert>
+          )}
+
+          {validFrom && (
+            <Alert>
+              Los precios nuevos van a entrar en vigencia el {validFrom}. Hasta entonces siguen rigiendo los actuales.
+            </Alert>
+          )}
+
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={calculate} disabled={calculating || !scopeReady}>
               {calculating ? <Spinner /> : <Eye />} Calcular
             </Button>
-            <Button onClick={apply} disabled={!preview || preview.affected === 0 || applying}>
+            <Button onClick={apply} disabled={!preview || preview.affected === 0 || applying || (listaEsDerivada && target === 'salePrice')}>
               {applying ? <Spinner /> : <Calculator />} Aplicar {preview ? `a ${preview.affected}` : ''}
             </Button>
           </div>
@@ -314,6 +464,61 @@ export function PricesPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={listDialogOpen} onOpenChange={setListDialogOpen}>
+        <DialogContent>
+          <form onSubmit={saveList} className="flex flex-col gap-4">
+            <DialogHeader>
+              <DialogTitle>{editingList ? 'Editar lista' : 'Nueva lista de precios'}</DialogTitle>
+            </DialogHeader>
+
+            <Field label="Nombre" htmlFor="list-name">
+              <Input id="list-name" required value={listForm.name} onChange={e => setListForm({ ...listForm, name: e.target.value })} placeholder="Minorista" />
+            </Field>
+
+            <Field label="Cómo se calcula" htmlFor="list-derives">
+              <Select
+                id="list-derives"
+                value={listForm.derivesFromId}
+                onChange={e => setListForm({ ...listForm, derivesFromId: e.target.value })}
+                disabled={editingList?.isDefault}
+              >
+                <option value="">Precios propios</option>
+                {priceLists
+                  .filter(l => l.id !== editingList?.id)
+                  .map(l => <option key={l.id} value={l.id}>Derivada de {l.name}</option>)}
+              </Select>
+            </Field>
+
+            {editingList?.isDefault && (
+              <p className="text-sm text-muted-foreground">La lista base siempre tiene precios propios: es el origen del resto.</p>
+            )}
+
+            {listForm.derivesFromId && (
+              <Field label="Recargo %" htmlFor="list-markup" hint="(negativo = descuento)">
+                <Input
+                  id="list-markup"
+                  required
+                  type="number"
+                  step="0.01"
+                  value={listForm.markupPercent}
+                  onChange={e => setListForm({ ...listForm, markupPercent: e.target.value })}
+                  placeholder="40"
+                />
+              </Field>
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setListDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={savingList}>
+                {savingList && <Spinner />} {editingList ? 'Guardar' : 'Crear lista'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmingCatalog} onOpenChange={setConfirmingCatalog}>
         <DialogContent>

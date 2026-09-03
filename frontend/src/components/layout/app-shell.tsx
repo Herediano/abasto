@@ -1,4 +1,4 @@
-import { LogOut, Package, ArrowDownToLine, ArrowUpFromLine, History, CalendarClock, PackageMinus, Boxes, Warehouse, Truck, Users, Tags } from 'lucide-react';
+import { LogOut, Package, ArrowDownToLine, ArrowUpFromLine, History, CalendarClock, PackageMinus, Boxes, Warehouse, Truck, Users, Tags, Shapes } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
@@ -20,6 +20,7 @@ const NAV_GROUPS = [
     label: 'Catálogo',
     items: [
       { to: '/catalog/products', label: 'Productos', icon: Boxes },
+      { to: '/catalog/categories', label: 'Categorías', icon: Shapes },
       { to: '/catalog/warehouses', label: 'Depósitos', icon: Warehouse },
       { to: '/catalog/suppliers', label: 'Proveedores', icon: Truck },
     ],

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthController } from './health.controller';
 import { TenantsController } from './tenants.controller';
@@ -16,11 +17,13 @@ import { ProductReferenceController } from './product-reference.controller';
 import { PurchasesController } from './purchases.controller';
 import { PurchasesService } from './purchases.service';
 import { PricesController } from './prices.controller';
+import { PriceListsController } from './price-lists.controller';
 import { AdminGuard } from './admin.guard';
+import { PriceActivationService } from './price-activation.service';
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController],
-  providers: [StockService, AuthService, JwtAuthGuard, PurchasesService, AdminGuard],
+  imports: [PrismaModule, ScheduleModule.forRoot()],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController],
+  providers: [StockService, AuthService, JwtAuthGuard, PurchasesService, AdminGuard, PriceActivationService],
 })
 export class AppModule {}

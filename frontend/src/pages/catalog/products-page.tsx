@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Boxes, Eye, Pencil, Plus, Search } from 'lucide-react';
+import { Boxes, Download, Eye, Pencil, Plus, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -15,14 +15,13 @@ import { PageHeader } from '@/components/page-header';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type Category, type Pagination, type Product } from '@/lib/api';
+import { api, downloadFile, errorMessage, type Category, type Pagination, type PriceList, type Product } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', brand: '', costPrice: '', salePrice: '', taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false };
 // Alicuotas vigentes en Argentina; el backend valida contra la misma lista.
 const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
 type FormState = typeof EMPTY_FORM;
-const NEW_CATEGORY = '__new__';
 
 function margin(costPrice?: string | null, salePrice?: string | null) {
   const cost = Number(costPrice);
@@ -40,22 +39,49 @@ export function ProductsPage() {
   const [error, setError] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [categoryId, setCategoryId] = useState('');
+  const [brand, setBrand] = useState('');
+  const [status, setStatus] = useState('active');
+  const [priced, setPriced] = useState('');
+  const [stock, setStock] = useState('');
+  const [sort, setSort] = useState('name');
+  const [exporting, setExporting] = useState(false);
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
+  const [priceListId, setPriceListId] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<Pagination>({ total: 0, totalPages: 0, pageSize: 20, page: 1 });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [referenceHint, setReferenceHint] = useState(false);
 
   const loadCategories = () => api<Category[]>('/categories', {}, token).then(setCategories).catch(e => setError(errorMessage(e)));
+  const loadBrands = () => api<string[]>('/products/brands', {}, token).then(setBrands).catch(() => {});
+  const loadPriceLists = () => api<PriceList[]>('/price-lists', {}, token).then(setPriceLists).catch(() => {});
+
+  const filterParams = () => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (categoryId) params.set('categoryId', categoryId);
+    if (brand) params.set('brand', brand);
+    if (status !== 'active') params.set('status', status);
+    if (priced) params.set('priced', priced);
+    if (stock) params.set('stock', stock);
+    if (sort !== 'name') params.set('sort', sort);
+    if (priceListId) params.set('priceListId', priceListId);
+    return params;
+  };
 
   const load = () => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), pageSize: '20', status: showInactive ? 'inactive' : 'active' });
-    if (search) params.set('search', search);
+    const params = filterParams();
+    params.set('page', String(page));
+    params.set('pageSize', '20');
     return api<{ items: Product[]; pagination: Pagination }>(`/products?${params}`, {}, token)
       .then(r => {
         setItems(r.items);
@@ -73,8 +99,21 @@ export function ProductsPage() {
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
-  useEffect(() => { void loadCategories(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); }, [token, search, showInactive, page]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void loadCategories(); void loadBrands(); void loadPriceLists(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(1); }, [search, categoryId, brand, status, priced, stock, sort, priceListId]);
+  useEffect(() => { void load(); }, [token, search, categoryId, brand, status, priced, stock, sort, priceListId, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function exportExcel() {
+    setExporting(true);
+    setError('');
+    try {
+      await downloadFile(`/products/export?${filterParams()}`, token, 'productos.xlsx');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => {
     if (editing || !open) return;
@@ -82,25 +121,31 @@ export function ProductsPage() {
     setReferenceHint(false);
     if (!barcode) return;
     const timeout = setTimeout(() => {
-      api<{ name: string; brand: string | null }>(`/product-reference/${encodeURIComponent(barcode)}`, {}, token)
+      api<{ name: string; brand: string | null; category: string | null }>(`/product-reference/${encodeURIComponent(barcode)}`, {}, token)
         .then(ref => {
+          // El rubro de referencia solo se aplica si el tenant ya tiene una
+          // categoría con ese nombre; no se crea sola para no ensuciar el listado.
+          const matchedCategory = ref.category
+            ? categories.find(c => c.name.toLowerCase() === ref.category!.toLowerCase())
+            : undefined;
           let applied = false;
           setForm(f => {
             if (f.barcode.trim() !== barcode || f.name) return f;
             applied = true;
-            return { ...f, name: ref.name, brand: ref.brand ?? f.brand };
+            return { ...f, name: ref.name, brand: ref.brand ?? f.brand, categoryId: f.categoryId || matchedCategory?.id || '' };
           });
           if (applied) setReferenceHint(true);
         })
         .catch(() => {});
     }, 400);
     return () => clearTimeout(timeout);
-  }, [form.barcode, editing, open, token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.barcode, editing, open, token, categories]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openCreate() {
     setEditing(null);
     setForm(EMPTY_FORM);
     setNewCategoryName('');
+    setCreatingCategory(false);
     setReferenceHint(false);
     setError('');
     setOpen(true);
@@ -124,6 +169,7 @@ export function ProductsPage() {
       manejaVencimiento: p.manejaVencimiento,
     });
     setNewCategoryName('');
+    setCreatingCategory(false);
     setError('');
     setOpen(true);
   }
@@ -133,14 +179,7 @@ export function ProductsPage() {
     setSaving(true);
     setError('');
     try {
-      let categoryId = form.categoryId;
-      if (categoryId === NEW_CATEGORY) {
-        if (!newCategoryName.trim()) throw new Error('Escribí el nombre de la nueva categoría');
-        const created = await api<Category>('/categories', { method: 'POST', body: JSON.stringify({ name: newCategoryName.trim() }) }, token);
-        categoryId = created.id;
-        setCategories(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      }
-      const body = { ...form, categoryId: categoryId || null, costPrice: form.costPrice || null, salePrice: form.salePrice || null, minStock: form.minStock || null };
+      const body = { ...form, categoryId: form.categoryId || null, costPrice: form.costPrice || null, salePrice: form.salePrice || null, minStock: form.minStock || null };
       if (editing) await api(`/products/${editing.id}`, { method: 'PUT', body: JSON.stringify(body) }, token);
       else await api('/products', { method: 'POST', body: JSON.stringify(body) }, token);
       setOpen(false);
@@ -149,6 +188,24 @@ export function ProductsPage() {
       setError(errorMessage(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function createCategory() {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    setSavingCategory(true);
+    setError('');
+    try {
+      const created = await api<Category>('/categories', { method: 'POST', body: JSON.stringify({ name }) }, token);
+      setCategories(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setForm(f => ({ ...f, categoryId: created.id }));
+      setNewCategoryName('');
+      setCreatingCategory(false);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingCategory(false);
     }
   }
 
@@ -168,9 +225,14 @@ export function ProductsPage() {
         title="Productos"
         description="Catálogo de productos del tenant."
         actions={
-          <Button onClick={openCreate}>
-            <Plus /> Nuevo producto
-          </Button>
+          <>
+            <Button variant="outline" onClick={exportExcel} disabled={exporting || loading}>
+              {exporting ? <Spinner /> : <Download />} Exportar a Excel
+            </Button>
+            <Button onClick={openCreate}>
+              <Plus /> Nuevo producto
+            </Button>
+          </>
         }
       />
       {error && !open && <Alert variant="destructive">{error}</Alert>}
@@ -182,19 +244,68 @@ export function ProductsPage() {
               <Input id="filter-search" className="pl-8" placeholder="Nombre, código de barras o interno" value={searchInput} onChange={e => setSearchInput(e.target.value)} />
             </div>
           </Field>
-          <div className="flex items-center gap-2 pb-2">
-            <Checkbox
-              id="show-inactive"
-              checked={showInactive}
-              onCheckedChange={checked => {
-                setShowInactive(checked === true);
-                setPage(1);
-              }}
-            />
-            <Label htmlFor="show-inactive" className="font-normal">
-              Mostrar desactivados
-            </Label>
-          </div>
+          <Field label="Categoría" htmlFor="filter-category">
+            <Select id="filter-category" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+              <option value="">Todas</option>
+              <option value="none">Sin categoría</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Marca" htmlFor="filter-brand">
+            <Select id="filter-brand" value={brand} onChange={e => setBrand(e.target.value)}>
+              <option value="">Todas</option>
+              {brands.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Estado" htmlFor="filter-status">
+            <Select id="filter-status" value={status} onChange={e => setStatus(e.target.value)}>
+              <option value="active">Activos</option>
+              <option value="inactive">Desactivados</option>
+              <option value="all">Todos</option>
+            </Select>
+          </Field>
+          <Field label="Precio de venta" htmlFor="filter-priced">
+            <Select id="filter-priced" value={priced} onChange={e => setPriced(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="yes">Con precio</option>
+              <option value="no">Sin precio</option>
+            </Select>
+          </Field>
+          <Field label="Stock" htmlFor="filter-stock">
+            <Select id="filter-stock" value={stock} onChange={e => setStock(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="low">Bajo mínimo</option>
+              <option value="out">Sin stock</option>
+            </Select>
+          </Field>
+          <Field label="Ordenar por" htmlFor="filter-sort">
+            <Select id="filter-sort" value={sort} onChange={e => setSort(e.target.value)}>
+              <option value="name">Nombre (A-Z)</option>
+              <option value="newest">Más nuevos</option>
+              <option value="updated">Actualizados recién</option>
+              <option value="price_desc">Mayor precio</option>
+              <option value="price_asc">Menor precio</option>
+            </Select>
+          </Field>
+
+          {/* Con más de una lista se puede mirar el catálogo con los precios de
+              cualquiera de ellas, incluidas las que se calculan solas. */}
+          {priceLists.length > 1 && (
+            <Field label="Ver precios de" htmlFor="filter-pricelist">
+              <Select id="filter-pricelist" value={priceListId} onChange={e => setPriceListId(e.target.value)}>
+                {priceLists.map(l => (
+                  <option key={l.id} value={l.isDefault ? '' : l.id}>
+                    {l.name}
+                    {l.derivesFromName ? ` (${l.derivesFromName} ${Number(l.markupPercent) >= 0 ? '+' : ''}${Number(l.markupPercent)}%)` : ''}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
         </CardContent>
       </Card>
 
@@ -203,7 +314,7 @@ export function ProductsPage() {
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={Boxes} title={showInactive ? 'Sin productos desactivados' : 'Sin productos'} description={search ? 'No hay productos que coincidan con la búsqueda.' : 'Creá el primer producto para empezar a manejar stock.'} />
+            <EmptyState icon={Boxes} title={status === 'inactive' ? 'Sin productos desactivados' : 'Sin productos'} description={search || categoryId || brand || priced || stock ? 'No hay productos que coincidan con los filtros.' : 'Creá el primer producto para empezar a manejar stock.'} />
           ) : (
             <>
               <Table>
@@ -212,9 +323,11 @@ export function ProductsPage() {
                     <TableHead>Código</TableHead>
                     <TableHead>Cód. barras</TableHead>
                     <TableHead>Nombre</TableHead>
+                    <TableHead>Marca</TableHead>
                     <TableHead>Categoría</TableHead>
                     <TableHead className="text-right">Precio</TableHead>
                     <TableHead className="text-right">Margen</TableHead>
+                    <TableHead className="text-right">Stock</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -227,9 +340,13 @@ export function ProductsPage() {
                         <TableCell className="font-mono text-xs">{p.internalCode}</TableCell>
                         <TableCell className="font-mono text-xs">{p.barcode}</TableCell>
                         <TableCell className="font-medium">{p.name}</TableCell>
+                        <TableCell>{p.brand ?? '—'}</TableCell>
                         <TableCell>{p.categoryName ?? '—'}</TableCell>
                         <TableCell className="text-right">{p.salePrice ? `$${Number(p.salePrice).toFixed(2)}` : '—'}</TableCell>
                         <TableCell className="text-right">{m === null ? '—' : `${m.toFixed(0)}%`}</TableCell>
+                        <TableCell className={`text-right tabular-nums ${p.currentStock !== undefined && p.minStock != null && p.currentStock < Number(p.minStock) ? 'font-medium text-destructive' : ''}`}>
+                          {p.currentStock === undefined ? '—' : Number.isInteger(p.currentStock) ? p.currentStock : p.currentStock.toFixed(3)}
+                        </TableCell>
                         <TableCell>{p.isActive ? <Badge variant="success">Activo</Badge> : <Badge variant="destructive">Desactivado</Badge>}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
@@ -294,15 +411,43 @@ export function ProductsPage() {
             {referenceHint && !editing && <p className="-mt-2 text-xs text-muted-foreground">Nombre y marca autocompletados desde la base de referencia. Revisalos antes de guardar.</p>}
             <div className="grid grid-cols-2 gap-4">
               <Field label="Categoría" htmlFor="categoryId" hint="(opcional)">
-                <Select id="categoryId" value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })}>
-                  <option value="">Sin categoría</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                  <option value={NEW_CATEGORY}>+ Nueva categoría...</option>
-                </Select>
+                {creatingCategory ? (
+                  <div className="flex gap-2">
+                    <Input
+                      id="newCategoryName"
+                      autoFocus
+                      placeholder="Nombre de la categoría"
+                      value={newCategoryName}
+                      onChange={e => setNewCategoryName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') { e.preventDefault(); void createCategory(); }
+                        if (e.key === 'Escape') { setCreatingCategory(false); setNewCategoryName(''); }
+                      }}
+                    />
+                    <Button type="button" size="sm" onClick={() => void createCategory()} disabled={savingCategory || !newCategoryName.trim()}>
+                      {savingCategory ? <Spinner /> : 'Crear'}
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => { setCreatingCategory(false); setNewCategoryName(''); }}>
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Select id="categoryId" value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })}>
+                      <option value="">Sin categoría</option>
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                    {isAdmin && (
+                      <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setCreatingCategory(true)}>
+                        <Plus /> Nueva
+                      </Button>
+                    )}
+                  </div>
+                )}
               </Field>
               <Field label="Unidad de venta" htmlFor="unit">
                 <Input id="unit" required value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} />
@@ -320,11 +465,6 @@ export function ProductsPage() {
                 <Input id="unitsPerPurchase" min="0.001" step="0.001" type="number" value={form.unitsPerPurchase} onChange={e => setForm({ ...form, unitsPerPurchase: e.target.value })} />
               </Field>
             </div>
-            {form.categoryId === NEW_CATEGORY && (
-              <Field label="Nombre de la nueva categoría" htmlFor="newCategoryName">
-                <Input id="newCategoryName" required value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
-              </Field>
-            )}
             <Field label="Marca" htmlFor="brand" hint="(opcional)">
               <Input id="brand" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} />
             </Field>

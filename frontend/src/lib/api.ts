@@ -49,6 +49,7 @@ export type Product = {
   minStock?: string | null;
   manejaVencimiento: boolean;
   isActive: boolean;
+  currentStock?: number;
   // Sólo vienen en el detalle (GET /products/:id), no en el listado.
   extraBarcodes?: ProductBarcode[];
   suppliers?: ProductSupplierLink[];
@@ -77,7 +78,18 @@ export type ProductSupplierLink = {
 
 export type LowStockProduct = Product & { currentStock: number };
 
-export type Category = { id: string; name: string };
+export type Category = { id: string; name: string; productCount?: number };
+
+export type PriceList = {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  isActive: boolean;
+  derivesFromId?: string | null;
+  derivesFromName?: string | null;
+  markupPercent?: string | null;
+  priceCount?: number;
+};
 
 export type Warehouse = { id: string; name: string; code: string; address?: string | null };
 

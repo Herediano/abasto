@@ -12,6 +12,7 @@ import { ExpirationsPage } from '@/pages/stock/expirations-page';
 import { RestockPage } from '@/pages/stock/restock-page';
 import { ProductsPage } from '@/pages/catalog/products-page';
 import { ProductDetailPage } from '@/pages/catalog/product-detail-page';
+import { CategoriesPage } from '@/pages/catalog/categories-page';
 import { WarehousesPage } from '@/pages/catalog/warehouses-page';
 import { SuppliersPage } from '@/pages/catalog/suppliers-page';
 import { PricesPage } from '@/pages/prices/prices-page';
@@ -30,6 +31,7 @@ function App() {
         <Route path="/stock/restock" element={<RestockPage />} />
         <Route path="/catalog/products" element={<ProductsPage />} />
         <Route path="/catalog/products/:id" element={<ProductDetailPage />} />
+        <Route path="/catalog/categories" element={<CategoriesPage />} />
         <Route path="/catalog/warehouses" element={<WarehousesPage />} />
         <Route path="/catalog/suppliers" element={<SuppliersPage />} />
         <Route element={<AdminRoute />}>
