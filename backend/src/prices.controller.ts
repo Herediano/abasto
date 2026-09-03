@@ -65,6 +65,94 @@ export class PricesController {
     return { updated: await activarPreciosVigentes(this.prisma) };
   }
 
+  /**
+   * Auditoría: quién tocó qué precio, cuándo y desde dónde.
+   *
+   * Los datos viven en dos tablas por diseño: product_prices guarda los precios
+   * de venta (con su lista y vigencia) y product_price_history los de costo, que
+   * no pertenecen a ninguna lista. Se unifican acá para leerlos como una sola
+   * línea de tiempo.
+   */
+  @Get('audit')
+  async audit(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
+    const tenantId = request.user.tenantId;
+    const limit = Math.min(200, Math.max(1, Number.parseInt(query.limit ?? '100', 10) || 100));
+    const desde = query.from ? new Date(`${query.from}T00:00:00`) : undefined;
+    const hasta = query.to ? new Date(`${query.to}T23:59:59.999`) : undefined;
+    const rango = desde || hasta ? { gte: desde, lte: hasta } : undefined;
+    const productId = query.productId || undefined;
+    const source = query.source || undefined;
+
+    const [ventas, costos, usuarios] = await Promise.all([
+      // El precio anterior no se guarda: es la fila previa de la misma lista, y
+      // se resuelve abajo ordenando por producto y fecha.
+      query.field === 'cost' ? [] : this.prisma.productPrice.findMany({
+        where: { tenantId, ...(rango ? { createdAt: rango } : {}), ...(productId ? { productId } : {}), ...(source ? { source } : {}) },
+        include: { product: { select: { name: true } }, priceList: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      }),
+      query.field === 'sale' ? [] : this.prisma.productPriceHistory.findMany({
+        where: { tenantId, field: 'cost', ...(rango ? { createdAt: rango } : {}), ...(productId ? { productId } : {}), ...(source ? { source } : {}) },
+        include: { product: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      }),
+      this.prisma.user.findMany({ where: { tenantId }, select: { id: true, name: true } }),
+    ]);
+
+    const nombreUsuario = new Map(usuarios.map(u => [u.id, u.name]));
+
+    // Para cada precio de venta, el anterior de esa misma lista y producto.
+    const previos = new Map<string, number>();
+    const porClave = new Map<string, typeof ventas>();
+    for (const v of ventas) {
+      const clave = `${v.productId}|${v.priceListId}`;
+      porClave.set(clave, [...(porClave.get(clave) ?? []), v]);
+    }
+    for (const [clave, filas] of porClave) {
+      const anteriores = await this.prisma.productPrice.findMany({
+        where: { tenantId, productId: filas[0].productId, priceListId: filas[0].priceListId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, price: true },
+      });
+      for (let i = 0; i < anteriores.length - 1; i++) previos.set(`${clave}|${anteriores[i].id}`, Number(anteriores[i + 1].price));
+    }
+
+    const items = [
+      ...ventas.map(v => ({
+        id: v.id,
+        at: v.createdAt.toISOString(),
+        productId: v.productId,
+        productName: v.product.name,
+        field: 'sale' as const,
+        scope: v.priceList.name,
+        before: previos.get(`${v.productId}|${v.priceListId}|${v.id}`) ?? null,
+        after: Number(v.price),
+        source: v.source,
+        userName: v.userId ? nombreUsuario.get(v.userId) ?? null : null,
+        validFrom: v.validFrom.toISOString(),
+      })),
+      ...costos.map(c => ({
+        id: c.id,
+        at: c.createdAt.toISOString(),
+        productId: c.productId,
+        productName: c.product.name,
+        field: 'cost' as const,
+        scope: null,
+        before: c.oldValue === null ? null : Number(c.oldValue),
+        after: Number(c.newValue),
+        source: c.source,
+        userName: c.userId ? nombreUsuario.get(c.userId) ?? null : null,
+        validFrom: c.createdAt.toISOString(),
+      })),
+    ]
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .slice(0, limit);
+
+    return { items };
+  }
+
   // --- politica de redondeo por tramo ---
 
   @Get('rounding-rules')

@@ -136,6 +136,20 @@ export type Customer = {
 
 export type PriceTier = { id: string; priceListId: string; priceListName: string; minQty: string; price: string };
 
+export type PriceAuditRow = {
+  id: string;
+  at: string;
+  productId: string;
+  productName: string;
+  field: 'sale' | 'cost';
+  scope?: string | null;
+  before: number | null;
+  after: number;
+  source: string;
+  userName?: string | null;
+  validFrom: string;
+};
+
 export type Warehouse = { id: string; name: string; code: string; address?: string | null };
 
 export type Supplier = {

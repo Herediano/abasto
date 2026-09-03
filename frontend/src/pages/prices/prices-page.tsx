@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/page-header';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList, type PriceRule, type RoundingRule, type ScheduledChange, type Promotion } from '@/lib/api';
+import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList, type PriceRule, type RoundingRule, type ScheduledChange, type Promotion, type PriceAuditRow } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 type ScopeType = 'all' | 'category' | 'brand';
@@ -29,6 +29,14 @@ type BulkResult = {
   scheduled: boolean;
   validFrom: string;
   priceList: { id: string; name: string };
+};
+
+const PRICE_SOURCES: Record<string, string> = {
+  manual: 'Edición manual',
+  import: 'Importación',
+  bulk: 'Acción masiva',
+  rule: 'Criterio guardado',
+  invoice: 'Factura de compra',
 };
 
 const MODOS_REDONDEO: Record<string, string> = {
@@ -90,6 +98,11 @@ export function PricesPage() {
     validFrom: new Date().toISOString().slice(0, 10), validTo: '',
   });
 
+  // auditoría
+  const [audit, setAudit] = useState<PriceAuditRow[]>([]);
+  const [auditFiltro, setAuditFiltro] = useState({ field: '', source: '', from: '', to: '' });
+  const [loadingAudit, setLoadingAudit] = useState(false);
+
   const [scopeType, setScopeType] = useState<ScopeType>('all');
   const [scopeValue, setScopeValue] = useState('');
   const [target, setTarget] = useState<Target>('salePrice');
@@ -112,6 +125,19 @@ export function PricesPage() {
   const loadRounding = () => api<RoundingRule[]>('/prices/rounding-rules', {}, token).then(setRoundingRules).catch(() => {});
   const loadScheduled = () => api<ScheduledChange[]>('/prices/scheduled', {}, token).then(setScheduled).catch(() => {});
   const loadPromotions = () => api<Promotion[]>('/promotions', {}, token).then(setPromotions).catch(() => {});
+
+  const loadAudit = () => {
+    setLoadingAudit(true);
+    const p = new URLSearchParams({ limit: '100' });
+    if (auditFiltro.field) p.set('field', auditFiltro.field);
+    if (auditFiltro.source) p.set('source', auditFiltro.source);
+    if (auditFiltro.from) p.set('from', auditFiltro.from);
+    if (auditFiltro.to) p.set('to', auditFiltro.to);
+    return api<{ items: PriceAuditRow[] }>(`/prices/audit?${p}`, {}, token)
+      .then(r => setAudit(r.items))
+      .catch(() => {})
+      .finally(() => setLoadingAudit(false));
+  };
 
   /** Arma el config según el tipo: cada promoción tiene sus propios parámetros. */
   function promoConfig() {
@@ -178,7 +204,10 @@ export function PricesPage() {
     void loadRounding();
     void loadScheduled();
     void loadPromotions();
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  // La auditoria se recarga sola al cambiar los filtros.
+  useEffect(() => { void loadAudit(); }, [token, auditFiltro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Guarda la configuración actual del formulario como criterio reutilizable. */
   async function saveRule() {
@@ -846,6 +875,80 @@ export function PricesPage() {
                           <Trash2 />
                         </Button>
                       </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Auditoría de precios</h2>
+            <p className="text-sm text-muted-foreground">
+              Cada cambio de precio, con su origen y quién lo hizo. Es sólo lectura: nada de esto se edita ni se borra.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Precio" htmlFor="audit-field">
+              <Select id="audit-field" value={auditFiltro.field} onChange={e => setAuditFiltro({ ...auditFiltro, field: e.target.value })}>
+                <option value="">Costo y venta</option>
+                <option value="sale">Sólo venta</option>
+                <option value="cost">Sólo costo</option>
+              </Select>
+            </Field>
+            <Field label="Origen" htmlFor="audit-source">
+              <Select id="audit-source" value={auditFiltro.source} onChange={e => setAuditFiltro({ ...auditFiltro, source: e.target.value })}>
+                <option value="">Todos</option>
+                <option value="manual">Edición manual</option>
+                <option value="import">Importación</option>
+                <option value="bulk">Acción masiva</option>
+                <option value="invoice">Factura de compra</option>
+              </Select>
+            </Field>
+            <Field label="Desde" htmlFor="audit-from">
+              <Input id="audit-from" type="date" value={auditFiltro.from} onChange={e => setAuditFiltro({ ...auditFiltro, from: e.target.value })} />
+            </Field>
+            <Field label="Hasta" htmlFor="audit-to">
+              <Input id="audit-to" type="date" value={auditFiltro.to} onChange={e => setAuditFiltro({ ...auditFiltro, to: e.target.value })} />
+            </Field>
+          </div>
+
+          {loadingAudit ? (
+            <Spinner />
+          ) : audit.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay cambios que coincidan con esos filtros.</p>
+          ) : (
+            <div className="max-h-[28rem] overflow-y-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Precio</TableHead>
+                    <TableHead className="text-right">Antes</TableHead>
+                    <TableHead className="text-right">Después</TableHead>
+                    <TableHead>Origen</TableHead>
+                    <TableHead>Usuario</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {audit.map(a => (
+                    <TableRow key={`${a.field}-${a.id}`}>
+                      <TableCell className="whitespace-nowrap">{a.at.slice(0, 10)}</TableCell>
+                      <TableCell className="font-medium">{a.productName}</TableCell>
+                      <TableCell>
+                        {a.field === 'cost' ? 'Costo' : 'Venta'}
+                        {a.scope && <span className="text-muted-foreground"> · {a.scope}</span>}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">{a.before === null ? '—' : `$${a.before.toFixed(2)}`}</TableCell>
+                      <TableCell className="text-right font-medium">${a.after.toFixed(2)}</TableCell>
+                      <TableCell><Badge variant="outline">{PRICE_SOURCES[a.source] ?? a.source}</Badge></TableCell>
+                      <TableCell className="text-muted-foreground">{a.userName ?? '—'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
