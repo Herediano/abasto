@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Calculator, Download, Eye, PackagePlus, Pencil, Play, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { Calculator, Download, Eye, Pencil, Play, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,8 +55,6 @@ export function PricesPage() {
 
   // herramientas de catalogo
   const [categories, setCategories] = useState<Category[]>([]);
-  const [importingCatalog, setImportingCatalog] = useState(false);
-  const [confirmingCatalog, setConfirmingCatalog] = useState(false);
   const [exportingPrices, setExportingPrices] = useState(false);
   const [importingPrices, setImportingPrices] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -344,23 +342,6 @@ export function PricesPage() {
     }
   }
 
-  async function importCatalog() {
-    setConfirmingCatalog(false);
-    setImportingCatalog(true);
-    setToolsMessage('');
-    setError('');
-    try {
-      const result = await api<{ created: number; skipped: number; categories: number; categorized: number }>('/products/import-reference', { method: 'POST' }, token);
-      const cats = result.categories ? ` ${result.categories} rubros como categorías` : '';
-      const cat = result.categorized ? `, ${result.categorized} productos ya existentes recibieron categoría` : '';
-      setToolsMessage(`Catálogo cargado: ${result.created} productos nuevos, ${result.skipped} ya existían.${cats}${cat}.`);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setImportingCatalog(false);
-    }
-  }
-
   async function exportPrices() {
     setExportingPrices(true);
     setError('');
@@ -455,7 +436,7 @@ export function PricesPage() {
 
   return (
     <>
-      <PageHeader title="Precios" description="Herramientas de catálogo y actualización masiva de precios." />
+      <PageHeader title="Precios" description="Listas, actualización masiva y auditoría de precios." />
 
       {toolsMessage && <Alert>{toolsMessage}</Alert>}
       {error && <Alert variant="destructive">{error}</Alert>}
@@ -517,14 +498,11 @@ export function PricesPage() {
       <Card>
         <CardContent className="flex flex-col gap-4">
           <div>
-            <h2 className="text-sm font-semibold">Catálogo y planillas</h2>
-            <p className="text-sm text-muted-foreground">Cargá el catálogo regional o movés precios con Excel.</p>
+            <h2 className="text-sm font-semibold">Planillas de precios</h2>
+            <p className="text-sm text-muted-foreground">Exportá el listado o actualizá precios desde un Excel.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && importPrices(e.target.files[0])} />
-            <Button variant="outline" onClick={() => setConfirmingCatalog(true)} disabled={importingCatalog}>
-              {importingCatalog ? <Spinner /> : <PackagePlus />} Cargar catálogo regional
-            </Button>
             <Button variant="outline" onClick={exportPrices} disabled={exportingPrices}>
               {exportingPrices ? <Spinner /> : <Download />} Exportar precios
             </Button>
@@ -1089,25 +1067,6 @@ export function PricesPage() {
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={confirmingCatalog} onOpenChange={setConfirmingCatalog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cargar catálogo regional</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Esto va a cargar el catálogo regional completo (miles de productos) como productos de este tenant, con un precio de venta sugerido. Los que ya existan por código de barras se saltean.
-          </p>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setConfirmingCatalog(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={importCatalog} disabled={importingCatalog}>
-              {importingCatalog && <Spinner />} Cargar catálogo
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Boxes, Download, Eye, Pencil, Plus, Search } from 'lucide-react';
+import { Boxes, Download, Eye, PackagePlus, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ import { api, downloadFile, errorMessage, type Category, type Pagination, type P
 import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
-const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', brand: '', costPrice: '', salePrice: '', taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false };
+const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', brand: '', taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false };
 // Alicuotas vigentes en Argentina; el backend valida contra la misma lista.
 const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
 type FormState = typeof EMPTY_FORM;
@@ -48,6 +48,11 @@ export function ProductsPage() {
   const [stock, setStock] = useState('');
   const [sort, setSort] = useState('name');
   const [exporting, setExporting] = useState(false);
+  const [importingCatalog, setImportingCatalog] = useState(false);
+  const [confirmingCatalog, setConfirmingCatalog] = useState(false);
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const [clearingCatalog, setClearingCatalog] = useState(false);
+  const [catalogMessage, setCatalogMessage] = useState('');
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [priceListId, setPriceListId] = useState('');
   const [page, setPage] = useState(1);
@@ -116,31 +121,62 @@ export function ProductsPage() {
     }
   }
 
+  async function importCatalog() {
+    setConfirmingCatalog(false);
+    setImportingCatalog(true);
+    setCatalogMessage('');
+    setError('');
+    try {
+      const result = await api<{ created: number; skipped: number }>('/products/import-reference', { method: 'POST' }, token);
+      setCatalogMessage(`Catálogo cargado: ${result.created} productos nuevos, ${result.skipped} ya existían.`);
+      await Promise.all([load(), loadBrands()]);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setImportingCatalog(false);
+    }
+  }
+
+  async function clearCatalog() {
+    setConfirmingClear(false);
+    setClearingCatalog(true);
+    setCatalogMessage('');
+    setError('');
+    try {
+      const result = await api<{ deleted: number; kept: number }>('/products/clear-reference-catalog', { method: 'POST' }, token);
+      setCatalogMessage(
+        result.deleted === 0 && result.kept === 0
+          ? 'No había productos del catálogo importado para borrar.'
+          : `Se borraron ${result.deleted} productos del catálogo importado.${result.kept ? ` ${result.kept} se conservaron porque ya tuvieron movimientos.` : ''}`,
+      );
+      await Promise.all([load(), loadBrands()]);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setClearingCatalog(false);
+    }
+  }
+
   useEffect(() => {
     if (editing || !open) return;
     const barcode = form.barcode.trim();
     setReferenceHint(false);
     if (!barcode) return;
     const timeout = setTimeout(() => {
-      api<{ name: string; brand: string | null; category: string | null }>(`/product-reference/${encodeURIComponent(barcode)}`, {}, token)
+      api<{ name: string; brand: string | null }>(`/product-reference/${encodeURIComponent(barcode)}`, {}, token)
         .then(ref => {
-          // El rubro de referencia solo se aplica si el tenant ya tiene una
-          // categoría con ese nombre; no se crea sola para no ensuciar el listado.
-          const matchedCategory = ref.category
-            ? categories.find(c => c.name.toLowerCase() === ref.category!.toLowerCase())
-            : undefined;
           let applied = false;
           setForm(f => {
             if (f.barcode.trim() !== barcode || f.name) return f;
             applied = true;
-            return { ...f, name: ref.name, brand: ref.brand ?? f.brand, categoryId: f.categoryId || matchedCategory?.id || '' };
+            return { ...f, name: ref.name, brand: ref.brand ?? f.brand };
           });
           if (applied) setReferenceHint(true);
         })
         .catch(() => {});
     }, 400);
     return () => clearTimeout(timeout);
-  }, [form.barcode, editing, open, token, categories]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.barcode, editing, open, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openCreate() {
     setEditing(null);
@@ -162,8 +198,6 @@ export function ProductsPage() {
       purchaseUnit: p.purchaseUnit ?? '',
       unitsPerPurchase: p.unitsPerPurchase ?? '1',
       brand: p.brand ?? '',
-      costPrice: p.costPrice ?? '',
-      salePrice: p.salePrice ?? '',
       taxRate: p.taxRate,
       internalTaxRate: p.internalTaxRate ?? '0',
       minStock: p.minStock ?? '',
@@ -180,7 +214,7 @@ export function ProductsPage() {
     setSaving(true);
     setError('');
     try {
-      const body = { ...form, categoryId: form.categoryId || null, costPrice: form.costPrice || null, salePrice: form.salePrice || null, minStock: form.minStock || null };
+      const body = { ...form, categoryId: form.categoryId || null, minStock: form.minStock || null };
       if (editing) await api(`/products/${editing.id}`, { method: 'PUT', body: JSON.stringify(body) }, token);
       else await api('/products', { method: 'POST', body: JSON.stringify(body) }, token);
       setOpen(false);
@@ -227,6 +261,11 @@ export function ProductsPage() {
         description="Catálogo de productos del tenant."
         actions={
           <>
+            {isAdmin && (
+              <Button variant="outline" onClick={() => setConfirmingCatalog(true)} disabled={importingCatalog}>
+                {importingCatalog ? <Spinner /> : <PackagePlus />} Cargar catálogo regional
+              </Button>
+            )}
             <Button variant="outline" onClick={exportExcel} disabled={exporting || loading}>
               {exporting ? <Spinner /> : <Download />} Exportar a Excel
             </Button>
@@ -236,6 +275,7 @@ export function ProductsPage() {
           </>
         }
       />
+      {catalogMessage && <Alert>{catalogMessage}</Alert>}
       {error && !open && <Alert variant="destructive">{error}</Alert>}
       <Card>
         <CardContent className="flex flex-wrap items-end gap-4">
@@ -469,22 +509,17 @@ export function ProductsPage() {
             <Field label="Marca" htmlFor="brand" hint="(opcional)">
               <Input id="brand" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} />
             </Field>
-            <div className="grid grid-cols-3 gap-4">
-              <Field label="Costo" htmlFor="costPrice" hint="(opcional)">
-                <Input id="costPrice" min="0" step="0.01" type="number" value={form.costPrice} onChange={e => setForm({ ...form, costPrice: e.target.value })} />
-              </Field>
-              <Field label="Precio de venta" htmlFor="salePrice" hint="(opcional)">
-                <Input id="salePrice" min="0" step="0.01" type="number" value={form.salePrice} onChange={e => setForm({ ...form, salePrice: e.target.value })} />
-              </Field>
+            <div className="grid grid-cols-2 gap-4">
               <Field label="IVA %" htmlFor="taxRate">
                 <Select id="taxRate" value={form.taxRate} onChange={e => setForm({ ...form, taxRate: e.target.value })}>
                   {TAX_RATES.map(rate => <option key={rate} value={rate}>{rate}%</option>)}
                 </Select>
               </Field>
+              <Field label="Impuestos internos %" htmlFor="internalTaxRate" hint="(opcional · bebidas alcohólicas, cigarrillos)">
+                <Input id="internalTaxRate" min="0" step="0.01" type="number" value={form.internalTaxRate} onChange={e => setForm({ ...form, internalTaxRate: e.target.value })} />
+              </Field>
             </div>
-            <Field label="Impuestos internos %" htmlFor="internalTaxRate" hint="(opcional · bebidas alcohólicas, cigarrillos)">
-              <Input id="internalTaxRate" min="0" step="0.01" type="number" value={form.internalTaxRate} onChange={e => setForm({ ...form, internalTaxRate: e.target.value })} />
-            </Field>
+            <p className="-mt-1 text-xs text-muted-foreground">El precio de costo y el de venta se cargan desde el módulo de Precios.</p>
             <Field label="Stock mínimo" htmlFor="minStock" hint="(opcional · alerta de reposición cuando el stock total caiga por debajo)">
               <Input id="minStock" min="0" step="0.001" type="number" value={form.minStock} onChange={e => setForm({ ...form, minStock: e.target.value })} />
             </Field>
@@ -503,6 +538,54 @@ export function ProductsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmingCatalog} onOpenChange={setConfirmingCatalog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cargar catálogo regional</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Carga los códigos de barra del catálogo de referencia de la región como productos, para no tener que cargarlos uno por uno. No carga stock ni precios: los precios se ponen después desde el módulo de Precios. Los códigos que ya tengas se saltean.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmingCatalog(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={importCatalog} disabled={importingCatalog}>
+              {importingCatalog && <Spinner />} Cargar catálogo
+            </Button>
+          </DialogFooter>
+          <div className="mt-1 border-t border-border pt-3 text-sm text-muted-foreground">
+            ¿Ya lo cargaste y querés empezar de nuevo?{' '}
+            <button
+              type="button"
+              className="font-medium text-destructive hover:underline"
+              onClick={() => { setConfirmingCatalog(false); setConfirmingClear(true); }}
+            >
+              Vaciar catálogo importado
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmingClear} onOpenChange={setConfirmingClear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vaciar catálogo importado</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Borra los productos que se crearon con «Cargar catálogo regional» y que nunca tuvieron movimientos (stock, ventas o compras). Los que ya se usaron quedan como están. Esto no se puede deshacer.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmingClear(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="destructive" onClick={clearCatalog} disabled={clearingCatalog}>
+              {clearingCatalog ? <Spinner /> : <Trash2 />} Vaciar catálogo
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

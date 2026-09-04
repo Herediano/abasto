@@ -10,16 +10,14 @@ datasource db {
 // Catálogo de referencia compartido entre todos los tenants (no pertenece a ningún tenant).
 // Se usa para autocompletar nombre/marca al cargar un producto por código de barras.
 model ProductReference {
-  ean            String   @id
-  name           String
-  brand          String?
-  suggestedPrice Decimal? @map("suggested_price") @db.Decimal(14, 2)
-  // Rubro canonico (Almacen, Limpieza, Perfumeria, ...). Se completa aparte con
-  // scripts/enrich-reference-categories.ts a partir del arbol de Precios Claros;
-  // products/import-reference lo mapea a una Category del tenant al cargar el catalogo.
-  category       String?
-  source         String   @default("sepa")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  ean       String   @id
+  name      String
+  brand     String?
+  // Rubro (Almacen, Limpieza, ...). Columna latente: hoy nada la escribe ni la
+  // usa; queda para una futura clasificación del catálogo.
+  category  String?
+  source    String   @default("xlsx")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("product_reference")
 }
@@ -353,6 +351,10 @@ model Product {
   internalTaxRate      Decimal               @default(0) @map("internal_tax_rate") @db.Decimal(5, 2)
   minStock             Decimal?              @map("min_stock") @db.Decimal(14, 3)
   manejaVencimiento    Boolean               @default(false) @map("maneja_vencimiento")
+  // Marca los productos creados por la carga del catálogo de referencia
+  // (products/import-reference). Sirve para poder revertir esa carga en masa
+  // borrando solo los que nunca tuvieron actividad.
+  fromReferenceCatalog Boolean               @default(false) @map("from_reference_catalog")
   isActive             Boolean               @default(true) @map("is_active")
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")

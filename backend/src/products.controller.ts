@@ -172,52 +172,10 @@ export class ProductsController {
     const tenantId = request.user.tenantId;
     const [reference, existing] = await Promise.all([
       this.prisma.productReference.findMany(),
-      this.prisma.product.findMany({ where: { tenantId }, select: { id: true, barcode: true, categoryId: true } }),
+      this.prisma.product.findMany({ where: { tenantId }, select: { barcode: true } }),
     ]);
-    const existingByBarcode = new Map(existing.map(p => [p.barcode, p]));
-    const toCreate = reference.filter(r => !existingByBarcode.has(r.ean));
-
-    // Rubro (product_reference.category) -> Category del tenant. Se necesita tanto
-    // para los productos nuevos como para completar la categoria de los que ya
-    // existen sin una. Se reusa la Category que exista (sin distinguir mayusculas,
-    // igual que categories.controller) y se crean las que falten.
-    const rubroByEan = new Map(reference.filter(r => r.category?.trim()).map(r => [r.ean, r.category!.trim()]));
-    const rubrosNecesarios = new Set<string>();
-    for (const r of toCreate) if (r.category?.trim()) rubrosNecesarios.add(r.category.trim());
-    for (const p of existing) {
-      const rubro = rubroByEan.get(p.barcode);
-      if (rubro && !p.categoryId) rubrosNecesarios.add(rubro);
-    }
-
-    const categoryByRubro = new Map<string, string>();
-    if (rubrosNecesarios.size) {
-      const tenantCategories = await this.prisma.category.findMany({ where: { tenantId }, select: { id: true, name: true } });
-      const byLowerName = new Map(tenantCategories.map(c => [c.name.toLowerCase(), c.id]));
-      for (const rubro of rubrosNecesarios) {
-        const found = byLowerName.get(rubro.toLowerCase());
-        if (found) { categoryByRubro.set(rubro, found); continue; }
-        const created = await this.prisma.category.create({ data: { tenantId, name: rubro } });
-        byLowerName.set(rubro.toLowerCase(), created.id);
-        categoryByRubro.set(rubro, created.id);
-      }
-    }
-
-    // Completar la categoria de los productos que ya existian sin una.
-    let categorized = 0;
-    const idsPorCategoria = new Map<string, string[]>();
-    for (const p of existing) {
-      if (p.categoryId) continue;
-      const rubro = rubroByEan.get(p.barcode);
-      const categoryId = rubro && categoryByRubro.get(rubro);
-      if (!categoryId) continue;
-      const list = idsPorCategoria.get(categoryId) ?? [];
-      list.push(p.id);
-      idsPorCategoria.set(categoryId, list);
-    }
-    for (const [categoryId, ids] of idsPorCategoria) {
-      const { count } = await this.prisma.product.updateMany({ where: { tenantId, id: { in: ids } }, data: { categoryId } });
-      categorized += count;
-    }
+    const existingBarcodes = new Set(existing.map(p => p.barcode));
+    const toCreate = reference.filter(r => !existingBarcodes.has(r.ean));
 
     if (toCreate.length) {
       const [{ product_code_seq: newSeq }] = await this.prisma.$queryRaw<Array<{ product_code_seq: number }>>`
@@ -231,14 +189,43 @@ export class ProductsController {
           barcode: r.ean,
           name: r.name,
           brand: r.brand ?? undefined,
-          categoryId: r.category ? categoryByRubro.get(r.category.trim()) : undefined,
           unit: 'unidad',
-          salePrice: r.suggestedPrice ?? undefined,
           manejaVencimiento: false,
+          fromReferenceCatalog: true,
         })),
       });
     }
-    return { created: toCreate.length, skipped: reference.length - toCreate.length, categories: categoryByRubro.size, categorized };
+    return { created: toCreate.length, skipped: reference.length - toCreate.length };
+  }
+
+  /** Revierte la carga del catálogo: borra los productos que vinieron de
+   *  import-reference y que nunca tuvieron actividad (stock, venta o compra).
+   *  Los que ya se usaron quedan intactos. */
+  @Post('clear-reference-catalog')
+  @UseGuards(AdminGuard)
+  async clearReferenceCatalog(@Req() request: AuthRequest) {
+    const tenantId = request.user.tenantId;
+    const candidates = await this.prisma.product.findMany({
+      where: { tenantId, fromReferenceCatalog: true },
+      select: { id: true },
+    });
+    if (!candidates.length) return { deleted: 0, kept: 0 };
+    const ids = candidates.map(c => c.id);
+
+    const [moves, sales, purchases] = await Promise.all([
+      this.prisma.stockMovement.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ['productId'] }),
+      this.prisma.saleLine.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ['productId'] }),
+      this.prisma.purchaseInvoiceLine.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ['productId'] }),
+    ]);
+    const conActividad = new Set([...moves, ...sales, ...purchases].map(x => x.productId));
+    const borrables = ids.filter(id => !conActividad.has(id));
+
+    // ProductPrice / PriceTier / ProductBarcode / ProductSupplier / historial
+    // tienen onDelete: Cascade, así que alcanza con borrar el producto.
+    if (borrables.length) {
+      await this.prisma.product.deleteMany({ where: { tenantId, id: { in: borrables } } });
+    }
+    return { deleted: borrables.length, kept: ids.length - borrables.length };
   }
 
   @Get('export')
@@ -559,8 +546,7 @@ export class ProductsController {
   async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     for (const field of ['barcode', 'name', 'unit']) if (typeof body[field] !== 'string' || !(body[field] as string).trim()) throw new BadRequestException(`${field} es obligatorio`);
-    const costPrice = parseOptionalDecimal(body.costPrice, 'costPrice');
-    const salePrice = parseOptionalDecimal(body.salePrice, 'salePrice');
+    // Los precios (costo y venta) se cargan solo desde el módulo de Precios.
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
     const taxRate = body.taxRate === undefined ? undefined : parseOptionalDecimal(body.taxRate, 'taxRate') ?? undefined;
     assertTaxRate(taxRate);
@@ -584,7 +570,7 @@ export class ProductsController {
         purchaseUnit: typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : undefined,
         unitsPerPurchase: unitsPerPurchase ?? undefined,
         internalTaxRate: internalTaxRate ?? undefined,
-        costPrice: costPrice ?? undefined, salePrice: salePrice ?? undefined, taxRate, minStock: minStock ?? undefined,
+        taxRate, minStock: minStock ?? undefined,
       } });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ya existe un producto con ese código de barras');
@@ -602,8 +588,7 @@ export class ProductsController {
     const name = typeof body.name === 'string' ? body.name.trim() : current.name;
     const unit = typeof body.unit === 'string' ? body.unit.trim() : current.unit;
     if (!barcode || !name || !unit) throw new BadRequestException('barcode, name y unit son obligatorios');
-    const costPrice = parseOptionalDecimal(body.costPrice, 'costPrice');
-    const salePrice = parseOptionalDecimal(body.salePrice, 'salePrice');
+    // Los precios (costo y venta) se cargan solo desde el módulo de Precios.
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
     const taxRate = parseOptionalDecimal(body.taxRate, 'taxRate');
     assertTaxRate(taxRate);
@@ -612,33 +597,21 @@ export class ProductsController {
     if (unitsPerPurchase !== undefined && unitsPerPurchase !== null && unitsPerPurchase <= 0) throw new UnprocessableEntityException('Las unidades por bulto deben ser mayores a cero');
     const categoryId = body.categoryId === null || body.categoryId === '' ? null : typeof body.categoryId === 'string' ? body.categoryId : current.categoryId;
     if (categoryId && !(await this.prisma.category.findFirst({ where: { id: categoryId, tenantId } }))) throw new BadRequestException('Categoría no encontrada');
-    const nextCost = costPrice === undefined ? current.costPrice : costPrice;
-    const nextSale = salePrice === undefined ? current.salePrice : salePrice;
-    const historia = [
-      priceChange({ tenantId, productId: id, field: 'cost', before: current.costPrice, after: nextCost, source: 'manual', userId: request.user.id }),
-      priceChange({ tenantId, productId: id, field: 'sale', before: current.salePrice, after: nextSale, source: 'manual', userId: request.user.id }),
-    ].filter((h): h is NonNullable<typeof h> => h !== null);
 
     try {
-      const [updated] = await this.prisma.$transaction([
-        this.prisma.product.update({ where: { id }, data: {
-          barcode, name, unit,
-          categoryId,
-          brand: typeof body.brand === 'string' ? body.brand.trim() : null,
-          description: typeof body.description === 'string' ? body.description.trim() : null,
-          manejaVencimiento: typeof body.manejaVencimiento === 'boolean' ? body.manejaVencimiento : current.manejaVencimiento,
-          isActive: typeof body.isActive === 'boolean' ? body.isActive : current.isActive,
-          purchaseUnit: body.purchaseUnit === undefined ? current.purchaseUnit : (typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : null),
-          unitsPerPurchase: unitsPerPurchase === undefined || unitsPerPurchase === null ? current.unitsPerPurchase : unitsPerPurchase,
-          internalTaxRate: internalTaxRate === undefined || internalTaxRate === null ? current.internalTaxRate : internalTaxRate,
-          costPrice: nextCost,
-          salePrice: nextSale,
-          minStock: minStock === undefined ? current.minStock : minStock,
-          taxRate: taxRate === undefined ? current.taxRate : (taxRate ?? current.taxRate),
-        } }),
-        ...(historia.length ? [this.prisma.productPriceHistory.createMany({ data: historia })] : []),
-      ]);
-      return updated;
+      return await this.prisma.product.update({ where: { id }, data: {
+        barcode, name, unit,
+        categoryId,
+        brand: typeof body.brand === 'string' ? body.brand.trim() : null,
+        description: typeof body.description === 'string' ? body.description.trim() : null,
+        manejaVencimiento: typeof body.manejaVencimiento === 'boolean' ? body.manejaVencimiento : current.manejaVencimiento,
+        isActive: typeof body.isActive === 'boolean' ? body.isActive : current.isActive,
+        purchaseUnit: body.purchaseUnit === undefined ? current.purchaseUnit : (typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : null),
+        unitsPerPurchase: unitsPerPurchase === undefined || unitsPerPurchase === null ? current.unitsPerPurchase : unitsPerPurchase,
+        internalTaxRate: internalTaxRate === undefined || internalTaxRate === null ? current.internalTaxRate : internalTaxRate,
+        minStock: minStock === undefined ? current.minStock : minStock,
+        taxRate: taxRate === undefined ? current.taxRate : (taxRate ?? current.taxRate),
+      } });
     }
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El barcode ya existe'); throw error; }
   }
