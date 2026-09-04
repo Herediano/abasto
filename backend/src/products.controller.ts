@@ -11,6 +11,7 @@ import { AdminGuard } from './admin.guard';
 import { parsePricesFile } from './price-import.util';
 import { priceChange, type PriceHistoryEntry } from './price-history.util';
 import { guardarPrecio, resolverPrecios } from './price-resolver.util';
+import { buscarProductoIds } from './product-search.util';
 
 // Alicuotas de IVA vigentes en Argentina. El campo era decimal libre, lo que
 // habilitaba cargar valores que despues rompen la facturacion.
@@ -42,24 +43,19 @@ export class ProductsController {
 
   // Filtros compartidos entre el listado y la exportacion, para que "Exportar a
   // Excel" respete exactamente lo que el usuario esta viendo en pantalla.
-  private listWhere(tenantId: string, query: Record<string, string | undefined>): Prisma.ProductWhereInput {
-    const search = query.search?.trim();
+  /**
+   * `searchIds` viene resuelto aparte (product-search.util) porque la búsqueda
+   * necesita SQL crudo: tolera acentos, abreviaturas y errores de tipeo, y
+   * ordena por relevancia. Acá sólo se acota el conjunto.
+   */
+  private listWhere(tenantId: string, query: Record<string, string | undefined>, searchIds?: string[]): Prisma.ProductWhereInput {
     // Se acumulan en AND porque barcode y search pueden venir juntos y cada uno
     // aporta su propio OR: puestos como claves sueltas, el segundo pisaría al primero.
     const filters: Prisma.ProductWhereInput[] = [];
     // Un producto puede tener codigos adicionales: el escaneo tiene que
     // encontrarlo tanto por el principal como por cualquiera de los otros.
     if (query.barcode) filters.push({ OR: [{ barcode: query.barcode }, { extraBarcodes: { some: { barcode: query.barcode } } }] });
-    if (search) {
-      filters.push({
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { barcode: { contains: search, mode: 'insensitive' } },
-          { internalCode: { contains: search, mode: 'insensitive' } },
-          { extraBarcodes: { some: { barcode: { contains: search, mode: 'insensitive' } } } },
-        ],
-      });
-    }
+    if (searchIds) filters.push({ id: { in: searchIds } });
     return {
       tenantId,
       ...(query.status === 'inactive' ? { isActive: false } : query.status === 'all' ? {} : { isActive: true }),
@@ -93,7 +89,14 @@ export class ProductsController {
     const tenantId = request.user.tenantId;
     const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
-    const where = this.listWhere(tenantId, query);
+    const consulta = query.search?.trim();
+    const searchIds = consulta ? await buscarProductoIds(this.prisma, tenantId, consulta) : undefined;
+    // Si buscó y no hubo ni una coincidencia, no hay nada que listar: sin esto
+    // un `id: { in: [] }` devolvería vacío igual, pero ahorra las consultas.
+    if (searchIds && !searchIds.length) {
+      return { items: [], pagination: { page, pageSize, total: 0, totalPages: 0 } };
+    }
+    const where = this.listWhere(tenantId, query, searchIds);
     const orderBy = this.listOrderBy(query.sort);
     const stockFilter = query.stock === 'low' || query.stock === 'out' ? query.stock : undefined;
 
@@ -133,6 +136,19 @@ export class ProductsController {
         .map(c => c.id);
       const items = await this.prisma.product.findMany({ where: { id: { in: matchIds } }, include: { category: { select: { name: true } } }, orderBy, skip: (page - 1) * pageSize, take: pageSize });
       return await shape(items, stockAll, matchIds.length);
+    }
+
+    // Buscando y sin un orden pedido a mano, manda la relevancia: lo más
+    // parecido a lo que se escribió va primero. Prisma no sabe ordenar por la
+    // posición en un arreglo, así que se pagina sobre los ids ya rankeados.
+    if (searchIds && !query.sort) {
+      const permitidos = new Set((await this.prisma.product.findMany({ where, select: { id: true } })).map(p => p.id));
+      const ordenados = searchIds.filter(id => permitidos.has(id));
+      const pagina = ordenados.slice((page - 1) * pageSize, page * pageSize);
+      const filas = await this.prisma.product.findMany({ where: { id: { in: pagina } }, include: { category: { select: { name: true } } } });
+      const porId = new Map(filas.map(f => [f.id, f]));
+      const items = pagina.map(id => porId.get(id)).filter((f): f is (typeof filas)[number] => !!f);
+      return await shape(items, await this.stockMap(tenantId, pagina), ordenados.length);
     }
 
     const [items, total] = await this.prisma.$transaction([
@@ -232,7 +248,9 @@ export class ProductsController {
   @UseGuards(AdminGuard)
   async export(@Req() request: AuthRequest, @Res() res: Response, @Query() query: Record<string, string | undefined>) {
     const tenantId = request.user.tenantId;
-    const where = this.listWhere(tenantId, query);
+    // El export tiene que respetar exactamente lo que se está viendo, búsqueda incluida.
+    const consultaExport = query.search?.trim();
+    const where = this.listWhere(tenantId, query, consultaExport ? await buscarProductoIds(this.prisma, tenantId, consultaExport) : undefined);
     const orderBy = this.listOrderBy(query.sort);
     let products = await this.prisma.product.findMany({
       where,
