@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Pencil, Plus, Shapes, Trash2 } from 'lucide-react';
+import { PencilSimple, Plus, Shapes, Trash } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -126,10 +126,10 @@ export function CategoriesPage() {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
-                            <Pencil />
+                            <PencilSimple />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => openDelete(c)}>
-                            <Trash2 />
+                            <Trash />
                           </Button>
                         </div>
                       </TableCell>

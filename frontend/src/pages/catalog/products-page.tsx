@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Boxes, Download, Eye, PackagePlus, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { ShoppingCartSimple, DownloadSimple, Eye, Package, PencilSimple, Plus, MagnifyingGlass, SlidersHorizontal, Trash, X } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -272,11 +272,11 @@ export function ProductsPage() {
           <>
             {isAdmin && (
               <Button variant="outline" onClick={() => setConfirmingCatalog(true)} disabled={importingCatalog}>
-                {importingCatalog ? <Spinner /> : <PackagePlus />} Cargar catálogo regional
+                {importingCatalog ? <Spinner /> : <Package />} Cargar catálogo regional
               </Button>
             )}
             <Button variant="outline" onClick={exportExcel} disabled={exporting || loading}>
-              {exporting ? <Spinner /> : <Download />} Exportar a Excel
+              {exporting ? <Spinner /> : <DownloadSimple />} Exportar a Excel
             </Button>
             <Button onClick={openCreate}>
               <Plus /> Nuevo producto
@@ -292,7 +292,7 @@ export function ProductsPage() {
           más. */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1 sm:max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-placeholder" />
+          <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-placeholder" />
           <Input
             aria-label="Buscar productos"
             className="pl-9"
@@ -332,7 +332,7 @@ export function ProductsPage() {
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={Boxes} title={status === 'inactive' ? 'Sin productos desactivados' : 'Sin productos'} description={search || categoryId || brand || priced || stock ? 'No hay productos que coincidan con los filtros.' : 'Creá el primer producto para empezar a manejar stock.'} />
+            <EmptyState icon={ShoppingCartSimple} title={status === 'inactive' ? 'Sin productos desactivados' : 'Sin productos'} description={search || categoryId || brand || priced || stock ? 'No hay productos que coincidan con los filtros.' : 'Creá el primer producto para empezar a manejar stock.'} />
           ) : (
             <>
               <Table>
@@ -388,7 +388,7 @@ export function ProductsPage() {
                             {isAdmin && (
                               <>
                                 <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
-                                  <Pencil />
+                                  <PencilSimple />
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={() => toggleActive(p)}>
                                   {p.isActive ? 'Desactivar' : 'Activar'}
@@ -650,7 +650,7 @@ export function ProductsPage() {
               Cancelar
             </Button>
             <Button type="button" variant="destructive" onClick={clearCatalog} disabled={clearingCatalog}>
-              {clearingCatalog ? <Spinner /> : <Trash2 />} Vaciar catálogo
+              {clearingCatalog ? <Spinner /> : <Trash />} Vaciar catálogo
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Pencil, Plus, Truck } from 'lucide-react';
+import { PencilSimple, Plus, Truck } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -105,7 +105,7 @@ export function SuppliersPage() {
                     {isAdmin && (
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
-                          <Pencil />
+                          <PencilSimple />
                         </Button>
                       </TableCell>
                     )}

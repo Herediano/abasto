@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Pencil, Plus, Users as UsersIcon } from 'lucide-react';
+import { PencilSimple, Plus, UsersThree as UsersIcon } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -135,7 +135,7 @@ export function UsersPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
-                        <Pencil />
+                        <PencilSimple />
                       </Button>
                     </TableCell>
                   </TableRow>

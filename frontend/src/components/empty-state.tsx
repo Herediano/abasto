@@ -1,6 +1,6 @@
-import type { LucideIcon } from 'lucide-react';
+import type { Icon } from '@phosphor-icons/react';
 
-export function EmptyState({ icon: Icon, title, description }: { icon: LucideIcon; title: string; description?: string }) {
+export function EmptyState({ icon: Icon, title, description }: { icon: Icon; title: string; description?: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
       <Icon className="size-8 text-muted-foreground" />

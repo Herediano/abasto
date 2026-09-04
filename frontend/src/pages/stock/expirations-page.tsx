@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { CalendarClock, Pencil } from 'lucide-react';
+import { CalendarX, PencilSimple } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,7 +88,7 @@ export function ExpirationsPage() {
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={CalendarClock} title="Sin vencimientos próximos" description="No hay stock con fecha de vencimiento registrada." />
+            <EmptyState icon={CalendarX} title="Sin vencimientos próximos" description="No hay stock con fecha de vencimiento registrada." />
           ) : (
             <Table>
               <TableHeader>
@@ -119,7 +119,7 @@ export function ExpirationsPage() {
                       {isAdmin && (
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(i)}>
-                            <Pencil />
+                            <PencilSimple />
                           </Button>
                         </TableCell>
                       )}

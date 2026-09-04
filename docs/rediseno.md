@@ -58,6 +58,11 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
   cliente, subtotal, descuentos, IVA, el **total grande**, los medios de pago
   como botones y Cobrar al pie. Atajos reales: `F2` lector, `F4` cliente, `F8`
   quitar la última línea.
+- **Selector de tema** en el pie del riel: claro → oscuro → automático. En
+  automático no estampa nada y manda el sistema; elegir uno estampa `data-theme`
+  y le gana. Se guarda en `localStorage` (`lib/theme.ts`).
+- **Íconos migrados a Phosphor** en toda la app: los 20 archivos que quedaban en
+  Lucide. `lucide-react` ya no se usa.
 
 ## Lo que sigue, en orden
 
@@ -65,12 +70,10 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
    egresos, historial, vencimientos, reposición, proveedores, clientes, ventas.
    Mismo patrón de buscador + filtros en panel + chips, y tablas con las
    columnas justas.
-2. **Terminar el cambio de íconos.** El riel y la caja ya usan Phosphor; el
-   resto de las páginas sigue en Lucide. Es un reemplazo mecánico de imports.
-3. **Selector de tema** (claro / oscuro / sistema) en algún lugar del riel. Los
-   tokens ya lo soportan, falta el control y guardar la preferencia.
-4. **Panel del encargado**, que todavía no existe: es la pantalla donde el bento
+2. **Panel del encargado**, que todavía no existe: es la pantalla donde el bento
    tiene sentido de verdad.
+3. **Repasar los formularios**: siguen siendo los de antes. Falta aplicarles la
+   misma regla de aire y agrupación que al resto.
 
 Más adelante, y ya con cambios de backend detrás (ver `docs/producto.md`):
 rangos y permisos, sucursales como entidad propia, caja/arqueo, pago dividido,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Calculator, Download, Eye, Pencil, Play, Plus, Save, Trash2, Upload } from 'lucide-react';
+import { Calculator, DownloadSimple, Eye, PencilSimple, Play, Plus, FloppyDisk, Trash, UploadSimple } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -478,11 +478,11 @@ export function PricesPage() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openListDialog(l)} aria-label={`Editar ${l.name}`}>
-                          <Pencil />
+                          <PencilSimple />
                         </Button>
                         {!l.isDefault && (
                           <Button variant="ghost" size="icon" onClick={() => deleteList(l)} aria-label={`Borrar ${l.name}`}>
-                            <Trash2 />
+                            <Trash />
                           </Button>
                         )}
                       </div>
@@ -504,10 +504,10 @@ export function PricesPage() {
           <div className="flex flex-wrap gap-2">
             <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && importPrices(e.target.files[0])} />
             <Button variant="outline" onClick={exportPrices} disabled={exportingPrices}>
-              {exportingPrices ? <Spinner /> : <Download />} Exportar precios
+              {exportingPrices ? <Spinner /> : <DownloadSimple />} Exportar precios
             </Button>
             <Button variant="outline" onClick={() => setImportDialogOpen(true)} disabled={importingPrices}>
-              {importingPrices ? <Spinner /> : <Upload />} Importar precios
+              {importingPrices ? <Spinner /> : <UploadSimple />} Importar precios
             </Button>
           </div>
         </CardContent>
@@ -629,7 +629,7 @@ export function PricesPage() {
                 className="max-w-48"
               />
               <Button variant="outline" onClick={saveRule} disabled={savingRule || !ruleName.trim() || !scopeReady}>
-                {savingRule ? <Spinner /> : <Save />} Guardar
+                {savingRule ? <Spinner /> : <FloppyDisk />} Guardar
               </Button>
             </div>
           </div>
@@ -751,7 +751,7 @@ export function PricesPage() {
                             {runningRule === r.id ? <Spinner /> : <Play />} Aplicar
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => deleteRule(r.id)} aria-label={`Borrar ${r.name}`}>
-                            <Trash2 />
+                            <Trash />
                           </Button>
                         </div>
                       </TableCell>
@@ -780,7 +780,7 @@ export function PricesPage() {
                   ${Number(t.fromAmount).toLocaleString('es-AR')} – {t.toAmount ? `$${Number(t.toAmount).toLocaleString('es-AR')}` : '∞'}
                   <Badge variant="outline">{MODOS_REDONDEO[t.mode] ?? t.mode}</Badge>
                   <button type="button" onClick={() => deleteTramo(t.id)} className="text-muted-foreground hover:text-destructive" aria-label="Quitar tramo">
-                    <Trash2 className="size-3.5" />
+                    <Trash className="size-3.5" />
                   </button>
                 </span>
               ))}
@@ -847,7 +847,7 @@ export function PricesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => deletePromo(p.id)} aria-label={`Borrar ${p.name}`}>
-                          <Trash2 />
+                          <Trash />
                         </Button>
                       </TableCell>
                     </TableRow>

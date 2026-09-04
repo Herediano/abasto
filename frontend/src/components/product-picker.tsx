@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { MagnifyingGlass } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { api, type Pagination, type Product } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,7 @@ export function ProductPicker({ token, value, onSelect, placeholder = 'Buscar po
   return (
     <div className="relative" ref={containerRef}>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           id={id}
           className="pl-8"

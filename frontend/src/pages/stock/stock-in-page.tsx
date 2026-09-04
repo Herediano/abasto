@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -458,7 +458,7 @@ export function StockInPage() {
                           <TableCell className="text-right font-medium">{money(Number(l.quantity) * Number(l.unitCost) * (1 + Number(l.taxRate) / 100))}</TableCell>
                           <TableCell>
                             <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)}>
-                              <Trash2 />
+                              <Trash />
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -484,7 +484,7 @@ export function StockInPage() {
                       <Input id={`other-tax-amount-${i}`} min="0" step="0.01" type="number" value={t.amount} onChange={e => updateOtherTax(i, { amount: e.target.value })} />
                     </Field>
                     <Button type="button" variant="ghost" size="icon" onClick={() => removeOtherTax(i)}>
-                      <Trash2 />
+                      <Trash />
                     </Button>
                   </div>
                 ))}

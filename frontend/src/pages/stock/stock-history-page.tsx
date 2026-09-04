@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Eye, History as HistoryIcon, Search, X } from 'lucide-react';
+import { Eye, ClockCounterClockwise as HistoryIcon, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,7 +114,7 @@ export function StockHistoryPage() {
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Buscar" htmlFor="filter-search">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input id="filter-search" className="pl-8" placeholder="Producto o código de barras" value={searchInput} onChange={e => setSearchInput(e.target.value)} />
             </div>
           </Field>

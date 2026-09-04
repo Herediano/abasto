@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Receipt } from 'lucide-react';
+import { Receipt } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

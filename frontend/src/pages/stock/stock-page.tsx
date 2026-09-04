@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PackageSearch } from 'lucide-react';
+import { Package } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/empty-state';
@@ -32,7 +32,7 @@ export function StockPage() {
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={PackageSearch} title="No hay stock registrado" description="Registrá un ingreso para empezar a ver existencias acá." />
+            <EmptyState icon={Package} title="No hay stock registrado" description="Registrá un ingreso para empezar a ver existencias acá." />
           ) : (
             <Table>
               <TableHeader>

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Pencil, Plus, Search, Users } from 'lucide-react';
+import { PencilSimple, Plus, MagnifyingGlass, UsersThree } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -106,7 +106,7 @@ export function CustomersPage() {
         <CardContent>
           <Field label="Buscar" htmlFor="search" className="max-w-sm">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+              <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input id="search" className="pl-8" placeholder="Nombre o CUIT" value={searchInput} onChange={e => setSearchInput(e.target.value)} />
             </div>
           </Field>
@@ -118,7 +118,7 @@ export function CustomersPage() {
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={Users} title="Sin clientes" description="Creá el primero para poder asignarle una lista de precios." />
+            <EmptyState icon={UsersThree} title="Sin clientes" description="Creá el primero para poder asignarle una lista de precios." />
           ) : (
             <Table>
               <TableHeader>
@@ -143,7 +143,7 @@ export function CustomersPage() {
                       {isAdmin && (
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="icon" onClick={() => openDialog(c)} aria-label={`Editar ${c.name}`}>
-                            <Pencil />
+                            <PencilSimple />
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => toggleActive(c)}>
                             {c.isActive ? 'Desactivar' : 'Activar'}

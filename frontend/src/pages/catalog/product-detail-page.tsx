@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Package, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Package, Plus, Trash } from '@phosphor-icons/react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -236,7 +236,7 @@ export function ProductDetailPage() {
                   {b.barcode}
                   {isAdmin && (
                     <button type="button" onClick={() => removeBarcode(b.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${b.barcode}`}>
-                      <Trash2 className="size-3.5" />
+                      <Trash className="size-3.5" />
                     </button>
                   )}
                 </span>
@@ -310,7 +310,7 @@ export function ProductDetailPage() {
                   <Badge variant="outline">{t.priceListName}</Badge>
                   {isAdmin && (
                     <button type="button" onClick={() => removeTier(t.id)} className="text-muted-foreground hover:text-destructive" aria-label="Quitar escala">
-                      <Trash2 className="size-3.5" />
+                      <Trash className="size-3.5" />
                     </button>
                   )}
                 </span>

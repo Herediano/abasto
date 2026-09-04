@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PackageMinus } from 'lucide-react';
+import { ArrowsClockwise } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,7 +34,7 @@ export function RestockPage() {
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={PackageMinus} title="Todo en orden" description="Ningún producto con stock mínimo configurado está por debajo del umbral. Configurá un stock mínimo desde la ficha de cada producto para que aparezca acá cuando corresponda reponerlo." />
+            <EmptyState icon={ArrowsClockwise} title="Todo en orden" description="Ningún producto con stock mínimo configurado está por debajo del umbral. Configurá un stock mínimo desde la ficha de cada producto para que aparezca acá cuando corresponda reponerlo." />
           ) : (
             <Table>
               <TableHeader>

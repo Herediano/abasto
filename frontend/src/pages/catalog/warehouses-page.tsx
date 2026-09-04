@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Pencil, Plus, Warehouse as WarehouseIcon } from 'lucide-react';
+import { PencilSimple, Plus, Warehouse as WarehouseIcon } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -100,7 +100,7 @@ export function WarehousesPage() {
                     {isAdmin && (
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
-                          <Pencil />
+                          <PencilSimple />
                         </Button>
                       </TableCell>
                     )}
