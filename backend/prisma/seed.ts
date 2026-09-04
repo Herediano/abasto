@@ -65,6 +65,11 @@ async function main() {
   const listaBase = await prisma.priceList.findFirst({ where: { tenantId: tenant.id, isDefault: true } });
   if (!listaBase) await prisma.priceList.create({ data: { tenantId: tenant.id, name: 'Mostrador', isDefault: true } });
 
+  // Sin una caja no hay dónde abrir un turno. El alta de sucursal la crea sola
+  // (warehouses.controller); acá, lo mismo para el depósito central de demo.
+  const cajaCentral = await prisma.cashRegister.findFirst({ where: { tenantId: tenant.id, warehouseId: central.id } });
+  if (!cajaCentral) await prisma.cashRegister.create({ data: { tenantId: tenant.id, warehouseId: central.id, name: 'Caja 1' } });
+
   const supplier = await findOrCreateSupplier(tenant.id);
   await findOrCreateCustomer(tenant.id);
 

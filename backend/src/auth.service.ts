@@ -75,6 +75,22 @@ export class AuthService {
     }
   }
 
+  /**
+   * Un cajero normal no puede anular un ítem del carrito solo: necesita que un
+   * supervisor (rol admin, hasta que exista un sistema de rangos) apruebe con
+   * sus propias credenciales. No emite token — es sólo un sí/no para
+   * desbloquear la acción en la pantalla que ya está abierta.
+   */
+  async authorizeSupervisor(tenantId: string, body: Record<string, unknown>) {
+    const email = normalizeEmail(body.email);
+    if (!email || typeof body.password !== 'string') throw new UnauthorizedException('Credenciales de supervisor inválidas');
+    const supervisor = await this.prisma.user.findUnique({ where: { email } });
+    if (!supervisor || !supervisor.isActive || supervisor.tenantId !== tenantId || supervisor.role !== 'admin' || !(await argon2.verify(supervisor.passwordHash, body.password))) {
+      throw new UnauthorizedException('Credenciales de supervisor inválidas');
+    }
+    return { authorized: true, supervisorName: supervisor.name };
+  }
+
   async authenticate(token: string) {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as { sub?: string };

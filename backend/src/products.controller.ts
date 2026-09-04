@@ -55,6 +55,9 @@ export class ProductsController {
     // Un producto puede tener codigos adicionales: el escaneo tiene que
     // encontrarlo tanto por el principal como por cualquiera de los otros.
     if (query.barcode) filters.push({ OR: [{ barcode: query.barcode }, { extraBarcodes: { some: { barcode: query.barcode } } }] });
+    // Un pesable se escanea con el código de balanza (peso embebido), que no es
+    // el barcode del producto: se resuelve el producto por su código interno.
+    if (query.internalCode) filters.push({ internalCode: query.internalCode });
     if (searchIds) filters.push({ id: { in: searchIds } });
     return {
       tenantId,
@@ -608,6 +611,7 @@ export class ProductsController {
         brand: typeof body.brand === 'string' ? body.brand : undefined,
         description: typeof body.description === 'string' ? body.description : undefined,
         manejaVencimiento: body.manejaVencimiento === true,
+        isWeighed: body.isWeighed === true,
         purchaseUnit: typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : undefined,
         unitsPerPurchase: unitsPerPurchase ?? undefined,
         internalTaxRate: internalTaxRate ?? undefined,
@@ -646,6 +650,7 @@ export class ProductsController {
         brand: typeof body.brand === 'string' ? body.brand.trim() : null,
         description: typeof body.description === 'string' ? body.description.trim() : null,
         manejaVencimiento: typeof body.manejaVencimiento === 'boolean' ? body.manejaVencimiento : current.manejaVencimiento,
+        isWeighed: typeof body.isWeighed === 'boolean' ? body.isWeighed : current.isWeighed,
         isActive: typeof body.isActive === 'boolean' ? body.isActive : current.isActive,
         purchaseUnit: body.purchaseUnit === undefined ? current.purchaseUnit : (typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : null),
         unitsPerPurchase: unitsPerPurchase === undefined || unitsPerPurchase === null ? current.unitsPerPurchase : unitsPerPurchase,

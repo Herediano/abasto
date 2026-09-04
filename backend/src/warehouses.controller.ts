@@ -20,7 +20,15 @@ export class WarehousesController {
     const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
     const address = typeof body.address === 'string' ? body.address.trim() : undefined;
     if (!name || !code) throw new BadRequestException('name y code son obligatorios');
-    try { return await this.prisma.warehouse.create({ data: { tenantId: request.user.tenantId, name, code, address } }); }
+    try {
+      return await this.prisma.$transaction(async tx => {
+        const deposito = await tx.warehouse.create({ data: { tenantId: request.user.tenantId, name, code, address } });
+        // Sin una caja no hay dónde abrir un turno: nace con una, mismo criterio
+        // que la lista de precios "Mostrador" al crear el tenant.
+        await tx.cashRegister.create({ data: { tenantId: request.user.tenantId, warehouseId: deposito.id, name: 'Caja 1' } });
+        return deposito;
+      });
+    }
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El code ya existe en este tenant'); throw error; }
   }
   @Put(':id')

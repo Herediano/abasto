@@ -52,6 +52,31 @@ enum UserRole {
   user
 }
 
+enum ShiftStatus {
+  open
+  closed
+}
+
+enum CashMovementType {
+  deposit
+  withdrawal
+  expense
+}
+
+enum PaymentMethodType {
+  cash
+  card
+  transfer
+  qr
+  account
+}
+
+enum CustomerAccountMovementType {
+  sale
+  payment
+  adjustment
+}
+
 model Tenant {
   id                       String                    @id @default(uuid()) @db.Uuid
   name                     String
@@ -84,8 +109,135 @@ model Tenant {
   sales                    Sale[]
   saleLines                SaleLine[]
   saleSequences            SaleSequence[]
+  salePayments             SalePayment[]
+  cashRegisters            CashRegister[]
+  cashShifts               CashShift[]
+  cashMovements            CashMovement[]
+  customerAccountMovements CustomerAccountMovement[]
 
   @@map("tenants")
+}
+
+// Un puesto físico de cobro dentro de una sucursal ("Caja 1", "Caja 2"). Cada
+// sucursal nace con una (mismo criterio que la lista de precios "Mostrador"),
+// y puede tener más si el negocio lo necesita.
+model CashRegister {
+  id          String      @id @default(uuid()) @db.Uuid
+  tenantId    String      @map("tenant_id") @db.Uuid
+  warehouseId String      @map("warehouse_id") @db.Uuid
+  name        String
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  warehouse   Warehouse   @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  shifts      CashShift[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, warehouseId, name])
+  @@index([tenantId, warehouseId])
+  @@map("cash_registers")
+}
+
+// Turno de caja: abre con un fondo inicial y cierra con un arqueo. Mientras
+// está abierto, las ventas de esa caja y sus movimientos de efectivo le
+// pertenecen; expectedCash/cashDifference se calculan recién al cerrar, sobre
+// lo que pasó durante el turno (no se recalculan después: son la foto del
+// cierre). Sólo puede haber un turno abierto por caja y por usuario a la vez
+// — reforzado con índices únicos parciales en la migración, porque Prisma no
+// declara WHERE en @@unique.
+model CashShift {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @map("tenant_id") @db.Uuid
+  cashRegisterId String         @map("cash_register_id") @db.Uuid
+  openedById     String         @map("opened_by_id") @db.Uuid
+  closedById     String?        @map("closed_by_id") @db.Uuid
+  status         ShiftStatus    @default(open)
+  openingCash    Decimal        @map("opening_cash") @db.Decimal(14, 2)
+  openingNotes   String?        @map("opening_notes")
+  openedAt       DateTime       @default(now()) @map("opened_at")
+  closedAt       DateTime?      @map("closed_at")
+  expectedCash   Decimal?       @map("expected_cash") @db.Decimal(14, 2)
+  countedCash    Decimal?       @map("counted_cash") @db.Decimal(14, 2)
+  cashDifference Decimal?       @map("cash_difference") @db.Decimal(14, 2)
+  closingNotes   String?        @map("closing_notes")
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
+  cashRegister   CashRegister   @relation(fields: [cashRegisterId, tenantId], references: [id, tenantId])
+  openedBy       User           @relation("ShiftOpenedBy", fields: [openedById], references: [id])
+  closedBy       User?          @relation("ShiftClosedBy", fields: [closedById], references: [id])
+  movements      CashMovement[]
+  sales          Sale[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, cashRegisterId, status])
+  @@index([tenantId, openedById, status])
+  @@map("cash_shifts")
+}
+
+// Retiro a caja fuerte, ingreso de cambio o gasto menor pagado desde el cajón,
+// durante un turno abierto. Es lo que explica que el efectivo contado no sea
+// sólo fondo inicial + ventas en efectivo.
+model CashMovement {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  shiftId    String           @map("shift_id") @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  type       CashMovementType
+  amount     Decimal          @db.Decimal(14, 2)
+  reason     String
+  occurredAt DateTime         @default(now()) @map("occurred_at")
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  shift      CashShift        @relation(fields: [shiftId, tenantId], references: [id, tenantId])
+  user       User             @relation(fields: [userId], references: [id])
+
+  @@unique([id, tenantId])
+  @@index([tenantId, shiftId])
+  @@map("cash_movements")
+}
+
+// Una venta puede pagarse con más de un medio ($30.000 efectivo + $20.000
+// transferencia). Sale.paymentMethod queda como resumen ("cash" o "mixed");
+// esto es el detalle. reference guarda lo que pide cada medio para poder
+// cuadrar el arqueo: cupón de tarjeta, id de operación de una transferencia o
+// QR — texto libre porque cada medio pide algo distinto.
+model SalePayment {
+  id        String            @id @default(uuid()) @db.Uuid
+  tenantId  String            @map("tenant_id") @db.Uuid
+  saleId    String            @map("sale_id") @db.Uuid
+  method    PaymentMethodType
+  amount    Decimal           @db.Decimal(14, 2)
+  reference String?
+  tenant    Tenant            @relation(fields: [tenantId], references: [id])
+  sale      Sale              @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, saleId])
+  @@map("sale_payments")
+}
+
+// Append-only, misma filosofía que stock_movements: nunca se edita ni se
+// borra. amount positivo aumenta la deuda (venta a cuenta corriente),
+// negativo la reduce (cobro). balanceAfter es la foto del saldo en ese
+// momento, para que el estado de cuenta no dependa de recalcular todo desde
+// el origen cada vez que se muestra.
+model CustomerAccountMovement {
+  id           String                      @id @default(uuid()) @db.Uuid
+  tenantId     String                      @map("tenant_id") @db.Uuid
+  customerId   String                      @map("customer_id") @db.Uuid
+  type         CustomerAccountMovementType
+  amount       Decimal                     @db.Decimal(14, 2)
+  balanceAfter Decimal                     @map("balance_after") @db.Decimal(14, 2)
+  saleId       String?                     @map("sale_id") @db.Uuid
+  userId       String                      @map("user_id") @db.Uuid
+  notes        String?
+  occurredAt   DateTime                    @default(now()) @map("occurred_at")
+  tenant       Tenant                      @relation(fields: [tenantId], references: [id])
+  customer     Customer                    @relation(fields: [customerId, tenantId], references: [id, tenantId])
+  sale         Sale?                       @relation(fields: [saleId, tenantId], references: [id, tenantId])
+  user         User                        @relation(fields: [userId], references: [id])
+
+  @@unique([id, tenantId])
+  @@index([tenantId, customerId, occurredAt])
+  @@map("customer_account_movements")
 }
 
 model Category {
@@ -234,35 +386,42 @@ model Promotion {
 // "internal": conectar el web service despues es completar cae/caeExpiresAt,
 // no rehacer el modelo.
 model Sale {
-  id            String     @id @default(uuid()) @db.Uuid
-  tenantId      String     @map("tenant_id") @db.Uuid
-  warehouseId   String     @map("warehouse_id") @db.Uuid
-  customerId    String?    @map("customer_id") @db.Uuid
-  userId        String     @map("user_id") @db.Uuid
-  priceListId   String     @map("price_list_id") @db.Uuid
-  docType       String     @default("internal") @map("doc_type")
-  pointOfSale   String     @map("point_of_sale")
-  number        Int
-  cae           String?
-  caeExpiresAt  DateTime?  @map("cae_expires_at")
-  subtotal      Decimal    @db.Decimal(14, 2)
-  discountTotal Decimal    @default(0) @map("discount_total") @db.Decimal(14, 2)
-  taxTotal      Decimal    @map("tax_total") @db.Decimal(14, 2)
-  total         Decimal    @db.Decimal(14, 2)
-  paymentMethod String     @map("payment_method") // cash | card | transfer
-  status        String     @default("confirmed") // confirmed | cancelled
-  cancelReason  String?    @map("cancel_reason")
-  occurredAt    DateTime   @default(now()) @map("occurred_at")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  tenant        Tenant     @relation(fields: [tenantId], references: [id])
-  warehouse     Warehouse  @relation(fields: [warehouseId], references: [id])
-  customer      Customer?  @relation(fields: [customerId, tenantId], references: [id, tenantId])
-  user          User       @relation(fields: [userId], references: [id])
-  lines         SaleLine[]
+  id               String                    @id @default(uuid()) @db.Uuid
+  tenantId         String                    @map("tenant_id") @db.Uuid
+  warehouseId      String                    @map("warehouse_id") @db.Uuid
+  customerId       String?                   @map("customer_id") @db.Uuid
+  userId           String                    @map("user_id") @db.Uuid
+  priceListId      String                    @map("price_list_id") @db.Uuid
+  // Nulo sólo en ventas de antes de que existiera turno de caja. De acá en más
+  // toda venta de mostrador se hace con un turno abierto.
+  shiftId          String?                   @map("shift_id") @db.Uuid
+  docType          String                    @default("internal") @map("doc_type")
+  pointOfSale      String                    @map("point_of_sale")
+  number           Int
+  cae              String?
+  caeExpiresAt     DateTime?                 @map("cae_expires_at")
+  subtotal         Decimal                   @db.Decimal(14, 2)
+  discountTotal    Decimal                   @default(0) @map("discount_total") @db.Decimal(14, 2)
+  taxTotal         Decimal                   @map("tax_total") @db.Decimal(14, 2)
+  total            Decimal                   @db.Decimal(14, 2)
+  paymentMethod    String                    @map("payment_method") // cash | card | transfer
+  status           String                    @default("confirmed") // confirmed | cancelled
+  cancelReason     String?                   @map("cancel_reason")
+  occurredAt       DateTime                  @default(now()) @map("occurred_at")
+  createdAt        DateTime                  @default(now()) @map("created_at")
+  tenant           Tenant                    @relation(fields: [tenantId], references: [id])
+  warehouse        Warehouse                 @relation(fields: [warehouseId], references: [id])
+  customer         Customer?                 @relation(fields: [customerId, tenantId], references: [id, tenantId])
+  user             User                      @relation(fields: [userId], references: [id])
+  shift            CashShift?                @relation(fields: [shiftId, tenantId], references: [id, tenantId])
+  lines            SaleLine[]
+  payments         SalePayment[]
+  accountMovements CustomerAccountMovement[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, docType, pointOfSale, number])
   @@index([tenantId, occurredAt])
+  @@index([tenantId, shiftId])
   @@map("sales")
 }
 
@@ -324,6 +483,10 @@ model User {
   purchaseInvoices         PurchaseInvoice[]
   purchaseInvoiceRevisions PurchaseInvoiceRevision[]
   sales                    Sale[]
+  shiftsOpened             CashShift[]               @relation("ShiftOpenedBy")
+  shiftsClosed             CashShift[]               @relation("ShiftClosedBy")
+  cashMovements            CashMovement[]
+  customerAccountMovements CustomerAccountMovement[]
 
   @@index([tenantId])
   @@map("users")
@@ -355,6 +518,10 @@ model Product {
   // (products/import-reference). Sirve para poder revertir esa carga en masa
   // borrando solo los que nunca tuvieron actividad.
   fromReferenceCatalog Boolean               @default(false) @map("from_reference_catalog")
+  // Pesable: se vende por peso, con balanza. El código de barras trae el peso
+  // embebido (prefijo 20-29) en vez de identificar sólo el producto; se
+  // resuelve con parseWeighedBarcode() a partir de internalCode.
+  isWeighed            Boolean               @default(false) @map("is_weighed")
   isActive             Boolean               @default(true) @map("is_active")
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
@@ -456,20 +623,27 @@ model ProductPriceHistory {
 }
 
 model Customer {
-  id          String   @id @default(uuid()) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  name        String
-  legalName   String?  @map("legal_name")
-  taxId       String?  @map("tax_id")
-  email       String?
-  phone       String?
-  address     String?
-  priceListId String?  @map("price_list_id") @db.Uuid
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  sales       Sale[]
+  id               String                    @id @default(uuid()) @db.Uuid
+  tenantId         String                    @map("tenant_id") @db.Uuid
+  name             String
+  legalName        String?                   @map("legal_name")
+  taxId            String?                   @map("tax_id")
+  email            String?
+  phone            String?
+  address          String?
+  priceListId      String?                   @map("price_list_id") @db.Uuid
+  // Cuenta corriente. Sin límite (null) es crédito sin tope explícito; 0
+  // bloquea la venta a cuenta corriente. accountBalance es CACHE — la fuente
+  // de verdad es CustomerAccountMovement — y sólo lo escribe cuentas-corrientes
+  // (mismo criterio que Product.salePrice con ProductPrice).
+  creditLimit      Decimal?                  @map("credit_limit") @db.Decimal(14, 2)
+  accountBalance   Decimal                   @default(0) @map("account_balance") @db.Decimal(14, 2)
+  isActive         Boolean                   @default(true) @map("is_active")
+  createdAt        DateTime                  @default(now()) @map("created_at")
+  updatedAt        DateTime                  @updatedAt @map("updated_at")
+  tenant           Tenant                    @relation(fields: [tenantId], references: [id])
+  sales            Sale[]
+  accountMovements CustomerAccountMovement[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -491,6 +665,7 @@ model Warehouse {
   purchaseInvoices PurchaseInvoice[]
   users            User[]
   sales            Sale[]
+  cashRegisters    CashRegister[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])

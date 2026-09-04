@@ -2,11 +2,15 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import { cotizar, type LineaPedida } from './sale-pricing.util';
+import { registrarMovimientoCuenta } from './cuenta-corriente.util';
 
-const FORMAS_PAGO = ['cash', 'card', 'transfer'];
+const FORMAS_PAGO = ['cash', 'card', 'transfer', 'qr', 'account'] as const;
 const PUNTO_VENTA_DEFAULT = '0001';
+const TOLERANCIA = 0.01;
 
 type Usuario = { id: string; tenantId: string; warehouseId?: string | null };
+
+type PagoPedido = { method: (typeof FORMAS_PAGO)[number]; amount: number; reference: string | null };
 
 @Injectable()
 export class SalesService {
@@ -65,11 +69,34 @@ export class SalesService {
     };
   }
 
+  /** Uno o varios medios de pago que tienen que sumar exacto el total de la venta. */
+  private parsePagos(body: Record<string, unknown>, total: number, customerId: string | null): PagoPedido[] {
+    // Compatibilidad con lo que mandaba la pantalla antes del pago dividido:
+    // un paymentMethod suelto vale como un único pago por el total.
+    const raw = Array.isArray(body.payments)
+      ? body.payments
+      : typeof body.paymentMethod === 'string' && body.paymentMethod
+        ? [{ method: body.paymentMethod, amount: total }]
+        : [];
+    if (!raw.length) throw new UnprocessableEntityException('Indicá con qué se paga la venta');
+    const pagos = raw.map(p => {
+      const pago = p as Record<string, unknown>;
+      const method = typeof pago.method === 'string' ? pago.method : '';
+      if (!FORMAS_PAGO.includes(method as PagoPedido['method'])) throw new UnprocessableEntityException(`La forma de pago debe ser una de: ${FORMAS_PAGO.join(', ')}`);
+      const amount = Number(pago.amount);
+      if (!Number.isFinite(amount) || amount <= 0) throw new UnprocessableEntityException('El monto de cada pago debe ser mayor a cero');
+      const reference = typeof pago.reference === 'string' && pago.reference.trim() ? pago.reference.trim() : null;
+      return { method: method as PagoPedido['method'], amount: Math.round(amount * 100) / 100, reference };
+    });
+    if (pagos.some(p => p.method === 'account') && !customerId) throw new UnprocessableEntityException('La venta a cuenta corriente necesita un cliente, no puede ser a consumidor final');
+    const suma = pagos.reduce((s, p) => s + p.amount, 0);
+    if (Math.abs(suma - total) > TOLERANCIA) throw new UnprocessableEntityException(`Los pagos suman ${suma.toFixed(2)} y la venta es ${total.toFixed(2)}`);
+    return pagos;
+  }
+
   async create(user: Usuario, body: Record<string, unknown>) {
     const tenantId = user.tenantId;
     if (!user.warehouseId) throw new UnprocessableEntityException('El usuario no tiene una sucursal/depósito asignado');
-    const paymentMethod = typeof body.paymentMethod === 'string' ? body.paymentMethod : '';
-    if (!FORMAS_PAGO.includes(paymentMethod)) throw new UnprocessableEntityException(`La forma de pago debe ser una de: ${FORMAS_PAGO.join(', ')}`);
 
     const customerId = typeof body.customerId === 'string' && body.customerId ? body.customerId : null;
     const priceListId = await this.listaDelCliente(tenantId, customerId);
@@ -80,6 +107,9 @@ export class SalesService {
     const cotizadas = await cotizar(this.prisma, tenantId, priceListId, lineas);
     const sinPrecio = cotizadas.filter(c => c.listPrice <= 0);
     if (sinPrecio.length) throw new UnprocessableEntityException('Hay productos sin precio cargado; no se pueden vender');
+    const total = Math.round(cotizadas.reduce((s, c) => s + c.lineTotal, 0) * 100) / 100;
+    const pagos = this.parsePagos(body, total, customerId);
+    const paymentMethod = pagos.length === 1 ? pagos[0].method : 'mixed';
 
     const productos = await this.prisma.product.findMany({
       where: { tenantId, id: { in: lineas.map(l => l.productId) } },
@@ -88,6 +118,11 @@ export class SalesService {
     const porId = new Map(productos.map(p => [p.id, p]));
 
     return this.prisma.$transaction(async tx => {
+      // Sin turno abierto no hay dónde imputar la venta ni con qué comparar el
+      // efectivo al cerrar. Un usuario tiene a lo sumo un turno abierto.
+      const turno = await tx.cashShift.findFirst({ where: { tenantId, openedById: user.id, status: 'open' } });
+      if (!turno) throw new UnprocessableEntityException('Abrí un turno de caja antes de cobrar');
+
       // Numero de comprobante: mismo patron atomico que product_code_seq.
       await tx.saleSequence.upsert({
         where: { tenantId_docType_pointOfSale: { tenantId, docType, pointOfSale } },
@@ -107,6 +142,7 @@ export class SalesService {
           customerId,
           userId: user.id,
           priceListId,
+          shiftId: turno.id,
           docType,
           pointOfSale,
           number,
@@ -114,10 +150,19 @@ export class SalesService {
           subtotal: cotizadas.reduce((s, c) => s + c.lineSubtotal, 0),
           discountTotal: cotizadas.reduce((s, c) => s + c.discountAmount, 0),
           taxTotal: cotizadas.reduce((s, c) => s + c.lineTax, 0),
-          total: cotizadas.reduce((s, c) => s + c.lineTotal, 0),
+          total,
           occurredAt: new Date(),
         },
       });
+
+      await tx.salePayment.createMany({
+        data: pagos.map(p => ({ tenantId, saleId: venta.id, method: p.method, amount: p.amount, reference: p.reference })),
+      });
+
+      const pagoCuenta = pagos.find(p => p.method === 'account');
+      if (pagoCuenta) {
+        await registrarMovimientoCuenta(tx, tenantId, customerId!, pagoCuenta.amount, { type: 'sale', saleId: venta.id, userId: user.id });
+      }
 
       for (const c of cotizadas) {
         const producto = porId.get(c.productId);
@@ -230,7 +275,7 @@ export class SalesService {
   async get(tenantId: string, id: string) {
     const venta = await this.prisma.sale.findFirst({
       where: { id, tenantId },
-      include: { lines: true, customer: { select: { name: true } }, user: { select: { name: true } }, warehouse: { select: { name: true } } },
+      include: { lines: true, payments: true, customer: { select: { name: true } }, user: { select: { name: true } }, warehouse: { select: { name: true } } },
     });
     if (!venta) throw new NotFoundException('Venta no encontrada');
     return { ...venta, customerName: venta.customer?.name ?? null, userName: venta.user.name, warehouseName: venta.warehouse.name };
@@ -238,7 +283,9 @@ export class SalesService {
 
   /**
    * Anula: la venta no se borra ni se edita (misma regla que las compras), se
-   * marca cancelled y el stock vuelve con movimientos de ajuste.
+   * marca cancelled y el stock vuelve con movimientos de ajuste. Si se había
+   * pagado (total o parcialmente) a cuenta corriente, esa parte se revierte
+   * como un ajuste — no se puede "reeditar" la venta que la originó.
    */
   async cancel(user: Usuario, id: string, body: Record<string, unknown>) {
     const tenantId = user.tenantId;
@@ -246,9 +293,17 @@ export class SalesService {
     if (!reason) throw new UnprocessableEntityException('Indicá el motivo de la anulación');
 
     return this.prisma.$transaction(async tx => {
-      const venta = await tx.sale.findFirst({ where: { id, tenantId }, include: { lines: true } });
+      const venta = await tx.sale.findFirst({ where: { id, tenantId }, include: { lines: true, payments: true } });
       if (!venta) throw new NotFoundException('Venta no encontrada');
       if (venta.status === 'cancelled') throw new ConflictException('La venta ya está anulada');
+
+      const pagoCuenta = venta.payments.find(p => p.method === 'account');
+      if (pagoCuenta && venta.customerId) {
+        await registrarMovimientoCuenta(tx, tenantId, venta.customerId, -Number(pagoCuenta.amount), {
+          type: 'adjustment', saleId: venta.id, userId: user.id,
+          notes: `Anulación de venta ${venta.pointOfSale}-${String(venta.number).padStart(8, '0')}: ${reason}`,
+        });
+      }
 
       for (const linea of venta.lines) {
         await this.egreso(tx, tenantId, {

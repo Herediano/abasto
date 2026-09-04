@@ -15,7 +15,7 @@ import { AdminGuard } from './admin.guard';
 export class CustomersController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  private async parse(tenantId: string, body: Record<string, unknown>, actual?: { priceListId: string | null }) {
+  private async parse(tenantId: string, body: Record<string, unknown>, actual?: { priceListId: string | null; creditLimit: Prisma.Decimal | null }) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) throw new BadRequestException('El nombre es obligatorio');
     const priceListId = body.priceListId === null || body.priceListId === ''
@@ -25,6 +25,12 @@ export class CustomersController {
       throw new BadRequestException('Lista de precios no encontrada');
     }
     const texto = (campo: unknown) => (typeof campo === 'string' && campo.trim() ? campo.trim() : null);
+    // Sin límite (no se manda el campo o llega vacío) es crédito sin tope
+    // explícito; 0 bloquea la venta a cuenta corriente.
+    const creditLimit = body.creditLimit === null || body.creditLimit === ''
+      ? null
+      : body.creditLimit === undefined ? (actual?.creditLimit !== null && actual?.creditLimit !== undefined ? Number(actual.creditLimit) : null) : Number(body.creditLimit);
+    if (creditLimit !== null && (!Number.isFinite(creditLimit) || creditLimit < 0)) throw new BadRequestException('El límite de crédito no puede ser negativo');
     return {
       name,
       legalName: texto(body.legalName),
@@ -33,6 +39,7 @@ export class CustomersController {
       phone: texto(body.phone),
       address: texto(body.address),
       priceListId,
+      creditLimit,
     };
   }
 
