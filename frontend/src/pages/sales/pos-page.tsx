@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -146,17 +145,32 @@ export function PosPage() {
   const lineaDe = (productId: string) => quote?.lines.find(l => l.productId === productId);
 
   return (
-    <>
-      <PageHeader
-        title="Mostrador"
-        description="Escaneá los productos y cobrá. El precio sale de la lista del cliente."
-        actions={
-          <Button variant="outline" asChild>
+    // La caja ocupa la pantalla entera: sin riel, sin encabezado de aplicación.
+    // El cajero está acá todo el día y no tiene que ver nada más.
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
+      {/* Esto no es navegación: es el estado del turno, que el cajero necesita
+          a la vista permanentemente. */}
+      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-2.5">
+        <p className="font-display text-base font-bold tracking-tight">
+          abasto<span className="text-primary">.ai</span>
+        </p>
+        <span className="h-5 w-px bg-border" aria-hidden="true" />
+        <span className="flex items-center gap-2 text-sm font-medium">
+          <span className="size-2 rounded-full bg-success" aria-hidden="true" />
+          Caja abierta
+        </span>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" size="sm" asChild>
             <Link to="/ventas/historial">Ver ventas</Link>
           </Button>
-        }
-      />
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/">Salir</Link>
+          </Button>
+        </div>
+      </header>
 
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4">
       {aviso && <Alert>{aviso}</Alert>}
       {error && <Alert variant="destructive">{error}</Alert>}
 
@@ -296,6 +310,8 @@ export function PosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+        </div>
+      </div>
+    </div>
   );
 }

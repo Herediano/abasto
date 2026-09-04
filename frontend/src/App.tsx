@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminRoute } from '@/components/layout/admin-route';
-import { ProtectedRoute } from '@/components/layout/protected-route';
+import { FullScreenRoute, ProtectedRoute } from '@/components/layout/protected-route';
 import { UsersPage } from '@/pages/admin/users-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { SignupPage } from '@/pages/auth/signup-page';
@@ -25,6 +25,10 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      {/* La caja va afuera del riel: pantalla completa, su propio mundo. */}
+      <Route element={<FullScreenRoute />}>
+        <Route path="/ventas" element={<PosPage />} />
+      </Route>
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<StockPage />} />
         <Route path="/stock/in" element={<StockInPage />} />
@@ -38,7 +42,6 @@ function App() {
         <Route path="/catalog/warehouses" element={<WarehousesPage />} />
         <Route path="/catalog/suppliers" element={<SuppliersPage />} />
         <Route path="/catalog/customers" element={<CustomersPage />} />
-        <Route path="/ventas" element={<PosPage />} />
         <Route path="/ventas/historial" element={<SalesHistoryPage />} />
         <Route element={<AdminRoute />}>
           <Route path="/precios" element={<PricesPage />} />
