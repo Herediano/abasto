@@ -1,12 +1,14 @@
 import {
-  ArrowsClockwise, ArrowLineDown, ArrowLineUp, CashRegister, ClockCounterClockwise, Gear, Handbag,
-  Package, Receipt, ShoppingCartSimple, SignOut, Storefront, Tag, Truck, UsersThree, Warehouse,
+  ArrowsClockwise, ArrowLineDown, ArrowLineUp, CashRegister, ClockCounterClockwise, Circle, Gear,
+  Handbag, Moon, Package, Receipt, ShoppingCartSimple, SignOut, Storefront, Sun, Tag, Truck,
+  UsersThree, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { api, type Warehouse as WarehouseRow } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 type NavItem = { to: string; label: string; icon: Icon; end?: boolean };
@@ -38,8 +40,15 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
+const TEMAS = {
+  light: { icon: Sun, label: 'Tema claro' },
+  dark: { icon: Moon, label: 'Tema oscuro' },
+  system: { icon: Circle, label: 'Tema automático' },
+} as const;
+
 export function AppShell() {
   const { session, isAdmin, logout } = useAuth();
+  const { theme, ciclar } = useTheme();
   // La sesión guarda el warehouseId pero no el nombre; se resuelve una vez acá
   // porque la sucursal es lo primero que tiene que ver el usuario: operar en la
   // sucursal equivocada arruina el stock.
@@ -150,6 +159,20 @@ export function AppShell() {
             <p className="truncate text-sm font-semibold">{session.user.name}</p>
             <p className="truncate text-xs capitalize text-placeholder">{session.user.role}</p>
           </div>
+          {/* Claro / oscuro / automático. La caja se usa muchas horas seguidas
+              y la elección es personal, así que siempre está a mano. */}
+          <button
+            type="button"
+            onClick={ciclar}
+            aria-label={TEMAS[theme].label}
+            title={TEMAS[theme].label}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground"
+          >
+            {(() => {
+              const TemaIcon = TEMAS[theme].icon;
+              return <TemaIcon weight={theme === 'system' ? 'duotone' : 'fill'} className="size-[18px]" />;
+            })()}
+          </button>
           <button
             type="button"
             onClick={logout}
