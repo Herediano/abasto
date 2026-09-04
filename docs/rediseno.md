@@ -81,9 +81,6 @@ cuenta corriente, pesables.
 
 ## Deudas conocidas
 
-- **Nada está pusheado a GitHub.** Los commits están locales: el WSL es nuevo y
-  no tiene credenciales de GitHub guardadas. Hace falta `gh auth login` o un
-  token personal, y después `git push origin main`.
 - **Categorías salió del riel** porque el feature está sin definir, pero la
   página `/catalog/categories` sigue existiendo y el filtro por categoría sigue
   en Productos. Queda así hasta que se decida qué hacer con categorías.
