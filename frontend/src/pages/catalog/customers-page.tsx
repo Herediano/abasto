@@ -20,7 +20,9 @@ import { cn } from '@/lib/utils';
 const EMPTY = { name: '', legalName: '', taxId: '', email: '', phone: '', address: '', priceListId: '', creditLimit: '' };
 
 export function CustomersPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeCrear = can('clientes.crear');
+  const puedeEditar = can('clientes.editar');
   const token = session!.accessToken;
   const [items, setItems] = useState<Customer[]>([]);
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
@@ -144,7 +146,7 @@ export function CustomersPage() {
       <PageHeader
         title="Clientes"
         description="A cada cliente se le puede asignar una lista de precios."
-        actions={isAdmin ? <Button onClick={() => openDialog(null)}><Plus /> Nuevo cliente</Button> : undefined}
+        actions={puedeCrear ? <Button onClick={() => openDialog(null)}><Plus /> Nuevo cliente</Button> : undefined}
       />
       {error && !open && <Alert variant="destructive">{error}</Alert>}
 
@@ -197,7 +199,7 @@ export function CustomersPage() {
                         <Button variant="ghost" size="icon" onClick={() => openCuenta(c)} aria-label={`Cuenta corriente de ${c.name}`} title="Cuenta corriente">
                           <Wallet />
                         </Button>
-                        {isAdmin && (
+                        {puedeEditar && (
                           <>
                             <Button variant="ghost" size="icon" onClick={() => openDialog(c)} aria-label={`Editar ${c.name}`}>
                               <PencilSimple />

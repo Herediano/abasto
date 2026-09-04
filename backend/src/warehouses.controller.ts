@@ -1,20 +1,22 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 
 @Controller('warehouses')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class WarehousesController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  @Get()
+  @Get() @RequirePermission('depositos.ver')
   list(@Req() request: AuthRequest) {
     return this.prisma.warehouse.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } });
   }
 
   @Post()
+  @RequirePermission('depositos.crear')
   async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
@@ -32,7 +34,7 @@ export class WarehousesController {
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El code ya existe en este tenant'); throw error; }
   }
   @Put(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('depositos.editar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const code = typeof body.code === 'string' ? body.code.trim() : '';

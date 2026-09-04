@@ -93,7 +93,8 @@ function fmtHora(iso: string) {
 }
 
 export function PosPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeAutorizarAnulacion = can('caja.autorizar_anulacion');
   const token = session!.accessToken;
   const [items, setItems] = useState<Item[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -244,7 +245,7 @@ export function PosPage() {
 
   /** Un cajero normal necesita que un supervisor apruebe antes de anular una línea; un supervisor lo hace directo. */
   function pedirAutorizacion(accion: () => void) {
-    if (isAdmin) { accion(); return; }
+    if (puedeAutorizarAnulacion) { accion(); return; }
     pendingVoidRef.current = accion;
     setSupervisorOpen(true);
   }
@@ -276,7 +277,7 @@ export function PosPage() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [items.length, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [items.length, puedeAutorizarAnulacion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function agregarDesdeBusqueda(p: Product) {
     setItems(prev => {

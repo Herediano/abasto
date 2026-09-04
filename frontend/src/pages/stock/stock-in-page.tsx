@@ -51,7 +51,8 @@ function readDraft(tenantId: string): Draft | null {
 }
 
 export function StockInPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeCorregir = can('compras.corregir');
   const token = session!.accessToken;
   const tenantId = session!.tenant.id;
   const navigate = useNavigate();
@@ -584,7 +585,7 @@ export function StockInPage() {
                     <Badge variant={STATUS_LABEL[i.status]?.variant ?? 'secondary'}>{STATUS_LABEL[i.status]?.label ?? i.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {isAdmin && (i.status === 'confirmed' || i.status === 'corrected') && (
+                    {puedeCorregir && (i.status === 'confirmed' || i.status === 'corrected') && (
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" size="sm" onClick={() => startCorrection(i)}>
                           Corregir

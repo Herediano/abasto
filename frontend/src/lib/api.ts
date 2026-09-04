@@ -26,10 +26,13 @@ export async function downloadFile(path: string, token: string, filename: string
 
 export type Session = {
   accessToken: string;
-  expiresIn: number;
-  user: { id: string; name: string; email: string; role?: 'admin' | 'user'; warehouseId?: string | null };
+  user: { id: string; name: string; email: string; rangoId?: string; rangoName?: string; permissions?: string[]; warehouseId?: string | null };
   tenant: { id: string; name: string };
 };
+
+export type Permission = { key: string; area: string; label: string; dangerous: boolean };
+
+export type Rango = { id: string; name: string; isSystem: boolean; userCount: number; permissions: string[] };
 
 export type Product = {
   id: string;
@@ -315,7 +318,8 @@ export type TeamUser = {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'user';
+  rangoId: string;
+  rangoName: string;
   isActive: boolean;
   warehouseId?: string | null;
   warehouse?: { name: string } | null;

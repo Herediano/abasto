@@ -15,7 +15,8 @@ import { api, errorMessage, type Category } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 export function CategoriesPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeEditar = can('productos.editar');
   const token = session!.accessToken;
   const [items, setItems] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +95,7 @@ export function CategoriesPage() {
         title="Categorías"
         description="Rubros para clasificar los productos del catálogo."
         actions={
-          isAdmin && (
+          puedeEditar && (
             <Button onClick={openCreate}>
               <Plus /> Nueva categoría
             </Button>
@@ -114,7 +115,7 @@ export function CategoriesPage() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead className="text-right">Productos</TableHead>
-                  {isAdmin && <TableHead className="text-right">Acciones</TableHead>}
+                  {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -122,7 +123,7 @@ export function CategoriesPage() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">{c.productCount ?? 0}</TableCell>
-                    {isAdmin && (
+                    {puedeEditar && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>

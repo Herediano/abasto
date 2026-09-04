@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { AdminRoute } from '@/components/layout/admin-route';
+import { PermissionRoute } from '@/components/layout/admin-route';
 import { FullScreenRoute, ProtectedRoute } from '@/components/layout/protected-route';
 import { UsersPage } from '@/pages/admin/users-page';
 import { LoginPage } from '@/pages/auth/login-page';
@@ -20,6 +20,7 @@ import { PosPage } from '@/pages/sales/pos-page';
 import { SalesHistoryPage } from '@/pages/sales/sales-history-page';
 import { ShiftsHistoryPage } from '@/pages/sales/shifts-history-page';
 import { PricesPage } from '@/pages/prices/prices-page';
+import { RangosPage } from '@/pages/admin/rangos-page';
 
 function App() {
   return (
@@ -44,9 +45,16 @@ function App() {
         <Route path="/catalog/suppliers" element={<SuppliersPage />} />
         <Route path="/catalog/customers" element={<CustomersPage />} />
         <Route path="/ventas/historial" element={<SalesHistoryPage />} />
-        <Route element={<AdminRoute />}>
+        <Route element={<PermissionRoute permission="precios.ver" />}>
           <Route path="/precios" element={<PricesPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="usuarios.ver" />}>
           <Route path="/admin/users" element={<UsersPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="rangos.ver" />}>
+          <Route path="/admin/rangos" element={<RangosPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="caja.ver_todas" />}>
           <Route path="/ventas/turnos" element={<ShiftsHistoryPage />} />
         </Route>
       </Route>

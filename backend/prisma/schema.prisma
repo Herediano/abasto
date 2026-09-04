@@ -47,11 +47,6 @@ enum PurchaseInvoiceType {
   other
 }
 
-enum UserRole {
-  admin
-  user
-}
-
 enum ShiftStatus {
   open
   closed
@@ -114,6 +109,8 @@ model Tenant {
   cashShifts               CashShift[]
   cashMovements            CashMovement[]
   customerAccountMovements CustomerAccountMovement[]
+  rangos                   Rango[]
+  rangoPermissions         RangoPermission[]
 
   @@map("tenants")
 }
@@ -473,11 +470,12 @@ model User {
   name                     String
   email                    String                    @unique
   passwordHash             String                    @map("password_hash")
-  role                     UserRole                  @default(user)
+  rangoId                  String                    @map("rango_id") @db.Uuid
   isActive                 Boolean                   @default(true) @map("is_active")
   createdAt                DateTime                  @default(now()) @map("created_at")
   updatedAt                DateTime                  @updatedAt @map("updated_at")
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
+  rango                    Rango                     @relation(fields: [rangoId, tenantId], references: [id, tenantId])
   warehouseId              String?                   @map("warehouse_id") @db.Uuid
   warehouse                Warehouse?                @relation(fields: [warehouseId], references: [id])
   purchaseInvoices         PurchaseInvoice[]
@@ -489,7 +487,45 @@ model User {
   customerAccountMovements CustomerAccountMovement[]
 
   @@index([tenantId])
+  @@index([tenantId, rangoId])
   @@map("users")
+}
+
+// Rango: rol configurable por empresa (RBAC). Los "de fábrica" (isSystem) vienen
+// pre-cargados por tenant y se pueden clonar/editar como cualquier otro — nunca
+// se les agrega un permiso nuevo en caliente (ver permissions.catalog.ts): una
+// empresa ya creada no gana capacidades solas cuando el catálogo crece.
+model Rango {
+  id          String            @id @default(uuid()) @db.Uuid
+  tenantId    String            @map("tenant_id") @db.Uuid
+  name        String
+  isSystem    Boolean           @default(false) @map("is_system")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+  permissions RangoPermission[]
+  users       User[]
+
+  @@unique([tenantId, name])
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("rangos")
+}
+
+// Una fila por permiso concedido. key es texto libre (ej. "productos.editar",
+// "caja.autorizar_anulacion") resuelto contra el catálogo del código, no un
+// enum — así sumar un permiso nuevo es agregar una clave, no migrar la base.
+model RangoPermission {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  rangoId  String @map("rango_id") @db.Uuid
+  key      String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  rango    Rango  @relation(fields: [rangoId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([rangoId, key])
+  @@index([tenantId, rangoId])
+  @@map("rango_permissions")
 }
 
 model Product {

@@ -1,15 +1,17 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 
 @Controller('suppliers')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class SuppliersController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-  @Get() list(@Req() request: AuthRequest) { return this.prisma.supplier.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } }); }
+  @Get() @RequirePermission('proveedores.ver') list(@Req() request: AuthRequest) { return this.prisma.supplier.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } }); }
   @Post()
+  @RequirePermission('proveedores.crear')
   async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) throw new BadRequestException('name es obligatorio');
@@ -17,7 +19,7 @@ export class SuppliersController {
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El proveedor ya existe'); throw error; }
   }
   @Put(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('proveedores.editar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) throw new BadRequestException('name es obligatorio');

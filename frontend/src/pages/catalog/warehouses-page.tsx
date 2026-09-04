@@ -16,7 +16,8 @@ import { useAuth } from '@/lib/auth-context';
 const EMPTY_FORM = { name: '', code: '', address: '' };
 
 export function WarehousesPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeEditar = can('depositos.editar');
   const token = session!.accessToken;
   const [items, setItems] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,9 +71,11 @@ export function WarehousesPage() {
         title="Depósitos"
         description="Sucursales y depósitos donde se guarda stock."
         actions={
-          <Button onClick={openCreate}>
-            <Plus /> Nuevo depósito
-          </Button>
+          can('depositos.crear') ? (
+            <Button onClick={openCreate}>
+              <Plus /> Nuevo depósito
+            </Button>
+          ) : undefined
         }
       />
       <Card>
@@ -88,7 +91,7 @@ export function WarehousesPage() {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Código</TableHead>
                   <TableHead>Dirección</TableHead>
-                  {isAdmin && <TableHead className="text-right">Acciones</TableHead>}
+                  {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -97,7 +100,7 @@ export function WarehousesPage() {
                     <TableCell className="font-medium">{w.name}</TableCell>
                     <TableCell className="font-mono text-xs">{w.code}</TableCell>
                     <TableCell>{w.address ?? '—'}</TableCell>
-                    {isAdmin && (
+                    {puedeEditar && (
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
                           <PencilSimple />

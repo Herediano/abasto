@@ -1,11 +1,12 @@
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 
 @Controller('categories')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class CategoriesController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
@@ -18,7 +19,7 @@ export class CategoriesController {
     if (clash) throw new ConflictException('Ya existe una categoría con ese nombre');
   }
 
-  @Get()
+  @Get() @RequirePermission('productos.ver')
   async list(@Req() request: AuthRequest) {
     const rows = await this.prisma.category.findMany({
       where: { tenantId: request.user.tenantId },
@@ -29,7 +30,7 @@ export class CategoriesController {
   }
 
   @Post()
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.editar')
   async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -44,7 +45,7 @@ export class CategoriesController {
   }
 
   @Put(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.editar')
   async rename(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     const current = await this.prisma.category.findFirst({ where: { id, tenantId } });
@@ -63,7 +64,7 @@ export class CategoriesController {
   // Al borrar, los productos quedan sin categoria. Si se pasa ?reassignTo, se
   // mueven a esa categoria en su lugar (sirve tambien para fusionar dos).
   @Delete(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.editar')
   async remove(@Req() request: AuthRequest, @Param('id') id: string, @Query('reassignTo') reassignTo?: string) {
     const tenantId = request.user.tenantId;
     const current = await this.prisma.category.findFirst({ where: { id, tenantId } });

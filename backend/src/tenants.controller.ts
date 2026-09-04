@@ -1,10 +1,11 @@
 import { Controller, Get, Inject, NotFoundException, Param, Req, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 
 @Controller('tenants')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class TenantsController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 

@@ -32,7 +32,8 @@ function urgencyBadge(days: number) {
 }
 
 export function ExpirationsPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeEditar = can('stock.mover');
   const token = session!.accessToken;
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +100,7 @@ export function ExpirationsPage() {
                   <TableHead>Vencimiento</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
-                  {isAdmin && <TableHead className="text-right">Acciones</TableHead>}
+                  {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -116,7 +117,7 @@ export function ExpirationsPage() {
                         <Badge variant={urgency.variant}>{urgency.label}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-semibold">{i.quantity}</TableCell>
-                      {isAdmin && (
+                      {puedeEditar && (
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(i)}>
                             <PencilSimple />

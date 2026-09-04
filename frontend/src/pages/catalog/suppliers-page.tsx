@@ -16,7 +16,8 @@ import { useAuth } from '@/lib/auth-context';
 const EMPTY_FORM = { name: '', legalName: '', taxId: '', email: '', phone: '', address: '' };
 
 export function SuppliersPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeEditar = can('proveedores.editar');
   const token = session!.accessToken;
   const [items, setItems] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,9 +72,11 @@ export function SuppliersPage() {
         title="Proveedores"
         description="Registrá los proveedores para asociarlos a lotes y facturas de compra."
         actions={
-          <Button onClick={openCreate}>
-            <Plus /> Nuevo proveedor
-          </Button>
+          can('proveedores.crear') ? (
+            <Button onClick={openCreate}>
+              <Plus /> Nuevo proveedor
+            </Button>
+          ) : undefined
         }
       />
       <Card>
@@ -91,7 +94,7 @@ export function SuppliersPage() {
                   <TableHead>Tax ID</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Teléfono</TableHead>
-                  {isAdmin && <TableHead className="text-right">Acciones</TableHead>}
+                  {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -102,7 +105,7 @@ export function SuppliersPage() {
                     <TableCell>{s.taxId ?? '—'}</TableCell>
                     <TableCell>{s.email ?? '—'}</TableCell>
                     <TableCell>{s.phone ?? '—'}</TableCell>
-                    {isAdmin && (
+                    {puedeEditar && (
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(s)}>
                           <PencilSimple />

@@ -31,7 +31,7 @@ function margin(costPrice?: string | null, salePrice?: string | null) {
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { session } = useAuth();
+  const { session, can } = useAuth();
   const token = session!.accessToken;
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
@@ -45,7 +45,8 @@ export function ProductDetailPage() {
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [tierForm, setTierForm] = useState({ minQty: '', price: '', priceListId: '' });
   const [savingTier, setSavingTier] = useState(false);
-  const isAdmin = session!.user.role === 'admin';
+  const puedeEditarProducto = can('productos.editar');
+  const puedeEditarPrecios = can('precios.editar');
 
   const loadProduct = () => api<Product>(`/products/${id}`, {}, token).then(setProduct);
 
@@ -234,7 +235,7 @@ export function ProductDetailPage() {
               {(product.extraBarcodes ?? []).map(b => (
                 <span key={b.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-xs">
                   {b.barcode}
-                  {isAdmin && (
+                  {puedeEditarProducto && (
                     <button type="button" onClick={() => removeBarcode(b.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${b.barcode}`}>
                       <Trash className="size-3.5" />
                     </button>
@@ -244,7 +245,7 @@ export function ProductDetailPage() {
             </div>
           )}
 
-          {isAdmin && (
+          {puedeEditarProducto && (
             <form
               className="flex flex-wrap items-end gap-2"
               onSubmit={e => {
@@ -308,7 +309,7 @@ export function ProductDetailPage() {
                 <span key={t.id} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
                   Desde {Number(t.minQty)} u. → {money(Number(t.price))}
                   <Badge variant="outline">{t.priceListName}</Badge>
-                  {isAdmin && (
+                  {puedeEditarPrecios && (
                     <button type="button" onClick={() => removeTier(t.id)} className="text-muted-foreground hover:text-destructive" aria-label="Quitar escala">
                       <Trash className="size-3.5" />
                     </button>
@@ -318,7 +319,7 @@ export function ProductDetailPage() {
             </div>
           )}
 
-          {isAdmin && (
+          {puedeEditarPrecios && (
             <form
               className="flex flex-wrap items-end gap-2"
               onSubmit={e => {

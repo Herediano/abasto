@@ -1,6 +1,6 @@
 import {
   ArrowsClockwise, ArrowLineDown, ArrowLineUp, CashRegister, ClockCounterClockwise, Circle, Gear,
-  Handbag, Moon, Package, Receipt, ShoppingCartSimple, SignOut, Storefront, Sun, Tag, Truck,
+  Handbag, Moon, Package, Receipt, ShieldCheck, ShoppingCartSimple, SignOut, Storefront, Sun, Tag, Truck,
   UsersThree, Vault, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
@@ -11,31 +11,45 @@ import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
-type NavItem = { to: string; label: string; icon: Icon; end?: boolean };
+type NavItem = { to: string; label: string; icon: Icon; end?: boolean; permission?: string };
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Mercadería',
     items: [
-      { to: '/', label: 'Stock', icon: Package, end: true },
-      { to: '/stock/in', label: 'Ingreso', icon: ArrowLineDown },
-      { to: '/stock/out', label: 'Egreso', icon: ArrowLineUp },
-      { to: '/stock/history', label: 'Historial', icon: ClockCounterClockwise },
-      { to: '/stock/expirations', label: 'Vencimientos', icon: Handbag },
-      { to: '/stock/restock', label: 'Reposición', icon: ArrowsClockwise },
+      { to: '/', label: 'Stock', icon: Package, end: true, permission: 'stock.ver' },
+      { to: '/stock/in', label: 'Ingreso', icon: ArrowLineDown, permission: 'stock.mover' },
+      { to: '/stock/out', label: 'Egreso', icon: ArrowLineUp, permission: 'stock.mover' },
+      { to: '/stock/history', label: 'Historial', icon: ClockCounterClockwise, permission: 'stock.ver' },
+      { to: '/stock/expirations', label: 'Vencimientos', icon: Handbag, permission: 'stock.ver' },
+      { to: '/stock/restock', label: 'Reposición', icon: ArrowsClockwise, permission: 'stock.ver' },
     ],
   },
   {
     label: 'Ventas',
-    items: [{ to: '/ventas/historial', label: 'Ventas', icon: Receipt }],
+    items: [{ to: '/ventas/historial', label: 'Ventas', icon: Receipt, permission: 'ventas.ver' }],
   },
   {
     label: 'Catálogo',
     items: [
-      { to: '/catalog/products', label: 'Productos', icon: ShoppingCartSimple },
-      { to: '/catalog/warehouses', label: 'Depósitos', icon: Warehouse },
-      { to: '/catalog/suppliers', label: 'Proveedores', icon: Truck },
-      { to: '/catalog/customers', label: 'Clientes', icon: UsersThree },
+      { to: '/catalog/products', label: 'Productos', icon: ShoppingCartSimple, permission: 'productos.ver' },
+      { to: '/catalog/warehouses', label: 'Depósitos', icon: Warehouse, permission: 'depositos.ver' },
+      { to: '/catalog/suppliers', label: 'Proveedores', icon: Truck, permission: 'proveedores.ver' },
+      { to: '/catalog/customers', label: 'Clientes', icon: UsersThree, permission: 'clientes.ver' },
+    ],
+  },
+  {
+    label: 'Dinero',
+    items: [
+      { to: '/precios', label: 'Precios', icon: Tag, permission: 'precios.ver' },
+      { to: '/ventas/turnos', label: 'Turnos de caja', icon: Vault, permission: 'caja.ver_todas' },
+    ],
+  },
+  {
+    label: 'Administración',
+    items: [
+      { to: '/admin/users', label: 'Usuarios', icon: Gear, permission: 'usuarios.ver' },
+      { to: '/admin/rangos', label: 'Rangos', icon: ShieldCheck, permission: 'rangos.ver' },
     ],
   },
 ];
@@ -47,7 +61,7 @@ const TEMAS = {
 } as const;
 
 export function AppShell() {
-  const { session, isAdmin, logout } = useAuth();
+  const { session, can, logout } = useAuth();
   const { theme, ciclar } = useTheme();
   // La sesión guarda el warehouseId pero no el nombre; se resuelve una vez acá
   // porque la sucursal es lo primero que tiene que ver el usuario: operar en la
@@ -64,14 +78,11 @@ export function AppShell() {
 
   if (!session) return null;
 
-  // Precios y Administración son admin-only, igual que sus rutas (AdminRoute en App.tsx).
-  const groups = isAdmin
-    ? [
-        ...NAV_GROUPS,
-        { label: 'Dinero', items: [{ to: '/precios', label: 'Precios', icon: Tag }, { to: '/ventas/turnos', label: 'Turnos de caja', icon: Vault }] },
-        { label: 'Administración', items: [{ to: '/admin/users', label: 'Usuarios', icon: Gear }] },
-      ]
-    : NAV_GROUPS;
+  // Cada ítem se filtra por su propio permiso; un grupo que se queda sin
+  // ítems no se muestra — así el riel refleja exactamente lo que este rango
+  // puede tocar, no un bloque "admin sí / admin no".
+  const groups = NAV_GROUPS.map(g => ({ ...g, items: g.items.filter(i => !i.permission || can(i.permission)) })).filter(g => g.items.length > 0);
+  const puedeOperarCaja = can('caja.operar');
 
   const iniciales = session.user.name
     .split(' ')
@@ -106,15 +117,17 @@ export function AppShell() {
         <nav className="flex-1 overflow-y-auto px-2.5 py-3">
           {/* La caja no es una sección más: es un modo. Entra a pantalla
               completa y el cajero no ve nada de esto adentro. */}
-          <NavLink
-            to="/ventas"
-            end
-            className="mb-1 flex items-center gap-2.5 rounded-lg bg-foreground px-3 py-2.5 font-display text-[15px] font-semibold tracking-tight text-background transition-opacity hover:opacity-90"
-          >
-            <CashRegister weight="fill" className="size-5 shrink-0" />
-            Caja
-            <span className="ml-auto font-mono text-[10px] font-normal opacity-60">F1</span>
-          </NavLink>
+          {puedeOperarCaja && (
+            <NavLink
+              to="/ventas"
+              end
+              className="mb-1 flex items-center gap-2.5 rounded-lg bg-foreground px-3 py-2.5 font-display text-[15px] font-semibold tracking-tight text-background transition-opacity hover:opacity-90"
+            >
+              <CashRegister weight="fill" className="size-5 shrink-0" />
+              Caja
+              <span className="ml-auto font-mono text-[10px] font-normal opacity-60">F1</span>
+            </NavLink>
+          )}
 
           {groups.map(group => (
             <div key={group.label}>
@@ -157,7 +170,7 @@ export function AppShell() {
           </div>
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate text-sm font-semibold">{session.user.name}</p>
-            <p className="truncate text-xs capitalize text-placeholder">{session.user.role}</p>
+            <p className="truncate text-xs text-placeholder">{session.user.rangoName}</p>
           </div>
           {/* Claro / oscuro / automático. La caja se usa muchas horas seguidas
               y la elección es personal, así que siempre está a mano. */}

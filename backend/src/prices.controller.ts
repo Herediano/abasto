@@ -1,15 +1,17 @@
 import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 import { activarPreciosVigentes } from './price-resolver.util';
 import { PricesService, type BulkInput } from './prices.service';
 
 const MODOS_REDONDEO = ['nearest10', 'nearest100', 'ending99', 'none'];
 
 @Controller('prices')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission('precios.editar')
 export class PricesController {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
@@ -27,7 +29,7 @@ export class PricesController {
    * Precios cargados con fecha futura, agrupados por lista y fecha: es la vista
    * de "lo que va a entrar en vigencia" y desde donde se cancelan.
    */
-  @Get('scheduled')
+  @Get('scheduled') @RequirePermission('precios.ver')
   async scheduled(@Req() request: AuthRequest) {
     const tenantId = request.user.tenantId;
     const filas = await this.prisma.productPrice.findMany({
@@ -73,7 +75,7 @@ export class PricesController {
    * no pertenecen a ninguna lista. Se unifican acá para leerlos como una sola
    * línea de tiempo.
    */
-  @Get('audit')
+  @Get('audit') @RequirePermission('precios.ver')
   async audit(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
     const tenantId = request.user.tenantId;
     const limit = Math.min(200, Math.max(1, Number.parseInt(query.limit ?? '100', 10) || 100));
@@ -155,7 +157,7 @@ export class PricesController {
 
   // --- politica de redondeo por tramo ---
 
-  @Get('rounding-rules')
+  @Get('rounding-rules') @RequirePermission('precios.ver')
   roundingRules(@Req() request: AuthRequest) {
     return this.prisma.roundingRule.findMany({ where: { tenantId: request.user.tenantId }, orderBy: { fromAmount: 'asc' } });
   }

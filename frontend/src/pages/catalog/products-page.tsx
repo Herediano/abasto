@@ -25,7 +25,9 @@ const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
 type FormState = typeof EMPTY_FORM;
 
 export function ProductsPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeEditar = can('productos.editar');
+  const puedeCrear = can('productos.crear');
   const token = session!.accessToken;
   const [items, setItems] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -271,7 +273,7 @@ export function ProductsPage() {
         description="Catálogo de productos del tenant."
         actions={
           <>
-            {isAdmin && (
+            {puedeEditar && (
               <Button variant="outline" onClick={() => setConfirmingCatalog(true)} disabled={importingCatalog}>
                 {importingCatalog ? <Spinner /> : <Package />} Cargar catálogo regional
               </Button>
@@ -279,9 +281,11 @@ export function ProductsPage() {
             <Button variant="outline" onClick={exportExcel} disabled={exporting || loading}>
               {exporting ? <Spinner /> : <DownloadSimple />} Exportar a Excel
             </Button>
-            <Button onClick={openCreate}>
-              <Plus /> Nuevo producto
-            </Button>
+            {puedeCrear && (
+              <Button onClick={openCreate}>
+                <Plus /> Nuevo producto
+              </Button>
+            )}
           </>
         }
       />
@@ -386,7 +390,7 @@ export function ProductsPage() {
                                 <Eye />
                               </Link>
                             </Button>
-                            {isAdmin && (
+                            {puedeEditar && (
                               <>
                                 <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
                                   <PencilSimple />
@@ -472,7 +476,7 @@ export function ProductsPage() {
                         </option>
                       ))}
                     </Select>
-                    {isAdmin && (
+                    {puedeEditar && (
                       <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setCreatingCategory(true)}>
                         <Plus /> Nueva
                       </Button>

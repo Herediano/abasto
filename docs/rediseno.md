@@ -92,11 +92,20 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
   `2`, código interno + peso en gramos embebido) se parsea en la caja
   (`lib/pesable.ts`) y agrega la línea con la cantidad decimal correcta sin
   buscar por barcode.
-- **Anular un ítem del carrito** pide autorización: un cajero sin rol admin ve
-  un diálogo pidiendo email y contraseña de un supervisor
-  (`SupervisorAuthDialog`, contra `POST /auth/authorize-supervisor`) antes de
-  poder sacar una línea (Trash, `F8`, o cantidad en 0); un admin lo hace
-  directo. No emite token, es sólo un sí/no para esa acción.
+- **Anular un ítem del carrito** pide autorización: un cajero sin el permiso
+  `caja.autorizar_anulacion` ve un diálogo pidiendo email y contraseña de un
+  supervisor (`SupervisorAuthDialog`, contra `POST /auth/authorize-supervisor`)
+  antes de poder sacar una línea (Trash, `F8`, o cantidad en 0); quien sí tiene
+  el permiso lo hace directo. No emite token, es sólo un sí/no para esa acción.
+- **Rangos**: reemplazan por completo a `role: admin|user`. 7 de fábrica
+  (Cajero, Repositor, Recepción, Administrativo, Supervisor de caja, Encargado,
+  Dueño), clonables y editables desde Rangos (grid por área, peligrosos
+  remarcados). El riel y las rutas se arman por permiso, no por un flag de
+  admin — un rango sin `productos.crear` ni ve el botón. La sesión no vence;
+  se refresca sola (`GET /auth/me`) al abrir la app, así un cambio de rango se
+  nota sin desloguearse. Probado con un cajero de verdad: nav filtrada,
+  rutas bloqueadas, y el cambio de rango de otra pestaña se reflejó al
+  recargar.
 
 ## Lo que sigue, en orden
 
@@ -113,8 +122,8 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
    modelo y que la caja lo muestre antes de confirmar.
 
 Más adelante, y ya con cambios de backend detrás (ver `docs/producto.md`):
-rangos y permisos de verdad (hoy «supervisor» = rol admin, sin gradación),
-sucursales como entidad propia, ARCA, devoluciones/notas de crédito,
+sucursales como entidad propia (hoy `Sucursales.navegar` existe como permiso
+pero no hay selector que lo use), ARCA, devoluciones/notas de crédito,
 transferencias de stock entre sucursales.
 
 ## Deudas conocidas

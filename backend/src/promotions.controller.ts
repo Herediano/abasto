@@ -1,8 +1,9 @@
 import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Post, Put, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 
 const TIPOS = ['nxm', 'a_plus_b', 'percent', 'amount', 'special_price'] as const;
 const SCOPES = ['all', 'category', 'brand'];
@@ -55,7 +56,7 @@ function parseConfig(tipo: Tipo, raw: unknown): Record<string, number> {
 }
 
 @Controller('promotions')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class PromotionsController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
@@ -78,24 +79,24 @@ export class PromotionsController {
     return { name, type, config: parseConfig(type, body.config), scopeType, scopeValue, validFrom, validTo, isActive: body.isActive !== false };
   }
 
-  @Get()
+  @Get() @RequirePermission('promociones.ver')
   list(@Req() request: AuthRequest) {
     return this.prisma.promotion.findMany({ where: { tenantId: request.user.tenantId }, orderBy: [{ isActive: 'desc' }, { validFrom: 'desc' }] });
   }
 
-  @Post()
+  @Post() @RequirePermission('promociones.crear')
   create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     return this.prisma.promotion.create({ data: { tenantId: request.user.tenantId, ...this.parse(body) } });
   }
 
-  @Put(':id')
+  @Put(':id') @RequirePermission('promociones.editar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const actual = await this.prisma.promotion.findFirst({ where: { id, tenantId: request.user.tenantId } });
     if (!actual) throw new BadRequestException('Promoción no encontrada');
     return this.prisma.promotion.update({ where: { id }, data: this.parse(body) });
   }
 
-  @Delete(':id')
+  @Delete(':id') @RequirePermission('promociones.eliminar')
   async remove(@Req() request: AuthRequest, @Param('id') id: string) {
     const promo = await this.prisma.promotion.findFirst({ where: { id, tenantId: request.user.tenantId } });
     if (!promo) throw new BadRequestException('Promoción no encontrada');

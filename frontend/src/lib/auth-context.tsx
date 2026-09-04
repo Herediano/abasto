@@ -1,11 +1,12 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { Session } from './api';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { api, type Session } from './api';
 
 const STORAGE_KEY = 'mayorista-erp-session';
 
 type AuthContextValue = {
   session: Session | null;
-  isAdmin: boolean;
+  /** ¿Tiene el usuario actual esta clave del catálogo (ver permissions.catalog.ts en el backend)? */
+  can: (permission: string) => boolean;
   login: (session: Session) => void;
   logout: () => void;
 };
@@ -24,10 +25,20 @@ function readStoredSession(): Session | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(readStoredSession);
 
+  // La sesión no vence: si un supervisor te cambió el rango hace un rato, te
+  // enterás al abrir la app de nuevo, sin tener que desloguearte a mano.
+  useEffect(() => {
+    if (!session) return;
+    api<{ user: Session['user']; tenant: Session['tenant'] }>('/auth/me', {}, session.accessToken)
+      .then(fresh => setSession(prev => (prev ? { ...prev, user: fresh.user, tenant: fresh.tenant } : prev)))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
-      isAdmin: session?.user.role === 'admin',
+      can: permission => !!session?.user.permissions?.includes(permission),
       login: next => {
         setSession(next);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -39,6 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [session],
   );
+
+  useEffect(() => {
+    if (session) localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  }, [session]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

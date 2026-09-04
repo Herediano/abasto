@@ -23,7 +23,8 @@ const comprobante = (s: { pointOfSale: string; number: number }) => `${s.pointOf
 const fechaHora = (iso: string) => new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
 
 export function SalesHistoryPage() {
-  const { session, isAdmin } = useAuth();
+  const { session, can } = useAuth();
+  const puedeAnular = can('ventas.anular');
   const token = session!.accessToken;
   const [items, setItems] = useState<Sale[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
@@ -130,7 +131,7 @@ export function SalesHistoryPage() {
                           <Button variant="ghost" size="sm" onClick={() => api<SaleDetail>(`/sales/${s.id}`, {}, token).then(setDetalle).catch(e => setError(errorMessage(e)))}>
                             Ver
                           </Button>
-                          {isAdmin && s.status !== 'cancelled' && (
+                          {puedeAnular && s.status !== 'cancelled' && (
                             <Button variant="outline" size="sm" onClick={() => { setAnulando(s); setMotivo(''); }}>
                               Anular
                             </Button>

@@ -1,8 +1,9 @@
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Post, Put, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 import { OPERATIONS, PricesService, ROUNDINGS, SCOPES, TARGETS, type BulkInput } from './prices.service';
 
 /**
@@ -11,7 +12,8 @@ import { OPERATIONS, PricesService, ROUNDINGS, SCOPES, TARGETS, type BulkInput }
  * recalcula con los valores del momento: no repite los precios de la vez pasada.
  */
 @Controller('price-rules')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission('precios.editar')
 export class PriceRulesController {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,

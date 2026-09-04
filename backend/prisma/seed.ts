@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { sembrarRangosDeFabrica } from '../src/rangos.util';
 
 const prisma = new PrismaClient();
 
@@ -69,6 +70,12 @@ async function main() {
   // (warehouses.controller); acá, lo mismo para el depósito central de demo.
   const cajaCentral = await prisma.cashRegister.findFirst({ where: { tenantId: tenant.id, warehouseId: central.id } });
   if (!cajaCentral) await prisma.cashRegister.create({ data: { tenantId: tenant.id, warehouseId: central.id, name: 'Caja 1' } });
+
+  // Los 7 rangos de fábrica. El alta de empresa los crea solos (auth.service);
+  // acá, lo mismo para el tenant de demostración.
+  if ((await prisma.rango.count({ where: { tenantId: tenant.id } })) === 0) {
+    await prisma.$transaction(tx => sembrarRangosDeFabrica(tx, tenant.id));
+  }
 
   const supplier = await findOrCreateSupplier(tenant.id);
   await findOrCreateCustomer(tenant.id);

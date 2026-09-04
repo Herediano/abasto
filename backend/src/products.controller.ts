@@ -6,8 +6,9 @@ import type { Response } from 'express';
 import { memoryStorage } from 'multer';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 import { parsePricesFile } from './price-import.util';
 import { priceChange, type PriceHistoryEntry } from './price-history.util';
 import { guardarPrecio, resolverPrecios } from './price-resolver.util';
@@ -31,7 +32,7 @@ function assertTaxRate(value: number | null | undefined) {
 }
 
 @Controller('products')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class ProductsController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
@@ -87,7 +88,7 @@ export class ProductsController {
     return new Map(sums.map(s => [s.productId, Number(s._sum.quantity ?? 0)]));
   }
 
-  @Get()
+  @Get() @RequirePermission('productos.ver')
   async list(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
     const tenantId = request.user.tenantId;
     const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
@@ -161,7 +162,7 @@ export class ProductsController {
     return await shape(items, await this.stockMap(tenantId, items.map(i => i.id)), total);
   }
 
-  @Get('brands')
+  @Get('brands') @RequirePermission('productos.ver')
   async brands(@Req() request: AuthRequest) {
     const rows = await this.prisma.product.findMany({
       where: { tenantId: request.user.tenantId, brand: { not: null } },
@@ -172,7 +173,7 @@ export class ProductsController {
     return rows.map(r => r.brand).filter((b): b is string => !!b);
   }
 
-  @Get('low-stock')
+  @Get('low-stock') @RequirePermission('productos.ver')
   async lowStock(@Req() request: AuthRequest) {
     const tenantId = request.user.tenantId;
     const products = await this.prisma.product.findMany({ where: { tenantId, isActive: true, minStock: { not: null } } });
@@ -186,7 +187,7 @@ export class ProductsController {
   }
 
   @Post('import-reference')
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.editar')
   async importReference(@Req() request: AuthRequest) {
     const tenantId = request.user.tenantId;
     const [reference, existing] = await Promise.all([
@@ -221,7 +222,7 @@ export class ProductsController {
    *  import-reference y que nunca tuvieron actividad (stock, venta o compra).
    *  Los que ya se usaron quedan intactos. */
   @Post('clear-reference-catalog')
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.editar')
   async clearReferenceCatalog(@Req() request: AuthRequest) {
     const tenantId = request.user.tenantId;
     const candidates = await this.prisma.product.findMany({
@@ -248,7 +249,7 @@ export class ProductsController {
   }
 
   @Get('export')
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.ver')
   async export(@Req() request: AuthRequest, @Res() res: Response, @Query() query: Record<string, string | undefined>) {
     const tenantId = request.user.tenantId;
     // El export tiene que respetar exactamente lo que se está viendo, búsqueda incluida.
@@ -353,7 +354,7 @@ export class ProductsController {
   }
 
   @Post('import-prices')
-  @UseGuards(AdminGuard)
+  @RequirePermission('precios.editar')
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } }))
   async importPrices(@Req() request: AuthRequest, @UploadedFile() file: Express.Multer.File, @Body() body: { updateNames?: string }) {
     if (!file) throw new BadRequestException('Subí un archivo .csv o .xlsx');
@@ -437,7 +438,7 @@ export class ProductsController {
     return { updated, renamed, notFound, invalid, matchedColumns };
   }
 
-  @Get(':id')
+  @Get(':id') @RequirePermission('productos.ver')
   async get(@Req() request: AuthRequest, @Param('id') id: string) {
     const product = await this.prisma.product.findFirstOrThrow({
       where: { id, tenantId: request.user.tenantId },
@@ -457,7 +458,7 @@ export class ProductsController {
   }
 
   @Post(':id/barcodes')
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.editar')
   async addBarcode(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: { barcode?: unknown }) {
     const tenantId = request.user.tenantId;
     const barcode = typeof body.barcode === 'string' ? body.barcode.trim() : '';
@@ -474,7 +475,7 @@ export class ProductsController {
   }
 
   @Delete(':id/barcodes/:barcodeId')
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.editar')
   async removeBarcode(@Req() request: AuthRequest, @Param('id') id: string, @Param('barcodeId') barcodeId: string) {
     const tenantId = request.user.tenantId;
     const found = await this.prisma.productBarcode.findFirst({ where: { id: barcodeId, tenantId, productId: id } });
@@ -487,7 +488,7 @@ export class ProductsController {
    * Escalas por cantidad: a partir de minQty rige otro precio. Se configuran acá
    * y las consume Ventas; hoy no afectan ningún cálculo.
    */
-  @Get(':id/tiers')
+  @Get(':id/tiers') @RequirePermission('precios.ver')
   async tiers(@Req() request: AuthRequest, @Param('id') id: string) {
     const tenantId = request.user.tenantId;
     const filas = await this.prisma.priceTier.findMany({
@@ -499,7 +500,7 @@ export class ProductsController {
   }
 
   @Post(':id/tiers')
-  @UseGuards(AdminGuard)
+  @RequirePermission('precios.editar')
   async createTier(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     if (!(await this.prisma.product.findFirst({ where: { id, tenantId } }))) throw new BadRequestException('Producto no encontrado');
@@ -522,7 +523,7 @@ export class ProductsController {
   }
 
   @Delete(':id/tiers/:tierId')
-  @UseGuards(AdminGuard)
+  @RequirePermission('precios.editar')
   async deleteTier(@Req() request: AuthRequest, @Param('id') id: string, @Param('tierId') tierId: string) {
     const fila = await this.prisma.priceTier.findFirst({ where: { id: tierId, tenantId: request.user.tenantId, productId: id } });
     if (!fila) throw new BadRequestException('Escala no encontrada');
@@ -530,14 +531,14 @@ export class ProductsController {
     return { deleted: true };
   }
 
-  @Get(':id/lots')
+  @Get(':id/lots') @RequirePermission('stock.ver')
   lots(@Req() request: AuthRequest, @Param('id') id: string) {
     const tenantId = request.user.tenantId;
     return this.prisma.productLot.findMany({ where: { tenantId, productId: id }, orderBy: [{ expirationDate: 'asc' }, { lotNumber: 'asc' }] });
   }
 
   @Put(':id/lots/:lotId')
-  @UseGuards(AdminGuard)
+  @RequirePermission('stock.mover')
   async updateLot(@Req() request: AuthRequest, @Param('id') id: string, @Param('lotId') lotId: string, @Body() body: Record<string, unknown>) {
     const current = await this.prisma.productLot.findFirst({ where: { id: lotId, productId: id, tenantId: request.user.tenantId } });
     if (!current) throw new BadRequestException('Lote no encontrado');
@@ -556,6 +557,7 @@ export class ProductsController {
   }
 
   @Post(':id/lots')
+  @RequirePermission('stock.mover')
   async createLot(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     const providedLotNumber = typeof body.lotNumber === 'string' ? body.lotNumber.trim() : '';
@@ -587,6 +589,7 @@ export class ProductsController {
   }
 
   @Post()
+  @RequirePermission('productos.crear')
   async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     for (const field of ['barcode', 'name', 'unit']) if (typeof body[field] !== 'string' || !(body[field] as string).trim()) throw new BadRequestException(`${field} es obligatorio`);
@@ -624,7 +627,7 @@ export class ProductsController {
   }
 
   @Put(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('productos.editar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     const current = await this.prisma.product.findFirst({ where: { id, tenantId } });

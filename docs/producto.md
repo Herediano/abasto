@@ -48,21 +48,39 @@ tener ajustes propios.
   encimado. También: crear sucursales, definir rangos, crear/asignar usuarios,
   mover stock entre sucursales.
 
-## Rangos (permisos)
+## Rangos (permisos) — construido 2026-09-04
 
 Cada empresa configura qué puede hacer cada rango. Es un RBAC definido por la
-empresa.
+empresa: `Rango` (clonable, editable) + `RangoPermission` (una fila por clave
+concedida, texto libre contra un catálogo del código — no un enum de base de
+datos, para poder sumar permisos sin migrar nada).
 
-- El sistema trae **rangos por defecto** ya armados (Cajero, Repositor,
-  Administrativo, Supervisor de caja, Encargado, Dueño). La empresa los usa tal
-  cual **o** los clona y modifica.
-- Los permisos se muestran **agrupados por área** (Caja, Stock, Compras, Precios,
-  Productos, Clientes, Usuarios, Reportes) × **acción** (ver / crear / editar /
-  anular). No una lista plana de 80 checkboxes.
-- Los permisos peligrosos (anular ventas, editar precios, ver reportes de plata,
-  gestionar usuarios, navegar entre sucursales) se marcan distinto visualmente.
-- "Gestionar usuarios" es un permiso — el dueño lo puede delegar sin dar todo lo
-  demás.
+- El sistema trae **7 rangos de fábrica**: Cajero, Repositor, **Recepción**
+  (recibe mercadería, controla contra la factura, mermas, devoluciones a
+  proveedor — separado de Administrativo a propósito, para que quien descarga
+  el camión no sea necesariamente quien ajusta precios), Administrativo,
+  Supervisor de caja, Encargado, Dueño (todos los permisos). La empresa los usa
+  tal cual **o** los clona y modifica.
+- Los permisos se muestran **agrupados por área** (Caja, Ventas, Stock, Compras,
+  Precios, Productos, Proveedores, Clientes, Promociones, Depósitos, Usuarios,
+  Rangos, Reportes, Sucursales) × acción — ver/crear/editar/anular donde
+  encaja; Caja tiene sus propias acciones (operar, ver todas las cajas,
+  autorizar anulación, administrar) porque no entraba bien en ese molde.
+- Los permisos peligrosos se marcan distinto en la pantalla de Rangos.
+- "Gestionar usuarios" y "gestionar rangos" son permisos separados a propósito
+  — alguien puede dar de alta empleados sin poder redefinir qué puede hacer
+  cada rango.
+- **Un permiso nuevo nunca aparece solo en un rango de una empresa que ya
+  existe** — ni siquiera en los de fábrica. Sólo entra en el catálogo para
+  tenants nuevos; los que ya existen se actualizan a mano desde Rangos. Esto es
+  deliberado (falla cerrado) y va a repetirse cada vez que un módulo existente
+  sume una función nueva — hay que volver a esa pantalla y repartirla.
+- Los permisos se resuelven **en cada pedido** contra la base, nunca cacheados
+  en el token — y el token **no vence**: en este rubro no hay sesiones de 8
+  horas, la gente se loguea una vez y se queda. Revocar es desactivar al
+  usuario o sacarle el permiso, no esperar a que expire nada. El frontend
+  igual se refresca solo (`GET /auth/me` al abrir la app), así un cambio de
+  rango se nota sin desloguearse.
 
 ## Usuarios y su pantalla principal
 
@@ -151,9 +169,10 @@ Ordenados por peso para un mayorista:
 
 Al momento de escribir esto (2026-09):
 
-- **Roles:** hay 2 (admin/user). El objetivo son rangos configurables por
-  empresa. Falta todo el sistema de permisos — "supervisor" hoy es sinónimo de
-  admin (se usa así, por ejemplo, para autorizar anular un ítem del carrito).
+- **Roles:** construido — reemplazados por completo por el sistema de rangos
+  (`User.rangoId`, ya no existe `role`). Autorizar anular un ítem del carrito
+  ahora valida el permiso `caja.autorizar_anulacion` de quien presta sus
+  credenciales, no un rol fijo.
 - **Sucursal:** no hay modelo de sucursal; se usa `Warehouse` (depósito). Hay que
   separar los conceptos.
 - **Caja / turno / arqueo:** construido — `CashRegister`/`CashShift`/

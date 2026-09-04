@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 
-type Usuario = { id: string; tenantId: string; role: 'admin' | 'user'; warehouseId?: string | null };
+type Usuario = { id: string; tenantId: string; permissions: Set<string>; warehouseId?: string | null };
 
 const TIPOS_MOVIMIENTO = ['deposit', 'withdrawal', 'expense'] as const;
 
@@ -77,7 +77,7 @@ export class CajaService {
   private async turnoDeUsuario(user: Usuario, shiftId: string) {
     const turno = await this.prisma.cashShift.findFirst({ where: { id: shiftId, tenantId: user.tenantId } });
     if (!turno) throw new NotFoundException('Turno no encontrado');
-    if (user.role !== 'admin' && turno.openedById !== user.id) throw new NotFoundException('Turno no encontrado');
+    if (!user.permissions.has('caja.ver_todas') && turno.openedById !== user.id) throw new NotFoundException('Turno no encontrado');
     return turno;
   }
 
@@ -140,7 +140,7 @@ export class CajaService {
     await this.prisma.$transaction(async tx => {
       const turno = await tx.cashShift.findFirst({ where: { id: shiftId, tenantId: user.tenantId } });
       if (!turno) throw new NotFoundException('Turno no encontrado');
-      if (user.role !== 'admin' && turno.openedById !== user.id) throw new NotFoundException('Turno no encontrado');
+      if (!user.permissions.has('caja.ver_todas') && turno.openedById !== user.id) throw new NotFoundException('Turno no encontrado');
       if (turno.status === 'closed') throw new ConflictException('El turno ya está cerrado');
       const countedCash = monto(body.countedCash);
       if (!Number.isFinite(countedCash) || countedCash < 0) throw new UnprocessableEntityException('Contá el efectivo del cajón antes de cerrar');

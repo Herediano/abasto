@@ -14,17 +14,18 @@ import { PageHeader } from '@/components/page-header';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type TeamUser, type Warehouse } from '@/lib/api';
+import { api, errorMessage, type Rango, type TeamUser, type Warehouse } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
-const EMPTY_CREATE_FORM = { name: '', email: '', password: '', warehouseId: '' };
-const EMPTY_EDIT_FORM = { name: '', role: 'user' as 'admin' | 'user', warehouseId: '', isActive: true };
+const EMPTY_CREATE_FORM = { name: '', email: '', password: '', rangoId: '', warehouseId: '' };
+const EMPTY_EDIT_FORM = { name: '', rangoId: '', warehouseId: '', isActive: true };
 
 export function UsersPage() {
   const { session } = useAuth();
   const token = session!.accessToken;
   const [items, setItems] = useState<TeamUser[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [rangos, setRangos] = useState<Rango[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -41,13 +42,12 @@ export function UsersPage() {
 
   useEffect(() => {
     void load();
-    api<Warehouse[]>('/warehouses', {}, token)
-      .then(setWarehouses)
-      .catch(e => setError(errorMessage(e)));
+    api<Warehouse[]>('/warehouses', {}, token).then(setWarehouses).catch(e => setError(errorMessage(e)));
+    api<Rango[]>('/rangos', {}, token).then(setRangos).catch(e => setError(errorMessage(e)));
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openCreate() {
-    setCreateForm(EMPTY_CREATE_FORM);
+    setCreateForm({ ...EMPTY_CREATE_FORM, rangoId: rangos[0]?.id ?? '' });
     setError('');
     setCreateOpen(true);
   }
@@ -69,7 +69,7 @@ export function UsersPage() {
 
   function openEdit(u: TeamUser) {
     setEditing(u);
-    setEditForm({ name: u.name, role: u.role, warehouseId: u.warehouseId ?? '', isActive: u.isActive });
+    setEditForm({ name: u.name, rangoId: u.rangoId, warehouseId: u.warehouseId ?? '', isActive: u.isActive });
     setError('');
   }
 
@@ -93,7 +93,7 @@ export function UsersPage() {
     <>
       <PageHeader
         title="Usuarios"
-        description="Gestioná el equipo, sus roles y el depósito que tienen asignado."
+        description="Gestioná el equipo, su rango y el depósito que tienen asignado."
         actions={
           <Button onClick={openCreate}>
             <Plus /> Nuevo usuario
@@ -113,7 +113,7 @@ export function UsersPage() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Rol</TableHead>
+                  <TableHead>Rango</TableHead>
                   <TableHead>Depósito</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -125,9 +125,7 @@ export function UsersPage() {
                     <TableCell className="font-medium">{u.name}</TableCell>
                     <TableCell>{u.email}</TableCell>
                     <TableCell>
-                      <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
-                        {u.role}
-                      </Badge>
+                      <Badge variant={u.rangoName === 'Dueño' ? 'default' : 'secondary'}>{u.rangoName}</Badge>
                     </TableCell>
                     <TableCell>{u.warehouse?.name ?? '—'}</TableCell>
                     <TableCell>
@@ -162,6 +160,12 @@ export function UsersPage() {
             <Field label="Contraseña" htmlFor="create-password" hint="(mínimo 8 caracteres)">
               <Input id="create-password" required minLength={8} type="password" value={createForm.password} onChange={e => setCreateForm({ ...createForm, password: e.target.value })} />
             </Field>
+            <Field label="Rango" htmlFor="create-rango">
+              <Select id="create-rango" required value={createForm.rangoId} onChange={e => setCreateForm({ ...createForm, rangoId: e.target.value })}>
+                <option value="" disabled>Elegí un rango</option>
+                {rangos.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </Select>
+            </Field>
             <Field label="Depósito" htmlFor="create-warehouse" hint="(opcional)">
               <Select id="create-warehouse" value={createForm.warehouseId} onChange={e => setCreateForm({ ...createForm, warehouseId: e.target.value })}>
                 <option value="">Sin asignar</option>
@@ -194,10 +198,9 @@ export function UsersPage() {
             <Field label="Nombre" htmlFor="edit-name">
               <Input id="edit-name" required value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
             </Field>
-            <Field label="Rol" htmlFor="edit-role">
-              <Select id="edit-role" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value as 'admin' | 'user' })}>
-                <option value="user">Usuario</option>
-                <option value="admin">Administrador</option>
+            <Field label="Rango" htmlFor="edit-rango">
+              <Select id="edit-rango" value={editForm.rangoId} onChange={e => setEditForm({ ...editForm, rangoId: e.target.value })}>
+                {rangos.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </Select>
             </Field>
             <Field label="Depósito" htmlFor="edit-warehouse">

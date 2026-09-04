@@ -1,13 +1,14 @@
 import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Post, Put, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 
 const MAX_PROFUNDIDAD = 10;
 
 @Controller('price-lists')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class PriceListsController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
@@ -39,7 +40,7 @@ export class PriceListsController {
     return n;
   }
 
-  @Get()
+  @Get() @RequirePermission('precios.ver')
   async list(@Req() request: AuthRequest) {
     const listas = await this.prisma.priceList.findMany({
       where: { tenantId: request.user.tenantId },
@@ -59,7 +60,7 @@ export class PriceListsController {
   }
 
   @Post()
-  @UseGuards(AdminGuard)
+  @RequirePermission('precios.editar')
   async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -79,7 +80,7 @@ export class PriceListsController {
   }
 
   @Put(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('precios.editar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     const actual = await this.prisma.priceList.findFirst({ where: { id, tenantId } });
@@ -115,7 +116,7 @@ export class PriceListsController {
   }
 
   @Delete(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('precios.editar')
   async remove(@Req() request: AuthRequest, @Param('id') id: string) {
     const tenantId = request.user.tenantId;
     const lista = await this.prisma.priceList.findFirst({ where: { id, tenantId } });

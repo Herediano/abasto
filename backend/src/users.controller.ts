@@ -1,54 +1,66 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 import { PrismaService } from './prisma/prisma.service';
+import { RangosService } from './rangos.service';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class UsersController {
   constructor(
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(RangosService) private readonly rangos: RangosService,
   ) {}
 
-  @Get()
+  @Get() @RequirePermission('usuarios.ver')
   list(@Req() request: AuthRequest) {
     return this.prisma.user.findMany({
       where: { tenantId: request.user.tenantId },
-      select: { id: true, name: true, email: true, role: true, isActive: true, warehouseId: true, warehouse: { select: { name: true } } },
+      select: { id: true, name: true, email: true, rangoId: true, rango: { select: { name: true } }, isActive: true, warehouseId: true, warehouse: { select: { name: true } } },
       orderBy: { name: 'asc' },
-    });
+    }).then(rows => rows.map(({ rango, ...u }) => ({ ...u, rangoName: rango.name })));
   }
 
   @Post()
-  @UseGuards(AdminGuard)
+  @RequirePermission('usuarios.gestionar')
   create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     return this.auth.createUser(request.user.tenantId, body);
   }
 
   @Put(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('usuarios.gestionar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
-    const current = await this.prisma.user.findFirst({ where: { id, tenantId } });
+    const current = await this.prisma.user.findFirst({ where: { id, tenantId }, include: { rango: { include: { permissions: true } } } });
     if (!current) throw new BadRequestException('Usuario no encontrado');
 
     const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : current.name;
-    const role = body.role === 'admin' || body.role === 'user' ? body.role : current.role;
+    const rangoId = typeof body.rangoId === 'string' && body.rangoId ? body.rangoId : current.rangoId;
     const isActive = typeof body.isActive === 'boolean' ? body.isActive : current.isActive;
     const warehouseId = body.warehouseId === null ? null : typeof body.warehouseId === 'string' && body.warehouseId ? body.warehouseId : current.warehouseId;
 
     if (warehouseId && !(await this.prisma.warehouse.findFirst({ where: { id: warehouseId, tenantId } }))) throw new BadRequestException('Depósito no encontrado');
+    if (rangoId !== current.rangoId && !(await this.prisma.rango.findFirst({ where: { id: rangoId, tenantId } }))) throw new BadRequestException('Rango no encontrado');
 
-    const losesAdmin = current.role === 'admin' && (role !== 'admin' || !isActive);
-    if (losesAdmin) {
-      const remainingAdmins = await this.prisma.user.count({ where: { tenantId, role: 'admin', isActive: true, id: { not: id } } });
-      if (remainingAdmins === 0) throw new ConflictException('Debe quedar al menos un administrador activo en el tenant');
+    // Misma protección que antes con "al menos un admin", generalizada: no se
+    // puede dejar la empresa sin nadie activo que pueda gestionar usuarios.
+    const teniaGestionar = current.rango.permissions.some(p => p.key === 'usuarios.gestionar');
+    const pierdeGestionar = teniaGestionar && (!isActive || rangoId !== current.rangoId);
+    if (pierdeGestionar) {
+      const nuevoRangoTieneGestionar = rangoId === current.rangoId
+        ? teniaGestionar
+        : (await this.prisma.rangoPermission.findFirst({ where: { rangoId, key: 'usuarios.gestionar' } })) !== null;
+      if (!nuevoRangoTieneGestionar || !isActive) {
+        const quedaAlguien = await this.rangos.quedaAlguienConGestionarUsuarios(tenantId, { excludeUserId: id });
+        if (!quedaAlguien) throw new ConflictException('Tiene que quedar al menos un usuario activo que pueda gestionar usuarios');
+      }
     }
 
-    const updated = await this.prisma.user.update({ where: { id }, data: { name, role, isActive, warehouseId } });
-    return { id: updated.id, name: updated.name, email: updated.email, role: updated.role, isActive: updated.isActive, warehouseId: updated.warehouseId };
+    const updated = await this.prisma.user.update({ where: { id }, data: { name, rangoId, isActive, warehouseId }, include: { rango: { select: { name: true } } } });
+    return { id: updated.id, name: updated.name, email: updated.email, rangoId: updated.rangoId, rangoName: updated.rango.name, isActive: updated.isActive, warehouseId: updated.warehouseId };
   }
 }

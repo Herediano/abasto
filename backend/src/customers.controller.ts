@@ -2,8 +2,9 @@ import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Put, Q
 import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
+import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { AdminGuard } from './admin.guard';
+import { RequirePermission } from './require-permission.decorator';
 
 /**
  * El modelo Customer existía desde el principio pero nunca tuvo pantalla. Se
@@ -11,7 +12,7 @@ import { AdminGuard } from './admin.guard';
  * además es prerrequisito del módulo de ventas.
  */
 @Controller('customers')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class CustomersController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
@@ -43,7 +44,7 @@ export class CustomersController {
     };
   }
 
-  @Get()
+  @Get() @RequirePermission('clientes.ver')
   async list(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
     const tenantId = request.user.tenantId;
     const search = query.search?.trim();
@@ -63,14 +64,14 @@ export class CustomersController {
   }
 
   @Post()
-  @UseGuards(AdminGuard)
+  @RequirePermission('clientes.crear')
   async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     return this.prisma.customer.create({ data: { tenantId, ...(await this.parse(tenantId, body)) } });
   }
 
   @Put(':id')
-  @UseGuards(AdminGuard)
+  @RequirePermission('clientes.editar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
     const tenantId = request.user.tenantId;
     const actual = await this.prisma.customer.findFirst({ where: { id, tenantId } });
