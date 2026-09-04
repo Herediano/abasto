@@ -63,6 +63,23 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
   y le gana. Se guarda en `localStorage` (`lib/theme.ts`).
 - **Íconos migrados a Phosphor** en toda la app: los 20 archivos que quedaban en
   Lucide. `lucide-react` ya no se usa.
+- **Herramientas de la caja**: selector de tema propio (el cajero no tiene riel),
+  `F3` buscador único que resuelve las dos consultas del mostrador —«¿cuánto
+  sale?» mirando y «el código no lee» con Agregar—, cotizando los resultados
+  visibles en un solo pedido para mostrar el precio real del cliente; y `F6` las
+  promociones vigentes explicadas en palabras.
+
+## La caja: hasta acá llega sin tocar el backend
+
+Lo que falta de la maqueta **no es diseño, es dominio**. Necesita modelo nuevo:
+
+| Falta | Qué hace falta |
+|---|---|
+| Turno de caja, arqueo, «Caja 2 · 08:12» | Modelo de caja y turno, movimientos de efectivo, cierre con diferencia |
+| Pago dividido | Hoy una venta guarda **un** `paymentMethod` |
+| Cuenta corriente como forma de pago | Sin construir |
+| Comprobante ARCA (Factura A/B) | Sin definir cómo se integra |
+| Pesables con código de balanza | Parcial: hay unidad y cantidad decimal, falta parsear el código con peso |
 
 ## Lo que sigue, en orden
 
