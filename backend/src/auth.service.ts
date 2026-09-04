@@ -37,6 +37,10 @@ export class AuthService {
       const created = await this.prisma.$transaction(async tx => {
         const tenantCreated = await tx.tenant.create({ data: { name: tenantName, legalName: typeof tenant?.legalName === 'string' ? tenant.legalName.trim() : undefined, taxId } });
         const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash, role: 'admin' } });
+        // Sin lista base no se puede cotizar, y sin cotizar no se puede vender:
+        // toda empresa nace con una. Las demás listas (mayorista, por cliente)
+        // se crean después desde Precios y pueden derivar de ésta.
+        await tx.priceList.create({ data: { tenantId: tenantCreated.id, name: 'Mostrador', isDefault: true } });
         return { tenant: tenantCreated, user: userCreated };
       });
       return { ...this.token(created.user), user: { id: created.user.id, name: created.user.name, email: created.user.email, role: created.user.role }, tenant: { id: created.tenant.id, name: created.tenant.name } };

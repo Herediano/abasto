@@ -10,7 +10,7 @@ import { AuthRequest } from './auth.types';
 import { AdminGuard } from './admin.guard';
 import { parsePricesFile } from './price-import.util';
 import { priceChange, type PriceHistoryEntry } from './price-history.util';
-import { resolverPrecios } from './price-resolver.util';
+import { guardarPrecio, resolverPrecios } from './price-resolver.util';
 
 // Alicuotas de IVA vigentes en Argentina. El campo era decimal libre, lo que
 // habilitaba cargar valores que despues rompen la facturacion.
@@ -345,6 +345,11 @@ export class ProductsController {
     if (updateNames && !matchedColumns.name) throw new UnprocessableEntityException('Pediste actualizar los nombres pero no encontramos una columna de nombre. Revisá que tenga un encabezado como "Nombre nuevo", "Producto" o "Descripción".');
     if (!updateNames && !matchedColumns.costPrice && !matchedColumns.salePrice) throw new UnprocessableEntityException('No pudimos identificar ninguna columna de precio en el archivo. Revisá que tenga un encabezado como "Precio de costo" y/o "Precio de venta".');
 
+    // Los precios de venta se escriben en la lista base, que es la que la caja
+    // resuelve al cobrar. Sin lista base no hay dónde ponerlos.
+    const listaBase = await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true }, select: { id: true } });
+    if (!listaBase) throw new UnprocessableEntityException('No hay una lista de precios base configurada. Creá una en Precios antes de importar.');
+
     let updated = 0;
     let renamed = 0;
     const notFound: string[] = [];
@@ -353,7 +358,8 @@ export class ProductsController {
       const batch = rows.slice(i, i + 500);
       const products = await this.prisma.product.findMany({ where: { tenantId, barcode: { in: batch.map(r => r.barcode) } }, select: { id: true, barcode: true, name: true, costPrice: true, salePrice: true } });
       const byBarcode = new Map(products.map(p => [p.barcode, p]));
-      const updates: Prisma.PrismaPromise<unknown>[] = [];
+      const cambiosProducto: { id: string; data: Prisma.ProductUpdateInput }[] = [];
+      const ventas: { productId: string; price: number }[] = [];
       const historia: PriceHistoryEntry[] = [];
       for (const row of batch) {
         const current = byBarcode.get(row.barcode);
@@ -380,15 +386,32 @@ export class ProductsController {
           const h = priceChange({ tenantId, productId: current.id, field: 'sale', before: current.salePrice, after: salePrice, source: 'import', userId: request.user.id });
           if (h) historia.push(h);
         }
-        updates.push(this.prisma.product.update({
-          where: { id: current.id },
-          data: { ...(costPrice !== undefined ? { costPrice } : {}), ...(salePrice !== undefined ? { salePrice } : {}), ...(name !== undefined ? { name } : {}) },
-        }));
+        // El costo es un campo del producto. El precio de venta NO: vive en
+        // ProductPrice, que es de donde la caja resuelve cuánto cobrar. Escribir
+        // sólo la caché Product.salePrice dejaba productos que se veían con
+        // precio en el listado pero salían "sin precio" al vender.
+        if (costPrice !== undefined || name !== undefined) {
+          cambiosProducto.push({
+            id: current.id,
+            data: { ...(costPrice !== undefined ? { costPrice } : {}), ...(name !== undefined ? { name } : {}) },
+          });
+        }
+        if (salePrice !== undefined) ventas.push({ productId: current.id, price: salePrice });
         if (costPrice !== undefined || salePrice !== undefined) updated++;
         if (name !== undefined) renamed++;
       }
-      if (historia.length) updates.push(this.prisma.productPriceHistory.createMany({ data: historia }));
-      if (updates.length) await this.prisma.$transaction(updates);
+
+      if (cambiosProducto.length || ventas.length || historia.length) {
+        await this.prisma.$transaction(async tx => {
+          for (const c of cambiosProducto) await tx.product.update({ where: { id: c.id }, data: c.data });
+          // guardarPrecio crea la fila de ProductPrice en la lista base y, de
+          // paso, refresca la caché Product.salePrice.
+          for (const v of ventas) {
+            await guardarPrecio(tx, { tenantId, productId: v.productId, priceListId: listaBase.id, price: v.price, source: 'import', userId: request.user.id });
+          }
+          if (historia.length) await tx.productPriceHistory.createMany({ data: historia });
+        });
+      }
     }
     return { updated, renamed, notFound, invalid, matchedColumns };
   }

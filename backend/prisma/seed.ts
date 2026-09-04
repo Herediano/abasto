@@ -60,6 +60,11 @@ async function main() {
     create: { tenantId: tenant.id, name: 'Depósito Frío', code: 'FRIO', address: 'Calle 2 456' },
   });
 
+  // Sin lista base no se puede cotizar ni vender. El alta de empresa la crea
+  // sola (auth.service); acá se hace lo mismo para el tenant de demostración.
+  const listaBase = await prisma.priceList.findFirst({ where: { tenantId: tenant.id, isDefault: true } });
+  if (!listaBase) await prisma.priceList.create({ data: { tenantId: tenant.id, name: 'Mostrador', isDefault: true } });
+
   const supplier = await findOrCreateSupplier(tenant.id);
   await findOrCreateCustomer(tenant.id);
 
