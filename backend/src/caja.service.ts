@@ -49,10 +49,8 @@ export class CajaService {
 
   /** El turno abierto del usuario que llama, si tiene uno. Es lo primero que consulta la pantalla de caja al entrar. */
   async current(user: Usuario) {
-    return this.prisma.cashShift.findFirst({
-      where: { tenantId: user.tenantId, openedById: user.id, status: 'open' },
-      include: { cashRegister: { select: { id: true, name: true, warehouseId: true } } },
-    });
+    const turno = await this.prisma.cashShift.findFirst({ where: { tenantId: user.tenantId, openedById: user.id, status: 'open' } });
+    return turno ? this.detail(user, turno.id) : null;
   }
 
   async open(user: Usuario, body: Record<string, unknown>) {
@@ -62,10 +60,10 @@ export class CajaService {
     if (!Number.isFinite(openingCash) || openingCash < 0) throw new UnprocessableEntityException('El fondo inicial no puede ser negativo');
     const registro = await this.prisma.cashRegister.findFirst({ where: { id: cashRegisterId, tenantId: user.tenantId, isActive: true } });
     if (!registro) throw new NotFoundException('Caja no encontrada');
+    let creado: { id: string };
     try {
-      return await this.prisma.cashShift.create({
+      creado = await this.prisma.cashShift.create({
         data: { tenantId: user.tenantId, cashRegisterId, openedById: user.id, openingCash, openingNotes: texto(body.openingNotes) },
-        include: { cashRegister: { select: { id: true, name: true, warehouseId: true } } },
       });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
@@ -73,6 +71,7 @@ export class CajaService {
       }
       throw error;
     }
+    return this.detail(user, creado.id);
   }
 
   private async turnoDeUsuario(user: Usuario, shiftId: string) {
@@ -118,15 +117,17 @@ export class CajaService {
   /** Detalle de un turno: movimientos, y —si ya cerró o se pide para cerrar— el desglose de ventas por medio de pago. */
   async detail(user: Usuario, shiftId: string) {
     const turno = await this.turnoDeUsuario(user, shiftId);
-    const [movimientos, porMedio, cantidadVentas, openedBy, closedBy] = await Promise.all([
+    const [movimientos, porMedio, cantidadVentas, openedBy, closedBy, cashRegister] = await Promise.all([
       this.prisma.cashMovement.findMany({ where: { tenantId: user.tenantId, shiftId }, orderBy: { occurredAt: 'asc' }, include: { user: { select: { name: true } } } }),
       this.prisma.salePayment.groupBy({ by: ['method'], where: { tenantId: user.tenantId, sale: { shiftId, status: 'confirmed' } }, _sum: { amount: true } }),
       this.prisma.sale.count({ where: { tenantId: user.tenantId, shiftId, status: 'confirmed' } }),
       this.prisma.user.findUnique({ where: { id: turno.openedById }, select: { name: true } }),
       turno.closedById ? this.prisma.user.findUnique({ where: { id: turno.closedById }, select: { name: true } }) : Promise.resolve(null),
+      this.prisma.cashRegister.findUnique({ where: { id: turno.cashRegisterId }, select: { id: true, name: true, warehouseId: true } }),
     ]);
     return {
       ...turno,
+      cashRegister,
       openedByName: openedBy?.name ?? '',
       closedByName: closedBy?.name ?? null,
       salesCount: cantidadVentas,

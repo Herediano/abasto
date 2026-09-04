@@ -68,33 +68,54 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
   sale?» mirando y «el código no lee» con Agregar—, cotizando los resultados
   visibles en un solo pedido para mostrar el precio real del cliente; y `F6` las
   promociones vigentes explicadas en palabras.
-
-## La caja: hasta acá llega sin tocar el backend
-
-Lo que falta de la maqueta **no es diseño, es dominio**. Necesita modelo nuevo:
-
-| Falta | Qué hace falta |
-|---|---|
-| Turno de caja, arqueo, «Caja 2 · 08:12» | Modelo de caja y turno, movimientos de efectivo, cierre con diferencia |
-| Pago dividido | Hoy una venta guarda **un** `paymentMethod` |
-| Cuenta corriente como forma de pago | Sin construir |
-| Comprobante ARCA (Factura A/B) | Sin definir cómo se integra |
-| Pesables con código de balanza | Parcial: hay unidad y cantidad decimal, falta parsear el código con peso |
+- **Buscador de productos, ya no es sólo de la caja**: `product-search.util.ts`
+  (backend) tolera abreviaturas («QUE.FONTINA»), acentos y errores de tipeo —
+  necesario porque casi la mitad del catálogo real trae palabras cortadas — y
+  ordena por relevancia. `ProductSearchDialog` (frontend) es el mismo `F3` en
+  cualquier pantalla que necesite elegir un producto: ya está en la caja y en
+  Ingreso, adaptado con `cotizarPara`/`exigirPrecio` según quién lo llama.
+- **Turno de caja, arqueo y pago dividido**: `CashRegister` (una por sucursal,
+  se crea sola al crear el depósito) y `CashShift` — abre con fondo inicial,
+  sólo un turno abierto por caja y por usuario a la vez, cierra con arqueo
+  (`expectedCash` calculado, `countedCash` a mano, `cashDifference`). Sin turno
+  abierto no se puede vender. `CashMovement` para ingresos/retiros/gastos
+  durante el turno. En la caja: `F7` abre el panel (movimientos + cerrar
+  turno); al cerrar se ve el desglose por medio de pago. Historial completo en
+  Turnos de caja (admin). Una venta ahora puede pagarse con varios medios
+  (`SalePayment`) que tienen que sumar el total — el botón de "Cobrar" arranca
+  con el medio elegido en el panel y "Agregar otro medio" abre el split.
+- **Cuenta corriente**: límite de crédito por cliente (vacío = sin tope, 0 =
+  bloqueada), «Cuenta corriente» como medio de pago en la caja (pide cliente,
+  valida crédito disponible), estado de cuenta y cobro manual desde Clientes
+  (ícono de billetera), saldo visible en la caja junto al nombre del cliente.
+- **Pesables**: casillero «Pesable» en Productos; el código de balanza (prefijo
+  `2`, código interno + peso en gramos embebido) se parsea en la caja
+  (`lib/pesable.ts`) y agrega la línea con la cantidad decimal correcta sin
+  buscar por barcode.
+- **Anular un ítem del carrito** pide autorización: un cajero sin rol admin ve
+  un diálogo pidiendo email y contraseña de un supervisor
+  (`SupervisorAuthDialog`, contra `POST /auth/authorize-supervisor`) antes de
+  poder sacar una línea (Trash, `F8`, o cantidad en 0); un admin lo hace
+  directo. No emite token, es sólo un sí/no para esa acción.
 
 ## Lo que sigue, en orden
 
 1. **Pasar el resto de las páginas al molde de Productos**: stock, ingresos,
-   egresos, historial, vencimientos, reposición, proveedores, clientes, ventas.
+   egresos, historial, vencimientos, reposición, proveedores, ventas, turnos.
    Mismo patrón de buscador + filtros en panel + chips, y tablas con las
    columnas justas.
 2. **Panel del encargado**, que todavía no existe: es la pantalla donde el bento
    tiene sentido de verdad.
 3. **Repasar los formularios**: siguen siendo los de antes. Falta aplicarles la
    misma regla de aire y agrupación que al resto.
+4. **Recargo/descuento por medio de pago**: pago dividido ya existe, pero
+   ningún medio ajusta el total todavía (queda igual, cash o tarjeta). Falta
+   modelo y que la caja lo muestre antes de confirmar.
 
 Más adelante, y ya con cambios de backend detrás (ver `docs/producto.md`):
-rangos y permisos, sucursales como entidad propia, caja/arqueo, pago dividido,
-cuenta corriente, pesables.
+rangos y permisos de verdad (hoy «supervisor» = rol admin, sin gradación),
+sucursales como entidad propia, ARCA, devoluciones/notas de crédito,
+transferencias de stock entre sucursales.
 
 ## Deudas conocidas
 

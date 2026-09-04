@@ -18,6 +18,7 @@ import { SuppliersPage } from '@/pages/catalog/suppliers-page';
 import { CustomersPage } from '@/pages/catalog/customers-page';
 import { PosPage } from '@/pages/sales/pos-page';
 import { SalesHistoryPage } from '@/pages/sales/sales-history-page';
+import { ShiftsHistoryPage } from '@/pages/sales/shifts-history-page';
 import { PricesPage } from '@/pages/prices/prices-page';
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
         <Route element={<AdminRoute />}>
           <Route path="/precios" element={<PricesPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
+          <Route path="/ventas/turnos" element={<ShiftsHistoryPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

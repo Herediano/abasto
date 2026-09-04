@@ -1,23 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Barcode, Circle, CreditCard, Money, Moon, Percent, ShoppingCartSimple, Sun, Trash, User,
+  ArrowCircleDown, ArrowCircleUp, Barcode, Circle, CreditCard, Lock, Money, Moon, Percent, QrCode,
+  Receipt, ShoppingCartSimple, Sun, Trash, User, Wallet,
 } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Field } from '@/components/field';
 import { ProductSearchDialog } from '@/components/product-search-dialog';
+import { SupervisorAuthDialog } from '@/components/supervisor-auth-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Spinner } from '@/components/spinner';
-import { api, errorMessage, type Customer, type Product, type Promotion } from '@/lib/api';
+import { Spinner, PageSpinner } from '@/components/spinner';
+import {
+  api, errorMessage, type CashRegister, type CashShift, type Customer, type CustomerAccount,
+  type PaymentMethod, type Product, type Promotion,
+} from '@/lib/api';
 import { money } from '@/lib/format';
+import { parseWeighedBarcode } from '@/lib/pesable';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
-type Item = { productId: string; name: string; barcode: string; quantity: number };
+type Item = { productId: string; name: string; barcode: string; quantity: number; pesable?: boolean };
 
 type QuoteLine = {
   productId: string;
@@ -40,12 +47,20 @@ type Quote = {
   withoutPrice: string[];
 };
 
-// El backend acepta un solo medio por venta. El pago dividido (varios medios en
-// la misma venta) necesita cambios de modelo; hasta entonces esto es de a uno.
-const PAGOS: { id: string; label: string; icon: typeof Money }[] = [
+type Pago = { method: PaymentMethod; amount: string; reference: string };
+
+const PAGOS: { id: PaymentMethod; label: string; icon: typeof Money }[] = [
   { id: 'cash', label: 'Efectivo', icon: Money },
   { id: 'transfer', label: 'Transferencia', icon: Barcode },
   { id: 'card', label: 'Tarjeta', icon: CreditCard },
+  { id: 'qr', label: 'QR', icon: QrCode },
+  { id: 'account', label: 'Cuenta corriente', icon: Wallet },
+];
+
+const MOVIMIENTOS: { id: 'deposit' | 'withdrawal' | 'expense'; label: string }[] = [
+  { id: 'deposit', label: 'Ingreso (cambio)' },
+  { id: 'withdrawal', label: 'Retiro a caja fuerte' },
+  { id: 'expense', label: 'Gasto menor' },
 ];
 
 const TEMAS = { light: Sun, dark: Moon, system: Circle } as const;
@@ -73,12 +88,17 @@ function vigente(p: Promotion) {
   return true;
 }
 
+function fmtHora(iso: string) {
+  return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+}
+
 export function PosPage() {
-  const { session } = useAuth();
+  const { session, isAdmin } = useAuth();
   const token = session!.accessToken;
   const [items, setItems] = useState<Item[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState('');
+  const [customerAccount, setCustomerAccount] = useState<CustomerAccount | null>(null);
   const [barcode, setBarcode] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
@@ -86,10 +106,38 @@ export function PosPage() {
   const [buscando, setBuscando] = useState(false);
   const [cobrando, setCobrando] = useState(false);
   const [cobrarOpen, setCobrarOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [pagos, setPagos] = useState<Pago[]>([{ method: 'cash', amount: '', reference: '' }]);
   const barcodeRef = useRef<HTMLInputElement>(null);
   const customerRef = useRef<HTMLSelectElement>(null);
   const { theme, ciclar } = useTheme();
+
+  // Turno de caja: sin uno abierto no se puede vender. Es lo primero que se
+  // resuelve al entrar; mientras se resuelve, la pantalla no muestra nada.
+  const [shift, setShift] = useState<CashShift | null | undefined>(undefined);
+  const [registers, setRegisters] = useState<CashRegister[]>([]);
+  const [selectedRegisterId, setSelectedRegisterId] = useState('');
+  const [openingCash, setOpeningCash] = useState('');
+  const [openingNotes, setOpeningNotes] = useState('');
+  const [opening, setOpening] = useState(false);
+  const [openError, setOpenError] = useState('');
+
+  // Panel de caja (F7): movimientos de efectivo y cierre con arqueo.
+  const [cajaOpen, setCajaOpen] = useState(false);
+  const [cajaView, setCajaView] = useState<'panel' | 'cerrar' | 'resultado'>('panel');
+  const [movType, setMovType] = useState<'deposit' | 'withdrawal' | 'expense'>('deposit');
+  const [movAmount, setMovAmount] = useState('');
+  const [movReason, setMovReason] = useState('');
+  const [movSaving, setMovSaving] = useState(false);
+  const [movError, setMovError] = useState('');
+  const [countedCash, setCountedCash] = useState('');
+  const [closingNotes, setClosingNotes] = useState('');
+  const [closing, setClosing] = useState(false);
+  const [closeResult, setCloseResult] = useState<CashShift | null>(null);
+
+  // Anular un ítem del carrito: un cajero no-supervisor necesita que un
+  // supervisor lo autorice con sus propias credenciales.
+  const [supervisorOpen, setSupervisorOpen] = useState(false);
+  const pendingVoidRef = useRef<(() => void) | null>(null);
 
   // Buscador (F3): sirve para las dos consultas del mostrador — "¿cuánto sale
   // esto?" mirándolo, y "el código no lee" con Agregar.
@@ -100,15 +148,29 @@ export function PosPage() {
   const [ofertasOpen, setOfertasOpen] = useState(false);
   const [promos, setPromos] = useState<Promotion[]>([]);
 
+  const cargarTurno = useCallback(() => {
+    return api<CashShift | null>('/cash-shifts/current', {}, token).then(setShift).catch(() => setShift(null));
+  }, [token]);
+
+  useEffect(() => { void cargarTurno(); }, [cargarTurno]);
+
   useEffect(() => {
     api<Customer[]>('/customers', {}, token).then(setCustomers).catch(() => {});
   }, [token]);
 
+  useEffect(() => {
+    if (shift !== null || !session?.user.warehouseId) return;
+    api<CashRegister[]>(`/cash-registers?warehouseId=${session.user.warehouseId}`, {}, token).then(regs => {
+      setRegisters(regs);
+      if (regs.length === 1) setSelectedRegisterId(regs[0].id);
+    }).catch(() => {});
+  }, [shift, session?.user.warehouseId, token]);
+
   // El foco vuelve siempre al lector: es una pantalla de mostrador, se opera
   // escaneando uno atrás de otro sin tocar el mouse.
   useEffect(() => {
-    barcodeRef.current?.focus();
-  }, [items.length]);
+    if (shift) barcodeRef.current?.focus();
+  }, [items.length, shift]);
 
   // Cada cambio del carrito o del cliente re-cotiza: el precio depende de la
   // lista del cliente, de la cantidad (escalas) y de las promociones vigentes.
@@ -127,6 +189,17 @@ export function PosPage() {
     return () => { cancelado = true; };
   }, [items, customerId, token]);
 
+  // El saldo de cuenta corriente del cliente elegido: contexto para decidir si
+  // conviene pagarle a cuenta, y cuánto le queda disponible.
+  useEffect(() => {
+    if (!customerId) { setCustomerAccount(null); return; }
+    let cancelado = false;
+    api<CustomerAccount>(`/customers/${customerId}/account`, {}, token)
+      .then(c => { if (!cancelado) setCustomerAccount(c); })
+      .catch(() => { if (!cancelado) setCustomerAccount(null); });
+    return () => { cancelado = true; };
+  }, [customerId, token]);
+
   useEffect(() => {
     if (!ofertasOpen) return;
     api<Promotion[]>('/promotions', {}, token).then(setPromos).catch(() => {});
@@ -138,6 +211,18 @@ export function PosPage() {
     setBuscando(true);
     setError('');
     try {
+      // Un código de balanza no es el barcode del producto: trae el peso
+      // embebido y hay que resolver el producto por su código interno.
+      const pesado = parseWeighedBarcode(limpio);
+      if (pesado) {
+        const rp = await api<{ items: Product[] }>(`/products?internalCode=${encodeURIComponent(pesado.internalCode)}`, {}, token);
+        const p = rp.items.find(x => x.isWeighed);
+        if (p) {
+          setItems(prev => [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: pesado.weightKg, pesable: true }]);
+          setBarcode('');
+          return;
+        }
+      }
       const r = await api<{ items: Product[] }>(`/products?barcode=${encodeURIComponent(limpio)}`, {}, token);
       const p = r.items[0];
       if (!p) {
@@ -145,8 +230,8 @@ export function PosPage() {
         return;
       }
       setItems(prev => {
-        const existente = prev.find(i => i.productId === p.id);
-        if (existente) return prev.map(i => (i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i));
+        const existente = prev.find(i => i.productId === p.id && !i.pesable);
+        if (existente) return prev.map(i => (i === existente ? { ...i, quantity: i.quantity + 1 } : i));
         return [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: 1 }];
       });
       setBarcode('');
@@ -157,12 +242,24 @@ export function PosPage() {
     }
   }, [token]);
 
+  /** Un cajero normal necesita que un supervisor apruebe antes de anular una línea; un supervisor lo hace directo. */
+  function pedirAutorizacion(accion: () => void) {
+    if (isAdmin) { accion(); return; }
+    pendingVoidRef.current = accion;
+    setSupervisorOpen(true);
+  }
+
   function cambiarCantidad(productId: string, quantity: number) {
     if (quantity <= 0) {
-      setItems(prev => prev.filter(i => i.productId !== productId));
+      pedirAutorizacion(() => setItems(prev => prev.filter(i => i.productId !== productId)));
       return;
     }
     setItems(prev => prev.map(i => (i.productId === productId ? { ...i, quantity } : i)));
+  }
+
+  function quitarUltima() {
+    if (!items.length) return;
+    pedirAutorizacion(() => setItems(prev => prev.slice(0, -1)));
   }
 
   // Atajos reales, los que un cajero usa sin soltar el lector. Sólo se declaran
@@ -172,22 +269,54 @@ export function PosPage() {
       if (e.key === 'F3') { e.preventDefault(); setBuscarOpen(true); }
       if (e.key === 'F4') { e.preventDefault(); customerRef.current?.focus(); }
       if (e.key === 'F6') { e.preventDefault(); setOfertasOpen(true); }
-      if (e.key === 'F8') { e.preventDefault(); setItems(prev => prev.slice(0, -1)); }
+      if (e.key === 'F7') { e.preventDefault(); setCajaView('panel'); setCajaOpen(true); }
+      if (e.key === 'F8') { e.preventDefault(); quitarUltima(); }
       // Escape devuelve al lector, que es el estado de reposo de la pantalla.
       if (e.key === 'Escape') barcodeRef.current?.focus();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [items.length, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function agregarDesdeBusqueda(p: Product) {
     setItems(prev => {
-      const existente = prev.find(i => i.productId === p.id);
-      if (existente) return prev.map(i => (i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i));
+      const existente = prev.find(i => i.productId === p.id && !i.pesable);
+      if (existente) return prev.map(i => (i === existente ? { ...i, quantity: i.quantity + 1 } : i));
       return [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: 1 }];
     });
     setBuscarOpen(false);
   }
+
+  function abrirCobrar() {
+    if (!quote) return;
+    setPagos([{ method: pagos[0]?.method ?? 'cash', amount: quote.total.toFixed(2), reference: '' }]);
+    setCobrarOpen(true);
+  }
+
+  function elegirMedioPrincipal(m: PaymentMethod) {
+    setPagos([{ method: m, amount: quote ? quote.total.toFixed(2) : '', reference: '' }]);
+  }
+
+  function agregarPago() {
+    const usados = new Set(pagos.map(p => p.method));
+    const libre = PAGOS.find(p => !usados.has(p.id) && (p.id !== 'account' || customerId))?.id ?? 'cash';
+    const sumado = pagos.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const resto = Math.max(0, (quote?.total ?? 0) - sumado);
+    setPagos(prev => [...prev, { method: libre, amount: resto ? resto.toFixed(2) : '', reference: '' }]);
+  }
+
+  function actualizarPago(i: number, cambios: Partial<Pago>) {
+    setPagos(prev => prev.map((p, idx) => (idx === i ? { ...p, ...cambios } : p)));
+  }
+
+  function quitarPago(i: number) {
+    setPagos(prev => prev.filter((_, idx) => idx !== i));
+  }
+
+  const sumaPagos = pagos.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const restante = Math.round(((quote?.total ?? 0) - sumaPagos) * 100) / 100;
+  const usaCtaCte = pagos.some(p => p.method === 'account');
+  const puedeConfirmar = Math.abs(restante) < 0.01 && (!usaCtaCte || !!customerId) && pagos.every(p => Number(p.amount) > 0);
 
   async function cobrar() {
     setCobrando(true);
@@ -197,14 +326,16 @@ export function PosPage() {
         method: 'POST',
         body: JSON.stringify({
           customerId: customerId || undefined,
-          paymentMethod,
           lines: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+          payments: pagos.map(p => ({ method: p.method, amount: Number(p.amount), reference: p.reference || undefined })),
         }),
       }, token);
       setCobrarOpen(false);
       setItems([]);
       setQuote(null);
       setAviso(`Venta ${venta.pointOfSale}-${String(venta.number).padStart(8, '0')} cobrada por ${money(Number(venta.total))}.`);
+      // Si se pagó a cuenta corriente, el saldo mostrado quedó viejo.
+      if (customerId) api<CustomerAccount>(`/customers/${customerId}/account`, {}, token).then(setCustomerAccount).catch(() => {});
     } catch (err) {
       setError(errorMessage(err));
       setCobrarOpen(false);
@@ -213,10 +344,128 @@ export function PosPage() {
     }
   }
 
+  async function abrirTurno() {
+    setOpening(true);
+    setOpenError('');
+    try {
+      const turno = await api<CashShift>('/cash-shifts/open', {
+        method: 'POST',
+        body: JSON.stringify({ cashRegisterId: selectedRegisterId, openingCash: Number(openingCash) || 0, openingNotes: openingNotes || undefined }),
+      }, token);
+      setShift(turno);
+      setOpeningCash('');
+      setOpeningNotes('');
+    } catch (err) {
+      setOpenError(errorMessage(err));
+    } finally {
+      setOpening(false);
+    }
+  }
+
+  async function agregarMovimiento() {
+    if (!shift) return;
+    setMovSaving(true);
+    setMovError('');
+    try {
+      await api(`/cash-shifts/${shift.id}/movements`, {
+        method: 'POST',
+        body: JSON.stringify({ type: movType, amount: Number(movAmount), reason: movReason }),
+      }, token);
+      const actualizado = await api<CashShift>(`/cash-shifts/${shift.id}`, {}, token);
+      setShift(actualizado);
+      setMovAmount('');
+      setMovReason('');
+    } catch (err) {
+      setMovError(errorMessage(err));
+    } finally {
+      setMovSaving(false);
+    }
+  }
+
+  async function cerrarTurno() {
+    if (!shift) return;
+    setClosing(true);
+    setMovError('');
+    try {
+      const cerrado = await api<CashShift>(`/cash-shifts/${shift.id}/close`, {
+        method: 'POST',
+        body: JSON.stringify({ countedCash: Number(countedCash) || 0, closingNotes: closingNotes || undefined }),
+      }, token);
+      setCloseResult(cerrado);
+      setCajaView('resultado');
+    } catch (err) {
+      setMovError(errorMessage(err));
+    } finally {
+      setClosing(false);
+    }
+  }
+
+  function terminarCierre() {
+    setShift(null);
+    setCajaOpen(false);
+    setCajaView('panel');
+    setCloseResult(null);
+    setCountedCash('');
+    setClosingNotes('');
+  }
+
   const lineaDe = (productId: string) => quote?.lines.find(l => l.productId === productId);
   const sinPrecio = quote?.withoutPrice ?? [];
   const puedeCobrar = items.length > 0 && sinPrecio.length === 0 && !!quote;
   const clienteElegido = customers.find(c => c.id === customerId);
+
+  if (shift === undefined) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <PageSpinner />
+      </div>
+    );
+  }
+
+  // Sin turno abierto no hay caja: se pide abrir uno antes de mostrar el
+  // mostrador. Es lo primero del día para un cajero.
+  if (!shift) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-6 bg-background p-4">
+        <p className="font-display text-2xl font-bold tracking-tight">
+          abasto<span className="text-primary">.ai</span>
+        </p>
+        <div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2.5">
+            <Wallet weight="fill" className="size-5 text-primary" />
+            <h1 className="font-display text-lg font-bold">Abrir turno</h1>
+          </div>
+          {!session?.user.warehouseId ? (
+            <Alert variant="destructive">Tu usuario no tiene una sucursal asignada. Pedile a un administrador que te la asigne en Usuarios.</Alert>
+          ) : registers.length === 0 ? (
+            <Alert variant="destructive">No hay cajas configuradas en tu sucursal.</Alert>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {openError && <Alert variant="destructive">{openError}</Alert>}
+              {registers.length > 1 && (
+                <Field label="Caja" htmlFor="reg">
+                  <Select id="reg" value={selectedRegisterId} onChange={e => setSelectedRegisterId(e.target.value)}>
+                    <option value="">Elegí una caja</option>
+                    {registers.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </Select>
+                </Field>
+              )}
+              <Field label="Fondo inicial" htmlFor="fondo" hint="con lo que arranca el cajón">
+                <Input id="fondo" type="number" min="0" step="0.01" autoFocus value={openingCash} onChange={e => setOpeningCash(e.target.value)} />
+              </Field>
+              <Field label="Notas" htmlFor="notas-apertura" hint="(opcional)">
+                <Input id="notas-apertura" value={openingNotes} onChange={e => setOpeningNotes(e.target.value)} />
+              </Field>
+              <Button size="lg" className="h-12" disabled={!selectedRegisterId || opening} onClick={abrirTurno}>
+                {opening && <Spinner />} Abrir turno
+              </Button>
+            </div>
+          )}
+          <Link to="/" className="mt-4 block text-center text-sm text-muted-foreground hover:text-foreground">Volver</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // La caja ocupa la pantalla entera: sin riel, sin encabezado de aplicación.
@@ -229,10 +478,10 @@ export function PosPage() {
           abasto<span className="text-primary">.ai</span>
         </p>
         <span className="h-5 w-px bg-border" aria-hidden="true" />
-        <span className="flex items-center gap-2 text-sm font-medium">
+        <button type="button" onClick={() => { setCajaView('panel'); setCajaOpen(true); }} className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm font-medium transition-colors hover:bg-secondary">
           <span className="size-2 rounded-full bg-success" aria-hidden="true" />
-          Caja abierta
-        </span>
+          {shift.cashRegister?.name ?? 'Caja'} · abierta {fmtHora(shift.openedAt)}
+        </button>
         <div className="ml-auto flex items-center gap-2">
           {/* El cajero pasa el turno entero mirando esta pantalla y no tiene el
               riel a mano: el tema tiene que estar acá. */}
@@ -301,17 +550,18 @@ export function PosPage() {
                 <p className="text-sm text-muted-foreground">Escaneá un producto para empezar la venta.</p>
               </div>
             ) : (
-              items.map(i => {
+              items.map((i, idx) => {
                 const l = lineaDe(i.productId);
                 const conDescuento = l && (l.discountAmount > 0 || l.unitPrice !== l.listPrice);
                 return (
                   <div
-                    key={i.productId}
+                    key={`${i.productId}-${idx}`}
                     className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 border-b border-border-soft px-4 py-3 last:border-0 sm:grid-cols-[1fr_5rem_7rem_7rem_auto]"
                   >
                     <div className="min-w-0">
                       <p className="font-medium leading-snug">{i.name}</p>
                       <p className="mt-0.5 font-mono text-xs text-placeholder">{i.barcode}</p>
+                      {i.pesable && <Badge variant="secondary" className="mt-1">Pesable · {i.quantity.toFixed(3)} kg</Badge>}
                       {l?.promotionName && (
                         <Badge variant="success" className="mt-1">
                           {l.promotionName} · −{money(l.discountAmount)}
@@ -352,7 +602,8 @@ export function PosPage() {
               { k: 'F3', l: 'Buscar producto', go: () => { setBuscarOpen(true); } },
               { k: 'F4', l: 'Cliente', go: () => customerRef.current?.focus() },
               { k: 'F6', l: 'Ofertas del día', go: () => setOfertasOpen(true) },
-              { k: 'F8', l: 'Quitar la última', go: () => setItems(prev => prev.slice(0, -1)) },
+              { k: 'F7', l: 'Caja', go: () => { setCajaView('panel'); setCajaOpen(true); } },
+              { k: 'F8', l: 'Quitar la última', go: quitarUltima },
             ].map(a => (
               <button
                 key={a.k}
@@ -386,6 +637,9 @@ export function PosPage() {
               </Select>
               <p className="truncate text-xs text-placeholder">
                 {quote?.priceList ? `Lista ${quote.priceList.name}` : clienteElegido?.priceListName ?? 'Lista mostrador'}
+                {customerAccount && (customerAccount.balance !== 0 || customerAccount.creditLimit !== null) && (
+                  <> · Cta cte {money(customerAccount.balance)}{customerAccount.available !== null ? ` (disp. ${money(customerAccount.available)})` : ''}</>
+                )}
               </p>
             </div>
           </div>
@@ -416,29 +670,34 @@ export function PosPage() {
           <div className="flex flex-1 flex-col gap-3 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-placeholder">Medio de pago</p>
             <div className="grid grid-cols-2 gap-2">
-              {PAGOS.map(p => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setPaymentMethod(p.id)}
-                  aria-pressed={paymentMethod === p.id}
-                  className={cn(
-                    'flex items-center gap-2 rounded-md border px-3 py-2.5 text-sm transition-colors',
-                    paymentMethod === p.id
-                      ? 'border-primary bg-accent font-semibold text-accent-foreground'
-                      : 'border-border bg-background font-medium hover:border-accent-border',
-                  )}
-                >
-                  <p.icon weight={paymentMethod === p.id ? 'fill' : 'regular'} className="size-4 shrink-0" />
-                  {p.label}
-                </button>
-              ))}
+              {PAGOS.map(p => {
+                const bloqueado = p.id === 'account' && !customerId;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={bloqueado}
+                    title={bloqueado ? 'Elegí un cliente primero' : undefined}
+                    onClick={() => elegirMedioPrincipal(p.id)}
+                    aria-pressed={pagos.length === 1 && pagos[0].method === p.id}
+                    className={cn(
+                      'flex items-center gap-2 rounded-md border px-3 py-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                      pagos.length === 1 && pagos[0].method === p.id
+                        ? 'border-primary bg-accent font-semibold text-accent-foreground'
+                        : 'border-border bg-background font-medium hover:border-accent-border',
+                    )}
+                  >
+                    <p.icon weight={pagos.length === 1 && pagos[0].method === p.id ? 'fill' : 'regular'} className="size-4 shrink-0" />
+                    {p.label}
+                  </button>
+                );
+              })}
             </div>
 
             <Button
               size="lg"
               className="mt-auto h-14 font-display text-lg font-bold"
-              onClick={() => setCobrarOpen(true)}
+              onClick={abrirCobrar}
               disabled={!puedeCobrar}
             >
               Cobrar {quote ? money(quote.total) : ''}
@@ -456,6 +715,17 @@ export function PosPage() {
         token={token}
       />
 
+      <SupervisorAuthDialog
+        open={supervisorOpen}
+        onOpenChange={setSupervisorOpen}
+        token={token}
+        reason="Un cajero necesita que un supervisor autorice anular un ítem del carrito."
+        onAuthorized={nombre => {
+          pendingVoidRef.current?.();
+          pendingVoidRef.current = null;
+          setAviso(`Anulación autorizada por ${nombre}.`);
+        }}
+      />
 
       <Dialog open={ofertasOpen} onOpenChange={setOfertasOpen}>
         <DialogContent>
@@ -495,16 +765,175 @@ export function PosPage() {
           <DialogHeader>
             <DialogTitle>Cobrar {quote ? money(quote.total) : ''}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {PAGOS.find(p => p.id === paymentMethod)?.label} · {clienteElegido?.name ?? 'Consumidor final'}
-          </p>
+          <p className="text-sm text-muted-foreground">{clienteElegido?.name ?? 'Consumidor final'}</p>
+
+          <div className="flex flex-col gap-2">
+            {pagos.map((p, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Select
+                  aria-label="Medio de pago"
+                  value={p.method}
+                  onChange={e => actualizarPago(i, { method: e.target.value as PaymentMethod })}
+                  className="w-40 shrink-0"
+                >
+                  {PAGOS.map(pg => <option key={pg.id} value={pg.id} disabled={pg.id === 'account' && !customerId}>{pg.label}</option>)}
+                </Select>
+                <Input
+                  type="number" min="0" step="0.01" aria-label="Monto"
+                  value={p.amount} onChange={e => actualizarPago(i, { amount: e.target.value })}
+                  className="tabular"
+                />
+                {p.method !== 'cash' && p.method !== 'account' && (
+                  <Input
+                    placeholder="Cupón / referencia" aria-label="Referencia"
+                    value={p.reference} onChange={e => actualizarPago(i, { reference: e.target.value })}
+                    className="w-36 shrink-0"
+                  />
+                )}
+                {pagos.length > 1 && (
+                  <Button type="button" variant="ghost" size="icon" onClick={() => quitarPago(i)} aria-label="Quitar este pago">
+                    <Trash className="size-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" className="self-start" onClick={agregarPago} disabled={pagos.length >= PAGOS.length}>
+              Agregar otro medio
+            </Button>
+          </div>
+
+          {usaCtaCte && customerAccount?.available !== null && customerAccount && (
+            <p className="text-xs text-placeholder">Disponible en la cuenta corriente: {money(customerAccount.available ?? 0)}</p>
+          )}
+          {Math.abs(restante) >= 0.01 && (
+            <Alert variant="destructive">
+              {restante > 0 ? `Falta cubrir ${money(restante)}.` : `Los pagos suman ${money(-restante)} de más.`}
+            </Alert>
+          )}
+
           <p className="text-sm text-muted-foreground">
             Al confirmar se descuenta el stock y se emite el comprobante. La venta no se puede editar después, sólo anular.
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setCobrarOpen(false)}>Cancelar</Button>
-            <Button type="button" onClick={cobrar} disabled={cobrando}>{cobrando && <Spinner />} Confirmar venta</Button>
+            <Button type="button" onClick={cobrar} disabled={cobrando || !puedeConfirmar}>{cobrando && <Spinner />} Confirmar venta</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Panel de caja: movimientos de efectivo y cierre con arqueo (F7). */}
+      <Dialog open={cajaOpen} onOpenChange={o => { setCajaOpen(o); if (!o) { setCajaView('panel'); setMovError(''); } }}>
+        <DialogContent className="max-w-lg">
+          {cajaView === 'panel' && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{shift.cashRegister?.name ?? 'Caja'}</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                Abierta {fmtHora(shift.openedAt)} por {shift.openedByName} · fondo inicial {money(Number(shift.openingCash))}
+                {shift.openingNotes ? ` · ${shift.openingNotes}` : ''}
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-placeholder">Movimientos del turno</p>
+                <div className="max-h-40 overflow-y-auto rounded-md border border-border">
+                  {!shift.movements?.length ? (
+                    <p className="p-4 text-center text-sm text-muted-foreground">Sin movimientos todavía.</p>
+                  ) : (
+                    shift.movements.map(m => (
+                      <div key={m.id} className="flex items-center gap-2 border-b border-border-soft px-3 py-2 text-sm last:border-0">
+                        {m.type === 'deposit' ? <ArrowCircleDown className="size-4 shrink-0 text-success" /> : m.type === 'withdrawal' ? <ArrowCircleUp className="size-4 shrink-0 text-warning" /> : <Receipt className="size-4 shrink-0 text-muted-foreground" />}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate">{m.reason}</p>
+                          <p className="text-xs text-placeholder">{fmtHora(m.occurredAt)} · {m.userName}</p>
+                        </div>
+                        <span className="shrink-0 font-medium tabular">{m.type === 'withdrawal' || m.type === 'expense' ? '−' : '+'}{money(Number(m.amount))}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {movError && <Alert variant="destructive">{movError}</Alert>}
+                <div className="flex items-center gap-2">
+                  <Select aria-label="Tipo de movimiento" value={movType} onChange={e => setMovType(e.target.value as typeof movType)} className="w-44 shrink-0">
+                    {MOVIMIENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  </Select>
+                  <Input type="number" min="0" step="0.01" placeholder="Monto" aria-label="Monto del movimiento" value={movAmount} onChange={e => setMovAmount(e.target.value)} className="w-28 shrink-0" />
+                  <Input placeholder="Motivo" aria-label="Motivo" value={movReason} onChange={e => setMovReason(e.target.value)} />
+                  <Button type="button" size="sm" disabled={movSaving || !movAmount || !movReason} onClick={agregarMovimiento}>
+                    {movSaving && <Spinner />} Registrar
+                  </Button>
+                </div>
+              </div>
+
+              <DialogFooter className="justify-between sm:justify-between">
+                <Button type="button" variant="destructive" onClick={() => setCajaView('cerrar')}>
+                  <Lock /> Cerrar turno
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setCajaOpen(false)}>Cerrar panel</Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {cajaView === 'cerrar' && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Cierre de turno · arqueo</DialogTitle>
+              </DialogHeader>
+              {movError && <Alert variant="destructive">{movError}</Alert>}
+              <p className="text-sm text-muted-foreground">Contá el efectivo del cajón y anotalo. El sistema calcula la diferencia con lo que debería haber.</p>
+              <Field label="Efectivo contado" htmlFor="contado">
+                <Input id="contado" type="number" min="0" step="0.01" autoFocus value={countedCash} onChange={e => setCountedCash(e.target.value)} />
+              </Field>
+              <Field label="Notas" htmlFor="notas-cierre" hint="(opcional)">
+                <Input id="notas-cierre" value={closingNotes} onChange={e => setClosingNotes(e.target.value)} />
+              </Field>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setCajaView('panel')}>Volver</Button>
+                <Button type="button" variant="destructive" disabled={closing || !countedCash} onClick={cerrarTurno}>
+                  {closing && <Spinner />} Cerrar turno
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {cajaView === 'resultado' && closeResult && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Turno cerrado</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-xs text-placeholder">Esperado</p>
+                  <p className="font-semibold tabular">{money(Number(closeResult.expectedCash))}</p>
+                </div>
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-xs text-placeholder">Contado</p>
+                  <p className="font-semibold tabular">{money(Number(closeResult.countedCash))}</p>
+                </div>
+              </div>
+              <div className={cn('rounded-md border p-3', Number(closeResult.cashDifference) === 0 ? 'border-success bg-success/10' : 'border-warning bg-warning/10')}>
+                <p className="text-xs text-placeholder">Diferencia</p>
+                <p className="font-semibold tabular">
+                  {Number(closeResult.cashDifference) > 0 ? 'Sobrante ' : Number(closeResult.cashDifference) < 0 ? 'Faltante ' : ''}
+                  {money(Math.abs(Number(closeResult.cashDifference)))}
+                </p>
+              </div>
+              {!!closeResult.totalsByMethod?.length && (
+                <div className="flex flex-col gap-1 text-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-placeholder">Por medio de pago</p>
+                  {closeResult.totalsByMethod.map(t => (
+                    <div key={t.method} className="flex justify-between tabular">
+                      <span className="capitalize text-muted-foreground">{PAGOS.find(p => p.id === t.method)?.label ?? t.method}</span>
+                      <span>{money(t.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <DialogFooter>
+                <Button type="button" onClick={terminarCierre}>Entendido</Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

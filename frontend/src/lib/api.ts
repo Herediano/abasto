@@ -48,6 +48,7 @@ export type Product = {
   internalTaxRate?: string | null;
   minStock?: string | null;
   manejaVencimiento: boolean;
+  isWeighed: boolean;
   isActive: boolean;
   currentStock?: number;
   // Sólo vienen en el detalle (GET /products/:id), no en el listado.
@@ -131,7 +132,65 @@ export type Customer = {
   address?: string | null;
   priceListId?: string | null;
   priceListName?: string | null;
+  creditLimit?: string | null;
+  accountBalance?: string;
   isActive: boolean;
+};
+
+export type CashRegister = { id: string; name: string; warehouseId: string };
+
+export type CashMovement = {
+  id: string;
+  type: 'deposit' | 'withdrawal' | 'expense';
+  amount: string;
+  reason: string;
+  occurredAt: string;
+  userName?: string;
+};
+
+export type CashShift = {
+  id: string;
+  cashRegisterId: string;
+  status: 'open' | 'closed';
+  openingCash: string;
+  openingNotes?: string | null;
+  openedAt: string;
+  closedAt?: string | null;
+  expectedCash?: string | null;
+  countedCash?: string | null;
+  cashDifference?: string | null;
+  closingNotes?: string | null;
+  cashRegister?: { id: string; name: string; warehouseId: string };
+  cashRegisterName?: string;
+  openedByName?: string;
+  closedByName?: string | null;
+  salesCount?: number;
+  totalsByMethod?: { method: string; total: number }[];
+  movements?: CashMovement[];
+};
+
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'qr' | 'account';
+
+export type SalePayment = { method: PaymentMethod; amount: string; reference?: string | null };
+
+export type CustomerAccountMovement = {
+  id: string;
+  type: 'sale' | 'payment' | 'adjustment';
+  amount: string;
+  balanceAfter: string;
+  notes?: string | null;
+  occurredAt: string;
+  userName?: string;
+  saleId?: string | null;
+};
+
+export type CustomerAccount = {
+  customerId: string;
+  customerName: string;
+  balance: number;
+  creditLimit: number | null;
+  available: number | null;
+  movements: CustomerAccountMovement[];
 };
 
 export type PriceTier = { id: string; priceListId: string; priceListName: string; minQty: string; price: string };
@@ -248,7 +307,7 @@ export type SaleLine = {
   lineTotal: string;
 };
 
-export type SaleDetail = Sale & { lines: SaleLine[]; warehouseName: string; cancelReason?: string | null };
+export type SaleDetail = Sale & { lines: SaleLine[]; payments: SalePayment[]; warehouseName: string; cancelReason?: string | null };
 
 export type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
 

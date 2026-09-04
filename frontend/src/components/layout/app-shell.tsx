@@ -1,7 +1,7 @@
 import {
   ArrowsClockwise, ArrowLineDown, ArrowLineUp, CashRegister, ClockCounterClockwise, Circle, Gear,
   Handbag, Moon, Package, Receipt, ShoppingCartSimple, SignOut, Storefront, Sun, Tag, Truck,
-  UsersThree, Warehouse,
+  UsersThree, Vault, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
@@ -68,7 +68,7 @@ export function AppShell() {
   const groups = isAdmin
     ? [
         ...NAV_GROUPS,
-        { label: 'Dinero', items: [{ to: '/precios', label: 'Precios', icon: Tag }] },
+        { label: 'Dinero', items: [{ to: '/precios', label: 'Precios', icon: Tag }, { to: '/ventas/turnos', label: 'Turnos de caja', icon: Vault }] },
         { label: 'Administración', items: [{ to: '/admin/users', label: 'Usuarios', icon: Gear }] },
       ]
     : NAV_GROUPS;

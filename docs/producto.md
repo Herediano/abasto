@@ -152,16 +152,27 @@ Ordenados por peso para un mayorista:
 Al momento de escribir esto (2026-09):
 
 - **Roles:** hay 2 (admin/user). El objetivo son rangos configurables por
-  empresa. Falta todo el sistema de permisos.
+  empresa. Falta todo el sistema de permisos — "supervisor" hoy es sinónimo de
+  admin (se usa así, por ejemplo, para autorizar anular un ítem del carrito).
 - **Sucursal:** no hay modelo de sucursal; se usa `Warehouse` (depósito). Hay que
   separar los conceptos.
-- **Caja / turno / arqueo:** no existe. Hay ventas sueltas con un "punto de
-  venta" de texto.
-- **Pago:** una venta = un medio de pago (string `cash | card | transfer`). Falta
-  pago dividido y datos por medio.
-- **Cuenta corriente:** no está construida.
-- **Pesables:** parcial (`unit`, cantidad decimal); falta balanza y código con
-  peso.
+- **Caja / turno / arqueo:** construido — `CashRegister`/`CashShift`/
+  `CashMovement`. Apertura con fondo, movimientos durante el turno, cierre con
+  arqueo (esperado/contado/diferencia) y desglose por medio de pago. Sin turno
+  abierto no se vende. Falta: varias cajas por sucursal se pueden crear pero la
+  UI de apertura no ofrece elegir cuál si hay más de una en pantallas fuera de
+  la caja (sólo la propia pantalla de apertura las lista).
+- **Pago:** construido el pago dividido — `SalePayment`, varios medios por
+  venta (`cash | card | transfer | qr | account`) que tienen que sumar el
+  total. Falta el recargo/descuento por medio de pago: hoy el total no cambia
+  según cómo se pague.
+- **Cuenta corriente:** construida — límite de crédito por cliente, "account"
+  como medio de pago, `CustomerAccountMovement` (venta/cobro/ajuste, saldo
+  cacheado), estado de cuenta y cobro manual.
+- **Pesables:** construido para el flujo de mostrador — `Product.isWeighed`,
+  parseo del código de balanza (prefijo 20-29) en la caja. Falta integración
+  real de balanza (esto asume que el código ya viene escaneado) y el mismo
+  parseo en otras pantallas si hiciera falta (hoy sólo caja).
 - **Base sólida que se conserva:** libro de stock append-only con lotes y
   vencimientos, multi-tenant por `tenant_id`, facturas de compra con corrección,
   listas de precios con derivación y vigencia, historial de precios, ventas que

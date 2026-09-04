@@ -16,7 +16,7 @@ import { api, errorMessage, type Pagination, type Sale, type SaleDetail } from '
 import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
-const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia' };
+const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente', mixed: 'Varios medios' };
 const comprobante = (s: { pointOfSale: string; number: number }) => `${s.pointOfSale}-${String(s.number).padStart(8, '0')}`;
 // occurredAt es un timestamp, no una fecha pura: hay que pasarlo a hora local o
 // una venta de la noche aparece con la fecha del día siguiente.
@@ -166,7 +166,14 @@ export function SalesHistoryPage() {
                 <span className="text-muted-foreground">Cliente</span><span>{detalle.customerName ?? 'Consumidor final'}</span>
                 <span className="text-muted-foreground">Vendedor</span><span>{detalle.userName}</span>
                 <span className="text-muted-foreground">Depósito</span><span>{detalle.warehouseName}</span>
-                <span className="text-muted-foreground">Pago</span><span>{PAGOS[detalle.paymentMethod] ?? detalle.paymentMethod}</span>
+                <span className="text-muted-foreground">Pago</span>
+                <span>
+                  {detalle.payments.map((p, i) => (
+                    <span key={i} className="block">
+                      {PAGOS[p.method] ?? p.method}: {money(p.amount)}{p.reference ? ` (${p.reference})` : ''}
+                    </span>
+                  ))}
+                </span>
                 {detalle.cancelReason && <><span className="text-muted-foreground">Motivo anulación</span><span>{detalle.cancelReason}</span></>}
               </div>
               <div className="overflow-hidden rounded-md border">

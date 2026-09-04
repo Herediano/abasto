@@ -19,7 +19,7 @@ import { api, downloadFile, errorMessage, type Category, type Pagination, type P
 import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
-const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', brand: '', taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false };
+const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', brand: '', taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false, isWeighed: false };
 // Alicuotas vigentes en Argentina; el backend valida contra la misma lista.
 const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
 type FormState = typeof EMPTY_FORM;
@@ -211,6 +211,7 @@ export function ProductsPage() {
       internalTaxRate: p.internalTaxRate ?? '0',
       minStock: p.minStock ?? '',
       manejaVencimiento: p.manejaVencimiento,
+      isWeighed: p.isWeighed,
     });
     setNewCategoryName('');
     setCreatingCategory(false);
@@ -516,6 +517,12 @@ export function ProductsPage() {
               <Checkbox id="manejaVencimiento" checked={form.manejaVencimiento} onCheckedChange={checked => setForm({ ...form, manejaVencimiento: checked === true })} />
               <Label htmlFor="manejaVencimiento" className="font-normal">
                 Maneja vencimiento
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="isWeighed" checked={form.isWeighed} onCheckedChange={checked => setForm({ ...form, isWeighed: checked === true })} />
+              <Label htmlFor="isWeighed" className="font-normal">
+                Pesable (se vende por peso, con balanza)
               </Label>
             </div>
             <DialogFooter>
