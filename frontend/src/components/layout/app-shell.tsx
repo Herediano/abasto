@@ -1,39 +1,39 @@
-import { LogOut, Package, ArrowDownToLine, ArrowUpFromLine, History, CalendarClock, PackageMinus, Boxes, Warehouse, Truck, Users, Tags, Shapes, ShoppingCart, Receipt, type LucideIcon } from 'lucide-react';
+import {
+  ArrowsClockwise, ArrowLineDown, ArrowLineUp, CashRegister, ClockCounterClockwise, Gear, Handbag,
+  Package, Receipt, ShoppingCartSimple, SignOut, Storefront, Tag, Truck, UsersThree, Warehouse,
+  type Icon,
+} from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { api, type Warehouse as WarehouseRow } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
-type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
+type NavItem = { to: string; label: string; icon: Icon; end?: boolean };
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
-    label: 'Stock',
+    label: 'Mercadería',
     items: [
-      { to: '/', label: 'Stock actual', icon: Package, end: true },
-      { to: '/stock/in', label: 'Ingreso', icon: ArrowDownToLine },
-      { to: '/stock/out', label: 'Egreso', icon: ArrowUpFromLine },
-      { to: '/stock/history', label: 'Historial', icon: History },
-      { to: '/stock/expirations', label: 'Vencimientos', icon: CalendarClock },
-      { to: '/stock/restock', label: 'Reposición', icon: PackageMinus },
+      { to: '/', label: 'Stock', icon: Package, end: true },
+      { to: '/stock/in', label: 'Ingreso', icon: ArrowLineDown },
+      { to: '/stock/out', label: 'Egreso', icon: ArrowLineUp },
+      { to: '/stock/history', label: 'Historial', icon: ClockCounterClockwise },
+      { to: '/stock/expirations', label: 'Vencimientos', icon: Handbag },
+      { to: '/stock/restock', label: 'Reposición', icon: ArrowsClockwise },
     ],
   },
   {
     label: 'Ventas',
-    items: [
-      { to: '/ventas', label: 'Mostrador', icon: ShoppingCart, end: true },
-      { to: '/ventas/historial', label: 'Ventas', icon: Receipt },
-    ],
+    items: [{ to: '/ventas/historial', label: 'Ventas', icon: Receipt }],
   },
   {
     label: 'Catálogo',
     items: [
-      { to: '/catalog/products', label: 'Productos', icon: Boxes },
-      { to: '/catalog/categories', label: 'Categorías', icon: Shapes },
+      { to: '/catalog/products', label: 'Productos', icon: ShoppingCartSimple },
       { to: '/catalog/warehouses', label: 'Depósitos', icon: Warehouse },
       { to: '/catalog/suppliers', label: 'Proveedores', icon: Truck },
-      { to: '/catalog/customers', label: 'Clientes', icon: Users },
+      { to: '/catalog/customers', label: 'Clientes', icon: UsersThree },
     ],
   },
 ];
@@ -41,7 +41,8 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 export function AppShell() {
   const { session, isAdmin, logout } = useAuth();
   // La sesión guarda el warehouseId pero no el nombre; se resuelve una vez acá
-  // para que el header diga en qué sucursal está parado el usuario.
+  // porque la sucursal es lo primero que tiene que ver el usuario: operar en la
+  // sucursal equivocada arruina el stock.
   const [sucursal, setSucursal] = useState('');
   const warehouseId = session?.user.warehouseId;
   const token = session?.accessToken;
@@ -58,8 +59,8 @@ export function AppShell() {
   const groups = isAdmin
     ? [
         ...NAV_GROUPS,
-        { label: 'Precios', items: [{ to: '/precios', label: 'Precios', icon: Tags }] },
-        { label: 'Administración', items: [{ to: '/admin/users', label: 'Usuarios', icon: Users }] },
+        { label: 'Dinero', items: [{ to: '/precios', label: 'Precios', icon: Tag }] },
+        { label: 'Administración', items: [{ to: '/admin/users', label: 'Usuarios', icon: Gear }] },
       ]
     : NAV_GROUPS;
 
@@ -71,24 +72,47 @@ export function AppShell() {
     .toUpperCase();
 
   return (
-    // Pantalla fija: el body no scrollea, sólo el área de trabajo. En un
-    // mostrador la barra lateral y el header tienen que estar siempre a la vista.
+    // Pantalla fija: el body no scrollea, sólo el área de trabajo. No hay barra
+    // superior de aplicación — el riel se queda con todo y el contenido gana
+    // alto, que es lo que vale en un sistema de tablas largas. Cada página trae
+    // su propio encabezado pegajoso (ver PageHeader).
     <div className="flex h-screen overflow-hidden">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-        <div className="flex h-16 items-center gap-3 px-4">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Boxes className="size-5" />
-          </div>
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-semibold uppercase tracking-wide text-sidebar-active-foreground">Mayorista ERP</p>
-            <p className="truncate text-xs text-sidebar-foreground">{session.tenant.name}</p>
+      <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+        <div className="flex flex-col gap-2.5 border-b border-border-soft px-3.5 py-3.5">
+          <p className="font-display text-xl font-bold tracking-tight text-foreground">
+            abasto<span className="text-primary">.ai</span>
+          </p>
+          {/* Para la mayoría de los usuarios la sucursal es un dato, no un
+              control: están atados a una. Cuando exista el permiso "navegar
+              entre sucursales" este bloque pasa a ser un selector. */}
+          <div className="flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5">
+            <Storefront weight="fill" className="size-4 shrink-0 text-primary" />
+            <div className="min-w-0 leading-tight">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-placeholder">Sucursal</p>
+              <p className="truncate text-sm font-semibold">{sucursal || session.tenant.name}</p>
+            </div>
           </div>
         </div>
-        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3">
+          {/* La caja no es una sección más: es un modo. Entra a pantalla
+              completa y el cajero no ve nada de esto adentro. */}
+          <NavLink
+            to="/ventas"
+            end
+            className="mb-1 flex items-center gap-2.5 rounded-lg bg-foreground px-3 py-2.5 font-display text-[15px] font-semibold tracking-tight text-background transition-opacity hover:opacity-90"
+          >
+            <CashRegister weight="fill" className="size-5 shrink-0" />
+            Caja
+            <span className="ml-auto font-mono text-[10px] font-normal opacity-60">F1</span>
+          </NavLink>
+
           {groups.map(group => (
             <div key={group.label}>
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-widest text-sidebar-foreground/60">{group.label}</p>
-              <div className="space-y-0.5">
+              <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-widest text-placeholder">
+                {group.label}
+              </p>
+              <div className="space-y-px">
                 {group.items.map(item => (
                   <NavLink
                     key={item.to}
@@ -96,59 +120,54 @@ export function AppShell() {
                     end={item.end}
                     className={({ isActive }) =>
                       cn(
-                        // El borde ámbar de 2px marca dónde estás parado; se
-                        // reserva transparente en los inactivos para que el
-                        // texto no se corra al cambiar de sección.
-                        'flex items-center gap-3 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors',
+                        'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
                         isActive
-                          ? 'border-primary bg-sidebar-active text-sidebar-active-foreground'
-                          : 'border-transparent text-sidebar-foreground hover:bg-sidebar-hover hover:text-sidebar-active-foreground',
+                          ? 'bg-sidebar-active font-semibold text-sidebar-active-foreground'
+                          : 'font-medium text-sidebar-foreground hover:bg-sidebar-hover hover:text-foreground',
                       )
                     }
                   >
-                    <item.icon className="size-4 shrink-0" />
-                    {item.label}
+                    {({ isActive }) => (
+                      <>
+                        {/* El relleno marca dónde estás: es para lo que
+                            elegimos Phosphor sobre un set sólo de línea. */}
+                        <item.icon weight={isActive ? 'fill' : 'regular'} className="size-[18px] shrink-0" />
+                        {item.label}
+                      </>
+                    )}
                   </NavLink>
                 ))}
               </div>
             </div>
           ))}
         </nav>
-        <div className="flex items-center gap-3 border-t border-sidebar-border px-4 py-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-active text-xs font-semibold text-sidebar-active-foreground">
+
+        <div className="flex items-center gap-2.5 border-t border-border-soft px-3.5 py-3">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary font-display text-xs font-semibold text-primary-foreground">
             {iniciales}
           </div>
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-sm font-medium text-sidebar-active-foreground">{session.user.name}</p>
-            <p className="truncate text-xs capitalize text-sidebar-foreground">{session.user.role}</p>
+            <p className="truncate text-sm font-semibold">{session.user.name}</p>
+            <p className="truncate text-xs capitalize text-placeholder">{session.user.role}</p>
           </div>
           <button
             type="button"
             onClick={logout}
             aria-label="Salir"
-            className="rounded-md p-2 text-sidebar-foreground transition-colors hover:bg-sidebar-hover hover:text-sidebar-active-foreground"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground"
           >
-            <LogOut className="size-4" />
+            <SignOut className="size-[18px]" />
           </button>
         </div>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-card px-6">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Warehouse className="size-4 text-muted-foreground" />
-            {sucursal || session.tenant.name}
-          </div>
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-success" />
-            Sistema online
-          </div>
-        </header>
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto flex max-w-6xl flex-col gap-6">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+
+      {/* El área de trabajo es el contenedor que scrollea, para que el
+          encabezado pegajoso de cada página se ancle contra él. */}
+      <main className="min-w-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 pb-12">
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 }

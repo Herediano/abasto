@@ -10,9 +10,12 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary/90',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-input bg-card hover:bg-secondary',
+        // El contorno se tiñe de verde al pasar por encima: insinúa que se
+        // puede tocar sin competir con la acción primaria, que es la única
+        // sólida de la pantalla.
+        outline: 'border border-input bg-card hover:border-accent-border hover:bg-subtle',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-secondary',
+        ghost: 'text-muted-foreground hover:bg-secondary hover:text-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

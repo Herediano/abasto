@@ -2,63 +2,165 @@
 @plugin "tailwindcss-animate";
 
 /*
- * Sistema de diseño "Charcoal & Amber Gold".
- * Sidebar grafito de alto contraste, area de trabajo clara antifatiga y el
- * ambar reservado para acciones y foco: si el ambar aparece, se puede tocar.
+ * Sistema de diseño "Yerba" — ver docs/producto.md y la dirección visual.
+ *
+ * Verde pino sobre neutros arena cálidos. El verde es la única acción sólida
+ * de la pantalla: si aparece verde, se puede tocar. El ámbar queda reservado
+ * para avisos (sin precio, por vencer) y el rojo para lo que está mal.
+ *
+ * La paleta vive en variables crudas (--ab-*) y @theme las referencia con
+ * `inline`, así el tema se cambia en tiempo de ejecución sin recompilar:
+ * el bloque :root es el claro, y se redefine para el oscuro del sistema y
+ * para el data-theme explícito.
  */
-@theme {
-  --font-sans: "IBM Plex Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* Area de trabajo */
-  --color-background: #f8fafc;
-  --color-foreground: #0f172a;
+:root {
+  --ab-ground: #f8f6f1;
+  --ab-surface: #ffffff;
+  --ab-surface-2: #fcfbf8;
+  --ab-ink: #1b2420;
+  --ab-soft: #5c6560;
+  --ab-faint: #8b938d;
+  --ab-line: #e7e1d6;
+  --ab-line-soft: #f0ece4;
 
-  --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
+  --ab-primary: #1f7355;
+  --ab-primary-soft: #e3eee8;
+  --ab-primary-line: #bfdace;
+  /* Texto sobre cualquier relleno sólido (primario, peligro, aviso). */
+  --ab-on-solid: #ffffff;
 
-  --color-border: #e2e8f0;
-  --color-input: #e2e8f0;
-  --color-ring: #d97706;
+  --ab-warn: #a76322;
+  --ab-warn-soft: #f7ede0;
+  --ab-ok: #2f7d4f;
+  --ab-danger: #a6453b;
+  --ab-danger-soft: #f8e9e7;
 
-  /* Accion primaria: el unico ambar solido de la pantalla */
-  --color-primary: #d97706;
-  --color-primary-foreground: #ffffff;
+  --ab-shadow-1: 0 1px 2px rgb(20 30 25 / 0.05);
+  --ab-shadow-2: 0 1px 2px rgb(20 30 25 / 0.04), 0 10px 28px -14px rgb(20 30 25 / 0.16);
 
-  /* Superficies secundarias (chips neutros, atajos de teclado) */
-  --color-secondary: #f1f3f5;
-  --color-secondary-foreground: #475569;
+  color-scheme: light;
+}
 
-  --color-muted: #f1f3f5;
+/* Oscuro del sistema — no se aplica si el usuario eligió claro a mano. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ab-ground: #101512;
+    --ab-surface: #191e1a;
+    --ab-surface-2: #1d231f;
+    --ab-ink: #e8ebe6;
+    --ab-soft: #949d97;
+    --ab-faint: #6e7872;
+    --ab-line: #262c27;
+    --ab-line-soft: #212722;
+
+    --ab-primary: #57b994;
+    --ab-primary-soft: #1b2a24;
+    --ab-primary-line: #2e4a3e;
+    --ab-on-solid: #06130d;
+
+    --ab-warn: #d08a3c;
+    --ab-warn-soft: #2a2118;
+    --ab-ok: #63b37c;
+    --ab-danger: #e0776a;
+    --ab-danger-soft: #2b1b19;
+
+    --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
+    --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
+
+    color-scheme: dark;
+  }
+}
+
+/* Oscuro elegido a mano — gana sobre el sistema en claro. */
+:root[data-theme="dark"] {
+  --ab-ground: #101512;
+  --ab-surface: #191e1a;
+  --ab-surface-2: #1d231f;
+  --ab-ink: #e8ebe6;
+  --ab-soft: #949d97;
+  --ab-faint: #6e7872;
+  --ab-line: #262c27;
+  --ab-line-soft: #212722;
+
+  --ab-primary: #57b994;
+  --ab-primary-soft: #1b2a24;
+  --ab-primary-line: #2e4a3e;
+  --ab-on-solid: #06130d;
+
+  --ab-warn: #d08a3c;
+  --ab-warn-soft: #2a2118;
+  --ab-ok: #63b37c;
+  --ab-danger: #e0776a;
+  --ab-danger-soft: #2b1b19;
+
+  --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
+  --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  /* Spline Sans para trabajar, Bricolage para los títulos y la marca. */
+  --font-sans: "Spline Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Spline Sans", ui-sans-serif, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-background: var(--ab-ground);
+  --color-foreground: var(--ab-ink);
+
+  --color-card: var(--ab-surface);
+  --color-card-foreground: var(--ab-ink);
+  /* Cabeceras de tabla, pies, superficies apenas levantadas. */
+  --color-subtle: var(--ab-surface-2);
+
+  --color-border: var(--ab-line);
+  --color-border-soft: var(--ab-line-soft);
+  --color-input: var(--ab-line);
+  --color-ring: var(--ab-primary);
+
+  --color-primary: var(--ab-primary);
+  --color-primary-foreground: var(--ab-on-solid);
+
+  --color-secondary: var(--ab-ground);
+  --color-secondary-foreground: var(--ab-soft);
+
+  --color-muted: var(--ab-line-soft);
   /* Texto secundario: etiquetas, descripciones, cabeceras de tabla. */
-  --color-muted-foreground: #475569;
-  /* Texto terciario: placeholders, SKU secundarios, timestamps. */
-  --color-placeholder: #94a3b8;
+  --color-muted-foreground: var(--ab-soft);
+  /* Texto terciario: placeholders, códigos, marcas de tiempo. */
+  --color-placeholder: var(--ab-faint);
 
-  /* Tag mayorista / ahorro: ambar suave, sin competir con el CTA */
-  --color-accent: #fef3c7;
-  --color-accent-foreground: #b45309;
+  /* Fondo suave del primario: chips activos, ítem del riel seleccionado. */
+  --color-accent: var(--ab-primary-soft);
+  --color-accent-foreground: var(--ab-primary);
+  --color-accent-border: var(--ab-primary-line);
 
-  /* Semantica operativa */
-  --color-destructive: #ef4444;
-  --color-destructive-foreground: #ffffff;
+  --color-destructive: var(--ab-danger);
+  --color-destructive-foreground: var(--ab-on-solid);
+  --color-destructive-soft: var(--ab-danger-soft);
 
-  --color-success: #10b981;
-  --color-success-foreground: #ffffff;
+  --color-success: var(--ab-ok);
+  --color-success-foreground: var(--ab-on-solid);
 
-  --color-warning: #f59e0b;
-  --color-warning-foreground: #ffffff;
+  --color-warning: var(--ab-warn);
+  --color-warning-foreground: var(--ab-on-solid);
+  --color-warning-soft: var(--ab-warn-soft);
 
-  /* Superficies oscuras */
-  --color-sidebar: #12151a;
-  --color-sidebar-foreground: #8e9aa8;
-  --color-sidebar-hover: #1c2129;
-  --color-sidebar-active: #262c36;
-  --color-sidebar-active-foreground: #ffffff;
-  --color-sidebar-border: #1f242d;
+  /* El riel es una superficie clara más, no un bloque oscuro. */
+  --color-sidebar: var(--ab-surface);
+  --color-sidebar-foreground: var(--ab-soft);
+  --color-sidebar-hover: var(--ab-ground);
+  --color-sidebar-active: var(--ab-primary-soft);
+  --color-sidebar-active-foreground: var(--ab-primary);
+  --color-sidebar-border: var(--ab-line);
 
-  --radius-lg: 0.65rem;
-  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5625rem;
   --radius-sm: 0.375rem;
+
+  --shadow-card: var(--ab-shadow-1);
+  --shadow-float: var(--ab-shadow-2);
 }
 
 @layer base {
@@ -69,5 +171,16 @@
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Los títulos llevan la cara con carácter; el resto, la tranquila. */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  /* Toda columna de números se alinea por dígito. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }

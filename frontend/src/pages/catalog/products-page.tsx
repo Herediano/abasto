@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Boxes, Download, Eye, PackagePlus, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Boxes, Download, Eye, PackagePlus, Pencil, Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -23,13 +23,6 @@ const EMPTY_FORM = { barcode: '', name: '', categoryId: '', unit: 'unidad', purc
 // Alicuotas vigentes en Argentina; el backend valida contra la misma lista.
 const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
 type FormState = typeof EMPTY_FORM;
-
-function margin(costPrice?: string | null, salePrice?: string | null) {
-  const cost = Number(costPrice);
-  const sale = Number(salePrice);
-  if (!costPrice || !salePrice || !Number.isFinite(cost) || !Number.isFinite(sale) || sale <= 0) return null;
-  return ((sale - cost) / sale) * 100;
-}
 
 export function ProductsPage() {
   const { session, isAdmin } = useAuth();
@@ -65,6 +58,22 @@ export function ProductsPage() {
   const [savingCategory, setSavingCategory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [referenceHint, setReferenceHint] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Lo que está filtrado se muestra como chips: se ve de un vistazo qué está
+  // acotando el listado y se saca de a uno sin abrir el panel.
+  const SORTS: Record<string, string> = {
+    newest: 'Más nuevos', updated: 'Actualizados recién', price_desc: 'Mayor precio', price_asc: 'Menor precio',
+  };
+  const activeFilters: { key: string; label: string; clear: () => void }[] = [
+    categoryId && { key: 'cat', label: categoryId === 'none' ? 'Sin categoría' : categories.find(c => c.id === categoryId)?.name ?? 'Categoría', clear: () => setCategoryId('') },
+    brand && { key: 'brand', label: brand, clear: () => setBrand('') },
+    status !== 'active' && { key: 'status', label: status === 'inactive' ? 'Desactivados' : 'Todos los estados', clear: () => setStatus('active') },
+    priced && { key: 'priced', label: priced === 'yes' ? 'Con precio' : 'Sin precio', clear: () => setPriced('') },
+    stock && { key: 'stock', label: stock === 'low' ? 'Bajo mínimo' : 'Sin stock', clear: () => setStock('') },
+    sort !== 'name' && { key: 'sort', label: SORTS[sort] ?? sort, clear: () => setSort('name') },
+    priceListId && { key: 'list', label: `Precios de ${priceLists.find(l => l.id === priceListId)?.name ?? 'otra lista'}`, clear: () => setPriceListId('') },
+  ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   const loadCategories = () => api<Category[]>('/categories', {}, token).then(setCategories).catch(e => setError(errorMessage(e)));
   const loadBrands = () => api<string[]>('/products/brands', {}, token).then(setBrands).catch(() => {});
@@ -277,78 +286,46 @@ export function ProductsPage() {
       />
       {catalogMessage && <Alert>{catalogMessage}</Alert>}
       {error && !open && <Alert variant="destructive">{error}</Alert>}
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <Field label="Buscar" htmlFor="filter-search" className="max-w-sm">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="filter-search" className="pl-8" placeholder="Nombre, código de barras o interno" value={searchInput} onChange={e => setSearchInput(e.target.value)} />
-            </div>
-          </Field>
-          <Field label="Categoría" htmlFor="filter-category">
-            <Select id="filter-category" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
-              <option value="">Todas</option>
-              <option value="none">Sin categoría</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Marca" htmlFor="filter-brand">
-            <Select id="filter-brand" value={brand} onChange={e => setBrand(e.target.value)}>
-              <option value="">Todas</option>
-              {brands.map(b => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Estado" htmlFor="filter-status">
-            <Select id="filter-status" value={status} onChange={e => setStatus(e.target.value)}>
-              <option value="active">Activos</option>
-              <option value="inactive">Desactivados</option>
-              <option value="all">Todos</option>
-            </Select>
-          </Field>
-          <Field label="Precio de venta" htmlFor="filter-priced">
-            <Select id="filter-priced" value={priced} onChange={e => setPriced(e.target.value)}>
-              <option value="">Todos</option>
-              <option value="yes">Con precio</option>
-              <option value="no">Sin precio</option>
-            </Select>
-          </Field>
-          <Field label="Stock" htmlFor="filter-stock">
-            <Select id="filter-stock" value={stock} onChange={e => setStock(e.target.value)}>
-              <option value="">Todos</option>
-              <option value="low">Bajo mínimo</option>
-              <option value="out">Sin stock</option>
-            </Select>
-          </Field>
-          <Field label="Ordenar por" htmlFor="filter-sort">
-            <Select id="filter-sort" value={sort} onChange={e => setSort(e.target.value)}>
-              <option value="name">Nombre (A-Z)</option>
-              <option value="newest">Más nuevos</option>
-              <option value="updated">Actualizados recién</option>
-              <option value="price_desc">Mayor precio</option>
-              <option value="price_asc">Menor precio</option>
-            </Select>
-          </Field>
-
-          {/* Con más de una lista se puede mirar el catálogo con los precios de
-              cualquiera de ellas, incluidas las que se calculan solas. */}
-          {priceLists.length > 1 && (
-            <Field label="Ver precios de" htmlFor="filter-pricelist">
-              <Select id="filter-pricelist" value={priceListId} onChange={e => setPriceListId(e.target.value)}>
-                {priceLists.map(l => (
-                  <option key={l.id} value={l.isDefault ? '' : l.id}>
-                    {l.name}
-                    {l.derivesFromName ? ` (${l.derivesFromName} ${Number(l.markupPercent) >= 0 ? '+' : ''}${Number(l.markupPercent)}%)` : ''}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+      {/* Buscar está siempre a mano; el resto de los filtros vive en un panel y
+          lo que queda activo vuelve como chips que se sacan de a uno. Siete
+          selectores en fila era ruido: la mayoría de las veces se busca y nada
+          más. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-56 flex-1 sm:max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-placeholder" />
+          <Input
+            aria-label="Buscar productos"
+            className="pl-9"
+            placeholder="Nombre, código de barras o interno"
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+          />
+        </div>
+        <Button variant="outline" onClick={() => setFiltersOpen(true)}>
+          <SlidersHorizontal /> Filtros
+          {activeFilters.length > 0 && (
+            <span className="ml-0.5 rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-foreground">
+              {activeFilters.length}
+            </span>
           )}
-        </CardContent>
-      </Card>
+        </Button>
+        {activeFilters.map(f => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={f.clear}
+            className="inline-flex items-center gap-1.5 rounded-full border border-accent-border bg-accent py-1 pl-3 pr-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-80"
+          >
+            {f.label}
+            <X className="size-3.5 opacity-70" />
+          </button>
+        ))}
+        {activeFilters.length > 1 && (
+          <Button variant="ghost" size="sm" onClick={() => activeFilters.forEach(f => f.clear())}>
+            Limpiar
+          </Button>
+        )}
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -360,14 +337,14 @@ export function ProductsPage() {
             <>
               <Table>
                 <TableHeader>
+                  {/* Seis columnas, no diez. La categoría y el margen viven en
+                      el detalle del producto: en el listado eran ruido. El
+                      código de barras va debajo del nombre, no en su propia
+                      columna. */}
                   <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Cód. barras</TableHead>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead>Producto</TableHead>
                     <TableHead>Marca</TableHead>
-                    <TableHead>Categoría</TableHead>
                     <TableHead className="text-right">Precio</TableHead>
-                    <TableHead className="text-right">Margen</TableHead>
                     <TableHead className="text-right">Stock</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
@@ -375,20 +352,32 @@ export function ProductsPage() {
                 </TableHeader>
                 <TableBody>
                   {items.map(p => {
-                    const m = margin(p.costPrice, p.salePrice);
+                    const bajoMinimo = p.currentStock !== undefined && p.minStock != null && p.currentStock < Number(p.minStock);
                     return (
                       <TableRow key={p.id}>
-                        <TableCell className="font-mono text-xs">{p.internalCode}</TableCell>
-                        <TableCell className="font-mono text-xs">{p.barcode}</TableCell>
-                        <TableCell className="font-medium">{p.name}</TableCell>
-                        <TableCell>{p.brand ?? '—'}</TableCell>
-                        <TableCell>{p.categoryName ?? '—'}</TableCell>
-                        <TableCell className="text-right">{p.salePrice ? `${money(Number(p.salePrice))}` : '—'}</TableCell>
-                        <TableCell className="text-right">{m === null ? '—' : `${m.toFixed(0)}%`}</TableCell>
-                        <TableCell className={`text-right tabular-nums ${p.currentStock !== undefined && p.minStock != null && p.currentStock < Number(p.minStock) ? 'font-medium text-destructive' : ''}`}>
+                        <TableCell>
+                          <div className="font-medium leading-snug">{p.name}</div>
+                          <div className="mt-0.5 font-mono text-xs text-placeholder">
+                            {p.barcode}
+                            {p.internalCode && <> · #{p.internalCode}</>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{p.brand ?? '—'}</TableCell>
+                        <TableCell className="text-right">
+                          {p.salePrice
+                            ? <span className="font-semibold tabular">{money(Number(p.salePrice))}</span>
+                            : <Badge variant="warning">Sin precio</Badge>}
+                        </TableCell>
+                        <TableCell className={`text-right tabular ${bajoMinimo ? 'font-semibold text-destructive' : ''}`}>
                           {p.currentStock === undefined ? '—' : Number.isInteger(p.currentStock) ? p.currentStock : p.currentStock.toFixed(3)}
                         </TableCell>
-                        <TableCell>{p.isActive ? <Badge variant="success">Activo</Badge> : <Badge variant="destructive">Desactivado</Badge>}</TableCell>
+                        <TableCell>
+                          {!p.isActive
+                            ? <Badge variant="destructive">Desactivado</Badge>
+                            : bajoMinimo
+                              ? <Badge variant="destructive">Bajo mínimo</Badge>
+                              : <Badge variant="success">Activo</Badge>}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button variant="ghost" size="icon" asChild>
@@ -538,6 +527,84 @@ export function ProductsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Filtros</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Categoría" htmlFor="filter-category">
+              <Select id="filter-category" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+                <option value="">Todas</option>
+                <option value="none">Sin categoría</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Marca" htmlFor="filter-brand">
+              <Select id="filter-brand" value={brand} onChange={e => setBrand(e.target.value)}>
+                <option value="">Todas</option>
+                {brands.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Estado" htmlFor="filter-status">
+              <Select id="filter-status" value={status} onChange={e => setStatus(e.target.value)}>
+                <option value="active">Activos</option>
+                <option value="inactive">Desactivados</option>
+                <option value="all">Todos</option>
+              </Select>
+            </Field>
+            <Field label="Precio de venta" htmlFor="filter-priced">
+              <Select id="filter-priced" value={priced} onChange={e => setPriced(e.target.value)}>
+                <option value="">Todos</option>
+                <option value="yes">Con precio</option>
+                <option value="no">Sin precio</option>
+              </Select>
+            </Field>
+            <Field label="Stock" htmlFor="filter-stock">
+              <Select id="filter-stock" value={stock} onChange={e => setStock(e.target.value)}>
+                <option value="">Todos</option>
+                <option value="low">Bajo mínimo</option>
+                <option value="out">Sin stock</option>
+              </Select>
+            </Field>
+            <Field label="Ordenar por" htmlFor="filter-sort">
+              <Select id="filter-sort" value={sort} onChange={e => setSort(e.target.value)}>
+                <option value="name">Nombre (A-Z)</option>
+                <option value="newest">Más nuevos</option>
+                <option value="updated">Actualizados recién</option>
+                <option value="price_desc">Mayor precio</option>
+                <option value="price_asc">Menor precio</option>
+              </Select>
+            </Field>
+
+            {/* Con más de una lista se puede mirar el catálogo con los precios
+                de cualquiera de ellas, incluidas las que se calculan solas. */}
+            {priceLists.length > 1 && (
+              <Field label="Ver precios de" htmlFor="filter-pricelist" className="sm:col-span-2">
+                <Select id="filter-pricelist" value={priceListId} onChange={e => setPriceListId(e.target.value)}>
+                  {priceLists.map(l => (
+                    <option key={l.id} value={l.isDefault ? '' : l.id}>
+                      {l.name}
+                      {l.derivesFromName ? ` (${l.derivesFromName} ${Number(l.markupPercent) >= 0 ? '+' : ''}${Number(l.markupPercent)}%)` : ''}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => activeFilters.forEach(f => f.clear())} disabled={activeFilters.length === 0}>
+              Limpiar todo
+            </Button>
+            <Button onClick={() => setFiltersOpen(false)}>Ver resultados</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
