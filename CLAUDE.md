@@ -50,3 +50,13 @@ There is no test suite and no lint config in this repo yet — don't look for `n
 - **Purchase invoices** (`purchases.service.ts`): lifecycle is `draft` → `confirm` (creates `purchase_in` stock movements for each line) → `corrected` (reverses the prior movements with `adjustment_out`, re-creates `purchase_in` movements for the new lines, and snapshots the prior invoice state into `purchase_invoice_revisions`). Confirmed/corrected invoices are treated as history and are not edited directly outside this flow.
 
 - **Frontend**: the whole app is `frontend/src/App.tsx` — no router library, just manual `window.history.pushState`-based path state, a single shared `api()` fetch wrapper, and the session persisted to `localStorage`.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
