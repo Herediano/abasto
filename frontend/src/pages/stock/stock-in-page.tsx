@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash } from '@phosphor-icons/react';
+import { MagnifyingGlass, Plus, Trash } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ProductSearchDialog } from '@/components/product-search-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -78,6 +79,7 @@ export function StockInPage() {
   const [cancelError, setCancelError] = useState('');
   const [newProduct, setNewProduct] = useState({ name: '', unit: 'unidad', manejaVencimiento: false });
   const [newProductHint, setNewProductHint] = useState(false);
+  const [buscarOpen, setBuscarOpen] = useState(false);
   const [creatingProduct, setCreatingProduct] = useState(false);
 
   useEffect(() => {
@@ -120,6 +122,16 @@ export function StockInPage() {
     if (!suppliers.length) return;
     setHeader(h => (suppliers.some(s => s.id === h.supplierId) ? h : { ...h, supplierId: suppliers[0].id }));
   }, [suppliers, header.supplierId]);
+
+  // F3 abre el buscador, igual que en la caja: es el mismo gesto en todo el
+  // sistema cuando hay que encontrar un producto sin tener el código.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'F3') { e.preventDefault(); setBuscarOpen(true); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     const barcode = line.barcode.trim();
@@ -355,7 +367,15 @@ export function StockInPage() {
               <CardContent className="grid gap-3">
                 <div className="grid grid-cols-6 gap-3">
                   <Field label="Código de barras" htmlFor="line-barcode" className="col-span-2">
-                    <Input id="line-barcode" placeholder="Escanear o tipear" value={line.barcode} onChange={e => setLine({ ...line, barcode: e.target.value })} />
+                    <div className="flex gap-2">
+                      <Input id="line-barcode" placeholder="Escanear o tipear" value={line.barcode} onChange={e => setLine({ ...line, barcode: e.target.value })} />
+                      {/* Cuando el código no lee o no se sabe, se busca por
+                          nombre. Mismo buscador que la caja. */}
+                      <Button type="button" variant="outline" className="shrink-0" onClick={() => setBuscarOpen(true)} title="Buscar producto (F3)">
+                        <MagnifyingGlass />
+                        <kbd className="font-mono text-[10px] text-placeholder">F3</kbd>
+                      </Button>
+                    </div>
                   </Field>
                   <div className="col-span-2 flex items-end pb-2 text-sm text-muted-foreground">
                     {lookupPending ? 'Buscando...' : product ? `${product.name}${product.internalCode ? ` · ${product.internalCode}` : ''}` : ''}
@@ -609,6 +629,16 @@ export function StockInPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* En una compra el producto puede no tener precio de venta todavía, así
+          que no se exige ni se cotiza: sólo se elige y se completa el código. */}
+      <ProductSearchDialog
+        open={buscarOpen}
+        onOpenChange={setBuscarOpen}
+        onPick={p => setLine(l => ({ ...l, barcode: p.barcode }))}
+        accion="Elegir"
+        token={token}
+      />
     </>
   );
 }

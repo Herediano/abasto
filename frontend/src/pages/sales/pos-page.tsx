@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Barcode, Circle, CreditCard, MagnifyingGlass, Money, Moon, Percent, ShoppingCartSimple, Sun,
-  Trash, User,
+  Barcode, Circle, CreditCard, Money, Moon, Percent, ShoppingCartSimple, Sun, Trash, User,
 } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ProductSearchDialog } from '@/components/product-search-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
@@ -92,14 +92,8 @@ export function PosPage() {
   const { theme, ciclar } = useTheme();
 
   // Buscador (F3): sirve para las dos consultas del mostrador — "¿cuánto sale
-  // esto?" y "el código no lee". Muestra el precio real para el cliente
-  // elegido, no el de lista.
+  // esto?" mirándolo, y "el código no lee" con Agregar.
   const [buscarOpen, setBuscarOpen] = useState(false);
-  const [busqueda, setBusqueda] = useState('');
-  const [resultados, setResultados] = useState<Product[]>([]);
-  const [precios, setPrecios] = useState<Record<string, number>>({});
-  const [precioAviso, setPrecioAviso] = useState('');
-  const [buscandoProd, setBuscandoProd] = useState(false);
 
   // Ofertas del día (F6): el cajero tiene que poder responder "¿qué promos hay?"
   // sin salir de la caja.
@@ -138,51 +132,6 @@ export function PosPage() {
     api<Promotion[]>('/promotions', {}, token).then(setPromos).catch(() => {});
   }, [ofertasOpen, token]);
 
-  // Busca y, en el mismo golpe, cotiza los resultados de a uno para mostrar el
-  // precio que realmente le va a salir a este cliente (con escalas y promos).
-  useEffect(() => {
-    if (!buscarOpen || busqueda.trim().length < 2) {
-      setResultados([]);
-      setPrecios({});
-      return;
-    }
-    let cancelado = false;
-    setBuscandoProd(true);
-    const t = setTimeout(() => {
-      (async () => {
-        let encontrados: Product[] = [];
-        try {
-          const r = await api<{ items: Product[] }>(`/products?search=${encodeURIComponent(busqueda.trim())}&pageSize=8`, {}, token);
-          encontrados = r.items;
-        } catch {
-          if (!cancelado) { setResultados([]); setPrecios({}); setPrecioAviso(''); }
-          return;
-        }
-        if (cancelado) return;
-        setResultados(encontrados);
-
-        // La cotización es un extra: si falla (por ejemplo, el tenant todavía
-        // no tiene lista de precios base) se muestra el precio de lista y se
-        // dice por qué, pero los resultados de la búsqueda no se pierden.
-        const conPrecio = encontrados.filter(p => p.salePrice);
-        if (!conPrecio.length) { setPrecios({}); setPrecioAviso(''); return; }
-        try {
-          const q = await api<Quote>('/sales/quote', {
-            method: 'POST',
-            body: JSON.stringify({
-              customerId: customerId || undefined,
-              lines: conPrecio.map(p => ({ productId: p.id, quantity: 1 })),
-            }),
-          }, token);
-          if (!cancelado) { setPrecios(Object.fromEntries(q.lines.map(l => [l.productId, l.unitPrice]))); setPrecioAviso(''); }
-        } catch (err) {
-          if (!cancelado) { setPrecios({}); setPrecioAviso(errorMessage(err)); }
-        }
-      })().finally(() => { if (!cancelado) setBuscandoProd(false); });
-    }, 250);
-    return () => { cancelado = true; clearTimeout(t); };
-  }, [busqueda, buscarOpen, customerId, token]);
-
   const agregar = useCallback(async (codigo: string) => {
     const limpio = codigo.trim();
     if (!limpio) return;
@@ -220,7 +169,7 @@ export function PosPage() {
   // los que están implementados: una tecla que no hace nada es peor que ninguna.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'F3') { e.preventDefault(); setBusqueda(''); setBuscarOpen(true); }
+      if (e.key === 'F3') { e.preventDefault(); setBuscarOpen(true); }
       if (e.key === 'F4') { e.preventDefault(); customerRef.current?.focus(); }
       if (e.key === 'F6') { e.preventDefault(); setOfertasOpen(true); }
       if (e.key === 'F8') { e.preventDefault(); setItems(prev => prev.slice(0, -1)); }
@@ -400,7 +349,7 @@ export function PosPage() {
 
           <div className="flex shrink-0 flex-wrap gap-2 text-sm">
             {[
-              { k: 'F3', l: 'Buscar producto', go: () => { setBusqueda(''); setBuscarOpen(true); } },
+              { k: 'F3', l: 'Buscar producto', go: () => { setBuscarOpen(true); } },
               { k: 'F4', l: 'Cliente', go: () => customerRef.current?.focus() },
               { k: 'F6', l: 'Ofertas del día', go: () => setOfertasOpen(true) },
               { k: 'F8', l: 'Quitar la última', go: () => setItems(prev => prev.slice(0, -1)) },
@@ -498,68 +447,15 @@ export function PosPage() {
         </aside>
       </div>
 
-      {/* Un solo buscador resuelve las dos consultas del mostrador: mirarlo
-          responde "¿cuánto sale?", y Agregar resuelve "el código no lee". */}
-      <Dialog open={buscarOpen} onOpenChange={setBuscarOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Buscar producto</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center gap-2.5 rounded-md border border-border bg-background px-3 py-2">
-            <MagnifyingGlass className="size-4 shrink-0 text-placeholder" />
-            <input
-              autoFocus
-              aria-label="Buscar por nombre o código"
-              placeholder="Nombre, marca o código"
-              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-placeholder"
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-            />
-            {buscandoProd && <Spinner />}
-          </div>
+      <ProductSearchDialog
+        open={buscarOpen}
+        onOpenChange={setBuscarOpen}
+        onPick={agregarDesdeBusqueda}
+        cotizarPara={customerId}
+        exigirPrecio
+        token={token}
+      />
 
-          {precioAviso ? (
-            <p className="text-xs text-warning">
-              Se muestra el precio de lista: {precioAviso}
-            </p>
-          ) : (
-            <p className="text-xs text-placeholder">
-              Precio neto (sin IVA) para {clienteElegido?.name ?? 'consumidor final'}
-              {quote?.priceList ? ` · lista ${quote.priceList.name}` : ''}
-            </p>
-          )}
-
-          <div className="max-h-80 overflow-y-auto rounded-md border border-border">
-            {busqueda.trim().length < 2 ? (
-              <p className="p-6 text-center text-sm text-muted-foreground">Escribí al menos dos letras.</p>
-            ) : resultados.length === 0 && !buscandoProd ? (
-              <p className="p-6 text-center text-sm text-muted-foreground">Sin resultados para «{busqueda}».</p>
-            ) : (
-              resultados.map(p => (
-                <div key={p.id} className="flex items-center gap-3 border-b border-border-soft px-3 py-2.5 last:border-0">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{p.name}</p>
-                    <p className="font-mono text-xs text-placeholder">{p.barcode}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    {p.salePrice ? (
-                      <p className="font-semibold tabular">{money(precios[p.id] ?? Number(p.salePrice))}</p>
-                    ) : (
-                      <Badge variant="warning">Sin precio</Badge>
-                    )}
-                  </div>
-                  <Button size="sm" onClick={() => agregarDesdeBusqueda(p)} disabled={!p.salePrice}>
-                    Agregar
-                  </Button>
-                </div>
-              ))
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBuscarOpen(false)}>Cerrar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={ofertasOpen} onOpenChange={setOfertasOpen}>
         <DialogContent>
