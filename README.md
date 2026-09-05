@@ -1,4 +1,4 @@
-# Mayorista ERP
+# Abasto
 
 Sistema ERP multi-tenant para supermercados mayoristas.
 

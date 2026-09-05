@@ -1,21 +1,21 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: mayorista-erp-postgres
+    container_name: abasto-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: mayorista_erp
+      POSTGRES_DB: abasto
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
-      - mayorista_erp_postgres_data:/var/lib/postgresql/data
+      - abasto_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mayorista_erp"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d abasto"]
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  mayorista_erp_postgres_data:
+  abasto_postgres_data:
