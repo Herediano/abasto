@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowCircleDown, ArrowCircleUp, Barcode, Circle, CreditCard, Lock, Money, Moon, Percent, QrCode,
-  Receipt, ShoppingCartSimple, Sun, Trash, User, Wallet,
+  ArrowCircleDown, ArrowCircleUp, Barcode, CreditCard, Lock, Money, Percent, QrCode,
+  Receipt, ShoppingCartSimple, Trash, User, Wallet,
 } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { SupervisorAuthDialog } from '@/components/supervisor-auth-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Spinner, PageSpinner } from '@/components/spinner';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   api, errorMessage, type CashRegister, type CashShift, type Customer, type CustomerAccount,
   type PaymentMethod, type Product, type Promotion,
@@ -21,7 +22,6 @@ import {
 import { money } from '@/lib/format';
 import { parseWeighedBarcode } from '@/lib/pesable';
 import { useAuth } from '@/lib/auth-context';
-import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 type Item = { productId: string; name: string; barcode: string; quantity: number; pesable?: boolean };
@@ -62,9 +62,6 @@ const MOVIMIENTOS: { id: 'deposit' | 'withdrawal' | 'expense'; label: string }[]
   { id: 'withdrawal', label: 'Retiro a caja fuerte' },
   { id: 'expense', label: 'Gasto menor' },
 ];
-
-const TEMAS = { light: Sun, dark: Moon, system: Circle } as const;
-const TEMA_LABEL = { light: 'Tema claro', dark: 'Tema oscuro', system: 'Tema automático' } as const;
 
 /** Texto legible de la promoción: en el mostrador nadie lee un JSON. */
 function describirPromo(p: Promotion) {
@@ -110,7 +107,6 @@ export function PosPage() {
   const [pagos, setPagos] = useState<Pago[]>([{ method: 'cash', amount: '', reference: '' }]);
   const barcodeRef = useRef<HTMLInputElement>(null);
   const customerRef = useRef<HTMLSelectElement>(null);
-  const { theme, ciclar } = useTheme();
 
   // Turno de caja: sin uno abierto no se puede vender. Es lo primero que se
   // resuelve al entrar; mientras se resuelve, la pantalla no muestra nada.
@@ -486,18 +482,7 @@ export function PosPage() {
         <div className="ml-auto flex items-center gap-2">
           {/* El cajero pasa el turno entero mirando esta pantalla y no tiene el
               riel a mano: el tema tiene que estar acá. */}
-          <button
-            type="button"
-            onClick={ciclar}
-            aria-label={TEMA_LABEL[theme]}
-            title={TEMA_LABEL[theme]}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            {(() => {
-              const TemaIcon = TEMAS[theme];
-              return <TemaIcon weight={theme === 'system' ? 'duotone' : 'fill'} className="size-[18px]" />;
-            })()}
-          </button>
+          <ThemeToggle className="hover:bg-secondary" />
           <Button variant="ghost" size="sm" asChild>
             <Link to="/ventas/historial">Ver ventas</Link>
           </Button>
