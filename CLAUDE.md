@@ -8,11 +8,7 @@ Abasto is a multi-tenant ERP for wholesale supermarkets, in early/foundational s
 
 ## Commands
 
-Start Postgres locally:
-
-```bash
-docker compose -f infra/docker/compose.yml up -d
-```
+Postgres runs as a **native local install** (not Docker) at `C:\Users\Usuario\PostgreSQL`, listening on `localhost:5432`. `infra/docker/compose.yml` exists as an optional containerized alternative (e.g. for a future teammate or CI) but is not what's actually running day to day — don't assume a Docker container is up.
 
 Backend (run from `backend/`):
 
