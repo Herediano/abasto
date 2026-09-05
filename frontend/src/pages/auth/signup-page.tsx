@@ -32,27 +32,35 @@ export function SignupPage() {
   }
 
   return (
-    <AuthLayout title="Crear tu mayorista" description="Registrá la empresa y el primer usuario administrador.">
+    <AuthLayout title="Registrá tu empresa" description="Completá los datos y un asesor de Abasto se va a comunicar por mail para continuar con el alta.">
       {error && <Alert variant="destructive">{error}</Alert>}
-      <form className="grid gap-4" onSubmit={submit}>
-        <Field label="Nombre del mayorista" htmlFor="tenantName">
-          <Input id="tenantName" required autoFocus value={form.tenantName} onChange={e => setForm({ ...form, tenantName: e.target.value })} />
-        </Field>
-        <Field label="Razón social" htmlFor="legalName" hint="(opcional)">
-          <Input id="legalName" value={form.legalName} onChange={e => setForm({ ...form, legalName: e.target.value })} />
-        </Field>
-        <Field label="CUIT / Tax ID" htmlFor="taxId">
-          <Input id="taxId" required value={form.taxId} onChange={e => setForm({ ...form, taxId: e.target.value })} />
-        </Field>
-        <Field label="Tu nombre" htmlFor="name">
-          <Input id="name" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-        </Field>
-        <Field label="Email" htmlFor="email">
-          <Input id="email" required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-        </Field>
-        <Field label="Contraseña" htmlFor="password" hint="(mínimo 8 caracteres)">
-          <Input id="password" required minLength={8} type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-        </Field>
+      <form className="grid gap-5" onSubmit={submit}>
+        {/* Dos bloques, no seis campos sueltos: primero la empresa que se
+            está dando de alta, después la cuenta de quien la crea. */}
+        <div className="grid gap-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-placeholder">Tu empresa</p>
+          <Field label="Nombre de la empresa" htmlFor="tenantName">
+            <Input id="tenantName" required autoFocus value={form.tenantName} onChange={e => setForm({ ...form, tenantName: e.target.value })} />
+          </Field>
+          <Field label="Razón social" htmlFor="legalName" hint="(opcional)">
+            <Input id="legalName" value={form.legalName} onChange={e => setForm({ ...form, legalName: e.target.value })} />
+          </Field>
+          <Field label="CUIT / Tax ID" htmlFor="taxId">
+            <Input id="taxId" required value={form.taxId} onChange={e => setForm({ ...form, taxId: e.target.value })} />
+          </Field>
+        </div>
+        <div className="grid gap-4 border-t border-border-soft pt-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-placeholder">Tu cuenta</p>
+          <Field label="Tu nombre" htmlFor="name">
+            <Input id="name" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          </Field>
+          <Field label="Email" htmlFor="email">
+            <Input id="email" required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          </Field>
+          <Field label="Contraseña" htmlFor="password" hint="(mínimo 8 caracteres)">
+            <Input id="password" required minLength={8} type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+          </Field>
+        </div>
         <Button disabled={saving} className="mt-1">
           {saving && <Spinner />} Crear cuenta
         </Button>

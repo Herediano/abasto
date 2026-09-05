@@ -1,14 +1,14 @@
 import {
-  ArrowsClockwise, ArrowLineDown, ArrowLineUp, CashRegister, ClockCounterClockwise, Circle, Gear,
-  Handbag, Moon, Package, Receipt, ShieldCheck, ShoppingCartSimple, SignOut, Storefront, Sun, Tag, Truck,
+  ArrowsClockwise, ArrowLineDown, ArrowLineUp, CashRegister, ClockCounterClockwise, Gear,
+  Handbag, Package, Receipt, ShieldCheck, ShoppingCartSimple, SignOut, Storefront, Tag, Truck,
   UsersThree, Vault, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { api, type Warehouse as WarehouseRow } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 type NavItem = { to: string; label: string; icon: Icon; end?: boolean; permission?: string };
@@ -54,15 +54,8 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-const TEMAS = {
-  light: { icon: Sun, label: 'Tema claro' },
-  dark: { icon: Moon, label: 'Tema oscuro' },
-  system: { icon: Circle, label: 'Tema automático' },
-} as const;
-
 export function AppShell() {
   const { session, can, logout } = useAuth();
-  const { theme, ciclar } = useTheme();
   // La sesión guarda el warehouseId pero no el nombre; se resuelve una vez acá
   // porque la sucursal es lo primero que tiene que ver el usuario: operar en la
   // sucursal equivocada arruina el stock.
@@ -174,18 +167,7 @@ export function AppShell() {
           </div>
           {/* Claro / oscuro / automático. La caja se usa muchas horas seguidas
               y la elección es personal, así que siempre está a mano. */}
-          <button
-            type="button"
-            onClick={ciclar}
-            aria-label={TEMAS[theme].label}
-            title={TEMAS[theme].label}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground"
-          >
-            {(() => {
-              const TemaIcon = TEMAS[theme].icon;
-              return <TemaIcon weight={theme === 'system' ? 'duotone' : 'fill'} className="size-[18px]" />;
-            })()}
-          </button>
+          <ThemeToggle />
           <button
             type="button"
             onClick={logout}

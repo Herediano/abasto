@@ -184,3 +184,19 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/*
+ * Grilla de puntos del fondo de login/signup: textura de base fija (sin
+ * animación propia) detrás de las cajas geométricas con física real que
+ * dibuja AuthBackground en un <canvas> — ver frontend/src/components/
+ * auth-background.tsx. Usa las variables --ab-* del tema, así cambia sola
+ * entre claro y oscuro.
+ */
+.auth-aurora__grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--ab-soft) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: 0.12;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 40%, transparent 90%);
+}

@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/spinner';
+import { AuthBackground } from '@/components/auth-background';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { api, errorMessage, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
@@ -30,7 +32,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Ingresar a Mayorista ERP" description="Usá tu email y contraseña para continuar.">
+    <AuthLayout description="Ingresá con tu email y contraseña.">
       {error && <Alert variant="destructive">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <Field label="Email" htmlFor="email">
@@ -44,21 +46,46 @@ export function LoginPage() {
         </Button>
       </form>
       <p className="text-center text-sm text-muted-foreground">
-        ¿No tenés cuenta? <Link to="/signup" className="font-medium text-primary hover:underline">Creá un mayorista nuevo</Link>
+        ¿No tenés cuenta todavía? <Link to="/signup" className="font-medium text-primary hover:underline">Registrá tu empresa</Link>
       </p>
     </AuthLayout>
   );
 }
 
-export function AuthLayout({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+export function AuthLayout({ title, description, children }: { title?: string; description: string; children: React.ReactNode }) {
+  const tarjetaRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="grid min-h-screen place-items-center bg-background p-6">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-background p-6">
+      {/* "Patrón Depósito": íconos de retail (caja, changuito, etiqueta,
+          camión, código de barras, bolsa) que flotan y chocan de verdad
+          (paredes, entre sí y contra la tarjeta) sobre una grilla de puntos
+          estática. Decorativo nada más — aria-hidden; el canvas ya respeta
+          prefers-reduced-motion por su cuenta. */}
+      <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+        <span className="auth-aurora__grid" />
+        <AuthBackground obstaculoRef={tarjetaRef} />
+      </div>
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+      <div className="relative w-full max-w-md">
+        <div
+          ref={tarjetaRef}
+          className="rounded-xl border border-border/70 bg-card/75 p-10 pt-9 shadow-float ring-1 ring-inset ring-white/10 backdrop-blur-xl"
+        >
+          {/* La marca vive adentro de la tarjeta ahora: es lo que tiene
+              colisión contra los íconos del fondo, y afuera quedaba flotando
+              sin nada que la proteja. Un solo bloque con la marca y el texto
+              pegados -- separarlos en dos secciones los alejaba de más. */}
+          <div className="mb-6 text-center">
+            <p className="font-display text-3xl font-bold tracking-tight text-foreground">
+              abasto<span className="text-primary">.ai</span>
+            </p>
+            {title && <h1 className="mt-4 text-lg font-semibold">{title}</h1>}
+            <p className={title ? 'mt-1 text-sm text-muted-foreground' : 'mt-2 text-sm text-muted-foreground'}>{description}</p>
+          </div>
+          <div className="grid gap-5">{children}</div>
         </div>
-        <div className="grid gap-5">{children}</div>
       </div>
     </div>
   );
