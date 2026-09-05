@@ -38,7 +38,7 @@ type OtherTax = { label: string; amount: string };
 type Draft = { header: typeof EMPTY_HEADER; line: Line; lines: Line[]; otherTaxes: OtherTax[]; editingInvoice: PurchaseInvoice | null; correctionReason: string };
 
 function draftKey(tenantId: string) {
-  return `mayorista-erp-purchase-draft:${tenantId}`;
+  return `abasto-purchase-draft:${tenantId}`;
 }
 
 function readDraft(tenantId: string): Draft | null {

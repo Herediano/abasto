@@ -46,7 +46,7 @@ async function findOrCreateCustomer(tenantId: string) {
 async function main() {
   await seedReferenceCatalog();
 
-  const tenantData = { name: 'Mayorista Demo', legalName: 'Mayorista Demo S.A.', taxId: '30-12345678-9' };
+  const tenantData = { name: 'Abasto Demo', legalName: 'Abasto Demo S.A.', taxId: '30-12345678-9' };
   const existingTenant = await prisma.tenant.findFirst({ where: { taxId: tenantData.taxId } });
   const tenant = existingTenant ?? await prisma.tenant.create({ data: tenantData });
 
@@ -100,8 +100,8 @@ async function main() {
     create: { tenantId: tenant.id, productId: rice.id, warehouseId: central.id, supplierId: supplier.id, lotNumber: 'ARZ-DEMO-001', expirationDate: new Date('2027-06-30'), receivedAt: new Date('2026-08-30') },
   });
 
-  const secondTenant = await prisma.tenant.findFirst({ where: { name: 'Otro Mayorista Demo' } })
-    ?? await prisma.tenant.create({ data: { name: 'Otro Mayorista Demo', legalName: 'Otro Mayorista Demo S.A.' } });
+  const secondTenant = await prisma.tenant.findFirst({ where: { name: 'Otro Abasto Demo' } })
+    ?? await prisma.tenant.create({ data: { name: 'Otro Abasto Demo', legalName: 'Otro Abasto Demo S.A.' } });
 
   console.log(`Seed verificado: ${tenant.name} (${tenant.id}) y ${secondTenant.name} (${secondTenant.id})`);
 }

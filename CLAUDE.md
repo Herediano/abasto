@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Mayorista ERP is a multi-tenant ERP for wholesale supermarkets, in early/foundational stage. Backend: NestJS + TypeScript + Prisma + PostgreSQL. Frontend: React + TypeScript + Vite.
+Abasto is a multi-tenant ERP for wholesale supermarkets, in early/foundational stage. Backend: NestJS + TypeScript + Prisma + PostgreSQL. Frontend: React + TypeScript + Vite.
 
 ## Commands
 

@@ -1,4 +1,4 @@
-# Definición del producto — Mayorista ERP
+# Definición del producto — Abasto
 
 > La estrella polar. Antes de diseñar o construir una pantalla, se chequea contra
 > este documento. Es un documento vivo: se corrige a medida que se aprende, pero

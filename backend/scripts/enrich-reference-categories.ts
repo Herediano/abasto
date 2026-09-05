@@ -25,7 +25,7 @@ const API = 'https://d3e6htiiul5ek9.cloudfront.net/prod';
 const HEADERS = {
   'x-api-key': 'zIgFou7Gta7g87VFGL9dZ4BEEs19gNYS1SOQZt96',
   referer: 'https://www.preciosclaros.gob.ar',
-  'user-agent': 'Mozilla/5.0 (mayorista-erp enrich-reference-categories)',
+  'user-agent': 'Mozilla/5.0 (abasto enrich-reference-categories)',
 };
 const PAGE = 100; // maxLimitPermitido de la API
 const SUCURSALES_POR_LOTE = 45; // maxCantSucursalesPermitido es 50

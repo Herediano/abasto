@@ -131,5 +131,9 @@ transferencias de stock entre sucursales.
 - **Categorías salió del riel** porque el feature está sin definir, pero la
   página `/catalog/categories` sigue existiendo y el filtro por categoría sigue
   en Productos. Queda así hasta que se decida qué hacer con categorías.
-- **El nombre del proyecto en el repo sigue siendo `smart-erp`** y el tenant de
-  prueba se llama «Mayorista Demo». Renombrar a Abasto es una pasada aparte.
+- **Renombre a Abasto**: completo. Carpeta del repo, `package.json`, lockfiles,
+  README/CLAUDE.md, remoto de GitHub, container/DB de Docker, claves de
+  `localStorage` del frontend y el tenant de prueba («Abasto Demo») ya dicen
+  `abasto`. Pendiente manual: recrear el contenedor de Postgres local (nuevo
+  nombre de DB y de volumen) y volver a loguearse en el frontend, porque cambió
+  la clave de `localStorage` de sesión.

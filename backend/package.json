@@ -1,5 +1,5 @@
 {
-  "name": "mayorista-erp-backend",
+  "name": "abasto-backend",
   "private": true,
   "scripts": {
     "start:dev": "tsx watch src/main.ts",

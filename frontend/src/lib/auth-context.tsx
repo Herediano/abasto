@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, type Session } from './api';
 
-const STORAGE_KEY = 'mayorista-erp-session';
+const STORAGE_KEY = 'abasto-session';
 
 type AuthContextValue = {
   session: Session | null;
