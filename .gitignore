@@ -18,3 +18,6 @@
 graphify-out/.graphify_python
 graphify-out/.graphify_root
 .claude/settings.json.graphify-bak
+
+# Token de desarrollo para probar la API a mano (nunca se commitea)
+backend/.dev-token.txt

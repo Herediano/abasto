@@ -1,12 +1,12 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
-import { AppShell } from './app-shell';
+import { EscritorioShell } from './escritorio-shell';
 
-/** Rutas de la aplicación: exigen sesión y viven adentro del riel. */
+/** Rutas de la aplicación: exigen sesión y viven adentro del escritorio. */
 export function ProtectedRoute() {
   const { session } = useAuth();
   if (!session) return <Navigate to="/login" replace />;
-  return <AppShell />;
+  return <EscritorioShell />;
 }
 
 /**

@@ -33,7 +33,7 @@ There is no test suite and no lint config in this repo yet — don't look for `n
 
 ## Architecture
 
-- **Layout**: `backend/` (NestJS + Prisma + Postgres API), `frontend/` (React + Vite SPA), `infra/docker/` (local Postgres via Compose), `docs/` (Spanish-language notes on data-model and workflow decisions — worth reading before changing the schema or the purchases/stock flows).
+- **Layout**: `backend/` (NestJS + Prisma + Postgres API), `frontend/` (React + Vite SPA), `infra/docker/` (local Postgres via Compose), `docs/` (Spanish-language notes on data-model and workflow decisions — worth reading before changing the schema or the purchases/stock flows). Two are north-star documents, checked before building: `docs/producto.md` (what the system is, its scope, who uses it) and `docs/diseno.md` (the visual system, design rules, the escritorio, navigation — read before touching any screen, component, or color).
 
 - **Multi-tenancy**: one shared Postgres schema; every business table carries `tenant_id`. The tenant is always derived server-side from the authenticated JWT (`request.user.tenantId`) — it is never accepted from the client. Parent models declare a composite `@@unique([id, tenantId])`, and child rows reference `[parentId, tenantId]` as their FK, so a child can only ever join to a parent in the same tenant (see `backend/prisma/schema.prisma`).
 
@@ -45,7 +45,7 @@ There is no test suite and no lint config in this repo yet — don't look for `n
 
 - **Purchase invoices** (`purchases.service.ts`): lifecycle is `draft` → `confirm` (creates `purchase_in` stock movements for each line) → `corrected` (reverses the prior movements with `adjustment_out`, re-creates `purchase_in` movements for the new lines, and snapshots the prior invoice state into `purchase_invoice_revisions`). Confirmed/corrected invoices are treated as history and are not edited directly outside this flow.
 
-- **Frontend**: the whole app is `frontend/src/App.tsx` — no router library, just manual `window.history.pushState`-based path state, a single shared `api()` fetch wrapper, and the session persisted to `localStorage`.
+- **Frontend**: `react-router-dom` routes in `frontend/src/App.tsx`, one file per screen under `frontend/src/pages/`, a single shared `api()` fetch wrapper (`lib/api.ts`), and the session persisted to `localStorage` (`lib/auth-context.tsx`, `useAuth().can(permission)`). Navigation is **the escritorio** (`docs/diseno.md`): the index route (`/`) is a grid of one tile per module, armed by permission; every other route is a "module" opened from it and wrapped in one shared frame (`← Escritorio` / `Esc` back, sticky `PageHeader` with icon chip + breadcrumb + title + actions). `ProtectedRoute` gates on session, `PermissionRoute` on a catalog key, `FullScreenRoute` is the rail-less full-screen mode the POS/caja uses. `app-shell.tsx` was the old left rail — being replaced by the escritorio shell.
 
 ## graphify
 

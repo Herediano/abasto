@@ -6,9 +6,15 @@
 
 ## Qué es
 
-Un ERP para **supermercados mayoristas** de Argentina, vendido como **servicio
-(SaaS B2B)** a varios mayoristas. Cada mayorista es una **empresa** aislada dentro
-del sistema.
+Un ERP para **negocios que compran, stockean y venden mercadería en mostrador**
+de Argentina, vendido como **servicio (SaaS B2B)**. Cada negocio es una
+**empresa** aislada dentro del sistema.
+
+El **cliente principal, y contra quien se diseña, es el supermercado mayorista**:
+es el caso más exigente — varias sucursales, cuenta corriente, pesables, lotes
+con vencimiento, factura A con IVA discriminado, personal con roles separados. Un
+error de stock o un arqueo mal cerrado le cuesta plata de verdad, así que paga en
+serio por que el sistema no falle.
 
 Venta **100% presencial, tipo cash & carry**: el cliente entra a la sucursal,
 agarra los productos, pasa por caja, se escanea cada uno, paga (efectivo,
@@ -18,6 +24,71 @@ teléfono ni reparto.
 Facturación **por ARCA** (fiscal, con CAE). La forma de integración todavía no
 está definida — se diseña tratando a ARCA como una caja negra que recibe una
 venta y devuelve un CAE.
+
+## Alcance — qué es y qué no
+
+Hay dos ejes por los que un ERP se puede generalizar. Sólo uno nos interesa.
+
+**Eje que abarcamos — mismo trabajo, distinto tamaño.** Mayorista, minorista,
+autoservicio, kiosco, almacén, distribuidora, dietética, ferretería, corralón,
+pet shop, verdulería, fiambrería. Todos hacen el mismo trabajo: *comprar
+mercadería, stockearla, venderla en mostrador, cobrar en caja*. Los sustantivos
+son idénticos — producto, stock, lote, proveedor, cliente, precio, caja, turno.
+Lo que cambia es la profundidad y el volumen, no el modelo de datos. El
+mayorista es el techo; los demás son el mismo sistema con las partes duras
+apagadas.
+
+**Eje que NO abarcamos — otro trabajo.** Consultorio, peluquería, taller
+mecánico, eventos, inmobiliaria, estudio profesional. Ahí el sustantivo central
+deja de ser "producto con stock" y pasa a ser "un turno en un calendario con una
+persona". Eso es **otro núcleo, no otro módulo**. No se construye para estos
+rubros hasta que un cliente real lo pague, y aún entonces se evalúa como
+producto aparte. El nombre *Abasto* ya marca el límite: significa algo para todo
+el primer eje y nada para un consultorio.
+
+**Cómo se generaliza sin costo.** No hardcodeando supuestos: `productLotId` es
+nullable (producto sin lotes ya funciona), `manejaVencimiento` e `isWeighed` son
+flags por producto con default `false` (el default *es* el caso del kiosco), el
+límite de crédito vacío = sin cuenta corriente, una sola sucursal tiene que ser
+el caso trivial y no un caso especial. Cada vez que algo se resuelve como "flag
+del producto/empresa" en vez de "cómo funciona el sistema", generaliza gratis.
+Construir *para* un rubro (un módulo nuevo) es caro y se pospone; no asumir es
+gratis y se hace siempre.
+
+**Lo que cuesta de este eje, y hay que tener en cuenta al construir:**
+
+- **Condición fiscal.** Un monotributista emite factura C o ticket; un
+  responsable inscripto emite A con IVA discriminado y le vende a otro RI. Son
+  dos condiciones, no una — cuando se defina ARCA, definirla sabiendo esto.
+- **Onboarding.** Un kiosquero que abre Abasto y se topa con siete rangos,
+  sucursales, lotes con vencimiento y listas de precios derivadas se va en dos
+  minutos. La progresividad (ver más abajo) no es filosofía: es este problema.
+- **Rangos.** Los 7 de fábrica asumen un mayorista con personal. En un negocio
+  de una persona el dueño es cajero, repositor y administrativo a la vez — falta
+  un preset "negocio de una persona".
+
+## Progresividad
+
+El sistema tiene que servirle a un negocio chico sin abrumarlo. La complejidad
+empresarial no se muestra toda de entrada: aparece a medida que el negocio la
+pide. El mecanismo ya existe — el riel y las rutas se arman por permiso, no por
+un flag global — pero vale como principio: **el caso simple (una sucursal, un
+usuario, sin cuenta corriente, sin lotes) es el default, no una configuración
+que hay que desarmar.**
+
+## IA como capa transversal
+
+La IA no es un módulo aparte: es una capa que lee lo que ya está en el sistema y
+responde en contexto. La regla de diseño (`docs/diseno.md`) manda: **la IA
+sugiere, nunca decide** — cada función con IA lleva su etiqueta y se puede
+descartar. Así el `.ai` del logotipo se lo gana.
+
+Norte de lo que tiene que poder contestar, cruzando módulos: cuánto se vendió
+hoy / esta semana, qué productos rotan menos, qué hay que comprar y a quién, qué
+precios cambiaron, qué clientes tienen deuda, qué gastos subieron, qué productos
+tienen más margen. La forma es un buscador que se invoca con `Ctrl+K` desde
+cualquier lado y se va (ver `docs/diseno.md`), no una pantalla propia. No se
+construye hasta que haya datos reales que valga la pena consultar así.
 
 ## Estructura: Empresa → Sucursal → Usuario
 

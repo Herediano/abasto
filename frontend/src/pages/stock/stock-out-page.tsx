@@ -65,7 +65,7 @@ export function StockOutPage() {
         { method: 'POST', body: JSON.stringify({ productId: product.id, productLotId: productLotId || undefined, warehouseId: form.warehouseId, quantity: Number(form.quantity), movementType: form.movementType, notes: form.notes || undefined }) },
         token,
       );
-      navigate('/');
+      navigate('/stock');
     } catch (err) {
       setError(errorMessage(err));
     } finally {

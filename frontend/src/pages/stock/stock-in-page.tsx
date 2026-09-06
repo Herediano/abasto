@@ -261,7 +261,7 @@ export function StockInPage() {
       setLines([]);
       setOtherTaxes([]);
       await loadInvoices();
-      if (!editingInvoice) navigate('/');
+      if (!editingInvoice) navigate('/stock');
     } catch (err) {
       setError(errorMessage(err));
     } finally {

@@ -200,3 +200,28 @@
   opacity: 0.12;
   mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 40%, transparent 90%);
 }
+
+/*
+ * Escritorio ↔ módulo: la tarjeta se despliega. La tarjeta del escritorio y el
+ * bloque chip+título de PageHeader comparten `view-transition-name: module-hero`
+ * (la tarjeta se lo pone al hacer clic, ver pages/escritorio-page.tsx), y el
+ * navegador morfea uno en el otro. El resto cruza suave. Ver docs/diseno.md.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(module-hero) {
+    animation-duration: 220ms;
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 200ms;
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
