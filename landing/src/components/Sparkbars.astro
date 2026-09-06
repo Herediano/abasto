@@ -1,0 +1,91 @@
+---
+/*
+ * Mini gráfico de barras — el mismo lenguaje que el gráfico del módulo Ventas
+ * de la app. SVG puro, sin librería. Se usa en la respuesta del buscador y en
+ * las tarjetas del escritorio.
+ */
+interface Props {
+  values: number[];
+  labels?: string[];
+  highlight?: number;      // índice de la barra destacada
+  color?: string;          // color de las barras (default: verde acción)
+  height?: number;
+  class?: string;
+}
+const {
+  values,
+  labels,
+  highlight = -1,
+  color = 'var(--ab-primary)',
+  height = 64,
+  class: className,
+} = Astro.props;
+
+const max = Math.max(...values, 1);
+const n = values.length;
+const gap = 6;
+const bw = (100 - gap * (n - 1)) / n;
+---
+
+<figure class:list={['spark', className]} style={`--spark-h:${height}px;--spark-color:${color}`}>
+  <svg viewBox={`0 0 100 100`} preserveAspectRatio="none" aria-hidden="true">
+    {
+      values.map((v, i) => {
+        const h = (v / max) * 100;
+        return (
+          <rect
+            x={i * (bw + gap)}
+            y={100 - h}
+            width={bw}
+            height={h}
+            rx="1.5"
+            class:list={['spark__bar', i === highlight && 'is-hot']}
+          />
+        );
+      })
+    }
+  </svg>
+  {
+    labels && (
+      <div class="spark__labels">
+        {labels.map((l, i) => (
+          <span class:list={[i === highlight && 'is-hot']}>{l}</span>
+        ))}
+      </div>
+    )
+  }
+</figure>
+
+<style>
+  .spark {
+    margin: 0;
+    width: 100%;
+  }
+  .spark svg {
+    display: block;
+    width: 100%;
+    height: var(--spark-h);
+    overflow: visible;
+  }
+  .spark__bar {
+    fill: var(--spark-color);
+    opacity: 0.28;
+  }
+  .spark__bar.is-hot {
+    opacity: 1;
+  }
+  .spark__labels {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    margin-top: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--color-faint);
+    text-align: center;
+  }
+  .spark__labels .is-hot {
+    color: var(--spark-color);
+    font-weight: 500;
+  }
+</style>

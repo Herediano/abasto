@@ -1,0 +1,190 @@
+---
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+// La key de Web3Forms se configura como variable de entorno en Cloudflare
+// Pages (PUBLIC_WEB3FORMS_KEY). El destino del mail se ata a esa key en el
+// panel de Web3Forms => martinianoherediaf@gmail.com. TO-DO: crear la key.
+const web3formsKey = import.meta.env.PUBLIC_WEB3FORMS_KEY ?? '';
+const fallbackEmail = 'martinianoherediaf@gmail.com';
+---
+
+<section class="u-section u-section--tint" id="contacto">
+  <div class="u-container contact__grid">
+    <div class="contact__intro" data-reveal>
+      <p class="u-kicker">{t('contacto.kicker')}</p>
+      <h2>{t('contacto.title')}</h2>
+      <p>{t('contacto.lead')}</p>
+      <p class="contact__direct">
+        <a href={`mailto:${fallbackEmail}`}>{fallbackEmail}</a>
+      </p>
+    </div>
+
+    <form class="contact__form u-card" data-contact-form data-key={web3formsKey} data-lang={lang} novalidate data-reveal style="--reveal-delay:80ms">
+      <input type="hidden" name="access_key" value={web3formsKey} />
+      <input type="hidden" name="subject" value="Abasto — nuevo contacto desde la landing" />
+      <input type="hidden" name="from_name" value="Landing Abasto" />
+      <input type="checkbox" name="botcheck" class="contact__hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+      <label class="contact__field">
+        <span>{t('contacto.email')}</span>
+        <input type="email" name="email" required autocomplete="email" placeholder="vos@tunegocio.com" />
+      </label>
+
+      <div class="contact__two">
+        <label class="contact__field">
+          <span>{t('contacto.rubro')}</span>
+          <input type="text" name="rubro" placeholder={t('contacto.rubro.ph')} />
+        </label>
+        <label class="contact__field">
+          <span>{t('contacto.sucursales')}</span>
+          <input type="number" name="sucursales" min="1" inputmode="numeric" placeholder="1" />
+        </label>
+      </div>
+
+      <label class="contact__field">
+        <span>{t('contacto.mensaje')}</span>
+        <textarea name="mensaje" rows="3" placeholder={t('contacto.mensaje.ph')}></textarea>
+      </label>
+
+      <button type="submit" class="u-cta contact__submit">
+        <span data-label-idle>{t('contacto.send')}</span>
+        <span data-label-busy hidden>{t('contacto.sending')}</span>
+      </button>
+
+      <p class="contact__status" data-status role="status" aria-live="polite"></p>
+      <p class="contact__privacy">{t('contacto.privacy')}</p>
+    </form>
+  </div>
+</section>
+
+<style>
+  .contact__grid {
+    display: grid;
+    gap: clamp(2rem, 1rem + 4vw, 3.5rem);
+    align-items: start;
+  }
+  @media (min-width: 60rem) {
+    .contact__grid { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr); }
+  }
+  .contact__intro h2 { font-size: var(--text-h2); margin-top: 0.9rem; }
+  .contact__intro p { margin-top: 1rem; color: var(--color-muted-foreground); font-size: var(--text-lead); }
+  .contact__direct { font-family: var(--font-mono); font-size: 0.9rem; }
+  .contact__direct a { color: var(--ab-primary); }
+
+  .contact__form { display: flex; flex-direction: column; gap: 1rem; }
+  .contact__hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .contact__two { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+  @media (min-width: 30rem) { .contact__two { grid-template-columns: 1.4fr 0.8fr; } }
+
+  .contact__field { display: flex; flex-direction: column; gap: 0.35rem; }
+  .contact__field span {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+  .contact__field input,
+  .contact__field textarea {
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font: inherit;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+  }
+  .contact__field input:focus,
+  .contact__field textarea:focus {
+    outline: none;
+    border-color: var(--ab-primary-line);
+    box-shadow: 0 0 0 3px var(--ab-primary-soft);
+  }
+  .contact__field textarea { resize: vertical; }
+
+  .contact__submit { justify-content: center; margin-top: 0.25rem; }
+  .contact__status { font-size: 0.88rem; min-height: 1.2em; }
+  .contact__status[data-tone='ok'] { color: var(--ab-ok); }
+  .contact__status[data-tone='err'] { color: var(--ab-danger); }
+  .contact__status a { color: var(--ab-primary); }
+  .contact__privacy { font-size: 0.78rem; color: var(--color-faint); }
+</style>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+  if (form) {
+    const status = form.querySelector<HTMLElement>('[data-status]')!;
+    const idle = form.querySelector<HTMLElement>('[data-label-idle]')!;
+    const busy = form.querySelector<HTMLElement>('[data-label-busy]')!;
+    const submit = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
+    const key = form.dataset.key || '';
+    const lang = form.dataset.lang === 'en' ? 'en' : 'es';
+
+    const msg = {
+      es: {
+        ok: 'Recibido. Te escribo a la brevedad.',
+        err: 'Algo falló. Escribime directo a ',
+        nokey: 'Formulario en configuración. Por ahora escribime a ',
+        invalid: 'Revisá el email.',
+      },
+      en: {
+        ok: "Got it. I'll be in touch shortly.",
+        err: 'Something failed. Write me directly at ',
+        nokey: 'Form not wired up yet. For now write me at ',
+        invalid: 'Check the email address.',
+      },
+    }[lang];
+    const mail = 'martinianoherediaf@gmail.com';
+    const mailLink = `<a href="mailto:${mail}">${mail}</a>`;
+
+    const setStatus = (html: string, tone: 'ok' | 'err' | '') => {
+      status.innerHTML = html;
+      if (tone) status.dataset.tone = tone;
+      else delete status.dataset.tone;
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if ((form.elements.namedItem('botcheck') as HTMLInputElement)?.checked) return;
+
+      const email = (form.elements.namedItem('email') as HTMLInputElement).value.trim();
+      if (!email || !/.+@.+\..+/.test(email)) {
+        setStatus(msg.invalid, 'err');
+        return;
+      }
+      if (!key) {
+        setStatus(msg.nokey + mailLink, 'err');
+        return;
+      }
+
+      submit.disabled = true;
+      idle.hidden = true;
+      busy.hidden = false;
+      setStatus('', '');
+
+      try {
+        const res = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(form) as any)),
+        });
+        const data = await res.json();
+        if (data.success) {
+          form.reset();
+          setStatus(msg.ok, 'ok');
+        } else {
+          setStatus(msg.err + mailLink, 'err');
+        }
+      } catch {
+        setStatus(msg.err + mailLink, 'err');
+      } finally {
+        submit.disabled = false;
+        idle.hidden = false;
+        busy.hidden = true;
+      }
+    });
+  }
+</script>

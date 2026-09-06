@@ -1,0 +1,218 @@
+@import "tailwindcss";
+@import "./fonts.css";
+@import "./tokens.css";
+
+/*
+ * Mapea los tokens crudos --ab-* a los nombres semánticos de Tailwind v4.
+ * `inline` => se resuelven en tiempo de ejecución, así el cambio de tema
+ * (claro/oscuro/auto) no necesita recompilar nada.
+ */
+@theme inline {
+  --font-sans: "Spline Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Spline Sans", ui-sans-serif, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-background: var(--ab-ground);
+  --color-foreground: var(--ab-ink);
+  --color-card: var(--ab-surface);
+  --color-subtle: var(--ab-surface-2);
+  --color-border: var(--ab-line);
+  --color-border-soft: var(--ab-line-soft);
+
+  --color-muted-foreground: var(--ab-soft);
+  --color-faint: var(--ab-faint);
+
+  --color-primary: var(--ab-primary);
+  --color-primary-foreground: var(--ab-on-solid);
+  --color-primary-soft: var(--ab-primary-soft);
+  --color-primary-line: var(--ab-primary-line);
+
+  --color-warning: var(--ab-warn);
+  --color-warning-soft: var(--ab-warn-soft);
+  --color-success: var(--ab-ok);
+  --color-danger: var(--ab-danger);
+  --color-danger-soft: var(--ab-danger-soft);
+
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5625rem;
+  --radius-sm: 0.375rem;
+
+  --shadow-card: var(--ab-shadow-1);
+  --shadow-float: var(--ab-shadow-2);
+  --shadow-hero: var(--ab-shadow-3);
+
+  /* Escala tipográfica fluida — editorial en el display, tranquila en el cuerpo. */
+  --text-kicker: 0.75rem;
+  --text-display: clamp(2.5rem, 1.6rem + 4.4vw, 5.25rem);
+  --text-h2: clamp(1.9rem, 1.4rem + 2.2vw, 3rem);
+  --text-h3: clamp(1.25rem, 1.05rem + 0.9vw, 1.6rem);
+  --text-lead: clamp(1.05rem, 0.98rem + 0.4vw, 1.3rem);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* `clip` recorta el desborde horizontal SIN volver a <body> un contenedor
+     * de scroll (eso rompía `position: sticky` del header). */
+    overflow-x: clip;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.06;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: var(--ab-primary);
+    color: var(--ab-on-solid);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ab-primary);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .u-container {
+    width: 100%;
+    max-width: 75rem; /* 1200px */
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 0.5rem + 3vw, 2.5rem);
+  }
+
+  .u-kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-kicker);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+
+  /* El único botón sólido de la página: la acción es siempre contactarse. */
+  .u-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.4rem;
+    border-radius: var(--radius-md);
+    background: var(--ab-primary);
+    color: var(--ab-on-solid);
+    font-weight: 600;
+    font-family: var(--font-sans);
+    line-height: 1;
+    box-shadow: var(--ab-shadow-1);
+    transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+  }
+  .u-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--ab-shadow-2);
+    filter: brightness(1.05);
+  }
+  .u-cta:active {
+    transform: translateY(0);
+  }
+
+  /* Botón fantasma: contorno que se tiñe de verde al hover, igual que la app. */
+  .u-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.3rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    color: var(--color-foreground);
+    font-weight: 500;
+    background: transparent;
+    transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+  }
+  .u-ghost:hover {
+    border-color: var(--ab-primary-line);
+    color: var(--ab-primary);
+    background: var(--ab-primary-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .u-cta, .u-ghost { transition: none; }
+    .u-cta:hover { transform: none; }
+  }
+
+  /* Secciones */
+  .u-section {
+    padding-block: clamp(4rem, 2.5rem + 7vw, 8rem);
+    position: relative;
+  }
+  .u-section--tint {
+    background: color-mix(in oklab, var(--ab-surface-2) 70%, transparent);
+  }
+  .u-head {
+    max-width: 46rem;
+    margin-bottom: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+  }
+  .u-head h2 {
+    font-size: var(--text-h2);
+    margin-top: 0.9rem;
+  }
+  .u-head p {
+    margin-top: 1rem;
+    font-size: var(--text-lead);
+    color: var(--color-muted-foreground);
+  }
+
+  /* Tarjeta base — una sola sombra, el borde y la elevación significan algo. */
+  .u-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  }
+
+  /* Reveal al scroll */
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 520ms cubic-bezier(0.2, 0, 0, 1), transform 520ms cubic-bezier(0.2, 0, 0, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  [data-reveal].is-in {
+    opacity: 1;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+}

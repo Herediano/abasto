@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://abasto.ai/sitemap-index.xml

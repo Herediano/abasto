@@ -1,0 +1,147 @@
+---
+/*
+ * "El escritorio de fondo" — la metáfora del producto es el fondo de la página.
+ *
+ * Capas (de abajo a arriba):
+ *  1. color base ............ lo pone <body> (var --ab-ground)
+ *  2. .bg-grid .............. grilla bento de "tarjetas fantasma". Es un SVG
+ *                            usado como mask sobre un div pintado con
+ *                            var(--ab-ink) => se adapta solo a claro/oscuro.
+ *                            Parallax lento (script de abajo).
+ *  3. .bg-grain ............ grano orgánico (feTurbulence inline), soft-light.
+ *                            Mata el banding del spotlight y saca el plástico.
+ *  4. .bg-spot ............. spotlight cálido detrás del hero (primary-soft).
+ *  5. .bg-pulse ............ 4 puntos que laten ámbar/verde muy de vez en
+ *                            cuando: el fondo "respira" como el negocio.
+ *
+ * Todo aria-hidden y detrás del contenido. Sin JS: se ve perfecto, sólo
+ * pierde parallax y latido. prefers-reduced-motion congela ambos.
+ */
+---
+
+<div class="bg-root" aria-hidden="true">
+  <div class="bg-grid" data-bg-grid></div>
+  <div class="bg-grain"></div>
+  <div class="bg-spot"></div>
+  <div class="bg-pulse" style="--x:18%;--y:24%;--d:0s;--c:var(--ab-warn)"></div>
+  <div class="bg-pulse" style="--x:82%;--y:16%;--d:7s;--c:var(--ab-ok)"></div>
+  <div class="bg-pulse" style="--x:72%;--y:68%;--d:13s;--c:var(--ab-warn)"></div>
+  <div class="bg-pulse" style="--x:28%;--y:80%;--d:19s;--c:var(--ab-ok)"></div>
+</div>
+
+<style>
+  .bg-root {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    contain: strict;
+  }
+
+  /* 2 — grilla bento de tarjetas fantasma */
+  .bg-grid {
+    position: absolute;
+    inset: -12% -6% -18%;
+    background: var(--ab-ink);
+    opacity: 0.028;
+    will-change: transform;
+    -webkit-mask-image: var(--bento);
+    mask-image: var(--bento);
+    -webkit-mask-repeat: repeat;
+    mask-repeat: repeat;
+    -webkit-mask-size: clamp(520px, 46vw, 820px);
+    mask-size: clamp(520px, 46vw, 820px);
+    --bento: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='820'%20height='820'%20viewBox='0%200%20820%20820'%3E%3Cg%20fill='%23000'%3E%3Crect%20x='40'%20y='40'%20width='240'%20height='150'%20rx='16'/%3E%3Crect%20x='300'%20y='40'%20width='200'%20height='150'%20rx='16'/%3E%3Crect%20x='520'%20y='40'%20width='260'%20height='214'%20rx='16'/%3E%3Crect%20x='40'%20y='214'%20width='150'%20height='130'%20rx='16'/%3E%3Crect%20x='214'%20y='214'%20width='286'%20height='130'%20rx='16'/%3E%3Crect%20x='40'%20y='368'%20width='236'%20height='186'%20rx='16'/%3E%3Crect%20x='300'%20y='368'%20width='200'%20height='186'%20rx='16'/%3E%3Crect%20x='520'%20y='278'%20width='260'%20height='120'%20rx='16'/%3E%3Crect%20x='520'%20y='422'%20width='260'%20height='358'%20rx='16'/%3E%3Crect%20x='40'%20y='578'%20width='456'%20height='202'%20rx='16'/%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* 3 — grano */
+  .bg-grain {
+    position: absolute;
+    inset: -20%;
+    opacity: 0.04;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='240'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'/%3E%3C/svg%3E");
+    -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 30%, #000 55%, transparent 100%);
+    mask-image: radial-gradient(ellipse 120% 90% at 50% 30%, #000 55%, transparent 100%);
+  }
+
+  /* 4 — spotlight cálido detrás del hero */
+  .bg-spot {
+    position: absolute;
+    left: 50%;
+    top: -18rem;
+    width: min(120rem, 160vw);
+    aspect-ratio: 1;
+    transform: translateX(-50%);
+    background: radial-gradient(
+      circle at center,
+      color-mix(in oklab, var(--ab-primary-soft) 90%, transparent) 0%,
+      transparent 62%
+    );
+  }
+
+  /* 5 — latidos de estado */
+  .bg-pulse {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: clamp(180px, 22vw, 320px);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at center, var(--c) 0%, transparent 68%);
+    opacity: 0;
+    animation: bg-breathe 26s ease-in-out infinite;
+    animation-delay: var(--d);
+  }
+
+  @keyframes bg-breathe {
+    0%, 88%, 100% { opacity: 0; }
+    92% { opacity: 0.05; }
+    96% { opacity: 0.02; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .bg-grid { opacity: 0.05; }
+    :root:not([data-theme="light"]) .bg-grain { opacity: 0.05; mix-blend-mode: overlay; }
+    :root:not([data-theme="light"]) .bg-pulse { animation-name: bg-breathe-dark; }
+  }
+  :root[data-theme="dark"] .bg-grid { opacity: 0.05; }
+  :root[data-theme="dark"] .bg-grain { opacity: 0.05; mix-blend-mode: overlay; }
+  :root[data-theme="dark"] .bg-pulse { animation-name: bg-breathe-dark; }
+
+  @keyframes bg-breathe-dark {
+    0%, 88%, 100% { opacity: 0; }
+    92% { opacity: 0.09; }
+    96% { opacity: 0.035; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg-pulse { animation: none; opacity: 0; }
+    .bg-grid { will-change: auto; }
+  }
+</style>
+
+<script>
+  // Parallax lento de la grilla. Sin librerías: un rAF con throttle por scroll,
+  // sólo transform (compositor), y se apaga con reduced-motion o pestaña oculta.
+  const grid = document.querySelector<HTMLElement>('[data-bg-grid]');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (grid && !reduce.matches) {
+    let ticking = false;
+    const update = () => {
+      const y = window.scrollY * 0.06;
+      grid.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+    document.addEventListener('scroll', onScroll, { passive: true });
+    update();
+  }
+</script>

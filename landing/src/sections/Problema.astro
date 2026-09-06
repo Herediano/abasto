@@ -1,0 +1,70 @@
+---
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+const t = useTranslations(getLangFromUrl(Astro.url));
+
+const cards = [
+  { data: t('problema.c1.data'), label: t('problema.c1.label'), tone: 'danger' },
+  { data: t('problema.c2.data'), label: t('problema.c2.label'), tone: 'danger' },
+  { data: t('problema.c3.data'), label: t('problema.c3.label'), tone: 'warn' },
+  { data: t('problema.c4.data'), label: t('problema.c4.label'), tone: 'warn' },
+];
+---
+
+<section class="u-section" id="problema">
+  <div class="u-container">
+    <div class="u-head" data-reveal>
+      <p class="u-kicker">{t('problema.kicker')}</p>
+      <h2>{t('problema.title')}</h2>
+      <p>{t('problema.lead')}</p>
+    </div>
+
+    <div class="prob__grid">
+      {
+        cards.map((c, i) => (
+          <article class="u-card prob__card" data-tone={c.tone} data-reveal style={`--reveal-delay:${i * 70}ms`}>
+            <span class:list={['prob__flag', `prob__flag--${c.tone}`]} aria-hidden="true" />
+            <p class="prob__data">{c.data}</p>
+            <p class="prob__label">{c.label}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .prob__grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 40rem) { .prob__grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 68rem) { .prob__grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .prob__card {
+    position: relative;
+    padding-top: 1.6rem;
+  }
+  .prob__flag {
+    position: absolute;
+    top: 1rem;
+    left: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+    width: 1.4rem;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .prob__flag--danger { background: var(--ab-danger); }
+  .prob__flag--warn { background: var(--ab-warn); }
+
+  .prob__data {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+  .prob__label {
+    margin-top: 0.5rem;
+    font-size: 0.92rem;
+    color: var(--color-muted-foreground);
+  }
+</style>

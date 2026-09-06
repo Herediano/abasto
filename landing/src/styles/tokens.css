@@ -1,0 +1,94 @@
+/*
+ * Sistema de diseño "Yerba" — copia fiel de los tokens de la app
+ * (frontend/src/styles.css). Se mantiene sincronizado a mano: si cambian
+ * los --ab-* en la app, se copian acá. Verde pino sobre neutros arena.
+ *
+ * El verde es la única acción sólida: si aparece verde lleno, se toca.
+ * Ámbar = aviso, rojo = problema. El color es estado, nunca identidad.
+ */
+
+:root {
+  --ab-ground: #f8f6f1;
+  --ab-surface: #ffffff;
+  --ab-surface-2: #fcfbf8;
+  --ab-ink: #1b2420;
+  --ab-soft: #5c6560;
+  --ab-faint: #8b938d;
+  --ab-line: #e7e1d6;
+  --ab-line-soft: #f0ece4;
+
+  --ab-primary: #1f7355;
+  --ab-primary-soft: #e3eee8;
+  --ab-primary-line: #bfdace;
+  --ab-on-solid: #ffffff;
+
+  --ab-warn: #a76322;
+  --ab-warn-soft: #f7ede0;
+  --ab-ok: #2f7d4f;
+  --ab-danger: #a6453b;
+  --ab-danger-soft: #f8e9e7;
+
+  --ab-shadow-1: 0 1px 2px rgb(20 30 25 / 0.05);
+  --ab-shadow-2: 0 1px 2px rgb(20 30 25 / 0.04), 0 10px 28px -14px rgb(20 30 25 / 0.16);
+  --ab-shadow-3: 0 2px 4px rgb(20 30 25 / 0.04), 0 24px 64px -24px rgb(20 30 25 / 0.28);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ab-ground: #101512;
+    --ab-surface: #191e1a;
+    --ab-surface-2: #1d231f;
+    --ab-ink: #e8ebe6;
+    --ab-soft: #949d97;
+    --ab-faint: #6e7872;
+    --ab-line: #262c27;
+    --ab-line-soft: #212722;
+
+    --ab-primary: #57b994;
+    --ab-primary-soft: #1b2a24;
+    --ab-primary-line: #2e4a3e;
+    --ab-on-solid: #06130d;
+
+    --ab-warn: #d08a3c;
+    --ab-warn-soft: #2a2118;
+    --ab-ok: #63b37c;
+    --ab-danger: #e0776a;
+    --ab-danger-soft: #2b1b19;
+
+    --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
+    --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
+    --ab-shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 28px 72px -24px rgb(0 0 0 / 0.7);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ab-ground: #101512;
+  --ab-surface: #191e1a;
+  --ab-surface-2: #1d231f;
+  --ab-ink: #e8ebe6;
+  --ab-soft: #949d97;
+  --ab-faint: #6e7872;
+  --ab-line: #262c27;
+  --ab-line-soft: #212722;
+
+  --ab-primary: #57b994;
+  --ab-primary-soft: #1b2a24;
+  --ab-primary-line: #2e4a3e;
+  --ab-on-solid: #06130d;
+
+  --ab-warn: #d08a3c;
+  --ab-warn-soft: #2a2118;
+  --ab-ok: #63b37c;
+  --ab-danger: #e0776a;
+  --ab-danger-soft: #2b1b19;
+
+  --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
+  --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
+  --ab-shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 28px 72px -24px rgb(0 0 0 / 0.7);
+
+  color-scheme: dark;
+}

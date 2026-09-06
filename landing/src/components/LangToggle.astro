@@ -1,0 +1,49 @@
+---
+import { getLangFromUrl, alternatePath } from '../i18n/utils';
+const lang = getLangFromUrl(Astro.url);
+const esHref = alternatePath(Astro.url, 'es');
+const enHref = alternatePath(Astro.url, 'en');
+---
+
+<div class="lang" role="group" aria-label="Idioma / Language">
+  <a href={esHref} class="lang__opt" aria-current={lang === 'es' ? 'true' : undefined} data-set-lang="es">ES</a>
+  <span class="lang__sep" aria-hidden="true">·</span>
+  <a href={enHref} class="lang__opt" aria-current={lang === 'en' ? 'true' : undefined} data-set-lang="en">EN</a>
+</div>
+
+<style>
+  .lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .lang__opt {
+    color: var(--color-faint);
+    padding: 0.15rem 0.15rem;
+    transition: color 140ms ease;
+  }
+  .lang__opt:hover {
+    color: var(--ab-primary);
+  }
+  .lang__opt[aria-current='true'] {
+    color: var(--color-foreground);
+  }
+  .lang__sep {
+    color: var(--color-border);
+  }
+</style>
+
+<script>
+  // Recuerda la preferencia de idioma para próximas visitas a "/".
+  document.querySelectorAll<HTMLAnchorElement>('[data-set-lang]').forEach((a) => {
+    a.addEventListener('click', () => {
+      try {
+        localStorage.setItem('abasto-landing-lang', a.dataset.setLang || 'es');
+      } catch {}
+    });
+  });
+</script>
