@@ -10,6 +10,7 @@ import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
 import { parsePricesFile } from './price-import.util';
+import { sendExport } from './export.util';
 import { priceChange, type PriceHistoryEntry } from './price-history.util';
 import { guardarPrecio, resolverPrecios } from './price-resolver.util';
 import { buscarProductoIds } from './product-search.util';
@@ -267,6 +268,44 @@ export class ProductsController {
         const s = stock.get(p.id) ?? 0;
         return query.stock === 'out' ? s <= 0 : p.minStock != null && s < Number(p.minStock);
       });
+    }
+
+    // CSV: mismo contenido, sin el estilo del Excel (ver export.util / diseno.md).
+    if (query.format === 'csv') {
+      await sendExport(
+        res,
+        'csv',
+        'productos',
+        [
+          { header: 'Código interno', key: 'internalCode' },
+          { header: 'Código de barras', key: 'barcode' },
+          { header: 'Producto', key: 'name' },
+          { header: 'Marca', key: 'brand' },
+          { header: 'Categoría', key: 'category' },
+          { header: 'Unidad de venta', key: 'unit' },
+          { header: 'Precio de costo', key: 'costPrice' },
+          { header: 'Precio de venta', key: 'salePrice' },
+          { header: 'IVA %', key: 'taxRate' },
+          { header: 'Stock actual', key: 'currentStock' },
+          { header: 'Stock mínimo', key: 'minStock' },
+          { header: 'Estado', key: 'status' },
+        ],
+        products.map(p => ({
+          internalCode: p.internalCode ?? '',
+          barcode: p.barcode,
+          name: p.name,
+          brand: p.brand ?? '',
+          category: p.category?.name ?? '',
+          unit: p.unit,
+          costPrice: p.costPrice ? Number(p.costPrice) : '',
+          salePrice: p.salePrice ? Number(p.salePrice) : '',
+          taxRate: Number(p.taxRate),
+          currentStock: stock.get(p.id) ?? 0,
+          minStock: p.minStock != null ? Number(p.minStock) : '',
+          status: p.isActive ? 'Activo' : 'Inactivo',
+        })),
+      );
+      return;
     }
 
     const workbook = new ExcelJS.Workbook();

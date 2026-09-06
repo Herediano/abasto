@@ -12,6 +12,7 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
+import { ExportMenu } from '@/components/export-menu';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -42,7 +43,6 @@ export function ProductsPage() {
   const [priced, setPriced] = useState('');
   const [stock, setStock] = useState('');
   const [sort, setSort] = useState('name');
-  const [exporting, setExporting] = useState(false);
   const [importingCatalog, setImportingCatalog] = useState(false);
   const [confirmingCatalog, setConfirmingCatalog] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -120,17 +120,6 @@ export function ProductsPage() {
   useEffect(() => { setPage(1); }, [search, categoryId, brand, status, priced, stock, sort, priceListId]);
   useEffect(() => { void load(); }, [token, search, categoryId, brand, status, priced, stock, sort, priceListId, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function exportExcel() {
-    setExporting(true);
-    setError('');
-    try {
-      await downloadFile(`/products/export?${filterParams()}`, token, 'productos.xlsx');
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setExporting(false);
-    }
-  }
 
   async function importCatalog() {
     setConfirmingCatalog(false);
@@ -278,9 +267,7 @@ export function ProductsPage() {
                 {importingCatalog ? <Spinner /> : <Package />} Cargar catálogo regional
               </Button>
             )}
-            <Button variant="outline" onClick={exportExcel} disabled={exporting || loading}>
-              {exporting ? <Spinner /> : <DownloadSimple />} Exportar a Excel
-            </Button>
+            <ExportMenu path="/products" params={filterParams()} filename="productos" />
             {puedeCrear && (
               <Button onClick={openCreate}>
                 <Plus /> Nuevo producto

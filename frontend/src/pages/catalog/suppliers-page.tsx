@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
+import { ExportMenu } from '@/components/export-menu';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Supplier } from '@/lib/api';
@@ -72,11 +73,14 @@ export function SuppliersPage() {
         title="Proveedores"
         description="Registrá los proveedores para asociarlos a lotes y facturas de compra."
         actions={
-          can('proveedores.crear') ? (
-            <Button onClick={openCreate}>
-              <Plus /> Nuevo proveedor
-            </Button>
-          ) : undefined
+          <>
+            <ExportMenu path="/suppliers" filename="proveedores" />
+            {can('proveedores.crear') && (
+              <Button onClick={openCreate}>
+                <Plus /> Nuevo proveedor
+              </Button>
+            )}
+          </>
         }
       />
       <Card>

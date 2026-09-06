@@ -1,15 +1,37 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
+import { sendExport } from './export.util';
 
 @Controller('suppliers')
 @UseGuards(JwtAuthGuard, PermissionGuard)
 export class SuppliersController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
   @Get() @RequirePermission('proveedores.ver') list(@Req() request: AuthRequest) { return this.prisma.supplier.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } }); }
+
+  @Get('export')
+  @RequirePermission('proveedores.ver')
+  async export(@Req() request: AuthRequest, @Res() res: Response, @Query('format') format?: string) {
+    const rows = await this.prisma.supplier.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } });
+    await sendExport(
+      res,
+      format,
+      'proveedores',
+      [
+        { header: 'Proveedor', key: 'name', width: 32 },
+        { header: 'Razón social', key: 'legalName', width: 32 },
+        { header: 'CUIT', key: 'taxId', width: 16 },
+        { header: 'Email', key: 'email', width: 26 },
+        { header: 'Teléfono', key: 'phone', width: 18 },
+        { header: 'Dirección', key: 'address', width: 32 },
+      ],
+      rows.map(s => ({ name: s.name, legalName: s.legalName ?? '', taxId: s.taxId ?? '', email: s.email ?? '', phone: s.phone ?? '', address: s.address ?? '' })),
+    );
+  }
   @Post()
   @RequirePermission('proveedores.crear')
   async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {

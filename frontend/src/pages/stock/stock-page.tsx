@@ -4,6 +4,7 @@ import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
+import { ExportMenu } from '@/components/export-menu';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type StockItem } from '@/lib/api';
@@ -25,7 +26,11 @@ export function StockPage() {
 
   return (
     <>
-      <PageHeader title="Stock actual" description="Existencias por producto, depósito y lote." />
+      <PageHeader
+        title="Stock actual"
+        description="Existencias por producto, depósito y lote."
+        actions={<ExportMenu path="/stock" filename="stock" />}
+      />
       {error && <Alert variant="destructive">{error}</Alert>}
       <Card>
         <CardContent className="p-0">
