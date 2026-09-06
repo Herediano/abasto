@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f8f6f1"/>
+  <rect x="0" y="0" width="1200" height="630" fill="url(#g)"/>
+  <defs>
+    <radialGradient id="g" cx="18%" cy="0%" r="90%">
+      <stop offset="0%" stop-color="#e3eee8"/>
+      <stop offset="60%" stop-color="#f8f6f1"/>
+    </radialGradient>
+  </defs>
+  <g font-family="Bricolage Grotesque, Arial, sans-serif" fill="#1b2420">
+    <text x="90" y="150" font-size="34" fill="#5c6560" font-family="Spline Sans Mono, monospace" letter-spacing="3">ERP · MOSTRADOR · ARGENTINA</text>
+    <text x="86" y="300" font-size="92" font-weight="700" letter-spacing="-2">El mostrador no para.</text>
+    <text x="86" y="410" font-size="92" font-weight="700" letter-spacing="-2">Tu sistema tampoco.</text>
+    <text x="90" y="520" font-size="40" font-weight="700">abasto<tspan fill="#1f7355">.ai</tspan></text>
+  </g>
+</svg>

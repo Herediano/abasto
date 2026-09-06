@@ -1,0 +1,137 @@
+---
+import MiniDesk from '../components/MiniDesk.astro';
+import Sparkbars from '../components/Sparkbars.astro';
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+const t = useTranslations(getLangFromUrl(Astro.url));
+
+const feats = [
+  { t: t('escritorio.f1.title'), b: t('escritorio.f1.body') },
+  { t: t('escritorio.f2.title'), b: t('escritorio.f2.body') },
+  { t: t('escritorio.f3.title'), b: t('escritorio.f3.body') },
+];
+---
+
+<section class="u-section u-section--tint" id="escritorio">
+  <div class="u-container">
+    <div class="u-head" data-reveal>
+      <p class="u-kicker">{t('escritorio.kicker')}</p>
+      <h2>{t('escritorio.title')}</h2>
+      <p>{t('escritorio.lead')}</p>
+    </div>
+
+    <div class="esc__stage" data-reveal>
+      <MiniDesk />
+
+      <aside class="esc__ia">
+        <span class="esc__ia-tag">✦ {t('escritorio.ia.tag')}</span>
+        <p class="esc__ia-title">{t('escritorio.ia.title')}</p>
+        <p class="esc__ia-body">{t('escritorio.ia.body')}</p>
+        <p class="esc__ia-chart-t">{t('escritorio.ia.chart')}</p>
+        <Sparkbars values={[1, 4, 2, 1]} labels={['S1', 'S2', 'S3', 'S4']} highlight={1} color="var(--ab-warn)" height={44} />
+      </aside>
+    </div>
+
+    <ul class="esc__feats">
+      {
+        feats.map((f, i) => (
+          <li class="esc__feat" data-reveal style={`--reveal-delay:${i * 70}ms`}>
+            <span class="esc__num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+            <div>
+              <h3>{f.t}</h3>
+              <p>{f.b}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .esc__stage {
+    position: relative;
+    margin-bottom: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
+  }
+
+  .esc__ia {
+    margin-top: 1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--ab-primary-line);
+    background:
+      radial-gradient(120% 130% at 10% 0%, color-mix(in oklab, var(--ab-primary-soft) 80%, transparent), transparent 62%),
+      var(--color-card);
+    box-shadow: var(--shadow-float);
+    padding: 1.1rem 1.2rem;
+  }
+  @media (min-width: 60rem) {
+    .esc__ia {
+      position: absolute;
+      right: clamp(-1rem, -2vw, 0rem);
+      bottom: -2.5rem;
+      width: 20rem;
+      margin-top: 0;
+    }
+  }
+
+  .esc__ia-tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ab-primary);
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: var(--ab-primary-soft);
+    border: 1px solid var(--ab-primary-line);
+  }
+  .esc__ia-title {
+    margin-top: 0.7rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+  }
+  .esc__ia-body {
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--color-muted-foreground);
+  }
+  .esc__ia-chart-t {
+    margin-top: 0.9rem;
+    margin-bottom: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-faint);
+  }
+
+  .esc__feats {
+    display: grid;
+    gap: 1.75rem;
+  }
+  @media (min-width: 52rem) {
+    .esc__feats { grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+  }
+  .esc__feat {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.9rem;
+    align-content: start;
+  }
+  .esc__num {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--ab-primary);
+    padding-top: 0.2rem;
+  }
+  .esc__feat h3 { font-size: var(--text-h3); }
+  .esc__feat p {
+    margin-top: 0.4rem;
+    color: var(--color-muted-foreground);
+    font-size: 0.95rem;
+  }
+</style>

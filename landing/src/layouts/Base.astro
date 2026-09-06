@@ -1,0 +1,139 @@
+---
+import '../styles/global.css';
+import Background from '../components/Background.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { getLangFromUrl, useTranslations, alternatePath } from '../i18n/utils';
+import type { UIKey } from '../i18n/ui';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const esHref = new URL(alternatePath(Astro.url, 'es'), Astro.site).href;
+const enHref = new URL(alternatePath(Astro.url, 'en'), Astro.site).href;
+
+const title = t('meta.title' as UIKey);
+const description = t('meta.description' as UIKey);
+// TO-DO: exportar una versión .png 1200×630 (algunos scrapers no renderizan SVG).
+const ogImage = new URL('/og.svg', Astro.site).href;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="es" href={esHref} />
+    <link rel="alternate" hreflang="en" href={enHref} />
+    <link rel="alternate" hreflang="x-default" href={esHref} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content={lang === 'es' ? 'es_AR' : 'en_US'} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Tema antes del primer paint: sin parpadeo claro→oscuro. -->
+    <script is:inline>
+      (function () {
+        try {
+          var t = localStorage.getItem('abasto-landing-theme');
+          if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
+
+  </head>
+
+  <body>
+    <a class="skip-link" href="#contenido">{t('nav.skip' as UIKey)}</a>
+    <Background />
+    <Header />
+    <main id="contenido">
+      <slot />
+    </main>
+    <Footer />
+
+    <a href="#contacto" class="float-cta" data-float-cta hidden>{t('nav.cta' as UIKey)}</a>
+
+    <script>
+      // Reveal al scroll: una sola pasada, se desconecta al entrar.
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            // Revela al entrar en vista, o si ya quedó por encima del viewport
+            // (scroll con salto: el elemento nunca "intersecta").
+            if (e.isIntersecting || e.boundingClientRect.top < 0) {
+              e.target.classList.add('is-in');
+              io.unobserve(e.target);
+            }
+          }
+        },
+        { rootMargin: '0px 0px -8% 0px', threshold: 0 },
+      );
+      document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el));
+
+      // CTA flotante en mobile: aparece cuando el hero salió de vista,
+      // se esconde al llegar al formulario.
+      const floatCta = document.querySelector('[data-float-cta]');
+      const contacto = document.getElementById('contacto');
+      if (floatCta && contacto) {
+        const onScroll = () => {
+          const pastHero = window.scrollY > window.innerHeight * 0.9;
+          const atForm = contacto.getBoundingClientRect().top < window.innerHeight;
+          floatCta.hidden = !(pastHero && !atForm);
+        };
+        document.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+      }
+    </script>
+
+    <style>
+      .skip-link {
+        position: absolute;
+        left: 1rem;
+        top: -3rem;
+        z-index: 100;
+        padding: 0.6rem 1rem;
+        border-radius: var(--radius-sm);
+        background: var(--ab-primary);
+        color: var(--ab-on-solid);
+        font-weight: 600;
+        transition: top 120ms ease;
+      }
+      .skip-link:focus {
+        top: 1rem;
+      }
+
+      .float-cta {
+        position: fixed;
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+        z-index: 40;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.9rem 1.25rem;
+        border-radius: var(--radius-md);
+        background: var(--ab-primary);
+        color: var(--ab-on-solid);
+        font-weight: 600;
+        box-shadow: var(--ab-shadow-2);
+      }
+      @media (min-width: 60rem) {
+        .float-cta { display: none; }
+      }
+    </style>
+  </body>
+</html>

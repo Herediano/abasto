@@ -1,0 +1,27 @@
+---
+interface Props {
+  href?: string;
+  class?: string;
+}
+const { href = '/', class: className } = Astro.props;
+---
+
+<a href={href} class:list={['logo', className]} aria-label="Abasto">
+  <span class="logo__name">abasto</span><span class="logo__ai">.ai</span>
+</a>
+
+<style>
+  .logo {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: -0.03em;
+    color: var(--color-foreground);
+    line-height: 1;
+    display: inline-flex;
+    align-items: baseline;
+  }
+  .logo__ai {
+    color: var(--ab-primary);
+  }
+</style>

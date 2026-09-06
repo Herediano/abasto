@@ -1,0 +1,18 @@
+/*
+ * Fuentes self-host vía Fontsource — mismos nombres de familia que la app
+ * ("Bricolage Grotesque", "Spline Sans", "Spline Sans Mono"), así los tokens
+ * de global.css no cambian. Sólo los pesos que se usan.
+ *
+ *   Bricolage 600/700  → títulos, marca, números grandes
+ *   Bricolage 500      → números medianos
+ *   Spline Sans 400/500/600
+ *   Spline Sans Mono 400/500
+ */
+@import '@fontsource/bricolage-grotesque/500.css';
+@import '@fontsource/bricolage-grotesque/600.css';
+@import '@fontsource/bricolage-grotesque/700.css';
+@import '@fontsource/spline-sans/400.css';
+@import '@fontsource/spline-sans/500.css';
+@import '@fontsource/spline-sans/600.css';
+@import '@fontsource/spline-sans-mono/400.css';
+@import '@fontsource/spline-sans-mono/500.css';

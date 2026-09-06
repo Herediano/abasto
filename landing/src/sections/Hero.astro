@@ -1,0 +1,102 @@
+---
+import AskPanel from '../components/AskPanel.astro';
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+const t = useTranslations(getLangFromUrl(Astro.url));
+---
+
+<section class="hero">
+  <div class="u-container hero__grid">
+    <div class="hero__copy">
+      <p class="u-kicker" data-reveal>{t('hero.kicker')}</p>
+      <h1 class="hero__title" data-reveal style="--reveal-delay:40ms">{t('hero.title')}</h1>
+      <p class="hero__lead" data-reveal style="--reveal-delay:90ms">{t('hero.lead')}</p>
+      <div class="hero__actions" data-reveal style="--reveal-delay:140ms">
+        <a href="#contacto" class="u-cta">
+          {t('hero.cta')}
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#preguntar" class="u-ghost">{t('hero.secondary')}</a>
+      </div>
+      <p class="hero__note" data-reveal style="--reveal-delay:190ms">
+        <span class="hero__pulse" aria-hidden="true"></span>
+        {t('hero.note')}
+      </p>
+    </div>
+
+    <figure class="hero__figure" data-reveal style="--reveal-delay:120ms">
+      <AskPanel />
+      <figcaption class="hero__caption">{t('hero.caption')}</figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding-top: clamp(3rem, 1.5rem + 6vw, 6.5rem);
+    padding-bottom: clamp(3.5rem, 2rem + 6vw, 7rem);
+  }
+  .hero__grid {
+    display: grid;
+    gap: clamp(2.5rem, 1rem + 6vw, 4.5rem);
+    align-items: center;
+  }
+  @media (min-width: 64rem) {
+    .hero__grid {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    }
+  }
+
+  .hero__title {
+    font-size: var(--text-display);
+    font-weight: 700;
+    margin-top: 1rem;
+  }
+  .hero__lead {
+    margin-top: 1.4rem;
+    font-size: var(--text-lead);
+    color: var(--color-muted-foreground);
+    max-width: 34rem;
+  }
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-top: 2rem;
+  }
+  .hero__note {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 1.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--color-faint);
+  }
+  .hero__pulse {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: var(--ab-ok);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--ab-ok) 60%, transparent);
+    animation: hero-pulse 2.8s ease-out infinite;
+  }
+  @keyframes hero-pulse {
+    0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--ab-ok) 55%, transparent); }
+    70% { box-shadow: 0 0 0 0.6rem transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+
+  .hero__figure {
+    margin: 0;
+  }
+  .hero__caption {
+    margin-top: 1rem;
+    font-size: 0.82rem;
+    color: var(--color-faint);
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero__pulse { animation: none; }
+  }
+</style>

@@ -1,0 +1,119 @@
+---
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+const t = useTranslations(getLangFromUrl(Astro.url));
+
+const pairs = [
+  { q: t('preguntar.p1.q'), a: t('preguntar.p1.a') },
+  { q: t('preguntar.p2.q'), a: t('preguntar.p2.a') },
+  { q: t('preguntar.p3.q'), a: t('preguntar.p3.a') },
+];
+const chips = [t('preguntar.ex1'), t('preguntar.ex2'), t('preguntar.ex3'), t('preguntar.ex4')];
+---
+
+<section class="u-section" id="preguntar">
+  <div class="u-container">
+    <div class="preg__head" data-reveal>
+      <p class="u-kicker">{t('preguntar.kicker')}</p>
+      <h2>{t('preguntar.title')}</h2>
+      <p>{t('preguntar.lead')}</p>
+    </div>
+
+    <ul class="preg__list">
+      {
+        pairs.map((p, i) => (
+          <li class="preg__pair" data-reveal style={`--reveal-delay:${i * 70}ms`}>
+            <p class="preg__q">
+              <svg class="preg__spark" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2c.9 5.6 3.4 8.1 9 9-5.6.9-8.1 3.4-9 9-.9-5.6-3.4-8.1-9-9 5.6-.9 8.1-3.4 9-9Z"/></svg>
+              {p.q}
+            </p>
+            <p class="preg__a">{p.a}</p>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="preg__more" data-reveal>
+      <p class="preg__more-label">{t('preguntar.more')}</p>
+      <ul class="preg__chips">
+        {chips.map((c) => <li>{c}</li>)}
+      </ul>
+      <p class="preg__foot">
+        <span class="preg__tag">{t('preguntar.tag')}</span>
+        {t('preguntar.foot')}
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .preg__head {
+    max-width: 44rem;
+    margin-bottom: clamp(2rem, 1.25rem + 3vw, 3.25rem);
+  }
+  .preg__head h2 { font-size: var(--text-h2); margin-top: 0.9rem; }
+  .preg__head p { margin-top: 1rem; font-size: var(--text-lead); color: var(--color-muted-foreground); }
+
+  .preg__list {
+    display: grid;
+    gap: 1rem;
+    max-width: 52rem;
+  }
+  .preg__pair {
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--ab-primary);
+    border-radius: var(--radius-md);
+    background: var(--color-card);
+    box-shadow: var(--shadow-card);
+    padding: 1rem 1.15rem;
+  }
+  .preg__q {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.98rem;
+  }
+  .preg__spark { color: var(--ab-primary); flex-shrink: 0; }
+  .preg__a {
+    margin-top: 0.5rem;
+    font-size: 0.93rem;
+    line-height: 1.55;
+    color: var(--color-muted-foreground);
+  }
+
+  .preg__more { margin-top: clamp(1.75rem, 1rem + 2vw, 2.5rem); max-width: 52rem; }
+  .preg__more-label {
+    font-size: 0.85rem;
+    color: var(--color-muted-foreground);
+    margin-bottom: 0.65rem;
+  }
+  .preg__chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .preg__chips li {
+    font-size: 0.82rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    color: var(--color-foreground);
+    background: var(--color-card);
+  }
+  .preg__foot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.4rem;
+    font-size: 0.85rem;
+    color: var(--color-faint);
+  }
+  .preg__tag {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: var(--ab-primary-soft);
+    color: var(--ab-primary);
+    border: 1px solid var(--ab-primary-line);
+  }
+</style>

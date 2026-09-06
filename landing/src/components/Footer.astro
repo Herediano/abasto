@@ -1,0 +1,67 @@
+---
+import Logo from './Logo.astro';
+import { getLangFromUrl, useTranslations, localizePath } from '../i18n/utils';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+const year = new Date().getFullYear();
+---
+
+<footer class="ft">
+  <div class="u-container ft__row">
+    <div class="ft__brand">
+      <Logo href={localizePath('/', lang)} />
+      <p>{t('footer.tagline')}</p>
+    </div>
+    <nav class="ft__links" aria-label="Footer">
+      <a href="#contacto">{t('footer.contact')}</a>
+      <a href="https://github.com/Herediano/abasto" rel="noopener">{t('footer.docs')}</a>
+    </nav>
+  </div>
+  <div class="u-container ft__legal">
+    <span>© {year} Abasto</span>
+    <span>{t('footer.rights')}</span>
+  </div>
+</footer>
+
+<style>
+  .ft {
+    margin-top: clamp(4rem, 2rem + 8vw, 8rem);
+    border-top: 1px solid var(--color-border-soft);
+    padding-block: clamp(2.5rem, 1.5rem + 3vw, 4rem) 2rem;
+  }
+  .ft__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: space-between;
+    align-items: start;
+  }
+  .ft__brand p {
+    margin-top: 0.75rem;
+    max-width: 22rem;
+    color: var(--color-muted-foreground);
+    font-size: 0.92rem;
+  }
+  .ft__links {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.9rem;
+  }
+  .ft__links a {
+    color: var(--color-muted-foreground);
+    transition: color 140ms ease;
+  }
+  .ft__links a:hover {
+    color: var(--ab-primary);
+  }
+  .ft__legal {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-faint);
+  }
+</style>
