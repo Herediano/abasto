@@ -28,10 +28,16 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
 - **Aire.** Poca información a la vez. Un entorno de trabajo no tiene que
   estresar.
 - **El verde es la única acción sólida.** Si aparece verde lleno, se puede
-  tocar. El ámbar es aviso, el rojo es problema. **No hay un color por módulo** —
-  el color siempre significa estado, nunca identidad.
-- **El estado lo dice el dato, no un marco.** «▲ 17,8 %» en verde, «3 lotes» en
-  ámbar, «4 vencidos» en rojo. Un puntito basta para marcar «acá hay algo».
+  tocar. El ámbar es aviso, el rojo es problema.
+- **Cada módulo tiene su color, y sólo ahí.** En el escritorio, cada tarjeta
+  lleva un matiz propio y saturado (azul Ventas, teal Caja, naranja Stock…) en la
+  pastilla del ícono, una franja al costado, el borde y un lavado del fondo. Es
+  **identidad, para encontrar el módulo por color sin leer** — nunca estado. Se
+  mantiene lejos del verde «tocable» y de los tonos del aviso. Adentro del módulo
+  el color desaparece: manda el verde acción.
+- **El estado lo dice el dato, no un marco.** «3 lotes», «4 vencidos», «+17,8 %
+  vs ayer»: texto plano, sin teñir. Un puntito ámbar o rojo arriba a la derecha
+  basta para marcar «acá hay algo».
 - **Bento para mirar, formularios tranquilos para hacer.** La elevación y los
   grupos siempre significan algo; no se decora con tarjetas.
 - **Consistencia.** Si editar un registro se hace de una manera en Clientes, la
@@ -61,20 +67,23 @@ del módulo Ventas, no en el escritorio).
 
 Anatomía, siempre en el mismo lugar:
 
-1. **Ícono** en un chip redondeado (arriba a la izquierda).
+1. **Ícono** en un chip redondeado, relleno del **color del módulo** (arriba a la
+   izquierda), con una **franja** del mismo color por el borde izquierdo.
 2. **Nombre** del módulo.
 3. **Dato clave** en Bricolage, grande — lo único que de verdad importa saber sin
    entrar (`$ 1,28 M`, `3 lotes`, `Abierta`, `43 pendientes`).
-4. **Una línea de contexto** debajo, con el color del estado si corresponde.
+4. **Un renglón de contexto** debajo, con **espacio fijo en todas las tarjetas**:
+   misma fuente, mismo tamaño, mismo lugar, pegado abajo. En minúscula con
+   mayúscula inicial, sin teñir (`Vencen en ≤ 2 días · jamón cocido`).
 5. **Puntito de aviso** (ámbar/rojo) arriba a la derecha, sólo si hay algo
    pendiente.
 
-La consistencia se cierra con la cáscara; la **identidad** la da un **motivo de
-línea** propio de cada módulo —grande y tenue, saliéndose por una esquina—:
-Ventas unas barras que suben, Caja una registradora, Vencimientos un calendario,
-Compras un camión, Precios una etiqueta, Reportes un gráfico. Es carácter que
-significa algo, no adorno, y no gasta color. Al pasar el mouse el motivo se tiñe
-de verde y el chip se llena.
+La identidad se refuerza con el **color del módulo** (punto 1, y también en el
+borde y un lavado tenue del fondo) y con un **motivo de línea** propio —grande y
+tenue, saliéndose por una esquina, teñido con ese mismo color—: Ventas unas
+barras que suben, Caja una registradora, Vencimientos un calendario, Precios una
+etiqueta. Es carácter que significa algo, no adorno. Al pasar el mouse el borde y
+el motivo se intensifican.
 
 ### Se arma por permiso
 

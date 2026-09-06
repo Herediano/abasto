@@ -10,14 +10,10 @@ import { pendientes, statFor, type EscritorioSummary } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
-const TONE: Record<string, string> = {
-  up: 'text-success',
-  down: 'text-destructive',
-  warn: 'text-warning',
-  hot: 'text-destructive',
-};
-
 const CONFIG_KEY = 'abasto-escritorio';
+
+/** Mayúscula inicial y nada más: el renglón de contexto ya viene en minúscula. */
+const sentence = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es-AR') + s.slice(1) : s);
 
 type Config = { hidden: string[]; order: string[] };
 
@@ -199,11 +195,12 @@ export function EscritorioPage() {
               }
             }}
             className={cn(
-              'module-tile group relative flex min-h-[150px] flex-col gap-2 overflow-hidden rounded-lg border bg-card p-4 transition-all',
+              'module-tile group relative flex min-h-[168px] flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 transition-all',
               configuring ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5',
               dragKey === m.key && 'opacity-40',
             )}
           >
+            <span className="module-tile__spine pointer-events-none absolute inset-y-0 left-0 w-1.5" aria-hidden="true" />
             <ModuleMotif
               motif={m.motif}
               className="module-tile__motif pointer-events-none absolute -bottom-4 -right-4 size-[104px] transition-opacity"
@@ -216,20 +213,20 @@ export function EscritorioPage() {
                 )}
               />
             )}
-            <div className="flex size-9 items-center justify-center rounded-[10px] bg-accent text-accent-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+            <div className="module-tile__chip flex size-9 items-center justify-center rounded-[10px]">
               <m.Icon weight="fill" className="size-[18px]" />
             </div>
             <p className="text-[13px] font-semibold">{m.label}</p>
-            {stat ? (
-              <div className="mt-auto">
-                <p className="font-display text-[19px] font-bold leading-tight tracking-tight">{stat.value}</p>
-                <p className={cn('mt-0.5 text-[11px] leading-snug', stat.tone ? TONE[stat.tone] : 'text-placeholder')}>
-                  {stat.hint}
-                </p>
-              </div>
-            ) : (
-              <p className="mt-auto text-[11.5px] leading-snug text-placeholder">{m.blurb}</p>
-            )}
+            {/* Renglón de contexto: espacio fijo en todas las tarjetas, misma
+                fuente y tamaño, pegado abajo. El dato clave crece por encima. */}
+            <div className="mt-auto flex min-h-[3.25rem] flex-col justify-end">
+              {stat && (
+                <p className="tabular font-display text-[18px] font-bold leading-tight tracking-tight">{stat.value}</p>
+              )}
+              <p className="mt-0.5 line-clamp-2 min-h-[2rem] text-[11px] leading-snug text-muted-foreground">
+                {sentence(stat?.hint ?? m.blurb)}
+              </p>
+            </div>
 
             {configuring && (
               <>

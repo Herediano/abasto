@@ -24,6 +24,8 @@ export type ModuleDef = {
   crumb: string;
   /** La caja abre a pantalla completa, fuera del escritorio. */
   fullscreen?: boolean;
+  /** No es una tarjeta del escritorio: se llega desde Ajustes (Usuarios, Rangos). */
+  settings?: boolean;
   /** Paths del motivo de línea de la tarjeta (dentro de un <svg viewBox="0 0 24 24">). */
   motif: string;
 };
@@ -85,13 +87,13 @@ export const MODULES: ModuleDef[] = [
     motif: '<path d="M3 21V9l9-5 9 5v12M3 21h18M9 21v-6h6v6"/>',
   },
   {
-    key: 'usuarios', label: 'Usuarios', path: '/admin/users', permission: 'usuarios.ver', Icon: Gear,
-    blurb: 'Quién entra al sistema y con qué rango.', crumb: 'Escritorio /',
-    motif: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+    key: 'usuarios', label: 'Usuarios', path: '/admin/users', permission: 'usuarios.ver', Icon: Gear, settings: true,
+    blurb: 'Quién entra al sistema y con qué rango.', crumb: 'Escritorio / Ajustes /',
+    motif: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.7-3.8 3.2-5.8 6-5.8S14.3 16.2 15 20"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 20c.4-2.4 1.3-4 2.7-4.8"/>',
   },
   {
-    key: 'rangos', label: 'Rangos', path: '/admin/rangos', permission: 'rangos.ver', Icon: ShieldCheck,
-    blurb: 'Qué puede tocar cada rango de la empresa.', crumb: 'Escritorio /',
+    key: 'rangos', label: 'Rangos', path: '/admin/rangos', permission: 'rangos.ver', Icon: ShieldCheck, settings: true,
+    blurb: 'Qué puede tocar cada rango de la empresa.', crumb: 'Escritorio / Ajustes /',
     motif: '<path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
   },
 ];
@@ -100,25 +102,26 @@ const BY_KEY = new Map(MODULES.map(m => [m.key, m]));
 export const moduleByKey = (key: string) => BY_KEY.get(key);
 
 /**
- * Un matiz propio por módulo, apagado y en gama fría/tierra, distinto de los
- * colores semánticos de Yerba (verde acción, ámbar aviso, rojo problema). No
- * dice estado: es identidad, para reconocer el módulo por color sin leer.
- * Ver docs/diseno.md.
+ * Un matiz propio y saturado por módulo. No dice estado —es identidad—: se
+ * aplica en grande (pastilla del ícono, franja al costado, borde, lavado del
+ * fondo) para reconocer el módulo por color sin leer. Se mantiene lejos del
+ * verde (que en Yerba significa "tocable") y de los tonos apagados del aviso
+ * (ámbar) y el problema (rojo ladrillo) que usa el puntito. Ver docs/diseno.md.
  */
 const HUES: Record<string, string> = {
-  ventas: '#3f7d6b',
-  caja: '#2f7d7d',
-  turnos: '#5b6b9e',
-  stock: '#8a6d3b',
-  vencimientos: '#9a5b7a',
-  reposicion: '#6b7d3f',
-  productos: '#4b6fa8',
-  precios: '#a07b2e',
-  proveedores: '#4a7a9e',
-  clientes: '#7a5ba0',
-  depositos: '#7a6a5a',
-  usuarios: '#3f8a9e',
-  rangos: '#3f7a4f',
+  ventas: '#2563eb', // azul
+  caja: '#0d9488', // verde azulado
+  turnos: '#4f46e5', // índigo
+  stock: '#ea580c', // naranja
+  vencimientos: '#0891b2', // cian
+  reposicion: '#d97706', // ámbar dorado
+  productos: '#7c3aed', // violeta
+  precios: '#e11d48', // carmín
+  proveedores: '#0284c7', // azul cielo
+  clientes: '#db2777', // rosa
+  depositos: '#475569', // pizarra (estructura, no acción)
+  usuarios: '#0e7490', // cian oscuro (vive en Ajustes)
+  rangos: '#9f1239', // granate (vive en Ajustes)
 };
 export const hueFor = (key: string) => HUES[key] ?? 'var(--color-primary)';
 
@@ -131,9 +134,14 @@ export function moduleForPath(pathname: string): ModuleDef | undefined {
     .sort((a, b) => b.path.length - a.path.length)[0];
 }
 
-/** Los módulos que este rango puede ver, en el orden del registro. */
+/** Las tarjetas del escritorio que este rango puede ver, en el orden del registro. */
 export function visibleModules(can: (permission: string) => boolean): ModuleDef[] {
-  return MODULES.filter(m => !m.permission || can(m.permission));
+  return MODULES.filter(m => !m.settings && (!m.permission || can(m.permission)));
+}
+
+/** Los módulos que viven dentro de Ajustes (Usuarios, Rangos), filtrados por permiso. */
+export function settingsModules(can: (permission: string) => boolean): ModuleDef[] {
+  return MODULES.filter(m => m.settings && (!m.permission || can(m.permission)));
 }
 
 /** El motivo de línea de una tarjeta: SVG grande y tenue que le da identidad sin gastar color. */

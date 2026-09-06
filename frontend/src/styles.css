@@ -227,25 +227,41 @@
 }
 
 /*
- * Aura sutil por módulo en el escritorio: cada tarjeta lleva su matiz propio
- * (--ab-tile-hue, ver lib/modules.tsx) en el borde y en el motivo, para
- * reconocer el módulo por color sin leer. Apagado a propósito — no compite con
- * el verde acción ni con los colores de estado. Ver docs/diseno.md.
+ * Color por módulo en el escritorio: cada tarjeta lleva su matiz propio
+ * (--ab-tile-hue, ver lib/modules.tsx) en cuatro lugares a la vez —la pastilla
+ * del ícono, una franja al costado, el borde y un lavado del fondo— para
+ * reconocer el módulo por color de un vistazo, sin leer. Es identidad, no
+ * estado: no compite con el verde acción ni con el puntito de aviso. Ver
+ * docs/diseno.md.
  */
 .module-tile {
-  border-color: color-mix(in srgb, var(--ab-tile-hue) 30%, var(--color-border));
-  box-shadow: var(--ab-shadow-1), inset 0 0 0 1px color-mix(in srgb, var(--ab-tile-hue) 8%, transparent);
+  border-color: color-mix(in srgb, var(--ab-tile-hue) 42%, var(--color-border));
+  background: color-mix(in srgb, var(--ab-tile-hue) 5%, var(--color-card));
 }
 .module-tile:hover {
-  border-color: color-mix(in srgb, var(--ab-tile-hue) 55%, var(--color-border));
-  box-shadow:
-    var(--ab-shadow-2),
-    0 6px 22px -10px color-mix(in srgb, var(--ab-tile-hue) 40%, transparent);
+  border-color: color-mix(in srgb, var(--ab-tile-hue) 72%, var(--color-border));
+  background: color-mix(in srgb, var(--ab-tile-hue) 9%, var(--color-card));
+  box-shadow: var(--ab-shadow-2), 0 8px 24px -12px color-mix(in srgb, var(--ab-tile-hue) 55%, transparent);
 }
-.module-tile .module-tile__motif {
+.module-tile__spine {
+  background: var(--ab-tile-hue);
+}
+.module-tile__chip {
+  background: var(--ab-tile-hue);
+  color: #fff;
+}
+.module-tile__motif {
   color: var(--ab-tile-hue);
-  opacity: 0.09;
+  opacity: 0.13;
 }
-:root:not([data-theme='light']) .module-tile .module-tile__motif { opacity: 0.16; }
-.module-tile:hover .module-tile__motif { opacity: 0.16; }
-:root:not([data-theme='light']) .module-tile:hover .module-tile__motif { opacity: 0.24; }
+.module-tile:hover .module-tile__motif { opacity: 0.22; }
+:root:not([data-theme='light']) .module-tile {
+  background: color-mix(in srgb, var(--ab-tile-hue) 14%, var(--color-card));
+  border-color: color-mix(in srgb, var(--ab-tile-hue) 40%, var(--color-border));
+}
+:root:not([data-theme='light']) .module-tile:hover {
+  border-color: color-mix(in srgb, var(--ab-tile-hue) 66%, var(--color-border));
+  background: color-mix(in srgb, var(--ab-tile-hue) 20%, var(--color-card));
+}
+:root:not([data-theme='light']) .module-tile__motif { opacity: 0.2; }
+:root:not([data-theme='light']) .module-tile:hover .module-tile__motif { opacity: 0.32; }
