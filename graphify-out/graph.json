@@ -595,7 +595,7 @@
       "file_type": "code",
       "norm_label": "formstate",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L26"
+      "source_location": "L27"
     },
     {
       "id": "frontend_src_pages_prices_prices_page_bulkresult",
@@ -2391,6 +2391,66 @@
       "norm_label": "signuppage()",
       "source_file": "frontend/src/pages/auth/signup-page.tsx",
       "source_location": "L12"
+    },
+    {
+      "id": "frontend_src_pages_stock_restock_page_restockpage",
+      "label": "RestockPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "restockpage()",
+      "source_file": "frontend/src/pages/stock/restock-page.tsx",
+      "source_location": "L16"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_history_page_originlabel",
+      "label": "originLabel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "originlabel()",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L37"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_history_page_stockhistorypage",
+      "label": "StockHistoryPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "stockhistorypage()",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L42"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_history_page_stockhistorypage_clearfilters",
+      "label": "clearFilters()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "clearfilters()",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L100"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_page_stockpage",
+      "label": "StockPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "stockpage()",
+      "source_file": "frontend/src/pages/stock/stock-page.tsx",
+      "source_location": "L15"
     },
     {
       "id": "backend_src_sales_controller_salescontroller_constructor",
@@ -4469,76 +4529,76 @@
       "source_location": "L63"
     },
     {
-      "id": "frontend_src_pages_catalog_categories_page_categoriespage",
-      "label": "CategoriesPage()",
+      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage",
+      "label": "WarehousesPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "CategoriesPage",
+      "community_name": "WarehousesPage",
       "file_type": "code",
-      "norm_label": "categoriespage()",
-      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
-      "source_location": "L17"
+      "norm_label": "warehousespage()",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L19"
     },
     {
-      "id": "frontend_src_pages_catalog_categories_page_categoriespage_confirmdelete",
-      "label": "confirmDelete()",
+      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_opencaja",
+      "label": "openCaja()",
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "CategoriesPage",
+      "community_name": "WarehousesPage",
       "file_type": "code",
-      "norm_label": "confirmdelete()",
-      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
-      "source_location": "L76"
+      "norm_label": "opencaja()",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L47"
     },
     {
-      "id": "frontend_src_pages_catalog_categories_page_categoriespage_opencreate",
+      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_opencreate",
       "label": "openCreate()",
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "CategoriesPage",
+      "community_name": "WarehousesPage",
       "file_type": "code",
       "norm_label": "opencreate()",
-      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
-      "source_location": "L40"
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L67"
     },
     {
-      "id": "frontend_src_pages_catalog_categories_page_categoriespage_opendelete",
-      "label": "openDelete()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "CategoriesPage",
-      "file_type": "code",
-      "norm_label": "opendelete()",
-      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
-      "source_location": "L54"
-    },
-    {
-      "id": "frontend_src_pages_catalog_categories_page_categoriespage_openedit",
+      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_openedit",
       "label": "openEdit()",
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "CategoriesPage",
+      "community_name": "WarehousesPage",
       "file_type": "code",
       "norm_label": "openedit()",
-      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
-      "source_location": "L47"
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L74"
     },
     {
-      "id": "frontend_src_pages_catalog_categories_page_categoriespage_submit",
+      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_submit",
       "label": "submit()",
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "CategoriesPage",
+      "community_name": "WarehousesPage",
       "file_type": "code",
       "norm_label": "submit()",
-      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
-      "source_location": "L60"
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L81"
+    },
+    {
+      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_submitcaja",
+      "label": "submitCaja()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 24,
+      "community_name": "WarehousesPage",
+      "file_type": "code",
+      "norm_label": "submitcaja()",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L52"
     },
     {
       "id": "backend_src_customers_controller_customerscontroller_constructor",
@@ -5105,66 +5165,6 @@
       "source_location": "L349"
     },
     {
-      "id": "frontend_src_pages_admin_users_page_userspage",
-      "label": "UsersPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "userspage()",
-      "source_file": "frontend/src/pages/admin/users-page.tsx",
-      "source_location": "L23"
-    },
-    {
-      "id": "frontend_src_pages_admin_users_page_userspage_opencreate",
-      "label": "openCreate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "opencreate()",
-      "source_file": "frontend/src/pages/admin/users-page.tsx",
-      "source_location": "L49"
-    },
-    {
-      "id": "frontend_src_pages_admin_users_page_userspage_openedit",
-      "label": "openEdit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "openedit()",
-      "source_file": "frontend/src/pages/admin/users-page.tsx",
-      "source_location": "L70"
-    },
-    {
-      "id": "frontend_src_pages_admin_users_page_userspage_submitcreate",
-      "label": "submitCreate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "submitcreate()",
-      "source_file": "frontend/src/pages/admin/users-page.tsx",
-      "source_location": "L55"
-    },
-    {
-      "id": "frontend_src_pages_admin_users_page_userspage_submitedit",
-      "label": "submitEdit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "submitedit()",
-      "source_file": "frontend/src/pages/admin/users-page.tsx",
-      "source_location": "L76"
-    },
-    {
       "id": "frontend_src_pages_ajustes_page_iniciales",
       "label": "iniciales()",
       "_callable": true,
@@ -5175,30 +5175,6 @@
       "norm_label": "iniciales()",
       "source_file": "frontend/src/pages/ajustes-page.tsx",
       "source_location": "L36"
-    },
-    {
-      "id": "frontend_src_pages_ajustes_page_passwordsection",
-      "label": "PasswordSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "passwordsection()",
-      "source_file": "frontend/src/pages/ajustes-page.tsx",
-      "source_location": "L181"
-    },
-    {
-      "id": "frontend_src_pages_ajustes_page_passwordsection_submit",
-      "label": "submit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "submit()",
-      "source_file": "frontend/src/pages/ajustes-page.tsx",
-      "source_location": "L186"
     },
     {
       "id": "frontend_src_pages_ajustes_page_perfilsection",
@@ -5223,6 +5199,78 @@
       "norm_label": "submit()",
       "source_file": "frontend/src/pages/ajustes-page.tsx",
       "source_location": "L126"
+    },
+    {
+      "id": "frontend_src_pages_catalog_categories_page_categoriespage",
+      "label": "CategoriesPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "api",
+      "file_type": "code",
+      "norm_label": "categoriespage()",
+      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
+      "source_location": "L17"
+    },
+    {
+      "id": "frontend_src_pages_catalog_categories_page_categoriespage_confirmdelete",
+      "label": "confirmDelete()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "api",
+      "file_type": "code",
+      "norm_label": "confirmdelete()",
+      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
+      "source_location": "L76"
+    },
+    {
+      "id": "frontend_src_pages_catalog_categories_page_categoriespage_opencreate",
+      "label": "openCreate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "api",
+      "file_type": "code",
+      "norm_label": "opencreate()",
+      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
+      "source_location": "L40"
+    },
+    {
+      "id": "frontend_src_pages_catalog_categories_page_categoriespage_opendelete",
+      "label": "openDelete()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "api",
+      "file_type": "code",
+      "norm_label": "opendelete()",
+      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
+      "source_location": "L54"
+    },
+    {
+      "id": "frontend_src_pages_catalog_categories_page_categoriespage_openedit",
+      "label": "openEdit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "api",
+      "file_type": "code",
+      "norm_label": "openedit()",
+      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
+      "source_location": "L47"
+    },
+    {
+      "id": "frontend_src_pages_catalog_categories_page_categoriespage_submit",
+      "label": "submit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 33,
+      "community_name": "api",
+      "file_type": "code",
+      "norm_label": "submit()",
+      "source_file": "frontend/src/pages/catalog/categories-page.tsx",
+      "source_location": "L60"
     },
     {
       "id": "frontend_src_pages_catalog_customers_page_customerspage",
@@ -5297,88 +5345,76 @@
       "source_location": "L134"
     },
     {
-      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage",
-      "label": "WarehousesPage()",
+      "id": "frontend_src_pages_catalog_product_detail_page_margin",
+      "label": "margin()",
       "_callable": true,
       "_origin": "ast",
       "community": 33,
       "community_name": "api",
       "file_type": "code",
-      "norm_label": "warehousespage()",
-      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L19"
+      "norm_label": "margin()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L25"
     },
     {
-      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_opencaja",
-      "label": "openCaja()",
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage",
+      "label": "ProductDetailPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 33,
       "community_name": "api",
       "file_type": "code",
-      "norm_label": "opencaja()",
-      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L47"
+      "norm_label": "productdetailpage()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L32"
     },
     {
-      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_opencreate",
-      "label": "openCreate()",
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_addbarcode",
+      "label": "addBarcode()",
       "_callable": true,
       "_origin": "ast",
       "community": 33,
       "community_name": "api",
       "file_type": "code",
-      "norm_label": "opencreate()",
-      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L67"
+      "norm_label": "addbarcode()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L70"
     },
     {
-      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_openedit",
-      "label": "openEdit()",
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_addtier",
+      "label": "addTier()",
       "_callable": true,
       "_origin": "ast",
       "community": 33,
       "community_name": "api",
       "file_type": "code",
-      "norm_label": "openedit()",
-      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L74"
+      "norm_label": "addtier()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L94"
     },
     {
-      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_submit",
-      "label": "submit()",
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_removebarcode",
+      "label": "removeBarcode()",
       "_callable": true,
       "_origin": "ast",
       "community": 33,
       "community_name": "api",
       "file_type": "code",
-      "norm_label": "submit()",
-      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L81"
+      "norm_label": "removebarcode()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L122"
     },
     {
-      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_submitcaja",
-      "label": "submitCaja()",
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_removetier",
+      "label": "removeTier()",
       "_callable": true,
       "_origin": "ast",
       "community": 33,
       "community_name": "api",
       "file_type": "code",
-      "norm_label": "submitcaja()",
-      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L52"
-    },
-    {
-      "id": "frontend_src_pages_stock_restock_page_restockpage",
-      "label": "RestockPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "restockpage()",
-      "source_file": "frontend/src/pages/stock/restock-page.tsx",
-      "source_location": "L15"
+      "norm_label": "removetier()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L112"
     },
     {
       "id": "frontend_src_pages_stock_stock_out_page_stockoutpage",
@@ -5403,18 +5439,6 @@
       "norm_label": "submit()",
       "source_file": "frontend/src/pages/stock/stock-out-page.tsx",
       "source_location": "L58"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_page_stockpage",
-      "label": "StockPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "stockpage()",
-      "source_file": "frontend/src/pages/stock/stock-page.tsx",
-      "source_location": "L14"
     },
     {
       "id": "backend_prisma_seed_seedreferencecatalog",
@@ -6149,76 +6173,64 @@
       "source_location": "L56"
     },
     {
-      "id": "frontend_src_pages_admin_rangos_page_rangospage",
-      "label": "RangosPage()",
+      "id": "frontend_src_pages_admin_users_page_userspage",
+      "label": "UsersPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 51,
-      "community_name": "RangosPage",
+      "community_name": "UsersPage",
       "file_type": "code",
-      "norm_label": "rangospage()",
-      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
-      "source_location": "L18"
+      "norm_label": "userspage()",
+      "source_file": "frontend/src/pages/admin/users-page.tsx",
+      "source_location": "L23"
     },
     {
-      "id": "frontend_src_pages_admin_rangos_page_rangospage_abriredicion",
-      "label": "abrirEdicion()",
+      "id": "frontend_src_pages_admin_users_page_userspage_opencreate",
+      "label": "openCreate()",
       "_callable": true,
       "_origin": "ast",
       "community": 51,
-      "community_name": "RangosPage",
+      "community_name": "UsersPage",
       "file_type": "code",
-      "norm_label": "abriredicion()",
-      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
-      "source_location": "L60"
+      "norm_label": "opencreate()",
+      "source_file": "frontend/src/pages/admin/users-page.tsx",
+      "source_location": "L49"
     },
     {
-      "id": "frontend_src_pages_admin_rangos_page_rangospage_borrar",
-      "label": "borrar()",
+      "id": "frontend_src_pages_admin_users_page_userspage_openedit",
+      "label": "openEdit()",
       "_callable": true,
       "_origin": "ast",
       "community": 51,
-      "community_name": "RangosPage",
+      "community_name": "UsersPage",
       "file_type": "code",
-      "norm_label": "borrar()",
-      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
-      "source_location": "L110"
+      "norm_label": "openedit()",
+      "source_file": "frontend/src/pages/admin/users-page.tsx",
+      "source_location": "L70"
     },
     {
-      "id": "frontend_src_pages_admin_rangos_page_rangospage_crear",
-      "label": "crear()",
+      "id": "frontend_src_pages_admin_users_page_userspage_submitcreate",
+      "label": "submitCreate()",
       "_callable": true,
       "_origin": "ast",
       "community": 51,
-      "community_name": "RangosPage",
+      "community_name": "UsersPage",
       "file_type": "code",
-      "norm_label": "crear()",
-      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
-      "source_location": "L92"
+      "norm_label": "submitcreate()",
+      "source_file": "frontend/src/pages/admin/users-page.tsx",
+      "source_location": "L55"
     },
     {
-      "id": "frontend_src_pages_admin_rangos_page_rangospage_guardar",
-      "label": "guardar()",
+      "id": "frontend_src_pages_admin_users_page_userspage_submitedit",
+      "label": "submitEdit()",
       "_callable": true,
       "_origin": "ast",
       "community": 51,
-      "community_name": "RangosPage",
+      "community_name": "UsersPage",
       "file_type": "code",
-      "norm_label": "guardar()",
-      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
+      "norm_label": "submitedit()",
+      "source_file": "frontend/src/pages/admin/users-page.tsx",
       "source_location": "L76"
-    },
-    {
-      "id": "frontend_src_pages_admin_rangos_page_rangospage_toggle",
-      "label": "toggle()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 51,
-      "community_name": "RangosPage",
-      "file_type": "code",
-      "norm_label": "toggle()",
-      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
-      "source_location": "L68"
     },
     {
       "id": "backend_src_sales_controller_salescontroller_cancel",
@@ -6461,6 +6473,102 @@
       "source_location": "L362"
     },
     {
+      "id": "frontend_src_pages_admin_rangos_page_rangospage",
+      "label": "RangosPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "rangospage()",
+      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
+      "source_location": "L18"
+    },
+    {
+      "id": "frontend_src_pages_admin_rangos_page_rangospage_abriredicion",
+      "label": "abrirEdicion()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "abriredicion()",
+      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
+      "source_location": "L60"
+    },
+    {
+      "id": "frontend_src_pages_admin_rangos_page_rangospage_borrar",
+      "label": "borrar()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "borrar()",
+      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
+      "source_location": "L110"
+    },
+    {
+      "id": "frontend_src_pages_admin_rangos_page_rangospage_crear",
+      "label": "crear()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "crear()",
+      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
+      "source_location": "L92"
+    },
+    {
+      "id": "frontend_src_pages_admin_rangos_page_rangospage_guardar",
+      "label": "guardar()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "guardar()",
+      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
+      "source_location": "L76"
+    },
+    {
+      "id": "frontend_src_pages_admin_rangos_page_rangospage_toggle",
+      "label": "toggle()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "toggle()",
+      "source_file": "frontend/src/pages/admin/rangos-page.tsx",
+      "source_location": "L68"
+    },
+    {
+      "id": "frontend_src_pages_ajustes_page_passwordsection",
+      "label": "PasswordSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "passwordsection()",
+      "source_file": "frontend/src/pages/ajustes-page.tsx",
+      "source_location": "L181"
+    },
+    {
+      "id": "frontend_src_pages_ajustes_page_passwordsection_submit",
+      "label": "submit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "submit()",
+      "source_file": "frontend/src/pages/ajustes-page.tsx",
+      "source_location": "L186"
+    },
+    {
       "id": "frontend_src_pages_auth_signup_page_signuppage_submit",
       "label": "submit()",
       "_callable": true,
@@ -6473,78 +6581,6 @@
       "source_location": "L20"
     },
     {
-      "id": "frontend_src_pages_catalog_product_detail_page_margin",
-      "label": "margin()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "margin()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L25"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage",
-      "label": "ProductDetailPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "productdetailpage()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L32"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_addbarcode",
-      "label": "addBarcode()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "addbarcode()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L70"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_addtier",
-      "label": "addTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "addtier()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L94"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_removebarcode",
-      "label": "removeBarcode()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "removebarcode()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L122"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_removetier",
-      "label": "removeTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "removetier()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L112"
-    },
-    {
       "id": "frontend_src_pages_catalog_products_page_productspage",
       "label": "ProductsPage()",
       "_callable": true,
@@ -6554,7 +6590,7 @@
       "file_type": "code",
       "norm_label": "productspage()",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L28"
+      "source_location": "L29"
     },
     {
       "id": "frontend_src_pages_catalog_products_page_productspage_clearcatalog",
@@ -6566,7 +6602,7 @@
       "file_type": "code",
       "norm_label": "clearcatalog()",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L140"
+      "source_location": "L141"
     },
     {
       "id": "frontend_src_pages_catalog_products_page_productspage_createcategory",
@@ -6578,7 +6614,7 @@
       "file_type": "code",
       "norm_label": "createcategory()",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L230"
+      "source_location": "L231"
     },
     {
       "id": "frontend_src_pages_catalog_products_page_productspage_importcatalog",
@@ -6590,7 +6626,7 @@
       "file_type": "code",
       "norm_label": "importcatalog()",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L124"
+      "source_location": "L125"
     },
     {
       "id": "frontend_src_pages_catalog_products_page_productspage_opencreate",
@@ -6602,7 +6638,7 @@
       "file_type": "code",
       "norm_label": "opencreate()",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L181"
+      "source_location": "L182"
     },
     {
       "id": "frontend_src_pages_catalog_products_page_productspage_openedit",
@@ -6614,7 +6650,7 @@
       "file_type": "code",
       "norm_label": "openedit()",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L191"
+      "source_location": "L192"
     },
     {
       "id": "frontend_src_pages_catalog_products_page_productspage_submit",
@@ -6626,7 +6662,7 @@
       "file_type": "code",
       "norm_label": "submit()",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L213"
+      "source_location": "L214"
     },
     {
       "id": "frontend_src_pages_catalog_products_page_productspage_toggleactive",
@@ -6638,43 +6674,7 @@
       "file_type": "code",
       "norm_label": "toggleactive()",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L248"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_history_page_originlabel",
-      "label": "originLabel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "originlabel()",
-      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L36"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_history_page_stockhistorypage",
-      "label": "StockHistoryPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "stockhistorypage()",
-      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L41"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_history_page_stockhistorypage_clearfilters",
-      "label": "clearFilters()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 57,
-      "community_name": "errorMessage",
-      "file_type": "code",
-      "norm_label": "clearfilters()",
-      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L99"
+      "source_location": "L249"
     },
     {
       "id": "backend_src_escritorio_controller_escritoriocontroller_constructor",
@@ -8006,7 +8006,7 @@
       "file_type": "code",
       "norm_label": "daysremaining()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L20"
+      "source_location": "L21"
     },
     {
       "id": "frontend_src_pages_stock_expirations_page_expirationspage",
@@ -8018,7 +8018,7 @@
       "file_type": "code",
       "norm_label": "expirationspage()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L35"
+      "source_location": "L36"
     },
     {
       "id": "frontend_src_pages_stock_expirations_page_expirationspage_openedit",
@@ -8030,7 +8030,7 @@
       "file_type": "code",
       "norm_label": "openedit()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L62"
+      "source_location": "L63"
     },
     {
       "id": "frontend_src_pages_stock_expirations_page_expirationspage_submitedit",
@@ -8042,7 +8042,7 @@
       "file_type": "code",
       "norm_label": "submitedit()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L68"
+      "source_location": "L69"
     },
     {
       "id": "frontend_src_pages_stock_expirations_page_urgencybadge",
@@ -8054,7 +8054,7 @@
       "file_type": "code",
       "norm_label": "urgencybadge()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L28"
+      "source_location": "L29"
     },
     {
       "id": "frontend_src_components_product_search_dialog_productsearchdialog",
@@ -8916,7 +8916,7 @@
       "file_type": "code",
       "norm_label": "empty_form",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L23"
+      "source_location": "L24"
     },
     {
       "id": "frontend_src_pages_catalog_products_page_tax_rates",
@@ -8927,7 +8927,7 @@
       "file_type": "code",
       "norm_label": "tax_rates",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L25"
+      "source_location": "L26"
     },
     {
       "id": "frontend_src_pages_catalog_suppliers_page",
@@ -9125,7 +9125,7 @@
       "file_type": "code",
       "norm_label": "movement_label",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L28"
+      "source_location": "L29"
     },
     {
       "id": "frontend_src_pages_stock_stock_history_page_movement_types",
@@ -9136,7 +9136,7 @@
       "file_type": "code",
       "norm_label": "movement_types",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L19"
+      "source_location": "L20"
     },
     {
       "id": "frontend_src_pages_stock_stock_history_page_reference_label",
@@ -9147,7 +9147,7 @@
       "file_type": "code",
       "norm_label": "reference_label",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L30"
+      "source_location": "L31"
     },
     {
       "id": "frontend_src_pages_stock_stock_in_page",
@@ -21047,6 +21047,18 @@
     },
     {
       "source": "frontend_src_pages_catalog_product_detail_page_productdetailpage",
+      "target": "frontend_src_lib_format_quantity",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L212",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_product_detail_page_productdetailpage",
       "target": "frontend_src_lib_auth_context_useauth",
       "relation": "calls",
       "_origin": "ast",
@@ -21186,7 +21198,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -21198,7 +21210,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L360",
+      "source_location": "L361",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_products_page_productspage",
+      "target": "frontend_src_lib_format_quantity",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L365",
       "weight": 1.0
     },
     {
@@ -21210,7 +21234,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L80",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -21222,7 +21246,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L80",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -21234,7 +21258,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L154",
+      "source_location": "L155",
       "weight": 1.0
     },
     {
@@ -21246,7 +21270,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L242",
+      "source_location": "L243",
       "weight": 1.0
     },
     {
@@ -21258,7 +21282,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L134",
+      "source_location": "L135",
       "weight": 1.0
     },
     {
@@ -21270,7 +21294,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L219",
+      "source_location": "L220",
       "weight": 1.0
     },
     {
@@ -21282,7 +21306,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L224",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -21294,7 +21318,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L251",
+      "source_location": "L252",
       "weight": 1.0
     },
     {
@@ -21306,7 +21330,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L254",
+      "source_location": "L255",
       "weight": 1.0
     },
     {
@@ -22350,7 +22374,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L110",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -22362,7 +22386,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L111",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_expirations_page_expirationspage",
+      "target": "frontend_src_lib_format_quantity",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/stock/expirations-page.tsx",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -22374,7 +22410,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L36",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -22386,7 +22422,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -22398,7 +22434,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -22410,7 +22446,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L74",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -22422,7 +22458,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L78",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -22434,7 +22470,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/restock-page.tsx",
-      "source_location": "L16",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -22446,7 +22482,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/restock-page.tsx",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -22458,7 +22494,31 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/restock-page.tsx",
-      "source_location": "L25",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_restock_page_restockpage",
+      "target": "frontend_src_lib_format_quantity",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/stock/restock-page.tsx",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_stock_history_page_stockhistorypage",
+      "target": "frontend_src_lib_format_quantity",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L235",
       "weight": 1.0
     },
     {
@@ -22470,7 +22530,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L301",
+      "source_location": "L302",
       "weight": 1.0
     },
     {
@@ -22482,7 +22542,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -22494,7 +22554,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L69",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -22506,7 +22566,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L74",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -22758,7 +22818,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/stock-page.tsx",
-      "source_location": "L15",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -22770,7 +22830,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/stock-page.tsx",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -22782,7 +22842,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/stock-page.tsx",
-      "source_location": "L24",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_stock_page_stockpage",
+      "target": "frontend_src_lib_format_quantity",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/stock/stock-page.tsx",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -23046,7 +23118,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L191",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -23058,7 +23130,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L230",
+      "source_location": "L231",
       "weight": 1.0
     },
     {
@@ -23070,7 +23142,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L248",
+      "source_location": "L249",
       "weight": 1.0
     },
     {
@@ -23286,7 +23358,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L62",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -35447,6 +35519,18 @@
     },
     {
       "source": "frontend_src_pages_catalog_product_detail_page",
+      "target": "frontend_src_lib_format_quantity",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_product_detail_page",
       "target": "frontend_src_lib_auth_context_useauth",
       "relation": "imports",
       "_origin": "ast",
@@ -35831,7 +35915,7 @@
     },
     {
       "source": "frontend_src_pages_catalog_products_page",
-      "target": "frontend_src_lib_format_money",
+      "target": "frontend_src_lib_format_quantity",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -35843,7 +35927,7 @@
     },
     {
       "source": "frontend_src_pages_catalog_products_page",
-      "target": "frontend_src_lib_auth_context_useauth",
+      "target": "frontend_src_lib_format_money",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -35851,6 +35935,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
       "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_products_page",
+      "target": "frontend_src_lib_auth_context_useauth",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -38435,7 +38531,7 @@
     },
     {
       "source": "frontend_src_pages_stock_expirations_page",
-      "target": "frontend_src_lib_auth_context_useauth",
+      "target": "frontend_src_lib_format_quantity",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -38443,6 +38539,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
       "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_expirations_page",
+      "target": "frontend_src_lib_auth_context_useauth",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/stock/expirations-page.tsx",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -38711,7 +38819,7 @@
     },
     {
       "source": "frontend_src_pages_stock_restock_page",
-      "target": "frontend_src_lib_auth_context_useauth",
+      "target": "frontend_src_lib_format_quantity",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -38719,6 +38827,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/stock/restock-page.tsx",
       "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_restock_page",
+      "target": "frontend_src_lib_auth_context_useauth",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/stock/restock-page.tsx",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -39011,7 +39131,7 @@
     },
     {
       "source": "frontend_src_pages_stock_stock_history_page",
-      "target": "frontend_src_lib_auth_context_useauth",
+      "target": "frontend_src_lib_format_quantity",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -39019,6 +39139,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
       "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_stock_history_page",
+      "target": "frontend_src_lib_auth_context_useauth",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -39923,7 +40055,7 @@
     },
     {
       "source": "frontend_src_pages_stock_stock_page",
-      "target": "frontend_src_lib_auth_context_useauth",
+      "target": "frontend_src_lib_format_quantity",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -39931,6 +40063,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/stock/stock-page.tsx",
       "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_stock_page",
+      "target": "frontend_src_lib_auth_context_useauth",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/stock/stock-page.tsx",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -44647,7 +44791,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -44659,7 +44803,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -45972,7 +46116,7 @@
     },
     {
       "source": "frontend_src_pages_stock_expirations_page",
-      "target": "frontend_src_lib_auth_context",
+      "target": "frontend_src_lib_format",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -45980,6 +46124,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
       "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_expirations_page",
+      "target": "frontend_src_lib_auth_context",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/stock/expirations-page.tsx",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -46104,7 +46260,7 @@
     },
     {
       "source": "frontend_src_pages_stock_restock_page",
-      "target": "frontend_src_lib_auth_context",
+      "target": "frontend_src_lib_format",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46112,6 +46268,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/stock/restock-page.tsx",
       "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_restock_page",
+      "target": "frontend_src_lib_auth_context",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/stock/restock-page.tsx",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -46272,7 +46440,7 @@
     },
     {
       "source": "frontend_src_pages_stock_stock_history_page",
-      "target": "frontend_src_lib_auth_context",
+      "target": "frontend_src_lib_format",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46280,6 +46448,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
       "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_stock_history_page",
+      "target": "frontend_src_lib_auth_context",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -46776,7 +46956,7 @@
     },
     {
       "source": "frontend_src_pages_stock_stock_page",
-      "target": "frontend_src_lib_auth_context",
+      "target": "frontend_src_lib_format",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46784,6 +46964,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/stock/stock-page.tsx",
       "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_stock_stock_page",
+      "target": "frontend_src_lib_auth_context",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/stock/stock-page.tsx",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -54291,7 +54483,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -54302,7 +54494,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L25",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -54313,7 +54505,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -54324,7 +54516,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -54335,7 +54527,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L124",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -54346,7 +54538,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L140",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -54357,7 +54549,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L181",
+      "source_location": "L182",
       "weight": 1.0
     },
     {
@@ -54368,7 +54560,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L213",
+      "source_location": "L214",
       "weight": 1.0
     },
     {
@@ -55039,7 +55231,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -55050,7 +55242,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -55061,7 +55253,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L35",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -55072,7 +55264,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L68",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -55083,7 +55275,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/restock-page.tsx",
-      "source_location": "L15",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -55094,7 +55286,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -55105,7 +55297,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -55116,7 +55308,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -55127,7 +55319,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L36",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -55138,7 +55330,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0
     },
     {
@@ -55149,7 +55341,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L99",
+      "source_location": "L100",
       "weight": 1.0
     },
     {
@@ -55358,7 +55550,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/stock/stock-page.tsx",
-      "source_location": "L14",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -59687,7 +59879,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L146",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -59699,7 +59891,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L236",
+      "source_location": "L237",
       "weight": 1.0
     },
     {
@@ -59711,7 +59903,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L130",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -59723,7 +59915,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L219",
+      "source_location": "L220",
       "weight": 1.0
     },
     {
@@ -59735,7 +59927,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L251",
+      "source_location": "L252",
       "weight": 1.0
     },
     {
@@ -60047,7 +60239,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
-      "source_location": "L74",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -61834,5 +62026,5 @@
       "source_file": "docs/investigacion-compras-recepcion-stock.md"
     }
   ],
-  "built_at_commit": "114701a3bed32e4597ff40646c549072fb3df009"
+  "built_at_commit": "5a608b6f75d6cf6beab76a3bbf107fd26df7c70e"
 }

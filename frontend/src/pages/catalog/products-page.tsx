@@ -17,6 +17,7 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, downloadFile, errorMessage, type Category, type Pagination, type PriceList, type Product } from '@/lib/api';
+import { quantity } from '@/lib/format';
 import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -361,7 +362,7 @@ export function ProductsPage() {
                             : <Badge variant="warning">Sin precio</Badge>}
                         </TableCell>
                         <TableCell className={`text-right tabular ${bajoMinimo ? 'font-semibold text-destructive' : ''}`}>
-                          {p.currentStock === undefined ? '—' : Number.isInteger(p.currentStock) ? p.currentStock : p.currentStock.toFixed(3)}
+                          {p.currentStock === undefined ? '—' : quantity(p.currentStock)}
                         </TableCell>
                         <TableCell>
                           {!p.isActive

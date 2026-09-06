@@ -14,6 +14,7 @@ import { PageSpinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Movement, type Pagination, type Supplier, type Warehouse } from '@/lib/api';
+import { quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const MOVEMENT_TYPES = [
@@ -231,7 +232,7 @@ export function StockHistoryPage() {
                         <Badge variant={m.quantity.startsWith('-') ? 'destructive' : 'success'}>{MOVEMENT_LABEL[m.movementType] ?? m.movementType}</Badge>
                       </TableCell>
                       <TableCell>{m.warehouseName}</TableCell>
-                      <TableCell className="text-right font-medium">{m.quantity}</TableCell>
+                      <TableCell className="text-right font-medium tabular">{quantity(m.quantity)}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => setViewing(m)}>
                           <Eye />
@@ -294,7 +295,7 @@ export function StockHistoryPage() {
               </div>
               <div>
                 <dt className="text-muted-foreground">Cantidad</dt>
-                <dd className="font-medium">{viewing.quantity}</dd>
+                <dd className="font-medium tabular">{quantity(viewing.quantity)}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Origen</dt>

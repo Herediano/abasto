@@ -732,15 +732,15 @@
     "semantic_hash": "bf8fe4b372c8bd7ec947cdf37984da02"
   },
   "frontend/src/pages/catalog/product-detail-page.tsx": {
-    "mtime": 1788662774.1728628,
-    "seen": 1788663735.1328664,
-    "ast_hash": "de24b7f76f19ee745e2f4fe3d06b92e6",
-    "semantic_hash": "de24b7f76f19ee745e2f4fe3d06b92e6"
+    "mtime": 1788679842.7943883,
+    "seen": 1788679938.0709593,
+    "ast_hash": "d39b82995561e7cf9ca208e74e569667",
+    "semantic_hash": ""
   },
   "frontend/src/pages/catalog/products-page.tsx": {
-    "mtime": 1788673536.9329898,
-    "seen": 1788674116.1530323,
-    "ast_hash": "ba6626222731a96e9c09ea9260246616",
+    "mtime": 1788679824.3566432,
+    "seen": 1788679938.0709593,
+    "ast_hash": "23522db7161ad5de5977c91f506c8017",
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/suppliers-page.tsx": {
@@ -780,21 +780,21 @@
     "semantic_hash": "b940e4335688430a686591cb3a5823fc"
   },
   "frontend/src/pages/stock/expirations-page.tsx": {
-    "mtime": 1788673809.1395323,
-    "seen": 1788674116.1530323,
-    "ast_hash": "b7811799d3c1183e6ec2e7b075a6043b",
+    "mtime": 1788679781.2388687,
+    "seen": 1788679938.0729594,
+    "ast_hash": "f317a74136156d09343bb942995470b5",
     "semantic_hash": ""
   },
   "frontend/src/pages/stock/restock-page.tsx": {
-    "mtime": 1788673804.4247696,
-    "seen": 1788674116.1530323,
-    "ast_hash": "dfe0a2e5e52f67456cb483059d8cc3ea",
+    "mtime": 1788679795.1270254,
+    "seen": 1788679938.0729594,
+    "ast_hash": "89a1db8177c71ecbb6f47b911f7d18ad",
     "semantic_hash": ""
   },
   "frontend/src/pages/stock/stock-history-page.tsx": {
-    "mtime": 1788673799.636136,
-    "seen": 1788674116.1530323,
-    "ast_hash": "41cdcd8c598f1f617c8802dbdeaa8aa1",
+    "mtime": 1788679811.5709996,
+    "seen": 1788679938.0729594,
+    "ast_hash": "589358c36bacbe9a73143245dbb5d562",
     "semantic_hash": ""
   },
   "frontend/src/pages/stock/stock-in-page.tsx": {
@@ -810,9 +810,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/stock/stock-page.tsx": {
-    "mtime": 1788673828.9751263,
-    "seen": 1788674116.1530323,
-    "ast_hash": "fd3e499cbb3c89d3a715f36750f6ece6",
+    "mtime": 1788679770.4293723,
+    "seen": 1788679938.0739596,
+    "ast_hash": "54d57d948a864ade173ed9cf393d2e36",
     "semantic_hash": ""
   },
   "frontend/src/vite-env.d.ts": {

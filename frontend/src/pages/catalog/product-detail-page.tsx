@@ -12,7 +12,7 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
-import { money } from '@/lib/format';
+import { money, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PRICE_SOURCES: Record<string, string> = {
@@ -209,7 +209,7 @@ export function ProductDetailPage() {
                     <TableCell>{s.lotNumber ?? '—'}</TableCell>
                     <TableCell>{s.expirationDate ? s.expirationDate.slice(0, 10) : '—'}</TableCell>
                     <TableCell>{s.supplierName ?? '—'}</TableCell>
-                    <TableCell className="text-right font-medium">{s.quantity}</TableCell>
+                    <TableCell className="text-right font-medium tabular">{quantity(s.quantity)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

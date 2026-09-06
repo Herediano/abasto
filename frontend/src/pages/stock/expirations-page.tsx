@@ -13,6 +13,7 @@ import { StockNav } from '@/components/stock-nav';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type StockItem } from '@/lib/api';
+import { quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -118,7 +119,7 @@ export function ExpirationsPage() {
                       <TableCell>
                         <Badge variant={urgency.variant}>{urgency.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold">{i.quantity}</TableCell>
+                      <TableCell className="text-right font-semibold tabular">{quantity(i.quantity)}</TableCell>
                       {puedeEditar && (
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(i)}>

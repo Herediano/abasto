@@ -1,16 +1,16 @@
 # Graph Report - erp-modular-vision-56c436  (2026-09-06)
 
 ## Corpus Check
-- 189 files · ~109,628 words
+- 189 files · ~109,662 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1441 nodes · 3809 edges · 99 communities (72 shown, 9 thin omitted)
+- 1441 nodes · 3825 edges · 99 communities (72 shown, 9 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 147 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `114701a3`
+- Built from commit: `5a608b6f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -39,7 +39,7 @@
 - products table
 - PriceListsController
 - PriceRulesController
-- CategoriesPage
+- WarehousesPage
 - CustomersController
 - price-import.util.ts
 - StockInPage
@@ -66,7 +66,7 @@
 - allowScripts
 - import-reference-from-xlsx.ts
 - Purchases/Reception/Stock Research
-- RangosPage
+- UsersPage
 - SalesController
 - backend/package.json
 - CuentasCorrientesController
@@ -134,7 +134,7 @@
 
 ### Community 0 - "api.ts"
 Cohesion: 0.06
-Nodes (135): AccountList(), iniciales(), EmptyState(), ExportMenu(), download(), Field(), PermissionRoute(), FullScreenRoute() (+127 more)
+Nodes (140): AccountList(), iniciales(), EmptyState(), ExportMenu(), download(), Field(), PermissionRoute(), FullScreenRoute() (+132 more)
 
 ### Community 1 - "SalesService"
 Cohesion: 0.21
@@ -228,9 +228,9 @@ Nodes (11): PriceListsController, Body, Controller, Delete, Get, Inject, Param, 
 Cohesion: 0.21
 Nodes (10): PriceRulesController, Body, Controller, Delete, Get, Param, Post, Put (+2 more)
 
-### Community 24 - "CategoriesPage"
+### Community 24 - "WarehousesPage"
 Cohesion: 0.33
-Nodes (3): CategoriesPage(), confirmDelete(), submit()
+Nodes (3): WarehousesPage(), submit(), submitCaja()
 
 ### Community 25 - "CustomersController"
 Cohesion: 0.17
@@ -261,8 +261,8 @@ Cohesion: 0.15
 Nodes (13): devDependencies, prisma, tsx, @types/express, @types/multer, @types/node, typescript, typescript (+5 more)
 
 ### Community 33 - "api"
-Cohesion: 0.11
-Nodes (21): api, UsersPage(), submitCreate(), submitEdit(), iniciales(), PasswordSection(), submit(), PerfilSection() (+13 more)
+Cohesion: 0.13
+Nodes (20): api, iniciales(), PerfilSection(), submit(), CategoriesPage(), confirmDelete(), submit(), CustomersPage() (+12 more)
 
 ### Community 35 - "enrich-reference-categories.ts"
 Cohesion: 0.27
@@ -328,9 +328,9 @@ Nodes (5): cellText(), findColumn(), HEADERS, main(), prisma
 Cohesion: 0.33
 Nodes (6): ARCA: Emisión y Autorización de Factura Electrónica, ARCA: Régimen General y Clases de Comprobantes, GS1 Global Traceability Standard, Oracle Procurement Three-Way Match Docs, Purchases/Reception/Stock Research, Three-Way Match Concept
 
-### Community 51 - "RangosPage"
+### Community 51 - "UsersPage"
 Cohesion: 0.40
-Nodes (5): RangosPage(), abrirEdicion(), borrar(), crear(), guardar()
+Nodes (3): UsersPage(), submitCreate(), submitEdit()
 
 ### Community 52 - "SalesController"
 Cohesion: 0.23
@@ -353,8 +353,8 @@ Cohesion: 0.22
 Nodes (7): ReportesController, Controller, Get, Inject, Query, Req, UseGuards
 
 ### Community 57 - "errorMessage"
-Cohesion: 0.16
-Nodes (16): errorMessage(), submit(), margin(), ProductDetailPage(), addBarcode(), addTier(), removeBarcode(), removeTier() (+8 more)
+Cohesion: 0.18
+Nodes (15): errorMessage(), RangosPage(), abrirEdicion(), borrar(), crear(), guardar(), PasswordSection(), submit() (+7 more)
 
 ### Community 58 - "EscritorioController"
 Cohesion: 0.25
@@ -422,22 +422,22 @@ Nodes (3): PrismaModule, Module, Global
 
 ## Knowledge Gaps
 - **279 isolated node(s):** `name`, `private`, `start:dev`, `start`, `db:generate` (+274 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 514 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 513 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AuthService` connect `AuthService` to `app.module.ts`, `PurchasesService`, `RangosService`, `.token`?**
-  _High betweenness centrality (0.261) - this node is a cross-community bridge._
+  _High betweenness centrality (0.256) - this node is a cross-community bridge._
 - **Why does `AuthRequest` connect `AuthRequest` to `app.module.ts`, `AuthService`, `ProductsController`, `prices.service.ts`, `StockService`, `promotions.controller.ts`, `PurchasesService`, `PricesController`, `PriceListsController`, `PriceRulesController`, `CustomersController`, `Tenants Controller`, `RangosService`, `SalesController`, `CuentasCorrientesController`, `CategoriesController`, `ReportesController`, `EscritorioController`, `SuppliersController`, `WarehousesController`?**
-  _High betweenness centrality (0.130) - this node is a cross-community bridge._
-- **Why does `errorMessage()` connect `errorMessage` to `api.ts`, `ProductSearchDialog`, `api`, `ExpirationsPage`, `escritorio-page.tsx`, `money`, `.token`, `SalesHistoryPage`, `RangosPage`, `CategoriesPage`, `StockInPage`, `SuppliersPage`, `SupervisorAuthDialog`, `EmpresaSection`?**
-  _High betweenness centrality (0.091) - this node is a cross-community bridge._
+  _High betweenness centrality (0.131) - this node is a cross-community bridge._
+- **Why does `errorMessage()` connect `errorMessage` to `api.ts`, `ProductSearchDialog`, `api`, `ExpirationsPage`, `escritorio-page.tsx`, `money`, `.token`, `SalesHistoryPage`, `UsersPage`, `WarehousesPage`, `StockInPage`, `SuppliersPage`, `SupervisorAuthDialog`, `EmpresaSection`?**
+  _High betweenness centrality (0.089) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `start:dev` to the rest of the system?**
   _279 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `api.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.05829015544041451 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05665795005896529 - nodes in this community are weakly interconnected._
 - **Should `app.module.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.1288135593220339 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**

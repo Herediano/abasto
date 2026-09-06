@@ -10,6 +10,7 @@ import { StockNav } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type LowStockProduct } from '@/lib/api';
+import { quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 export function RestockPage() {
@@ -58,8 +59,8 @@ export function RestockPage() {
                           {p.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-right">{p.currentStock}</TableCell>
-                      <TableCell className="text-right">{min}</TableCell>
+                      <TableCell className="text-right tabular">{quantity(p.currentStock)}</TableCell>
+                      <TableCell className="text-right tabular">{quantity(min)}</TableCell>
                       <TableCell>
                         <Badge variant={urgent ? 'destructive' : 'warning'}>{urgent ? 'Sin stock' : 'Por debajo del mínimo'}</Badge>
                       </TableCell>
