@@ -767,19 +767,6 @@
       "source_location": "L10"
     },
     {
-      "id": "backend_src_cuentas_corrientes_service_cuentascorrientesservice",
-      "label": "CuentasCorrientesService",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesService",
-      "file_type": "code",
-      "norm_label": "cuentascorrientesservice",
-      "source_file": "backend/src/cuentas-corrientes.service.ts",
-      "source_location": "L8"
-    },
-    {
       "id": "backend_src_price_resolver_util_db",
       "label": "Db",
       "_callable": true,
@@ -962,19 +949,6 @@
       "source_location": "L15"
     },
     {
-      "id": "frontend_src_lib_theme_theme",
-      "label": "Theme",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "theme",
-      "source_file": "frontend/src/lib/theme.ts",
-      "source_location": "L3"
-    },
-    {
       "id": "frontend_src_pages_escritorio_page_config",
       "label": "Config",
       "_callable": true,
@@ -985,7 +959,7 @@
       "file_type": "code",
       "norm_label": "config",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L21"
+      "source_location": "L22"
     },
     {
       "id": "backend_src_promotions_controller_promotionscontroller",
@@ -1014,17 +988,17 @@
       "source_location": "L11"
     },
     {
-      "id": "backend_src_prices_controller_pricescontroller",
-      "label": "PricesController",
+      "id": "backend_src_purchases_service_purchasesservice",
+      "label": "PurchasesService",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 13,
-      "community_name": "PricesController",
+      "community_name": "PurchasesService",
       "file_type": "code",
-      "norm_label": "pricescontroller",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L15"
+      "norm_label": "purchasesservice",
+      "source_file": "backend/src/purchases.service.ts",
+      "source_location": "L12"
     },
     {
       "id": "frontend_src_components_auth_background_forma",
@@ -1118,6 +1092,19 @@
       "source_location": "L3"
     },
     {
+      "id": "backend_src_cuentas_corrientes_service_cuentascorrientesservice",
+      "label": "CuentasCorrientesService",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "app.module.ts",
+      "file_type": "code",
+      "norm_label": "cuentascorrientesservice",
+      "source_file": "backend/src/cuentas-corrientes.service.ts",
+      "source_location": "L8"
+    },
+    {
       "id": "backend_src_cuentas_corrientes_service_usuario",
       "label": "Usuario",
       "_callable": true,
@@ -1168,6 +1155,19 @@
       "norm_label": "period",
       "source_file": "backend/src/reportes.controller.ts",
       "source_location": "L8"
+    },
+    {
+      "id": "frontend_src_lib_theme_theme",
+      "label": "Theme",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 20,
+      "community_name": "theme.ts",
+      "file_type": "code",
+      "norm_label": "theme",
+      "source_file": "frontend/src/lib/theme.ts",
+      "source_location": "L3"
     },
     {
       "id": "backend_src_price_lists_controller_pricelistscontroller",
@@ -1285,97 +1285,6 @@
       "norm_label": "parsepricesresult",
       "source_file": "backend/src/price-import.util.ts",
       "source_location": "L11"
-    },
-    {
-      "id": "backend_src_prices_service_bulkinput",
-      "label": "BulkInput",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "bulkinput",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L22"
-    },
-    {
-      "id": "backend_src_prices_service_operationtype",
-      "label": "OperationType",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "operationtype",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L9"
-    },
-    {
-      "id": "backend_src_prices_service_pricesservice",
-      "label": "PricesService",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "pricesservice",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L59"
-    },
-    {
-      "id": "backend_src_prices_service_rounding",
-      "label": "Rounding",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "rounding",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L11"
-    },
-    {
-      "id": "backend_src_prices_service_scopetype",
-      "label": "ScopeType",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "scopetype",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L7"
-    },
-    {
-      "id": "backend_src_prices_service_target",
-      "label": "Target",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "target",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L8"
-    },
-    {
-      "id": "backend_src_prices_service_tramoredondeo",
-      "label": "TramoRedondeo",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "tramoredondeo",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L31"
     },
     {
       "id": "frontend_src_components_ventas_chart_metric",
@@ -1518,7 +1427,7 @@
       "file_type": "code",
       "norm_label": "appmodule",
       "source_file": "backend/src/app.module.ts",
-      "source_location": "L46"
+      "source_location": "L47"
     },
     {
       "id": "backend_src_prisma_exception_filter_prismaexceptionfilter",
@@ -1560,6 +1469,19 @@
       "source_location": "L9"
     },
     {
+      "id": "backend_src_bootstrap_service_bootstrapservice",
+      "label": "BootstrapService",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "bootstrapservice",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L11"
+    },
+    {
       "id": "backend_src_caja_service_usuario",
       "label": "Usuario",
       "_callable": true,
@@ -1584,6 +1506,97 @@
       "norm_label": "healthcontroller",
       "source_file": "backend/src/health.controller.ts",
       "source_location": "L5"
+    },
+    {
+      "id": "backend_src_prices_service_bulkinput",
+      "label": "BulkInput",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "bulkinput",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L22"
+    },
+    {
+      "id": "backend_src_prices_service_operationtype",
+      "label": "OperationType",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "operationtype",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L9"
+    },
+    {
+      "id": "backend_src_prices_service_pricesservice",
+      "label": "PricesService",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "pricesservice",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L59"
+    },
+    {
+      "id": "backend_src_prices_service_rounding",
+      "label": "Rounding",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "rounding",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L11"
+    },
+    {
+      "id": "backend_src_prices_service_scopetype",
+      "label": "ScopeType",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "scopetype",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L7"
+    },
+    {
+      "id": "backend_src_prices_service_target",
+      "label": "Target",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "target",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L8"
+    },
+    {
+      "id": "backend_src_prices_service_tramoredondeo",
+      "label": "TramoRedondeo",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "tramoredondeo",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L31"
     },
     {
       "id": "backend_src_prisma_prisma_module_prismamodule",
@@ -1833,6 +1846,19 @@
       "source_location": "L24"
     },
     {
+      "id": "backend_src_prices_controller_pricescontroller",
+      "label": "PricesController",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "pricescontroller",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L15"
+    },
+    {
       "id": "backend_src_sales_controller_salescontroller",
       "label": "SalesController",
       "_callable": true,
@@ -1878,24 +1904,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": "purchasescontroller",
       "source_file": "backend/src/purchases.controller.ts",
       "source_location": "L10"
-    },
-    {
-      "id": "backend_src_purchases_service_purchasesservice",
-      "label": "PurchasesService",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": "purchasesservice",
-      "source_file": "backend/src/purchases.service.ts",
-      "source_location": "L12"
     },
     {
       "id": "frontend_src_components_empty_state_emptystate",
@@ -1956,42 +1969,6 @@
       "norm_label": "field()",
       "source_file": "frontend/src/components/field.tsx",
       "source_location": "L5"
-    },
-    {
-      "id": "frontend_src_components_layout_admin_route_permissionroute",
-      "label": "PermissionRoute()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "permissionroute()",
-      "source_file": "frontend/src/components/layout/admin-route.tsx",
-      "source_location": "L5"
-    },
-    {
-      "id": "frontend_src_components_layout_protected_route_fullscreenroute",
-      "label": "FullScreenRoute()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "fullscreenroute()",
-      "source_file": "frontend/src/components/layout/protected-route.tsx",
-      "source_location": "L17"
-    },
-    {
-      "id": "frontend_src_components_layout_protected_route_protectedroute",
-      "label": "ProtectedRoute()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "protectedroute()",
-      "source_file": "frontend/src/components/layout/protected-route.tsx",
-      "source_location": "L6"
     },
     {
       "id": "frontend_src_components_page_header_pageheader",
@@ -2064,6 +2041,18 @@
       "norm_label": "stocknav()",
       "source_file": "frontend/src/components/stock-nav.tsx",
       "source_location": "L18"
+    },
+    {
+      "id": "frontend_src_components_theme_toggle_themetoggle",
+      "label": "ThemeToggle()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "themetoggle()",
+      "source_file": "frontend/src/components/theme-toggle.tsx",
+      "source_location": "L11"
     },
     {
       "id": "frontend_src_components_ui_alert_alert",
@@ -2162,18 +2151,6 @@
       "source_location": "L3"
     },
     {
-      "id": "frontend_src_lib_auth_context_useauth",
-      "label": "useAuth()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "useauth()",
-      "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L61"
-    },
-    {
       "id": "frontend_src_lib_format_quantity",
       "label": "quantity()",
       "_callable": true,
@@ -2195,7 +2172,19 @@
       "file_type": "code",
       "norm_label": "moduleforpath()",
       "source_file": "frontend/src/lib/modules.tsx",
-      "source_location": "L103"
+      "source_location": "L126"
+    },
+    {
+      "id": "frontend_src_lib_pesable_parseweighedbarcode",
+      "label": "parseWeighedBarcode()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "parseweighedbarcode()",
+      "source_file": "frontend/src/lib/pesable.ts",
+      "source_location": "L7"
     },
     {
       "id": "frontend_src_lib_utils_cn",
@@ -2220,30 +2209,6 @@
       "norm_label": "authlayout()",
       "source_file": "frontend/src/pages/auth/login-page.tsx",
       "source_location": "L55"
-    },
-    {
-      "id": "frontend_src_pages_auth_login_page_loginpage",
-      "label": "LoginPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "loginpage()",
-      "source_file": "frontend/src/pages/auth/login-page.tsx",
-      "source_location": "L13"
-    },
-    {
-      "id": "frontend_src_pages_auth_signup_page_signuppage",
-      "label": "SignupPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "signuppage()",
-      "source_file": "frontend/src/pages/auth/signup-page.tsx",
-      "source_location": "L12"
     },
     {
       "id": "backend_src_cuenta_corriente_util_registrarmovimientocuenta",
@@ -2318,18 +2283,6 @@
       "source_location": "L11"
     },
     {
-      "id": "backend_src_cuentas_corrientes_service_cuentascorrientesservice_constructor",
-      "label": ".constructor()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesService",
-      "file_type": "code",
-      "norm_label": ".constructor()",
-      "source_file": "backend/src/cuentas-corrientes.service.ts",
-      "source_location": "L9"
-    },
-    {
       "id": "backend_src_cuentas_corrientes_service_cuentascorrientesservice_registeradjustment",
       "label": ".registerAdjustment()",
       "_callable": true,
@@ -2352,18 +2305,6 @@
       "norm_label": ".registerpayment()",
       "source_file": "backend/src/cuentas-corrientes.service.ts",
       "source_location": "L32"
-    },
-    {
-      "id": "backend_src_price_resolver_util_guardarprecio",
-      "label": "guardarPrecio()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesService",
-      "file_type": "code",
-      "norm_label": "guardarprecio()",
-      "source_file": "backend/src/price-resolver.util.ts",
-      "source_location": "L116"
     },
     {
       "id": "backend_src_price_resolver_util_precioexplicito",
@@ -2630,30 +2571,6 @@
       "source_location": "L10"
     },
     {
-      "id": "frontend_src_components_layout_escritorio_shell_escritorioshell",
-      "label": "EscritorioShell()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "escritorioshell()",
-      "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
-      "source_location": "L18"
-    },
-    {
-      "id": "frontend_src_components_layout_escritorio_shell_escritorioshell_onkey",
-      "label": "onKey()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "onkey()",
-      "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
-      "source_location": "L26"
-    },
-    {
       "id": "frontend_src_components_layout_escritorio_shell_usepalette",
       "label": "usePalette()",
       "_callable": true,
@@ -2666,16 +2583,40 @@
       "source_location": "L8"
     },
     {
-      "id": "frontend_src_components_theme_toggle_themetoggle",
-      "label": "ThemeToggle()",
+      "id": "frontend_src_components_user_menu_iniciales",
+      "label": "iniciales()",
       "_callable": true,
       "_origin": "ast",
       "community": 10,
       "community_name": "escritorio-page.tsx",
       "file_type": "code",
-      "norm_label": "themetoggle()",
-      "source_file": "frontend/src/components/theme-toggle.tsx",
-      "source_location": "L11"
+      "norm_label": "iniciales()",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L8"
+    },
+    {
+      "id": "frontend_src_components_user_menu_usermenu",
+      "label": "UserMenu()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "escritorio-page.tsx",
+      "file_type": "code",
+      "norm_label": "usermenu()",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L21"
+    },
+    {
+      "id": "frontend_src_components_user_menu_usermenu_cambiarcuenta",
+      "label": "cambiarCuenta()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "escritorio-page.tsx",
+      "file_type": "code",
+      "norm_label": "cambiarcuenta()",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L50"
     },
     {
       "id": "frontend_src_lib_escritorio_compact",
@@ -2726,6 +2667,18 @@
       "source_location": "L35"
     },
     {
+      "id": "frontend_src_lib_modules_huefor",
+      "label": "hueFor()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "escritorio-page.tsx",
+      "file_type": "code",
+      "norm_label": "huefor()",
+      "source_file": "frontend/src/lib/modules.tsx",
+      "source_location": "L123"
+    },
+    {
       "id": "frontend_src_lib_modules_modulebykey",
       "label": "moduleByKey()",
       "_callable": true,
@@ -2747,7 +2700,7 @@
       "file_type": "code",
       "norm_label": "modulemotif()",
       "source_file": "frontend/src/lib/modules.tsx",
-      "source_location": "L117"
+      "source_location": "L140"
     },
     {
       "id": "frontend_src_lib_modules_visiblemodules",
@@ -2759,55 +2712,7 @@
       "file_type": "code",
       "norm_label": "visiblemodules()",
       "source_file": "frontend/src/lib/modules.tsx",
-      "source_location": "L112"
-    },
-    {
-      "id": "frontend_src_lib_theme_aplicar",
-      "label": "aplicar()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "aplicar()",
-      "source_file": "frontend/src/lib/theme.ts",
-      "source_location": "L25"
-    },
-    {
-      "id": "frontend_src_lib_theme_leer",
-      "label": "leer()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "leer()",
-      "source_file": "frontend/src/lib/theme.ts",
-      "source_location": "L15"
-    },
-    {
-      "id": "frontend_src_lib_theme_prefiereoscuro",
-      "label": "prefiereOscuro()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "prefiereoscuro()",
-      "source_file": "frontend/src/lib/theme.ts",
-      "source_location": "L7"
-    },
-    {
-      "id": "frontend_src_lib_theme_usetheme",
-      "label": "useTheme()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "usetheme()",
-      "source_file": "frontend/src/lib/theme.ts",
-      "source_location": "L33"
+      "source_location": "L135"
     },
     {
       "id": "frontend_src_pages_escritorio_page_applyorder",
@@ -2819,7 +2724,7 @@
       "file_type": "code",
       "norm_label": "applyorder()",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L45"
+      "source_location": "L46"
     },
     {
       "id": "frontend_src_pages_escritorio_page_escritoriopage",
@@ -2831,7 +2736,7 @@
       "file_type": "code",
       "norm_label": "escritoriopage()",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L50"
+      "source_location": "L51"
     },
     {
       "id": "frontend_src_pages_escritorio_page_escritoriopage_open",
@@ -2843,7 +2748,7 @@
       "file_type": "code",
       "norm_label": "open()",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L99"
+      "source_location": "L104"
     },
     {
       "id": "frontend_src_pages_escritorio_page_escritoriopage_update",
@@ -2855,7 +2760,7 @@
       "file_type": "code",
       "norm_label": "update()",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L77"
+      "source_location": "L79"
     },
     {
       "id": "frontend_src_pages_escritorio_page_readconfig",
@@ -2867,7 +2772,7 @@
       "file_type": "code",
       "norm_label": "readconfig()",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L23"
+      "source_location": "L24"
     },
     {
       "id": "frontend_src_pages_escritorio_page_writeconfig",
@@ -2879,7 +2784,7 @@
       "file_type": "code",
       "norm_label": "writeconfig()",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L36"
+      "source_location": "L37"
     },
     {
       "id": "backend_src_promotions_controller_entero",
@@ -2990,100 +2895,136 @@
       "source_location": "L93"
     },
     {
-      "id": "backend_src_price_resolver_util_activarpreciosvigentes",
-      "label": "activarPreciosVigentes()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": "activarpreciosvigentes()",
-      "source_file": "backend/src/price-resolver.util.ts",
-      "source_location": "L144"
-    },
-    {
-      "id": "backend_src_prices_controller_pricescontroller_activate",
-      "label": ".activate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": ".activate()",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L66"
-    },
-    {
-      "id": "backend_src_prices_controller_pricescontroller_audit",
-      "label": ".audit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": ".audit()",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L79"
-    },
-    {
-      "id": "backend_src_prices_controller_pricescontroller_bulk",
-      "label": ".bulk()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": ".bulk()",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L22"
-    },
-    {
-      "id": "backend_src_prices_controller_pricescontroller_cancelscheduled",
-      "label": ".cancelScheduled()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": ".cancelscheduled()",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L52"
-    },
-    {
-      "id": "backend_src_prices_controller_pricescontroller_constructor",
+      "id": "backend_src_purchases_controller_purchasescontroller_constructor",
       "label": ".constructor()",
       "_callable": true,
       "_origin": "ast",
       "community": 13,
-      "community_name": "PricesController",
+      "community_name": "PurchasesService",
       "file_type": "code",
       "norm_label": ".constructor()",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L16"
+      "source_file": "backend/src/purchases.controller.ts",
+      "source_location": "L11"
     },
     {
-      "id": "backend_src_prices_controller_pricescontroller_createroundingrule",
-      "label": ".createRoundingRule()",
+      "id": "backend_src_purchases_service_purchasesservice_constructor",
+      "label": ".constructor()",
       "_callable": true,
       "_origin": "ast",
       "community": 13,
-      "community_name": "PricesController",
+      "community_name": "PurchasesService",
       "file_type": "code",
-      "norm_label": ".createroundingrule()",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L166"
+      "norm_label": ".constructor()",
+      "source_file": "backend/src/purchases.service.ts",
+      "source_location": "L13"
     },
     {
-      "id": "backend_src_prices_controller_pricescontroller_deleteroundingrule",
-      "label": ".deleteRoundingRule()",
+      "id": "backend_src_purchases_service_purchasesservice_correct",
+      "label": ".correct()",
       "_callable": true,
       "_origin": "ast",
       "community": 13,
-      "community_name": "PricesController",
+      "community_name": "PurchasesService",
       "file_type": "code",
-      "norm_label": ".deleteroundingrule()",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L191"
+      "norm_label": ".correct()",
+      "source_file": "backend/src/purchases.service.ts",
+      "source_location": "L106"
+    },
+    {
+      "id": "backend_src_purchases_service_purchasesservice_createdraft",
+      "label": ".createDraft()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 13,
+      "community_name": "PurchasesService",
+      "file_type": "code",
+      "norm_label": ".createdraft()",
+      "source_file": "backend/src/purchases.service.ts",
+      "source_location": "L30"
+    },
+    {
+      "id": "backend_src_purchases_service_purchasesservice_list",
+      "label": ".list()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 13,
+      "community_name": "PurchasesService",
+      "file_type": "code",
+      "norm_label": ".list()",
+      "source_file": "backend/src/purchases.service.ts",
+      "source_location": "L167"
+    },
+    {
+      "id": "backend_src_purchases_service_purchasesservice_money",
+      "label": ".money()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 13,
+      "community_name": "PurchasesService",
+      "file_type": "code",
+      "norm_label": ".money()",
+      "source_file": "backend/src/purchases.service.ts",
+      "source_location": "L15"
+    },
+    {
+      "id": "backend_src_purchases_service_purchasesservice_parseothertaxes",
+      "label": ".parseOtherTaxes()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 13,
+      "community_name": "PurchasesService",
+      "file_type": "code",
+      "norm_label": ".parseothertaxes()",
+      "source_file": "backend/src/purchases.service.ts",
+      "source_location": "L21"
+    },
+    {
+      "id": "frontend_src_components_product_search_dialog_productsearchdialog",
+      "label": "ProductSearchDialog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "money",
+      "file_type": "code",
+      "norm_label": "productsearchdialog()",
+      "source_file": "frontend/src/components/product-search-dialog.tsx",
+      "source_location": "L29"
+    },
+    {
+      "id": "frontend_src_components_product_search_dialog_productsearchdialog_alteclear",
+      "label": "alTeclear()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "money",
+      "file_type": "code",
+      "norm_label": "alteclear()",
+      "source_file": "frontend/src/components/product-search-dialog.tsx",
+      "source_location": "L115"
+    },
+    {
+      "id": "frontend_src_components_product_search_dialog_productsearchdialog_elegible",
+      "label": "elegible()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "money",
+      "file_type": "code",
+      "norm_label": "elegible()",
+      "source_file": "frontend/src/components/product-search-dialog.tsx",
+      "source_location": "L105"
+    },
+    {
+      "id": "frontend_src_components_product_search_dialog_productsearchdialog_elegir",
+      "label": "elegir()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "money",
+      "file_type": "code",
+      "norm_label": "elegir()",
+      "source_file": "frontend/src/components/product-search-dialog.tsx",
+      "source_location": "L109"
     },
     {
       "id": "frontend_src_lib_format_money",
@@ -3096,18 +3037,6 @@
       "norm_label": "money()",
       "source_file": "frontend/src/lib/format.ts",
       "source_location": "L14"
-    },
-    {
-      "id": "frontend_src_lib_pesable_parseweighedbarcode",
-      "label": "parseWeighedBarcode()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "money",
-      "file_type": "code",
-      "norm_label": "parseweighedbarcode()",
-      "source_file": "frontend/src/lib/pesable.ts",
-      "source_location": "L7"
     },
     {
       "id": "frontend_src_pages_sales_pos_page_describirpromo",
@@ -3338,28 +3267,28 @@
       "source_location": "L80"
     },
     {
-      "id": "frontend_src_pages_sales_shifts_history_page_fechahora",
-      "label": "fechaHora()",
+      "id": "backend_src_auth_service_authservice_token",
+      "label": ".token()",
       "_callable": true,
       "_origin": "ast",
-      "community": 14,
-      "community_name": "money",
+      "community": 15,
+      "community_name": "errorMessage",
       "file_type": "code",
-      "norm_label": "fechahora()",
-      "source_file": "frontend/src/pages/sales/shifts-history-page.tsx",
-      "source_location": "L20"
+      "norm_label": ".token()",
+      "source_file": "backend/src/auth.service.ts",
+      "source_location": "L28"
     },
     {
-      "id": "frontend_src_pages_sales_shifts_history_page_shiftshistorypage",
-      "label": "ShiftsHistoryPage()",
+      "id": "frontend_src_lib_api_api",
+      "label": "api",
       "_callable": true,
       "_origin": "ast",
-      "community": 14,
-      "community_name": "money",
+      "community": 15,
+      "community_name": "errorMessage",
       "file_type": "code",
-      "norm_label": "shiftshistorypage()",
-      "source_file": "frontend/src/pages/sales/shifts-history-page.tsx",
-      "source_location": "L27"
+      "norm_label": "api",
+      "source_file": "frontend/src/lib/api.ts",
+      "source_location": "L338"
     },
     {
       "id": "frontend_src_lib_api_errormessage",
@@ -3374,19 +3303,55 @@
       "source_location": "L351"
     },
     {
-      "id": "frontend_src_pages_auth_login_page_loginpage_submit",
-      "label": "submit()",
+      "id": "frontend_src_pages_catalog_customers_page_customerspage",
+      "label": "CustomersPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 15,
       "community_name": "errorMessage",
       "file_type": "code",
-      "norm_label": "submit()",
-      "source_file": "frontend/src/pages/auth/login-page.tsx",
-      "source_location": "L21"
+      "norm_label": "customerspage()",
+      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
+      "source_location": "L22"
     },
     {
-      "id": "frontend_src_pages_auth_signup_page_signuppage_submit",
+      "id": "frontend_src_pages_catalog_customers_page_customerspage_opencuenta",
+      "label": "openCuenta()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "opencuenta()",
+      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
+      "source_location": "L84"
+    },
+    {
+      "id": "frontend_src_pages_catalog_customers_page_customerspage_opendialog",
+      "label": "openDialog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "opendialog()",
+      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
+      "source_location": "L68"
+    },
+    {
+      "id": "frontend_src_pages_catalog_customers_page_customerspage_registrarpago",
+      "label": "registrarPago()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "registrarpago()",
+      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
+      "source_location": "L98"
+    },
+    {
+      "id": "frontend_src_pages_catalog_customers_page_customerspage_submit",
       "label": "submit()",
       "_callable": true,
       "_origin": "ast",
@@ -3394,8 +3359,188 @@
       "community_name": "errorMessage",
       "file_type": "code",
       "norm_label": "submit()",
-      "source_file": "frontend/src/pages/auth/signup-page.tsx",
-      "source_location": "L20"
+      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
+      "source_location": "L117"
+    },
+    {
+      "id": "frontend_src_pages_catalog_customers_page_customerspage_toggleactive",
+      "label": "toggleActive()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "toggleactive()",
+      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
+      "source_location": "L134"
+    },
+    {
+      "id": "frontend_src_pages_catalog_product_detail_page_margin",
+      "label": "margin()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "margin()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L25"
+    },
+    {
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage",
+      "label": "ProductDetailPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "productdetailpage()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L32"
+    },
+    {
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_addbarcode",
+      "label": "addBarcode()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "addbarcode()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L70"
+    },
+    {
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_addtier",
+      "label": "addTier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "addtier()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L94"
+    },
+    {
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_removebarcode",
+      "label": "removeBarcode()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "removebarcode()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L122"
+    },
+    {
+      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_removetier",
+      "label": "removeTier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "removetier()",
+      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
+      "source_location": "L112"
+    },
+    {
+      "id": "frontend_src_pages_catalog_products_page_productspage",
+      "label": "ProductsPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "productspage()",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L28"
+    },
+    {
+      "id": "frontend_src_pages_catalog_products_page_productspage_clearcatalog",
+      "label": "clearCatalog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "clearcatalog()",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L140"
+    },
+    {
+      "id": "frontend_src_pages_catalog_products_page_productspage_createcategory",
+      "label": "createCategory()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "createcategory()",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L230"
+    },
+    {
+      "id": "frontend_src_pages_catalog_products_page_productspage_importcatalog",
+      "label": "importCatalog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "importcatalog()",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L124"
+    },
+    {
+      "id": "frontend_src_pages_catalog_products_page_productspage_opencreate",
+      "label": "openCreate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "opencreate()",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L181"
+    },
+    {
+      "id": "frontend_src_pages_catalog_products_page_productspage_openedit",
+      "label": "openEdit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "openedit()",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L191"
+    },
+    {
+      "id": "frontend_src_pages_catalog_products_page_productspage_submit",
+      "label": "submit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "submit()",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L213"
+    },
+    {
+      "id": "frontend_src_pages_catalog_products_page_productspage_toggleactive",
+      "label": "toggleActive()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "toggleactive()",
+      "source_file": "frontend/src/pages/catalog/products-page.tsx",
+      "source_location": "L248"
     },
     {
       "id": "frontend_src_pages_prices_prices_page_pricespage",
@@ -3624,6 +3769,30 @@
       "norm_label": "saverule()",
       "source_file": "frontend/src/pages/prices/prices-page.tsx",
       "source_location": "L208"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_out_page_stockoutpage",
+      "label": "StockOutPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "stockoutpage()",
+      "source_file": "frontend/src/pages/stock/stock-out-page.tsx",
+      "source_location": "L23"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_out_page_stockoutpage_submit",
+      "label": "submit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 15,
+      "community_name": "errorMessage",
+      "file_type": "code",
+      "norm_label": "submit()",
+      "source_file": "frontend/src/pages/stock/stock-out-page.tsx",
+      "source_location": "L58"
     },
     {
       "id": "frontend_src_components_auth_background_authbackground",
@@ -4007,7 +4176,7 @@
       "file_type": "code",
       "norm_label": ".authenticate()",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L127"
+      "source_location": "L132"
     },
     {
       "id": "backend_src_export_util_csvcell",
@@ -4046,184 +4215,52 @@
       "source_location": "L16"
     },
     {
-      "id": "backend_src_auth_service_authservice_token",
-      "label": ".token()",
+      "id": "frontend_src_lib_theme_aplicar",
+      "label": "aplicar()",
       "_callable": true,
       "_origin": "ast",
       "community": 20,
-      "community_name": ".token",
+      "community_name": "theme.ts",
       "file_type": "code",
-      "norm_label": ".token()",
-      "source_file": "backend/src/auth.service.ts",
-      "source_location": "L28"
+      "norm_label": "aplicar()",
+      "source_file": "frontend/src/lib/theme.ts",
+      "source_location": "L25"
     },
     {
-      "id": "frontend_src_pages_catalog_customers_page_customerspage",
-      "label": "CustomersPage()",
+      "id": "frontend_src_lib_theme_leer",
+      "label": "leer()",
       "_callable": true,
       "_origin": "ast",
       "community": 20,
-      "community_name": ".token",
+      "community_name": "theme.ts",
       "file_type": "code",
-      "norm_label": "customerspage()",
-      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
-      "source_location": "L22"
+      "norm_label": "leer()",
+      "source_file": "frontend/src/lib/theme.ts",
+      "source_location": "L15"
     },
     {
-      "id": "frontend_src_pages_catalog_customers_page_customerspage_opencuenta",
-      "label": "openCuenta()",
+      "id": "frontend_src_lib_theme_prefiereoscuro",
+      "label": "prefiereOscuro()",
       "_callable": true,
       "_origin": "ast",
       "community": 20,
-      "community_name": ".token",
+      "community_name": "theme.ts",
       "file_type": "code",
-      "norm_label": "opencuenta()",
-      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
-      "source_location": "L84"
+      "norm_label": "prefiereoscuro()",
+      "source_file": "frontend/src/lib/theme.ts",
+      "source_location": "L7"
     },
     {
-      "id": "frontend_src_pages_catalog_customers_page_customerspage_opendialog",
-      "label": "openDialog()",
+      "id": "frontend_src_lib_theme_usetheme",
+      "label": "useTheme()",
       "_callable": true,
       "_origin": "ast",
       "community": 20,
-      "community_name": ".token",
+      "community_name": "theme.ts",
       "file_type": "code",
-      "norm_label": "opendialog()",
-      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
-      "source_location": "L68"
-    },
-    {
-      "id": "frontend_src_pages_catalog_customers_page_customerspage_registrarpago",
-      "label": "registrarPago()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "registrarpago()",
-      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
-      "source_location": "L98"
-    },
-    {
-      "id": "frontend_src_pages_catalog_customers_page_customerspage_submit",
-      "label": "submit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "submit()",
-      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
-      "source_location": "L117"
-    },
-    {
-      "id": "frontend_src_pages_catalog_customers_page_customerspage_toggleactive",
-      "label": "toggleActive()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "toggleactive()",
-      "source_file": "frontend/src/pages/catalog/customers-page.tsx",
-      "source_location": "L134"
-    },
-    {
-      "id": "frontend_src_pages_catalog_products_page_productspage",
-      "label": "ProductsPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "productspage()",
-      "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L28"
-    },
-    {
-      "id": "frontend_src_pages_catalog_products_page_productspage_clearcatalog",
-      "label": "clearCatalog()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "clearcatalog()",
-      "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L140"
-    },
-    {
-      "id": "frontend_src_pages_catalog_products_page_productspage_createcategory",
-      "label": "createCategory()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "createcategory()",
-      "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L230"
-    },
-    {
-      "id": "frontend_src_pages_catalog_products_page_productspage_importcatalog",
-      "label": "importCatalog()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "importcatalog()",
-      "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L124"
-    },
-    {
-      "id": "frontend_src_pages_catalog_products_page_productspage_opencreate",
-      "label": "openCreate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "opencreate()",
-      "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L181"
-    },
-    {
-      "id": "frontend_src_pages_catalog_products_page_productspage_openedit",
-      "label": "openEdit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "openedit()",
-      "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L191"
-    },
-    {
-      "id": "frontend_src_pages_catalog_products_page_productspage_submit",
-      "label": "submit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "submit()",
-      "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L213"
-    },
-    {
-      "id": "frontend_src_pages_catalog_products_page_productspage_toggleactive",
-      "label": "toggleActive()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 20,
-      "community_name": ".token",
-      "file_type": "code",
-      "norm_label": "toggleactive()",
-      "source_file": "frontend/src/pages/catalog/products-page.tsx",
-      "source_location": "L248"
+      "norm_label": "usetheme()",
+      "source_file": "frontend/src/lib/theme.ts",
+      "source_location": "L33"
     },
     {
       "id": "backend_src_price_lists_controller_pricelistscontroller_constructor",
@@ -4332,6 +4369,18 @@
       "norm_label": "tonumber()",
       "source_file": "backend/src/price-history.util.ts",
       "source_location": "L18"
+    },
+    {
+      "id": "backend_src_price_resolver_util_guardarprecio",
+      "label": "guardarPrecio()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "PriceRulesController",
+      "file_type": "code",
+      "norm_label": "guardarprecio()",
+      "source_file": "backend/src/price-resolver.util.ts",
+      "source_location": "L116"
     },
     {
       "id": "backend_src_price_rules_controller_pricerulescontroller_create",
@@ -4466,24 +4515,12 @@
       "source_location": "L33"
     },
     {
-      "id": "frontend_src_lib_api_api",
-      "label": "api",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "api",
-      "source_file": "frontend/src/lib/api.ts",
-      "source_location": "L338"
-    },
-    {
       "id": "frontend_src_pages_catalog_categories_page_categoriespage",
       "label": "CategoriesPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "api",
+      "community_name": "CategoriesPage",
       "file_type": "code",
       "norm_label": "categoriespage()",
       "source_file": "frontend/src/pages/catalog/categories-page.tsx",
@@ -4495,7 +4532,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "api",
+      "community_name": "CategoriesPage",
       "file_type": "code",
       "norm_label": "confirmdelete()",
       "source_file": "frontend/src/pages/catalog/categories-page.tsx",
@@ -4507,7 +4544,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "api",
+      "community_name": "CategoriesPage",
       "file_type": "code",
       "norm_label": "opencreate()",
       "source_file": "frontend/src/pages/catalog/categories-page.tsx",
@@ -4519,7 +4556,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "api",
+      "community_name": "CategoriesPage",
       "file_type": "code",
       "norm_label": "opendelete()",
       "source_file": "frontend/src/pages/catalog/categories-page.tsx",
@@ -4531,7 +4568,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "api",
+      "community_name": "CategoriesPage",
       "file_type": "code",
       "norm_label": "openedit()",
       "source_file": "frontend/src/pages/catalog/categories-page.tsx",
@@ -4543,179 +4580,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 24,
-      "community_name": "api",
+      "community_name": "CategoriesPage",
       "file_type": "code",
       "norm_label": "submit()",
       "source_file": "frontend/src/pages/catalog/categories-page.tsx",
       "source_location": "L60"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_margin",
-      "label": "margin()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "margin()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L25"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage",
-      "label": "ProductDetailPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "productdetailpage()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L32"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_addbarcode",
-      "label": "addBarcode()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "addbarcode()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L70"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_addtier",
-      "label": "addTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "addtier()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L94"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_removebarcode",
-      "label": "removeBarcode()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "removebarcode()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L122"
-    },
-    {
-      "id": "frontend_src_pages_catalog_product_detail_page_productdetailpage_removetier",
-      "label": "removeTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "removetier()",
-      "source_file": "frontend/src/pages/catalog/product-detail-page.tsx",
-      "source_location": "L112"
-    },
-    {
-      "id": "frontend_src_pages_catalog_suppliers_page_supplierspage",
-      "label": "SuppliersPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "supplierspage()",
-      "source_file": "frontend/src/pages/catalog/suppliers-page.tsx",
-      "source_location": "L19"
-    },
-    {
-      "id": "frontend_src_pages_catalog_suppliers_page_supplierspage_opencreate",
-      "label": "openCreate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "opencreate()",
-      "source_file": "frontend/src/pages/catalog/suppliers-page.tsx",
-      "source_location": "L47"
-    },
-    {
-      "id": "frontend_src_pages_catalog_suppliers_page_supplierspage_openedit",
-      "label": "openEdit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "openedit()",
-      "source_file": "frontend/src/pages/catalog/suppliers-page.tsx",
-      "source_location": "L54"
-    },
-    {
-      "id": "frontend_src_pages_catalog_suppliers_page_supplierspage_submit",
-      "label": "submit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "submit()",
-      "source_file": "frontend/src/pages/catalog/suppliers-page.tsx",
-      "source_location": "L61"
-    },
-    {
-      "id": "frontend_src_pages_stock_restock_page_restockpage",
-      "label": "RestockPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "restockpage()",
-      "source_file": "frontend/src/pages/stock/restock-page.tsx",
-      "source_location": "L15"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_out_page_stockoutpage",
-      "label": "StockOutPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "stockoutpage()",
-      "source_file": "frontend/src/pages/stock/stock-out-page.tsx",
-      "source_location": "L23"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_out_page_stockoutpage_submit",
-      "label": "submit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "submit()",
-      "source_file": "frontend/src/pages/stock/stock-out-page.tsx",
-      "source_location": "L58"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_page_stockpage",
-      "label": "StockPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 24,
-      "community_name": "api",
-      "file_type": "code",
-      "norm_label": "stockpage()",
-      "source_file": "frontend/src/pages/stock/stock-page.tsx",
-      "source_location": "L14"
     },
     {
       "id": "backend_src_customers_controller_customerscontroller_constructor",
@@ -5054,28 +4923,52 @@
       "source_location": "L99"
     },
     {
-      "id": "backend_src_price_rules_controller_pricerulescontroller_constructor",
-      "label": ".constructor()",
+      "id": "frontend_src_pages_catalog_suppliers_page_supplierspage",
+      "label": "SuppliersPage()",
       "_callable": true,
       "_origin": "ast",
       "community": 28,
-      "community_name": "prices.service.ts",
+      "community_name": "SuppliersPage",
       "file_type": "code",
-      "norm_label": ".constructor()",
-      "source_file": "backend/src/price-rules.controller.ts",
-      "source_location": "L18"
+      "norm_label": "supplierspage()",
+      "source_file": "frontend/src/pages/catalog/suppliers-page.tsx",
+      "source_location": "L19"
     },
     {
-      "id": "backend_src_prices_service_pricesservice_constructor",
-      "label": ".constructor()",
+      "id": "frontend_src_pages_catalog_suppliers_page_supplierspage_opencreate",
+      "label": "openCreate()",
       "_callable": true,
       "_origin": "ast",
       "community": 28,
-      "community_name": "prices.service.ts",
+      "community_name": "SuppliersPage",
       "file_type": "code",
-      "norm_label": ".constructor()",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L60"
+      "norm_label": "opencreate()",
+      "source_file": "frontend/src/pages/catalog/suppliers-page.tsx",
+      "source_location": "L47"
+    },
+    {
+      "id": "frontend_src_pages_catalog_suppliers_page_supplierspage_openedit",
+      "label": "openEdit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "SuppliersPage",
+      "file_type": "code",
+      "norm_label": "openedit()",
+      "source_file": "frontend/src/pages/catalog/suppliers-page.tsx",
+      "source_location": "L54"
+    },
+    {
+      "id": "frontend_src_pages_catalog_suppliers_page_supplierspage_submit",
+      "label": "submit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "SuppliersPage",
+      "file_type": "code",
+      "norm_label": "submit()",
+      "source_file": "frontend/src/pages/catalog/suppliers-page.tsx",
+      "source_location": "L61"
     },
     {
       "id": "frontend_src_components_ventas_chart_fmt",
@@ -5495,7 +5388,7 @@
       "file_type": "code",
       "norm_label": ".authorizesupervisor()",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L115"
+      "source_location": "L120"
     },
     {
       "id": "backend_src_auth_service_authservice_createuser",
@@ -5507,7 +5400,7 @@
       "file_type": "code",
       "norm_label": ".createuser()",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L89"
+      "source_location": "L94"
     },
     {
       "id": "backend_src_auth_service_authservice_login",
@@ -5519,7 +5412,7 @@
       "file_type": "code",
       "norm_label": ".login()",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L68"
+      "source_location": "L73"
     },
     {
       "id": "backend_src_auth_service_authservice_me",
@@ -5531,7 +5424,7 @@
       "file_type": "code",
       "norm_label": ".me()",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L81"
+      "source_location": "L86"
     },
     {
       "id": "backend_src_auth_service_authservice_signup",
@@ -5580,54 +5473,6 @@
       "norm_label": "sembrarrangosdefabrica()",
       "source_file": "backend/src/rangos.util.ts",
       "source_location": "L12"
-    },
-    {
-      "id": "frontend_src_components_product_search_dialog_productsearchdialog",
-      "label": "ProductSearchDialog()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "ProductSearchDialog",
-      "file_type": "code",
-      "norm_label": "productsearchdialog()",
-      "source_file": "frontend/src/components/product-search-dialog.tsx",
-      "source_location": "L29"
-    },
-    {
-      "id": "frontend_src_components_product_search_dialog_productsearchdialog_alteclear",
-      "label": "alTeclear()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "ProductSearchDialog",
-      "file_type": "code",
-      "norm_label": "alteclear()",
-      "source_file": "frontend/src/components/product-search-dialog.tsx",
-      "source_location": "L115"
-    },
-    {
-      "id": "frontend_src_components_product_search_dialog_productsearchdialog_elegible",
-      "label": "elegible()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "ProductSearchDialog",
-      "file_type": "code",
-      "norm_label": "elegible()",
-      "source_file": "frontend/src/components/product-search-dialog.tsx",
-      "source_location": "L105"
-    },
-    {
-      "id": "frontend_src_components_product_search_dialog_productsearchdialog_elegir",
-      "label": "elegir()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "ProductSearchDialog",
-      "file_type": "code",
-      "norm_label": "elegir()",
-      "source_file": "frontend/src/components/product-search-dialog.tsx",
-      "source_location": "L109"
     },
     {
       "id": "backend_src_main_bootstrap",
@@ -5738,6 +5583,42 @@
       "source_location": "L19"
     },
     {
+      "id": "backend_src_bootstrap_service_bootstrapservice_constructor",
+      "label": ".constructor()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": ".constructor()",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L13"
+    },
+    {
+      "id": "backend_src_bootstrap_service_bootstrapservice_onmoduleinit",
+      "label": ".onModuleInit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": ".onmoduleinit()",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L15"
+    },
+    {
+      "id": "backend_src_cuentas_corrientes_service_cuentascorrientesservice_constructor",
+      "label": ".constructor()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": ".constructor()",
+      "source_file": "backend/src/cuentas-corrientes.service.ts",
+      "source_location": "L9"
+    },
+    {
       "id": "backend_src_health_controller_healthcontroller_check",
       "label": ".check()",
       "_callable": true,
@@ -5762,6 +5643,66 @@
       "source_location": "L6"
     },
     {
+      "id": "backend_src_price_resolver_util_activarpreciosvigentes",
+      "label": "activarPreciosVigentes()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "activarpreciosvigentes()",
+      "source_file": "backend/src/price-resolver.util.ts",
+      "source_location": "L144"
+    },
+    {
+      "id": "backend_src_price_rules_controller_pricerulescontroller_constructor",
+      "label": ".constructor()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": ".constructor()",
+      "source_file": "backend/src/price-rules.controller.ts",
+      "source_location": "L18"
+    },
+    {
+      "id": "backend_src_prices_controller_pricescontroller_activate",
+      "label": ".activate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": ".activate()",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L66"
+    },
+    {
+      "id": "backend_src_prices_controller_pricescontroller_constructor",
+      "label": ".constructor()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": ".constructor()",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L16"
+    },
+    {
+      "id": "backend_src_prices_service_pricesservice_constructor",
+      "label": ".constructor()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": ".constructor()",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L60"
+    },
+    {
       "id": "backend_src_prisma_prisma_service_prismaservice_onmoduledestroy",
       "label": ".onModuleDestroy()",
       "_callable": true,
@@ -5784,18 +5725,6 @@
       "norm_label": ".onmoduleinit()",
       "source_file": "backend/src/prisma/prisma.service.ts",
       "source_location": "L6"
-    },
-    {
-      "id": "backend_src_rangos_service_rangosservice_constructor",
-      "label": ".constructor()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 47,
-      "community_name": "PrismaService",
-      "file_type": "code",
-      "norm_label": ".constructor()",
-      "source_file": "backend/src/rangos.service.ts",
-      "source_location": "L7"
     },
     {
       "id": "backend_src_sales_controller_salescontroller_constructor",
@@ -5927,7 +5856,19 @@
       "file_type": "code",
       "norm_label": "warehousespage()",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L18"
+      "source_location": "L19"
+    },
+    {
+      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_opencaja",
+      "label": "openCaja()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "WarehousesPage",
+      "file_type": "code",
+      "norm_label": "opencaja()",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L47"
     },
     {
       "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_opencreate",
@@ -5939,7 +5880,7 @@
       "file_type": "code",
       "norm_label": "opencreate()",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L38"
+      "source_location": "L67"
     },
     {
       "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_openedit",
@@ -5951,7 +5892,7 @@
       "file_type": "code",
       "norm_label": "openedit()",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L45"
+      "source_location": "L74"
     },
     {
       "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_submit",
@@ -5963,43 +5904,19 @@
       "file_type": "code",
       "norm_label": "submit()",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L81"
+    },
+    {
+      "id": "frontend_src_pages_catalog_warehouses_page_warehousespage_submitcaja",
+      "label": "submitCaja()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "WarehousesPage",
+      "file_type": "code",
+      "norm_label": "submitcaja()",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
       "source_location": "L52"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_history_page_originlabel",
-      "label": "originLabel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "StockHistoryPage",
-      "file_type": "code",
-      "norm_label": "originlabel()",
-      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L36"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_history_page_stockhistorypage",
-      "label": "StockHistoryPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "StockHistoryPage",
-      "file_type": "code",
-      "norm_label": "stockhistorypage()",
-      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L41"
-    },
-    {
-      "id": "frontend_src_pages_stock_stock_history_page_stockhistorypage_clearfilters",
-      "label": "clearFilters()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 54,
-      "community_name": "StockHistoryPage",
-      "file_type": "code",
-      "norm_label": "clearfilters()",
-      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
-      "source_location": "L99"
     },
     {
       "id": "backend_src_categories_controller_categoriescontroller_assertnamefree",
@@ -6110,12 +6027,156 @@
       "source_location": "L40"
     },
     {
+      "id": "frontend_src_components_layout_admin_route_permissionroute",
+      "label": "PermissionRoute()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "permissionroute()",
+      "source_file": "frontend/src/components/layout/admin-route.tsx",
+      "source_location": "L5"
+    },
+    {
+      "id": "frontend_src_components_layout_escritorio_shell_escritorioshell",
+      "label": "EscritorioShell()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "escritorioshell()",
+      "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
+      "source_location": "L18"
+    },
+    {
+      "id": "frontend_src_components_layout_escritorio_shell_escritorioshell_onkey",
+      "label": "onKey()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "onkey()",
+      "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
+      "source_location": "L26"
+    },
+    {
+      "id": "frontend_src_components_layout_protected_route_fullscreenroute",
+      "label": "FullScreenRoute()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "fullscreenroute()",
+      "source_file": "frontend/src/components/layout/protected-route.tsx",
+      "source_location": "L17"
+    },
+    {
+      "id": "frontend_src_components_layout_protected_route_protectedroute",
+      "label": "ProtectedRoute()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "protectedroute()",
+      "source_file": "frontend/src/components/layout/protected-route.tsx",
+      "source_location": "L6"
+    },
+    {
+      "id": "frontend_src_lib_auth_context_useauth",
+      "label": "useAuth()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "useauth()",
+      "source_file": "frontend/src/lib/auth-context.tsx",
+      "source_location": "L75"
+    },
+    {
+      "id": "frontend_src_pages_auth_login_page_loginpage",
+      "label": "LoginPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "loginpage()",
+      "source_file": "frontend/src/pages/auth/login-page.tsx",
+      "source_location": "L13"
+    },
+    {
+      "id": "frontend_src_pages_auth_login_page_loginpage_submit",
+      "label": "submit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "submit()",
+      "source_file": "frontend/src/pages/auth/login-page.tsx",
+      "source_location": "L21"
+    },
+    {
+      "id": "frontend_src_pages_auth_signup_page_signuppage",
+      "label": "SignupPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "signuppage()",
+      "source_file": "frontend/src/pages/auth/signup-page.tsx",
+      "source_location": "L12"
+    },
+    {
+      "id": "frontend_src_pages_auth_signup_page_signuppage_submit",
+      "label": "submit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "submit()",
+      "source_file": "frontend/src/pages/auth/signup-page.tsx",
+      "source_location": "L20"
+    },
+    {
+      "id": "frontend_src_pages_sales_shifts_history_page_fechahora",
+      "label": "fechaHora()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "fechahora()",
+      "source_file": "frontend/src/pages/sales/shifts-history-page.tsx",
+      "source_location": "L20"
+    },
+    {
+      "id": "frontend_src_pages_sales_shifts_history_page_shiftshistorypage",
+      "label": "ShiftsHistoryPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "shiftshistorypage()",
+      "source_file": "frontend/src/pages/sales/shifts-history-page.tsx",
+      "source_location": "L27"
+    },
+    {
       "id": "frontend_src_pages_stock_expirations_page_daysremaining",
       "label": "daysRemaining()",
       "_callable": true,
       "_origin": "ast",
       "community": 57,
-      "community_name": "ExpirationsPage",
+      "community_name": "useAuth",
       "file_type": "code",
       "norm_label": "daysremaining()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
@@ -6127,7 +6188,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 57,
-      "community_name": "ExpirationsPage",
+      "community_name": "useAuth",
       "file_type": "code",
       "norm_label": "expirationspage()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
@@ -6139,7 +6200,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 57,
-      "community_name": "ExpirationsPage",
+      "community_name": "useAuth",
       "file_type": "code",
       "norm_label": "openedit()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
@@ -6151,7 +6212,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 57,
-      "community_name": "ExpirationsPage",
+      "community_name": "useAuth",
       "file_type": "code",
       "norm_label": "submitedit()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
@@ -6163,11 +6224,71 @@
       "_callable": true,
       "_origin": "ast",
       "community": 57,
-      "community_name": "ExpirationsPage",
+      "community_name": "useAuth",
       "file_type": "code",
       "norm_label": "urgencybadge()",
       "source_file": "frontend/src/pages/stock/expirations-page.tsx",
       "source_location": "L28"
+    },
+    {
+      "id": "frontend_src_pages_stock_restock_page_restockpage",
+      "label": "RestockPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "restockpage()",
+      "source_file": "frontend/src/pages/stock/restock-page.tsx",
+      "source_location": "L15"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_history_page_originlabel",
+      "label": "originLabel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "originlabel()",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L36"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_history_page_stockhistorypage",
+      "label": "StockHistoryPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "stockhistorypage()",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L41"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_history_page_stockhistorypage_clearfilters",
+      "label": "clearFilters()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "clearfilters()",
+      "source_file": "frontend/src/pages/stock/stock-history-page.tsx",
+      "source_location": "L99"
+    },
+    {
+      "id": "frontend_src_pages_stock_stock_page_stockpage",
+      "label": "StockPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "stockpage()",
+      "source_file": "frontend/src/pages/stock/stock-page.tsx",
+      "source_location": "L14"
     },
     {
       "id": "backend_src_escritorio_controller_escritoriocontroller_constructor",
@@ -6635,7 +6756,7 @@
       "file_type": "code",
       "norm_label": "authprovider()",
       "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L25"
+      "source_location": "L27"
     },
     {
       "id": "frontend_src_lib_auth_context_readstoredsession",
@@ -6647,7 +6768,7 @@
       "file_type": "code",
       "norm_label": "readstoredsession()",
       "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L16"
+      "source_location": "L18"
     },
     {
       "id": "opencode_plugins_graphify_graphifyplugin",
@@ -6816,6 +6937,18 @@
       "norm_label": ".catalog()",
       "source_file": "backend/src/rangos.service.ts",
       "source_location": "L10"
+    },
+    {
+      "id": "backend_src_rangos_service_rangosservice_constructor",
+      "label": ".constructor()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "RangosService",
+      "file_type": "code",
+      "norm_label": ".constructor()",
+      "source_file": "backend/src/rangos.service.ts",
+      "source_location": "L7"
     },
     {
       "id": "backend_src_rangos_service_rangosservice_create",
@@ -7178,6 +7311,66 @@
       "source_location": "L37"
     },
     {
+      "id": "backend_src_prices_controller_pricescontroller_audit",
+      "label": ".audit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": ".audit()",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L79"
+    },
+    {
+      "id": "backend_src_prices_controller_pricescontroller_bulk",
+      "label": ".bulk()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": ".bulk()",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L22"
+    },
+    {
+      "id": "backend_src_prices_controller_pricescontroller_cancelscheduled",
+      "label": ".cancelScheduled()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": ".cancelscheduled()",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L52"
+    },
+    {
+      "id": "backend_src_prices_controller_pricescontroller_createroundingrule",
+      "label": ".createRoundingRule()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": ".createroundingrule()",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L166"
+    },
+    {
+      "id": "backend_src_prices_controller_pricescontroller_deleteroundingrule",
+      "label": ".deleteRoundingRule()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": ".deleteroundingrule()",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L191"
+    },
+    {
       "id": "backend_src_prices_controller_pricescontroller_roundingrules",
       "label": ".roundingRules()",
       "_callable": true,
@@ -7399,7 +7592,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": ".cancel()",
       "source_file": "backend/src/purchases.controller.ts",
@@ -7411,23 +7604,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": ".confirm()",
       "source_file": "backend/src/purchases.controller.ts",
       "source_location": "L14"
-    },
-    {
-      "id": "backend_src_purchases_controller_purchasescontroller_constructor",
-      "label": ".constructor()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": ".constructor()",
-      "source_file": "backend/src/purchases.controller.ts",
-      "source_location": "L11"
     },
     {
       "id": "backend_src_purchases_controller_purchasescontroller_correct",
@@ -7435,7 +7616,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": ".correct()",
       "source_file": "backend/src/purchases.controller.ts",
@@ -7447,7 +7628,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": ".create()",
       "source_file": "backend/src/purchases.controller.ts",
@@ -7459,7 +7640,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": ".list()",
       "source_file": "backend/src/purchases.controller.ts",
@@ -7471,7 +7652,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": ".cancel()",
       "source_file": "backend/src/purchases.service.ts",
@@ -7483,94 +7664,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": ".confirm()",
       "source_file": "backend/src/purchases.service.ts",
       "source_location": "L72"
-    },
-    {
-      "id": "backend_src_purchases_service_purchasesservice_constructor",
-      "label": ".constructor()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": ".constructor()",
-      "source_file": "backend/src/purchases.service.ts",
-      "source_location": "L13"
-    },
-    {
-      "id": "backend_src_purchases_service_purchasesservice_correct",
-      "label": ".correct()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": ".correct()",
-      "source_file": "backend/src/purchases.service.ts",
-      "source_location": "L106"
-    },
-    {
-      "id": "backend_src_purchases_service_purchasesservice_createdraft",
-      "label": ".createDraft()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": ".createdraft()",
-      "source_file": "backend/src/purchases.service.ts",
-      "source_location": "L30"
-    },
-    {
-      "id": "backend_src_purchases_service_purchasesservice_list",
-      "label": ".list()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": ".list()",
-      "source_file": "backend/src/purchases.service.ts",
-      "source_location": "L167"
-    },
-    {
-      "id": "backend_src_purchases_service_purchasesservice_money",
-      "label": ".money()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": ".money()",
-      "source_file": "backend/src/purchases.service.ts",
-      "source_location": "L15"
-    },
-    {
-      "id": "backend_src_purchases_service_purchasesservice_parseothertaxes",
-      "label": ".parseOtherTaxes()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": ".parseothertaxes()",
-      "source_file": "backend/src/purchases.service.ts",
-      "source_location": "L21"
-    },
-    {
-      "id": "frontend_src_app",
-      "label": "App.tsx",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "app.tsx",
-      "source_file": "frontend/src/App.tsx",
-      "source_location": "L1"
     },
     {
       "id": "frontend_src_components_empty_state",
@@ -7603,28 +7701,6 @@
       "file_type": "code",
       "norm_label": "field.tsx",
       "source_file": "frontend/src/components/field.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_components_layout_admin_route",
-      "label": "admin-route.tsx",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "admin-route.tsx",
-      "source_file": "frontend/src/components/layout/admin-route.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_components_layout_protected_route",
-      "label": "protected-route.tsx",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "api.ts",
-      "file_type": "code",
-      "norm_label": "protected-route.tsx",
-      "source_file": "frontend/src/components/layout/protected-route.tsx",
       "source_location": "L1"
     },
     {
@@ -7703,6 +7779,28 @@
       "norm_label": "supervisor-auth-dialog.tsx",
       "source_file": "frontend/src/components/supervisor-auth-dialog.tsx",
       "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_theme_toggle",
+      "label": "theme-toggle.tsx",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "theme-toggle.tsx",
+      "source_file": "frontend/src/components/theme-toggle.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_theme_toggle_temas",
+      "label": "TEMAS",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "temas",
+      "source_file": "frontend/src/components/theme-toggle.tsx",
+      "source_location": "L5"
     },
     {
       "id": "frontend_src_components_ui_alert",
@@ -8112,6 +8210,17 @@
       "source_location": "L4"
     },
     {
+      "id": "frontend_src_components_user_menu",
+      "label": "user-menu.tsx",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "user-menu.tsx",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "frontend_src_lib_api",
       "label": "api.ts",
       "_origin": "ast",
@@ -8142,7 +8251,7 @@
       "file_type": "code",
       "norm_label": "authcontext",
       "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L14"
+      "source_location": "L16"
     },
     {
       "id": "frontend_src_lib_format",
@@ -8165,6 +8274,17 @@
       "norm_label": "ars",
       "source_file": "frontend/src/lib/format.ts",
       "source_location": "L6"
+    },
+    {
+      "id": "frontend_src_lib_pesable",
+      "label": "pesable.ts",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "api.ts",
+      "file_type": "code",
+      "norm_label": "pesable.ts",
+      "source_file": "frontend/src/lib/pesable.ts",
+      "source_location": "L1"
     },
     {
       "id": "frontend_src_lib_utils",
@@ -8373,7 +8493,7 @@
       "file_type": "code",
       "norm_label": "empty_form",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L16"
+      "source_location": "L17"
     },
     {
       "id": "frontend_src_pages_prices_prices_page",
@@ -8728,28 +8848,6 @@
       "source_location": ""
     },
     {
-      "id": "backend_src_cuentas_corrientes_service_ts_inject",
-      "label": "Inject",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesService",
-      "file_type": "code",
-      "norm_label": "inject",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_cuentas_corrientes_service_ts_injectable",
-      "label": "Injectable",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "SalesService",
-      "file_type": "code",
-      "norm_label": "injectable",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "backend_src_price_resolver_util",
       "label": "price-resolver.util.ts",
       "_origin": "ast",
@@ -8827,50 +8925,6 @@
       "source_location": "L1"
     },
     {
-      "id": "frontend_src_components_layout_escritorio_shell",
-      "label": "escritorio-shell.tsx",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "escritorio-shell.tsx",
-      "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_components_layout_escritorio_shell_palettecontext",
-      "label": "PaletteContext",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "palettecontext",
-      "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
-      "source_location": "L7"
-    },
-    {
-      "id": "frontend_src_components_theme_toggle",
-      "label": "theme-toggle.tsx",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "theme-toggle.tsx",
-      "source_file": "frontend/src/components/theme-toggle.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_components_theme_toggle_temas",
-      "label": "TEMAS",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "temas",
-      "source_file": "frontend/src/components/theme-toggle.tsx",
-      "source_location": "L5"
-    },
-    {
       "id": "frontend_src_lib_escritorio",
       "label": "escritorio.ts",
       "_origin": "ast",
@@ -8904,6 +8958,17 @@
       "source_location": "L99"
     },
     {
+      "id": "frontend_src_lib_modules_hues",
+      "label": "HUES",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "escritorio-page.tsx",
+      "file_type": "code",
+      "norm_label": "hues",
+      "source_file": "frontend/src/lib/modules.tsx",
+      "source_location": "L108"
+    },
+    {
       "id": "frontend_src_lib_modules_modules",
       "label": "MODULES",
       "_origin": "ast",
@@ -8913,17 +8978,6 @@
       "norm_label": "modules",
       "source_file": "frontend/src/lib/modules.tsx",
       "source_location": "L31"
-    },
-    {
-      "id": "frontend_src_lib_theme",
-      "label": "theme.ts",
-      "_origin": "ast",
-      "community": 10,
-      "community_name": "escritorio-page.tsx",
-      "file_type": "code",
-      "norm_label": "theme.ts",
-      "source_file": "frontend/src/lib/theme.ts",
-      "source_location": "L1"
     },
     {
       "id": "frontend_src_pages_escritorio_page",
@@ -8945,7 +8999,7 @@
       "file_type": "code",
       "norm_label": "tone",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L12"
+      "source_location": "L13"
     },
     {
       "id": "backend_src_promotions_controller",
@@ -9344,125 +9398,37 @@
       "source_location": "L3"
     },
     {
-      "id": "backend_src_price_activation_service",
-      "label": "price-activation.service.ts",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": "price-activation.service.ts",
-      "source_file": "backend/src/price-activation.service.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "backend_src_prices_controller_ts_body",
-      "label": "Body",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": "body",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_prices_controller_ts_controller",
-      "label": "Controller",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": "controller",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_prices_controller_ts_delete",
-      "label": "Delete",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": "delete",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_prices_controller_ts_inject",
+      "id": "backend_src_purchases_controller_ts_inject",
       "label": "Inject",
       "_origin": "ast",
       "community": 13,
-      "community_name": "PricesController",
+      "community_name": "PurchasesService",
       "file_type": "code",
       "norm_label": "inject",
       "source_file": "",
       "source_location": ""
     },
     {
-      "id": "backend_src_prices_controller_ts_param",
-      "label": "Param",
+      "id": "backend_src_purchases_service_ts_inject",
+      "label": "Inject",
       "_origin": "ast",
       "community": 13,
-      "community_name": "PricesController",
+      "community_name": "PurchasesService",
       "file_type": "code",
-      "norm_label": "param",
+      "norm_label": "inject",
       "source_file": "",
       "source_location": ""
     },
     {
-      "id": "backend_src_prices_controller_ts_post",
-      "label": "Post",
+      "id": "backend_src_purchases_service_ts_injectable",
+      "label": "Injectable",
       "_origin": "ast",
       "community": 13,
-      "community_name": "PricesController",
+      "community_name": "PurchasesService",
       "file_type": "code",
-      "norm_label": "post",
+      "norm_label": "injectable",
       "source_file": "",
       "source_location": ""
-    },
-    {
-      "id": "backend_src_prices_controller_ts_query",
-      "label": "Query",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": "query",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_prices_controller_ts_req",
-      "label": "Req",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": "req",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_prices_controller_ts_useguards",
-      "label": "UseGuards",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "PricesController",
-      "file_type": "code",
-      "norm_label": "useguards",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "frontend_src_lib_pesable",
-      "label": "pesable.ts",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "money",
-      "file_type": "code",
-      "norm_label": "pesable.ts",
-      "source_file": "frontend/src/lib/pesable.ts",
-      "source_location": "L1"
     },
     {
       "id": "frontend_src_components_auth_background",
@@ -9883,6 +9849,17 @@
       "source_location": "L1"
     },
     {
+      "id": "backend_src_cuentas_corrientes_service_ts_injectable",
+      "label": "Injectable",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "app.module.ts",
+      "file_type": "code",
+      "norm_label": "injectable",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "backend_src_customers_controller",
       "label": "customers.controller.ts",
       "_origin": "ast",
@@ -9947,6 +9924,28 @@
       "norm_label": "price-lists.controller.ts",
       "source_file": "backend/src/price-lists.controller.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "backend_src_prices_controller",
+      "label": "prices.controller.ts",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "app.module.ts",
+      "file_type": "code",
+      "norm_label": "prices.controller.ts",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "backend_src_prices_controller_modos_redondeo",
+      "label": "MODOS_REDONDEO",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "app.module.ts",
+      "file_type": "code",
+      "norm_label": "modos_redondeo",
+      "source_file": "backend/src/prices.controller.ts",
+      "source_location": "L10"
     },
     {
       "id": "backend_src_prisma_prisma_service",
@@ -10155,6 +10154,17 @@
       "file_type": "code",
       "norm_label": "warehouses.controller.ts",
       "source_file": "backend/src/warehouses.controller.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_lib_theme",
+      "label": "theme.ts",
+      "_origin": "ast",
+      "community": 20,
+      "community_name": "theme.ts",
+      "file_type": "code",
+      "norm_label": "theme.ts",
+      "source_file": "frontend/src/lib/theme.ts",
       "source_location": "L1"
     },
     {
@@ -10541,127 +10551,6 @@
       "norm_label": "sale_aliases",
       "source_file": "backend/src/price-import.util.ts",
       "source_location": "L5"
-    },
-    {
-      "id": "backend_src_price_rules_controller",
-      "label": "price-rules.controller.ts",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "price-rules.controller.ts",
-      "source_file": "backend/src/price-rules.controller.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "backend_src_price_rules_controller_ts_inject",
-      "label": "Inject",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "inject",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_prices_controller",
-      "label": "prices.controller.ts",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "prices.controller.ts",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "backend_src_prices_controller_modos_redondeo",
-      "label": "MODOS_REDONDEO",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "modos_redondeo",
-      "source_file": "backend/src/prices.controller.ts",
-      "source_location": "L10"
-    },
-    {
-      "id": "backend_src_prices_service",
-      "label": "prices.service.ts",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "prices.service.ts",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "backend_src_prices_service_operations",
-      "label": "OPERATIONS",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "operations",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L15"
-    },
-    {
-      "id": "backend_src_prices_service_roundings",
-      "label": "ROUNDINGS",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "roundings",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L16"
-    },
-    {
-      "id": "backend_src_prices_service_scopes",
-      "label": "SCOPES",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "scopes",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L13"
-    },
-    {
-      "id": "backend_src_prices_service_targets",
-      "label": "TARGETS",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "targets",
-      "source_file": "backend/src/prices.service.ts",
-      "source_location": "L14"
-    },
-    {
-      "id": "backend_src_prices_service_ts_inject",
-      "label": "Inject",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "inject",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_prices_service_ts_injectable",
-      "label": "Injectable",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "prices.service.ts",
-      "file_type": "code",
-      "norm_label": "injectable",
-      "source_file": "",
-      "source_location": ""
     },
     {
       "id": "frontend_src_components_ventas_chart",
@@ -12237,6 +12126,39 @@
       "source_location": ""
     },
     {
+      "id": "backend_src_bootstrap_service",
+      "label": "bootstrap.service.ts",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "bootstrap.service.ts",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "backend_src_bootstrap_service_ts_inject",
+      "label": "Inject",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "inject",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_bootstrap_service_ts_injectable",
+      "label": "Injectable",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "injectable",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "backend_src_caja_service",
       "label": "caja.service.ts",
       "_origin": "ast",
@@ -12257,6 +12179,17 @@
       "norm_label": "tipos_movimiento",
       "source_file": "backend/src/caja.service.ts",
       "source_location": "L7"
+    },
+    {
+      "id": "backend_src_cuentas_corrientes_service_ts_inject",
+      "label": "Inject",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "inject",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "backend_src_health_controller",
@@ -12299,6 +12232,127 @@
       "community_name": "PrismaService",
       "file_type": "code",
       "norm_label": "inject",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_price_activation_service",
+      "label": "price-activation.service.ts",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "price-activation.service.ts",
+      "source_file": "backend/src/price-activation.service.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "backend_src_price_rules_controller",
+      "label": "price-rules.controller.ts",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "price-rules.controller.ts",
+      "source_file": "backend/src/price-rules.controller.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "backend_src_price_rules_controller_ts_inject",
+      "label": "Inject",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "inject",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_controller_ts_inject",
+      "label": "Inject",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "inject",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_service",
+      "label": "prices.service.ts",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "prices.service.ts",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "backend_src_prices_service_operations",
+      "label": "OPERATIONS",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "operations",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L15"
+    },
+    {
+      "id": "backend_src_prices_service_roundings",
+      "label": "ROUNDINGS",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "roundings",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L16"
+    },
+    {
+      "id": "backend_src_prices_service_scopes",
+      "label": "SCOPES",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "scopes",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L13"
+    },
+    {
+      "id": "backend_src_prices_service_targets",
+      "label": "TARGETS",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "targets",
+      "source_file": "backend/src/prices.service.ts",
+      "source_location": "L14"
+    },
+    {
+      "id": "backend_src_prices_service_ts_inject",
+      "label": "Inject",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "inject",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_service_ts_injectable",
+      "label": "Injectable",
+      "_origin": "ast",
+      "community": 47,
+      "community_name": "PrismaService",
+      "file_type": "code",
+      "norm_label": "injectable",
       "source_file": "",
       "source_location": ""
     },
@@ -12356,17 +12410,6 @@
       "norm_label": "correctable_statuses",
       "source_file": "backend/src/purchases.service.ts",
       "source_location": "L9"
-    },
-    {
-      "id": "backend_src_rangos_service_ts_inject",
-      "label": "Inject",
-      "_origin": "ast",
-      "community": 47,
-      "community_name": "PrismaService",
-      "file_type": "code",
-      "norm_label": "inject",
-      "source_file": "",
-      "source_location": ""
     },
     {
       "id": "backend_src_sales_controller_ts_inject",
@@ -13216,6 +13259,61 @@
       "source_location": ""
     },
     {
+      "id": "frontend_src_app",
+      "label": "App.tsx",
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "app.tsx",
+      "source_file": "frontend/src/App.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_layout_admin_route",
+      "label": "admin-route.tsx",
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "admin-route.tsx",
+      "source_file": "frontend/src/components/layout/admin-route.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_layout_escritorio_shell",
+      "label": "escritorio-shell.tsx",
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "escritorio-shell.tsx",
+      "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_layout_escritorio_shell_palettecontext",
+      "label": "PaletteContext",
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "palettecontext",
+      "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
+      "source_location": "L7"
+    },
+    {
+      "id": "frontend_src_components_layout_protected_route",
+      "label": "protected-route.tsx",
+      "_origin": "ast",
+      "community": 57,
+      "community_name": "useAuth",
+      "file_type": "code",
+      "norm_label": "protected-route.tsx",
+      "source_file": "frontend/src/components/layout/protected-route.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "backend_src_escritorio_controller_ts_controller",
       "label": "Controller",
       "_origin": "ast",
@@ -13986,6 +14084,17 @@
       "source_location": ""
     },
     {
+      "id": "backend_src_rangos_service_ts_inject",
+      "label": "Inject",
+      "_origin": "ast",
+      "community": 88,
+      "community_name": "RangosService",
+      "file_type": "code",
+      "norm_label": "inject",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "backend_src_rangos_service_ts_injectable",
       "label": "Injectable",
       "_origin": "ast",
@@ -14283,6 +14392,39 @@
       "source_location": ""
     },
     {
+      "id": "backend_src_prices_controller_ts_body",
+      "label": "Body",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "body",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_controller_ts_controller",
+      "label": "Controller",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "controller",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_controller_ts_delete",
+      "label": "Delete",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "delete",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "backend_src_prices_controller_ts_get",
       "label": "Get",
       "_origin": "ast",
@@ -14290,6 +14432,61 @@
       "community_name": "AuthRequest",
       "file_type": "code",
       "norm_label": "get",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_controller_ts_param",
+      "label": "Param",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "param",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_controller_ts_post",
+      "label": "Post",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "post",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_controller_ts_query",
+      "label": "Query",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "query",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_controller_ts_req",
+      "label": "Req",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "req",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "backend_src_prices_controller_ts_useguards",
+      "label": "UseGuards",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "AuthRequest",
+      "file_type": "code",
+      "norm_label": "useguards",
       "source_file": "",
       "source_location": ""
     },
@@ -14617,7 +14814,7 @@
       "label": "Body",
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": "body",
       "source_file": "",
@@ -14628,7 +14825,7 @@
       "label": "Controller",
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": "controller",
       "source_file": "",
@@ -14639,20 +14836,9 @@
       "label": "Get",
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": "get",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_purchases_controller_ts_inject",
-      "label": "Inject",
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": "inject",
       "source_file": "",
       "source_location": ""
     },
@@ -14661,7 +14847,7 @@
       "label": "Param",
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": "param",
       "source_file": "",
@@ -14672,7 +14858,7 @@
       "label": "Post",
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": "post",
       "source_file": "",
@@ -14683,7 +14869,7 @@
       "label": "Req",
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": "req",
       "source_file": "",
@@ -14694,31 +14880,9 @@
       "label": "UseGuards",
       "_origin": "ast",
       "community": 94,
-      "community_name": "PurchasesService",
+      "community_name": "PurchasesController",
       "file_type": "code",
       "norm_label": "useguards",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_purchases_service_ts_inject",
-      "label": "Inject",
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": "inject",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "backend_src_purchases_service_ts_injectable",
-      "label": "Injectable",
-      "_origin": "ast",
-      "community": 94,
-      "community_name": "PurchasesService",
-      "file_type": "code",
-      "norm_label": "injectable",
       "source_file": "",
       "source_location": ""
     },
@@ -15089,6 +15253,21 @@
       "source_url": null
     },
     {
+      "id": "docs_producto_pesables",
+      "label": "Productos por Peso (Pesables)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 19,
+      "community_name": "Product Definition (Abasto Vision)",
+      "contributor": null,
+      "file_type": "concept",
+      "norm_label": "productos por peso (pesables)",
+      "source_file": "docs/producto.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
       "id": "docs_producto_sale_payment",
       "label": "SalePayment Model",
       "_origin": "semantic",
@@ -15155,7 +15334,7 @@
       "author": null,
       "captured_at": null,
       "community": 21,
-      "community_name": "Reference Catalog Category Classification",
+      "community_name": "Category Model (per-tenant)",
       "contributor": null,
       "file_type": "code",
       "norm_label": "classify-reference-categories.ts script",
@@ -15170,10 +15349,70 @@
       "author": null,
       "captured_at": null,
       "community": 21,
-      "community_name": "Reference Catalog Category Classification",
+      "community_name": "Category Model (per-tenant)",
       "contributor": null,
       "file_type": "code",
       "norm_label": "enrich-reference-categories.ts script",
+      "source_file": "docs/catalogo-referencia-categorias.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "docs_catalogo_category_model",
+      "label": "Category Model (per-tenant)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 21,
+      "community_name": "Category Model (per-tenant)",
+      "contributor": null,
+      "file_type": "concept",
+      "norm_label": "category model (per-tenant)",
+      "source_file": "docs/catalogo-referencia-categorias.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "docs_catalogo_import_reference_endpoint",
+      "label": "POST /products/import-reference",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 21,
+      "community_name": "Category Model (per-tenant)",
+      "contributor": null,
+      "file_type": "concept",
+      "norm_label": "post /products/import-reference",
+      "source_file": "docs/catalogo-referencia-categorias.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "docs_catalogo_product_reference",
+      "label": "product_reference Global Table",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 21,
+      "community_name": "Category Model (per-tenant)",
+      "contributor": null,
+      "file_type": "concept",
+      "norm_label": "product_reference global table",
+      "source_file": "docs/catalogo-referencia-categorias.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "docs_catalogo_product_reference_ean_endpoint",
+      "label": "GET /product-reference/:ean",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 21,
+      "community_name": "Category Model (per-tenant)",
+      "contributor": null,
+      "file_type": "concept",
+      "norm_label": "get /product-reference/:ean",
       "source_file": "docs/catalogo-referencia-categorias.md",
       "source_location": null,
       "source_url": null
@@ -15185,10 +15424,25 @@
       "author": null,
       "captured_at": null,
       "community": 21,
-      "community_name": "Reference Catalog Category Classification",
+      "community_name": "Category Model (per-tenant)",
       "contributor": null,
       "file_type": "concept",
       "norm_label": "precios claros api (category tree)",
+      "source_file": "docs/catalogo-referencia-categorias.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "docs_catalogo_referencia_categorias_sepa",
+      "label": "SEPA Open Data Source",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 21,
+      "community_name": "Category Model (per-tenant)",
+      "contributor": null,
+      "file_type": "concept",
+      "norm_label": "sepa open data source",
       "source_file": "docs/catalogo-referencia-categorias.md",
       "source_location": null,
       "source_url": null
@@ -15200,7 +15454,7 @@
       "author": null,
       "captured_at": null,
       "community": 21,
-      "community_name": "Reference Catalog Category Classification",
+      "community_name": "Category Model (per-tenant)",
       "contributor": null,
       "file_type": "document",
       "norm_label": "reference catalog category classification",
@@ -15215,11 +15469,26 @@
       "author": null,
       "captured_at": null,
       "community": 21,
-      "community_name": "Reference Catalog Category Classification",
+      "community_name": "Category Model (per-tenant)",
       "contributor": null,
       "file_type": "rationale",
       "norm_label": "brand/keyword offline classifier",
       "source_file": "docs/catalogo-referencia-categorias.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "backend_src_main_main",
+      "label": "main.ts Bootstrap (ValidationPipe)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 36,
+      "community_name": "Mayorista ERP Project Overview",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "main.ts bootstrap (validationpipe)",
+      "source_file": "CLAUDE.md",
       "source_location": null,
       "source_url": null
     },
@@ -15339,6 +15608,21 @@
       "contributor": null,
       "file_type": "rationale",
       "norm_label": "append-only stock ledger",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "claude_validation_style",
+      "label": "Manual Validation Style (no DTOs)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 36,
+      "community_name": "Mayorista ERP Project Overview",
+      "contributor": null,
+      "file_type": "rationale",
+      "norm_label": "manual validation style (no dtos)",
       "source_file": "CLAUDE.md",
       "source_location": null,
       "source_url": null
@@ -15469,146 +15753,11 @@
       "_origin": "semantic",
       "author": null,
       "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
+      "community": 46,
+      "community_name": "Base Data Model",
       "contributor": null,
       "file_type": "concept",
       "norm_label": "auth endpoints (signup/login/users)",
-      "source_file": "docs/api.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_api_products_endpoints",
-      "label": "Products Endpoints",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "concept",
-      "norm_label": "products endpoints",
-      "source_file": "docs/api.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_catalogo_category_model",
-      "label": "Category Model (per-tenant)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "concept",
-      "norm_label": "category model (per-tenant)",
-      "source_file": "docs/catalogo-referencia-categorias.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_catalogo_import_reference_endpoint",
-      "label": "POST /products/import-reference",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "concept",
-      "norm_label": "post /products/import-reference",
-      "source_file": "docs/catalogo-referencia-categorias.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_catalogo_product_reference",
-      "label": "product_reference Global Table",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "concept",
-      "norm_label": "product_reference global table",
-      "source_file": "docs/catalogo-referencia-categorias.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_catalogo_product_reference_ean_endpoint",
-      "label": "GET /product-reference/:ean",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "concept",
-      "norm_label": "get /product-reference/:ean",
-      "source_file": "docs/catalogo-referencia-categorias.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_catalogo_referencia_categorias_sepa",
-      "label": "SEPA Open Data Source",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "concept",
-      "norm_label": "sepa open data source",
-      "source_file": "docs/catalogo-referencia-categorias.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_modelo_datos_base_products",
-      "label": "products table",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "concept",
-      "norm_label": "products table",
-      "source_file": "docs/modelo-datos-base.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_producto_pesables",
-      "label": "Productos por Peso (Pesables)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "concept",
-      "norm_label": "productos por peso (pesables)",
-      "source_file": "docs/producto.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "docs_api_overview",
-      "label": "API Base Reference",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 39,
-      "community_name": "products table",
-      "contributor": null,
-      "file_type": "document",
-      "norm_label": "api base reference",
       "source_file": "docs/api.md",
       "source_location": null,
       "source_url": null
@@ -15624,6 +15773,21 @@
       "contributor": null,
       "file_type": "concept",
       "norm_label": "catalog endpoints (warehouses/suppliers/lots)",
+      "source_file": "docs/api.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "docs_api_products_endpoints",
+      "label": "Products Endpoints",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 46,
+      "community_name": "Base Data Model",
+      "contributor": null,
+      "file_type": "concept",
+      "norm_label": "products endpoints",
       "source_file": "docs/api.md",
       "source_location": null,
       "source_url": null
@@ -15654,6 +15818,21 @@
       "contributor": null,
       "file_type": "concept",
       "norm_label": "product_lots table",
+      "source_file": "docs/modelo-datos-base.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "docs_modelo_datos_base_products",
+      "label": "products table",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 46,
+      "community_name": "Base Data Model",
+      "contributor": null,
+      "file_type": "concept",
+      "norm_label": "products table",
       "source_file": "docs/modelo-datos-base.md",
       "source_location": null,
       "source_url": null
@@ -15715,6 +15894,21 @@
       "file_type": "concept",
       "norm_label": "warehouses table",
       "source_file": "docs/modelo-datos-base.md",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "docs_api_overview",
+      "label": "API Base Reference",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 46,
+      "community_name": "Base Data Model",
+      "contributor": null,
+      "file_type": "document",
+      "norm_label": "api base reference",
+      "source_file": "docs/api.md",
       "source_location": null,
       "source_url": null
     },
@@ -16437,36 +16631,6 @@
       "source_file": ".opencode/skills/graphify/SKILL.md",
       "source_location": null,
       "source_url": null
-    },
-    {
-      "id": "backend_src_main_main",
-      "label": "main.ts Bootstrap (ValidationPipe)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 94,
-      "community_name": "PurchasesService",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "main.ts bootstrap (validationpipe)",
-      "source_file": "CLAUDE.md",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "claude_validation_style",
-      "label": "Manual Validation Style (no DTOs)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 94,
-      "community_name": "PurchasesService",
-      "contributor": null,
-      "file_type": "rationale",
-      "norm_label": "manual validation style (no dtos)",
-      "source_file": "CLAUDE.md",
-      "source_location": null,
-      "source_url": null
     }
   ],
   "links": [
@@ -16695,24 +16859,24 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L116",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
       "source": "backend_src_auth_service_authservice_createuser",
-      "target": "backend_src_auth_service_normalizeemail",
+      "target": "backend_src_auth_service_validatepassword",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L91",
+      "source_location": "L101",
       "weight": 1.0
     },
     {
       "source": "backend_src_auth_service_authservice_createuser",
-      "target": "backend_src_auth_service_validatepassword",
+      "target": "backend_src_auth_service_normalizeemail",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -16731,7 +16895,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L69",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -16743,7 +16907,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L74",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -16791,7 +16955,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L58",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -19063,6 +19227,54 @@
       "weight": 1.0
     },
     {
+      "source": "frontend_src_components_user_menu_usermenu",
+      "target": "frontend_src_lib_auth_context_useauth",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu_usermenu",
+      "target": "frontend_src_lib_api_api",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu_usermenu",
+      "target": "frontend_src_components_user_menu_iniciales",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L65",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu_usermenu",
+      "target": "frontend_src_lib_utils_cn",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
       "source": "frontend_src_components_ventas_chart_fmt",
       "target": "frontend_src_lib_format_money",
       "relation": "calls",
@@ -19192,18 +19404,6 @@
       "context": "call",
       "source_file": "frontend/src/lib/api.ts",
       "source_location": "L9",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_lib_auth_context_authprovider",
-      "target": "frontend_src_lib_api_api",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -19479,7 +19679,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/admin/users-page.tsx",
-      "source_location": "L86",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -20127,7 +20327,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -20139,7 +20339,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L31",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -20151,11 +20351,35 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L33",
+      "source_location": "L42",
       "weight": 1.0
     },
     {
       "source": "frontend_src_pages_catalog_warehouses_page_warehousespage_submit",
+      "target": "frontend_src_lib_api_api",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_warehouses_page_warehousespage_submit",
+      "target": "frontend_src_lib_api_errormessage",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_warehouses_page_warehousespage_submitcaja",
       "target": "frontend_src_lib_api_api",
       "relation": "calls",
       "_origin": "ast",
@@ -20167,7 +20391,7 @@
       "weight": 1.0
     },
     {
-      "source": "frontend_src_pages_catalog_warehouses_page_warehousespage_submit",
+      "source": "frontend_src_pages_catalog_warehouses_page_warehousespage_submitcaja",
       "target": "frontend_src_lib_api_errormessage",
       "relation": "calls",
       "_origin": "ast",
@@ -20175,7 +20399,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L62",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -20187,7 +20411,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L137",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -20199,7 +20423,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L140",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -20211,7 +20435,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L180",
+      "source_location": "L185",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_escritorio_page_escritoriopage",
+      "target": "frontend_src_lib_modules_huefor",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/escritorio-page.tsx",
+      "source_location": "L191",
       "weight": 1.0
     },
     {
@@ -20223,7 +20459,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L51",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -20235,7 +20471,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L53",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -20247,7 +20483,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L62",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -20259,7 +20495,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L70",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -20271,7 +20507,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L70",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -20283,7 +20519,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L79",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -20715,7 +20951,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/sales/pos-page.tsx",
-      "source_location": "L480",
+      "source_location": "L485",
       "weight": 1.0
     },
     {
@@ -20727,7 +20963,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/sales/pos-page.tsx",
-      "source_location": "L553",
+      "source_location": "L558",
       "weight": 1.0
     },
     {
@@ -20739,7 +20975,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/sales/pos-page.tsx",
-      "source_location": "L669",
+      "source_location": "L674",
       "weight": 1.0
     },
     {
@@ -20751,7 +20987,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/sales/pos-page.tsx",
-      "source_location": "L730",
+      "source_location": "L735",
       "weight": 1.0
     },
     {
@@ -21764,6 +22000,18 @@
     },
     {
       "source": "frontend_src_pages_catalog_warehouses_page_warehousespage",
+      "target": "frontend_src_pages_catalog_warehouses_page_warehousespage_opencaja",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_warehouses_page_warehousespage",
       "target": "frontend_src_pages_catalog_warehouses_page_warehousespage_openedit",
       "relation": "contains",
       "_origin": "ast",
@@ -21771,7 +22019,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L45",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -21783,7 +22031,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L77",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -22023,7 +22271,7 @@
       "confidence_score": 1.0,
       "context": "decorator",
       "source_file": "backend/src/app.module.ts",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -22228,6 +22476,30 @@
       "context": "decorator",
       "source_file": "backend/src/auth.service.ts",
       "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_bootstrap_service_bootstrapservice",
+      "target": "backend_src_bootstrap_service_ts_injectable",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "decorator",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_bootstrap_service_bootstrapservice_constructor",
+      "target": "backend_src_bootstrap_service_ts_inject",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "decorator",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -28448,6 +28720,18 @@
     },
     {
       "source": "backend_src_app_module",
+      "target": "backend_src_bootstrap_service_bootstrapservice",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "backend/src/app.module.ts",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_app_module",
       "target": "backend_src_health_controller_healthcontroller",
       "relation": "imports",
       "_origin": "ast",
@@ -28612,6 +28896,18 @@
       "context": "import",
       "source_file": "backend/src/auth.service.ts",
       "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_bootstrap_service",
+      "target": "backend_src_prisma_prisma_service_prismaservice",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L2",
       "weight": 1.0
     },
     {
@@ -31663,6 +31959,54 @@
       "weight": 1.0
     },
     {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_lib_api_api",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_lib_api_warehouse",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_lib_auth_context_useauth",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_lib_utils_cn",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
       "source": "frontend_src_components_ventas_chart",
       "target": "frontend_src_lib_api_api",
       "relation": "imports",
@@ -34460,7 +34804,7 @@
     },
     {
       "source": "frontend_src_pages_catalog_warehouses_page",
-      "target": "frontend_src_components_ui_table_table",
+      "target": "frontend_src_components_ui_select_select",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -34468,6 +34812,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
       "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_warehouses_page",
+      "target": "frontend_src_components_ui_table_table",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -34479,7 +34835,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -34491,7 +34847,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -34503,7 +34859,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -34515,7 +34871,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -34527,7 +34883,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -34539,7 +34895,19 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L13",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_warehouses_page",
+      "target": "frontend_src_lib_api_cashregister",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -34551,7 +34919,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L13",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -34563,7 +34931,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L13",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -34575,7 +34943,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L14",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -34724,7 +35092,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_utils_cn",
+      "target": "frontend_src_lib_auth_context_useauth",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -34732,6 +35100,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
       "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_escritorio_page",
+      "target": "frontend_src_lib_utils_cn",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/escritorio-page.tsx",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -34748,7 +35128,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_components_layout_escritorio_shell_usepalette",
+      "target": "frontend_src_components_user_menu_usermenu",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -34760,7 +35140,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_modules_moduledef",
+      "target": "frontend_src_components_layout_escritorio_shell_usepalette",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -34772,31 +35152,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_modules_modulemotif",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L6",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_modules_visiblemodules",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L6",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_api_api",
+      "target": "frontend_src_lib_modules_huefor",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -34808,7 +35164,43 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_escritorio_escritoriosummary",
+      "target": "frontend_src_lib_modules_moduledef",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/escritorio-page.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_escritorio_page",
+      "target": "frontend_src_lib_modules_modulemotif",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/escritorio-page.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_escritorio_page",
+      "target": "frontend_src_lib_modules_visiblemodules",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/escritorio-page.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_escritorio_page",
+      "target": "frontend_src_lib_api_api",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -34816,6 +35208,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
       "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_escritorio_page",
+      "target": "frontend_src_lib_escritorio_escritoriosummary",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/escritorio-page.tsx",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -34827,24 +35231,12 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
       "source": "frontend_src_pages_escritorio_page",
       "target": "frontend_src_lib_escritorio_statfor",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_auth_context_useauth",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -38444,6 +38836,18 @@
     },
     {
       "source": "backend_src_app_module",
+      "target": "backend_src_bootstrap_service",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "backend/src/app.module.ts",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_app_module",
       "target": "backend_src_health_controller",
       "relation": "imports_from",
       "_origin": "ast",
@@ -38608,6 +39012,18 @@
       "context": "import",
       "source_file": "backend/src/auth.service.ts",
       "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_bootstrap_service",
+      "target": "backend_src_prisma_prisma_service",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L2",
       "weight": 1.0
     },
     {
@@ -41096,6 +41512,42 @@
       "weight": 1.0
     },
     {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_lib_api",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_lib_auth_context",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_lib_utils",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
       "source": "frontend_src_components_ventas_chart",
       "target": "frontend_src_lib_api",
       "relation": "imports_from",
@@ -42657,7 +43109,7 @@
     },
     {
       "source": "frontend_src_pages_catalog_warehouses_page",
-      "target": "frontend_src_components_ui_table",
+      "target": "frontend_src_components_ui_select",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42669,7 +43121,7 @@
     },
     {
       "source": "frontend_src_pages_catalog_warehouses_page",
-      "target": "frontend_src_lib_api",
+      "target": "frontend_src_components_ui_table",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42681,7 +43133,7 @@
     },
     {
       "source": "frontend_src_pages_catalog_warehouses_page",
-      "target": "frontend_src_lib_auth_context",
+      "target": "frontend_src_lib_api",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42689,6 +43141,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
       "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_warehouses_page",
+      "target": "frontend_src_lib_auth_context",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -42777,7 +43241,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_utils",
+      "target": "frontend_src_lib_auth_context",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42785,6 +43249,18 @@
       "context": "import",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
       "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_escritorio_page",
+      "target": "frontend_src_lib_utils",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "frontend/src/pages/escritorio-page.tsx",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -42801,7 +43277,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_components_layout_escritorio_shell",
+      "target": "frontend_src_components_user_menu",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42813,7 +43289,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_modules",
+      "target": "frontend_src_components_layout_escritorio_shell",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42825,7 +43301,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_api",
+      "target": "frontend_src_lib_modules",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42837,7 +43313,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_escritorio",
+      "target": "frontend_src_lib_api",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42849,7 +43325,7 @@
     },
     {
       "source": "frontend_src_pages_escritorio_page",
-      "target": "frontend_src_lib_auth_context",
+      "target": "frontend_src_lib_escritorio",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -44645,6 +45121,18 @@
       "context": "parameter_type",
       "source_file": "backend/src/auth.service.ts",
       "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_bootstrap_service_bootstrapservice_constructor",
+      "target": "backend_src_prisma_prisma_service_prismaservice",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -47407,7 +47895,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/app.module.ts",
-      "source_location": "L46",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -47485,6 +47973,17 @@
       "confidence_score": 1.0,
       "source_file": "backend/src/auth.types.ts",
       "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_bootstrap_service",
+      "target": "backend_src_bootstrap_service_bootstrapservice",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -50403,6 +50902,39 @@
       "weight": 1.0
     },
     {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_components_user_menu_usermenu",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu",
+      "target": "frontend_src_components_user_menu_iniciales",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_components_user_menu_usermenu",
+      "target": "frontend_src_components_user_menu_usermenu_cambiarcuenta",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/components/user-menu.tsx",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
       "source": "frontend_src_components_ventas_chart",
       "target": "frontend_src_components_ventas_chart_period",
       "relation": "contains",
@@ -50982,7 +51514,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L14",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -50993,7 +51525,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L16",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -51004,7 +51536,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L25",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -51026,7 +51558,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L61",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -51141,13 +51673,35 @@
     },
     {
       "source": "frontend_src_lib_modules",
+      "target": "frontend_src_lib_modules_hues",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/lib/modules.tsx",
+      "source_location": "L108",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_lib_modules",
+      "target": "frontend_src_lib_modules_huefor",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/lib/modules.tsx",
+      "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_lib_modules",
       "target": "frontend_src_lib_modules_moduleforpath",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/lib/modules.tsx",
-      "source_location": "L103",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -51158,7 +51712,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/lib/modules.tsx",
-      "source_location": "L112",
+      "source_location": "L135",
       "weight": 1.0
     },
     {
@@ -51169,7 +51723,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/lib/modules.tsx",
-      "source_location": "L117",
+      "source_location": "L140",
       "weight": 1.0
     },
     {
@@ -51697,7 +52251,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L16",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -51708,7 +52262,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L18",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_warehouses_page_warehousespage",
+      "target": "frontend_src_pages_catalog_warehouses_page_warehousespage_submitcaja",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -51719,7 +52284,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L38",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -51730,7 +52295,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
-      "source_location": "L52",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -51741,7 +52306,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -51752,7 +52317,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -51763,7 +52328,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -51774,7 +52339,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L36",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -51785,7 +52350,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -51796,7 +52361,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L50",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -51807,7 +52372,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L99",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -52995,7 +53560,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L115",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -53006,7 +53571,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L127",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -53050,7 +53615,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L68",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -53061,7 +53626,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L81",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -53072,7 +53637,29 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/auth.service.ts",
-      "source_location": "L89",
+      "source_location": "L94",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_bootstrap_service_bootstrapservice",
+      "target": "backend_src_bootstrap_service_bootstrapservice_constructor",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "backend_src_bootstrap_service_bootstrapservice",
+      "target": "backend_src_bootstrap_service_bootstrapservice_onmoduleinit",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/bootstrap.service.ts",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -56609,7 +57196,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/lib/auth-context.tsx",
-      "source_location": "L26",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -56885,6 +57472,18 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_pages_catalog_warehouses_page_warehousespage_submitcaja",
+      "target": "backend_src_auth_service_authservice_token",
+      "relation": "indirect_call",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "argument",
+      "source_file": "frontend/src/pages/catalog/warehouses-page.tsx",
       "source_location": "L57",
       "weight": 1.0
     },
@@ -56897,7 +57496,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/escritorio-page.tsx",
-      "source_location": "L54",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -57089,7 +57688,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/pages/sales/pos-page.tsx",
-      "source_location": "L722",
+      "source_location": "L727",
       "weight": 1.0
     },
     {
@@ -57245,7 +57844,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "frontend/src/pages/sales/pos-page.tsx",
-      "source_location": "L592",
+      "source_location": "L597",
       "weight": 1.0
     },
     {
@@ -58948,5 +59547,5 @@
       "source_file": "docs/investigacion-compras-recepcion-stock.md"
     }
   ],
-  "built_at_commit": "acd3cfd7813be7bb0f148d8eb97dee4b4d1dcfb9"
+  "built_at_commit": "2dc92e8edfc531b8431d70429383550c0b8c3665"
 }

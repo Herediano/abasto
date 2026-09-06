@@ -228,9 +228,9 @@
     "semantic_hash": "5c1eb0346fe1bb881ca6c8744d2ead8d"
   },
   "backend/src/app.module.ts": {
-    "mtime": 1788671733.4324522,
-    "seen": 1788672917.2287781,
-    "ast_hash": "cc9d60256322c380f588e19ba56ee107",
+    "mtime": 1788675851.9813623,
+    "seen": 1788676543.8806036,
+    "ast_hash": "f787b3b7d3652fed64a3f17fb97ec75a",
     "semantic_hash": ""
   },
   "backend/src/auth.controller.ts": {
@@ -246,10 +246,10 @@
     "semantic_hash": "5db775b98637eccc26e58fb2b5d7e256"
   },
   "backend/src/auth.service.ts": {
-    "mtime": 1788662773.957788,
-    "seen": 1788663735.1328664,
-    "ast_hash": "0e32259859ed5a988cad598ca2f7c252",
-    "semantic_hash": "0e32259859ed5a988cad598ca2f7c252"
+    "mtime": 1788675831.2597587,
+    "seen": 1788676543.8806036,
+    "ast_hash": "fe10a5bbc702ef6b3cd686429d179801",
+    "semantic_hash": ""
   },
   "backend/src/auth.types.ts": {
     "mtime": 1788662773.957788,
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/auth-context.tsx": {
-    "mtime": 1788662774.1409109,
-    "seen": 1788663735.1328664,
-    "ast_hash": "6082d61624028763ed18314dbe767a56",
+    "mtime": 1788675937.3015463,
+    "seen": 1788676543.8806036,
+    "ast_hash": "d1268598036d5602c48e41dbedf542c7",
     "semantic_hash": ""
   },
   "frontend/src/lib/format.ts": {
@@ -702,10 +702,10 @@
     "semantic_hash": "2c0bdf166eff76eec978785c0e19a826"
   },
   "frontend/src/pages/admin/users-page.tsx": {
-    "mtime": 1788662774.1568468,
-    "seen": 1788663735.1328664,
-    "ast_hash": "81f7904201bd386c1dd78c48a2aba9d9",
-    "semantic_hash": "81f7904201bd386c1dd78c48a2aba9d9"
+    "mtime": 1788675954.9871728,
+    "seen": 1788676543.8806036,
+    "ast_hash": "15a45a6177ab28acf8ace4bad728e87b",
+    "semantic_hash": ""
   },
   "frontend/src/pages/auth/login-page.tsx": {
     "mtime": 1788662774.1568468,
@@ -750,10 +750,10 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/warehouses-page.tsx": {
-    "mtime": 1788662774.1728628,
-    "seen": 1788663735.1328664,
-    "ast_hash": "16b889995ef77b70c025adf037291034",
-    "semantic_hash": "16b889995ef77b70c025adf037291034"
+    "mtime": 1788676034.6466136,
+    "seen": 1788676543.8806036,
+    "ast_hash": "ca654b74190407f65c40c075ed651313",
+    "semantic_hash": ""
   },
   "frontend/src/pages/prices/prices-page.tsx": {
     "mtime": 1788662774.180847,
@@ -762,9 +762,9 @@
     "semantic_hash": "0328147e9818502c226d3411b30d5332"
   },
   "frontend/src/pages/sales/pos-page.tsx": {
-    "mtime": 1788662774.1888459,
-    "seen": 1788663735.1328664,
-    "ast_hash": "86050590004aa815469e57e60acc8644",
+    "mtime": 1788675989.5856824,
+    "seen": 1788676543.8806036,
+    "ast_hash": "6cb66e757534b3edbeeac4cf6456518e",
     "semantic_hash": ""
   },
   "frontend/src/pages/sales/sales-history-page.tsx": {
@@ -1044,15 +1044,15 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/modules.tsx": {
-    "mtime": 1788673723.210586,
-    "seen": 1788674116.1530323,
-    "ast_hash": "730964567d4be3bf23f9c21535ebb74b",
+    "mtime": 1788676143.7782462,
+    "seen": 1788676543.8806036,
+    "ast_hash": "22341a421fae77dba85c8a3f0e7d001f",
     "semantic_hash": ""
   },
   "frontend/src/pages/escritorio-page.tsx": {
-    "mtime": 1788672681.4855862,
-    "seen": 1788672917.2287781,
-    "ast_hash": "4405ee3ad89bf72699d74a1f8309ed6e",
+    "mtime": 1788676219.4715874,
+    "seen": 1788676543.8806036,
+    "ast_hash": "8c13688e425fb874988758ad0c4453c7",
     "semantic_hash": ""
   },
   "backend/prisma/seed-demo.ts": {
@@ -1101,6 +1101,18 @@
     "mtime": 1788673072.0472088,
     "seen": 1788674116.1530323,
     "ast_hash": "1dbf7eb621d07cec4b916d3f9516868d",
+    "semantic_hash": ""
+  },
+  "backend/src/bootstrap.service.ts": {
+    "mtime": 1788675842.308246,
+    "seen": 1788676543.8806036,
+    "ast_hash": "70628f10edf62b361a92f9b1b842495a",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/user-menu.tsx": {
+    "mtime": 1788676095.7624226,
+    "seen": 1788676543.8806036,
+    "ast_hash": "c40da0c6cc6e6229455bca877281aac2",
     "semantic_hash": ""
   }
 }

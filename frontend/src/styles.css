@@ -225,3 +225,27 @@
     animation: none !important;
   }
 }
+
+/*
+ * Aura sutil por módulo en el escritorio: cada tarjeta lleva su matiz propio
+ * (--ab-tile-hue, ver lib/modules.tsx) en el borde y en el motivo, para
+ * reconocer el módulo por color sin leer. Apagado a propósito — no compite con
+ * el verde acción ni con los colores de estado. Ver docs/diseno.md.
+ */
+.module-tile {
+  border-color: color-mix(in srgb, var(--ab-tile-hue) 30%, var(--color-border));
+  box-shadow: var(--ab-shadow-1), inset 0 0 0 1px color-mix(in srgb, var(--ab-tile-hue) 8%, transparent);
+}
+.module-tile:hover {
+  border-color: color-mix(in srgb, var(--ab-tile-hue) 55%, var(--color-border));
+  box-shadow:
+    var(--ab-shadow-2),
+    0 6px 22px -10px color-mix(in srgb, var(--ab-tile-hue) 40%, transparent);
+}
+.module-tile .module-tile__motif {
+  color: var(--ab-tile-hue);
+  opacity: 0.09;
+}
+:root:not([data-theme='light']) .module-tile .module-tile__motif { opacity: 0.16; }
+.module-tile:hover .module-tile__motif { opacity: 0.16; }
+:root:not([data-theme='light']) .module-tile:hover .module-tile__motif { opacity: 0.24; }

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { ArrowRight, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { UserMenu } from '@/components/user-menu';
 import { usePalette } from '@/components/layout/escritorio-shell';
-import { ModuleMotif, visibleModules, type ModuleDef } from '@/lib/modules';
+import { ModuleMotif, hueFor, visibleModules, type ModuleDef } from '@/lib/modules';
 import { api } from '@/lib/api';
 import { pendientes, statFor, type EscritorioSummary } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
@@ -54,6 +55,7 @@ export function EscritorioPage() {
   const [config, setConfig] = useState<Config>(readConfig);
   const [configuring, setConfiguring] = useState(false);
   const [summary, setSummary] = useState<EscritorioSummary | null>(null);
+  const [dragKey, setDragKey] = useState<string | null>(null);
 
   const token = session?.accessToken;
   useEffect(() => {
@@ -84,12 +86,15 @@ export function EscritorioPage() {
         ? { ...config, hidden: config.hidden.filter(k => k !== key) }
         : { ...config, hidden: [...config.hidden, key] },
     );
-  const move = (key: string, dir: -1 | 1) => {
+  // Arrastrar para reordenar (modo Configurar). Al pasar por encima de otra
+  // tarjeta se reordena en vivo; el orden queda guardado en localStorage.
+  const dropOn = (targetKey: string) => {
+    if (!dragKey || dragKey === targetKey) return;
     const keys = visible.map(m => m.key);
-    const i = keys.indexOf(key);
-    const j = i + dir;
-    if (j < 0 || j >= keys.length) return;
-    [keys[i], keys[j]] = [keys[j], keys[i]];
+    const from = keys.indexOf(dragKey);
+    const to = keys.indexOf(targetKey);
+    if (from < 0 || to < 0) return;
+    keys.splice(to, 0, keys.splice(from, 1)[0]);
     update({ ...config, order: [...keys, ...hidden.map(m => m.key)] });
   };
 
@@ -129,7 +134,7 @@ export function EscritorioPage() {
             <kbd className="rounded bg-primary/10 px-1 font-mono text-[10px] font-normal group-hover:bg-primary-foreground/15">Ctrl K</kbd>
           </button>
           <ThemeToggle className="border border-border" />
-          <span className="ml-1 hidden text-xs text-muted-foreground sm:inline">{session?.user.rangoName ?? ''}</span>
+          <UserMenu />
         </div>
       </header>
 
@@ -183,14 +188,25 @@ export function EscritorioPage() {
             key={m.key}
             to={m.path}
             onClick={e => open(e, m)}
+            style={{ ['--ab-tile-hue' as string]: hueFor(m.key) }}
+            draggable={configuring}
+            onDragStart={() => setDragKey(m.key)}
+            onDragEnd={() => setDragKey(null)}
+            onDragOver={e => {
+              if (configuring && dragKey) {
+                e.preventDefault();
+                dropOn(m.key);
+              }
+            }}
             className={cn(
-              'group relative flex min-h-[150px] flex-col gap-2 overflow-hidden rounded-lg border border-border bg-card p-4 shadow-card transition-all',
-              configuring ? 'cursor-default' : 'hover:-translate-y-0.5 hover:shadow-float',
+              'module-tile group relative flex min-h-[150px] flex-col gap-2 overflow-hidden rounded-lg border bg-card p-4 transition-all',
+              configuring ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5',
+              dragKey === m.key && 'opacity-40',
             )}
           >
             <ModuleMotif
               motif={m.motif}
-              className="pointer-events-none absolute -bottom-4 -right-4 size-[104px] text-foreground opacity-[0.055] transition-colors group-hover:text-primary group-hover:opacity-[0.1] dark:opacity-[0.09]"
+              className="module-tile__motif pointer-events-none absolute -bottom-4 -right-4 size-[104px] transition-opacity"
             />
             {stat?.flag && !configuring && (
               <span
@@ -216,18 +232,8 @@ export function EscritorioPage() {
             )}
 
             {configuring && (
-              <div className="absolute right-2 top-2 z-10 flex gap-0.5 rounded-md border border-border bg-card p-0.5 shadow-float">
-                <button
-                  type="button"
-                  aria-label="Subir"
-                  onClick={e => {
-                    e.preventDefault();
-                    move(m.key, -1);
-                  }}
-                  className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground"
-                >
-                  <DotsSixVertical className="size-3.5 rotate-90" />
-                </button>
+              <>
+                <DotsSixVertical className="absolute left-1/2 top-2 size-4 -translate-x-1/2 text-placeholder" />
                 <button
                   type="button"
                   aria-label="Ocultar"
@@ -235,11 +241,11 @@ export function EscritorioPage() {
                     e.preventDefault();
                     toggleHidden(m.key);
                   }}
-                  className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground"
+                  className="absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground shadow-float hover:bg-background hover:text-foreground"
                 >
                   <EyeSlash className="size-3.5" />
                 </button>
-              </div>
+              </>
             )}
             {!configuring && !stat?.flag && (
               <ArrowRight className="absolute right-4 top-4 size-4 text-placeholder opacity-0 transition-opacity group-hover:opacity-100" />

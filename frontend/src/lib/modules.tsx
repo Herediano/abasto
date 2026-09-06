@@ -99,6 +99,29 @@ export const MODULES: ModuleDef[] = [
 const BY_KEY = new Map(MODULES.map(m => [m.key, m]));
 export const moduleByKey = (key: string) => BY_KEY.get(key);
 
+/**
+ * Un matiz propio por módulo, apagado y en gama fría/tierra, distinto de los
+ * colores semánticos de Yerba (verde acción, ámbar aviso, rojo problema). No
+ * dice estado: es identidad, para reconocer el módulo por color sin leer.
+ * Ver docs/diseno.md.
+ */
+const HUES: Record<string, string> = {
+  ventas: '#3f7d6b',
+  caja: '#2f7d7d',
+  turnos: '#5b6b9e',
+  stock: '#8a6d3b',
+  vencimientos: '#9a5b7a',
+  reposicion: '#6b7d3f',
+  productos: '#4b6fa8',
+  precios: '#a07b2e',
+  proveedores: '#4a7a9e',
+  clientes: '#7a5ba0',
+  depositos: '#7a6a5a',
+  usuarios: '#3f8a9e',
+  rangos: '#3f7a4f',
+};
+export const hueFor = (key: string) => HUES[key] ?? 'var(--color-primary)';
+
 /** El módulo de una ruta: match exacto y si no, el prefijo más largo (rutas de detalle como /catalog/products/:id). */
 export function moduleForPath(pathname: string): ModuleDef | undefined {
   const exact = MODULES.find(m => m.path === pathname);
