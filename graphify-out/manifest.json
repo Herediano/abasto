@@ -1056,9 +1056,9 @@
     "semantic_hash": ""
   },
   "backend/prisma/seed-demo.ts": {
-    "mtime": 1788681565.1259215,
-    "seen": 1788682014.5554438,
-    "ast_hash": "a1341a05fdae935cb2192e06882a392c",
+    "mtime": 1788683747.193468,
+    "seen": 1788683910.7676082,
+    "ast_hash": "7a50e2a695335ae8285f356edba2196a",
     "semantic_hash": ""
   },
   "backend/src/escritorio.controller.ts": {

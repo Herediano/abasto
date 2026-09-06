@@ -1,7 +1,7 @@
 # Graph Report - erp-modular-vision-56c436  (2026-09-06)
 
 ## Corpus Check
-- 194 files · ~114,899 words
+- 194 files · ~115,639 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `be599817`
+- Built from commit: `fba93802`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -430,9 +430,9 @@ Nodes (4): ProductSearchDialog(), alTeclear(), elegible(), elegir()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AuthService` connect `AuthService` to `app.module.ts`, `auth.service.ts`, `Mayorista ERP Project Overview`, `.token`?**
-  _High betweenness centrality (0.262) - this node is a cross-community bridge._
+  _High betweenness centrality (0.261) - this node is a cross-community bridge._
 - **Why does `AuthRequest` connect `AuthRequest` to `SalesService`, `app.module.ts`, `AuthService`, `RequirePermission`, `prices.service.ts`, `StockService`, `PromotionsController`, `StockController`, `PriceListsController`, `PriceRulesController`, `CustomersController`, `products.controller.ts`, `Mayorista ERP Project Overview`, `Tenants Controller`, `BranchesController`, `RangosController`, `promotions.controller.ts`, `SalesController`, `PurchasesController`, `CategoriesController`, `ReportesController`, `CashShiftsController`, `SuppliersController`, `WarehousesController`?**
-  _High betweenness centrality (0.179) - this node is a cross-community bridge._
+  _High betweenness centrality (0.177) - this node is a cross-community bridge._
 - **Why does `api` connect `api` to `api.ts`, `CategoriesPage`, `SuppliersPage`, `ExpirationsPage`, `escritorio-page.tsx`, `money`, `.token`, `WarehousesPage`, `errorMessage`, `RangosPage`, `StockInPage`, `SalesHistoryPage`, `ventas-chart.tsx`?**
   _High betweenness centrality (0.100) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `start:dev` to the rest of the system?**

@@ -1,7 +1,9 @@
 /**
  * Datos de demo para VER el sistema funcionando: productos con stock, dos
  * semanas de ventas, clientes con cuenta corriente, lotes por vencer y una
- * factura de compra sin cargar.
+ * factura de compra sin cargar. Crea DOS sucursales —"Casa Central" (la
+ * grande) y "Sucursal Centro" (más chica)— cada una con su propio stock,
+ * ventas y borrador de compra, para probar el selector de sucursal.
  *
  * Uso:  npm run db:seed-demo -- "<nombre de la empresa>"
  *       (o DEMO_TENANT="<nombre>" npm run db:seed-demo)
@@ -125,9 +127,10 @@ async function main() {
   });
 
   // ---- Limpiar demo anterior ----
-  const DEMO_POS = '0001'; // punto de venta de las ventas de demo — así se limpian sin tocar ventas reales
+  const DEMO_POS = '0001'; // Casa Central. Punto de venta de las ventas de demo — así se limpian sin tocar ventas reales
+  const DEMO_POS_2 = '0002'; // Sucursal Centro
   const previos = await prisma.product.findMany({ where: { tenantId, barcode: { startsWith: BARCODE_PREFIX } }, select: { id: true } });
-  const ventasDemo = await prisma.sale.findMany({ where: { tenantId, pointOfSale: DEMO_POS }, select: { id: true } });
+  const ventasDemo = await prisma.sale.findMany({ where: { tenantId, pointOfSale: { in: [DEMO_POS, DEMO_POS_2] } }, select: { id: true } });
   if (previos.length || ventasDemo.length) {
     const ids = previos.map(p => p.id);
     const sids = ventasDemo.map(s => s.id);
@@ -325,6 +328,126 @@ async function main() {
       console.log('  · 1 factura de compra en borrador (Arcor)');
     }
   }
+
+  // ---- Segunda sucursal: "Sucursal Centro" — local más chico, menos movimiento ----
+  const centro =
+    (await prisma.branch.findFirst({ where: { tenantId, code: 'CEN' } })) ??
+    (await prisma.branch.create({ data: { tenantId, name: 'Sucursal Centro', code: 'CEN', address: 'Peatonal San Martín 850' } }));
+  const centroWh =
+    (await prisma.warehouse.findFirst({ where: { tenantId, branchId: centro.id } })) ??
+    (await prisma.warehouse.create({ data: { tenantId, branchId: centro.id, name: 'Depósito', code: 'CEN-DEP' } }));
+  await prisma.cashRegister.upsert({
+    where: { tenantId_warehouseId_name: { tenantId, warehouseId: centroWh.id, name: 'Caja 1' } },
+    update: {},
+    create: { tenantId, warehouseId: centroWh.id, name: 'Caja 1' },
+  });
+
+  // Stock inicial: dos tercios del surtido, cantidades más justas; Coca 500ml queda bajo mínimo.
+  const surtidoCentro = creados.filter((_, i) => i % 3 !== 0);
+  for (let i = 0; i < surtidoCentro.length; i++) {
+    const prod = surtidoCentro[i];
+    const bajo = prod.name === 'COCA COLA 500ML';
+    const qty = bajo ? Math.floor(prod.min * rand(0.2, 0.4)) : Math.floor(prod.min * rand(0.9, 1.9));
+    if (qty > 0) {
+      await prisma.stockMovement.create({
+        data: {
+          tenantId, productId: prod.id, warehouseId: centroWh.id, quantity: new Prisma.Decimal(qty),
+          movementType: 'purchase_in', occurredAt: daysAgo(12), notes: 'Carga inicial (demo)',
+        },
+      });
+    }
+    if (prod.venc) {
+      await prisma.productLot.create({
+        data: {
+          tenantId, productId: prod.id, warehouseId: centroWh.id, supplierId: proveedorMolinos?.id ?? null,
+          lotNumber: `LC-${pad(2000 + i, 4)}`, expirationDate: daysFromNow(pick([3, 8, 12])),
+        },
+      });
+    }
+  }
+
+  // Ventas: 8 jornadas, ~un tercio del volumen de Casa Central, su propia numeración.
+  let numeroCentro = 1;
+  let ventasCentro = 0;
+  for (let d = 7; d >= 0; d--) {
+    const dia = new Date(ahora);
+    dia.setDate(dia.getDate() - d);
+    const finde = dia.getDay() === 0 || dia.getDay() === 6;
+    const hoy = d === 0;
+    const baseOps = finde ? rand(2, 5) : rand(6, 11);
+    const ops = hoy ? Math.max(1, Math.round(baseOps * 0.7 * (transcurridoMs / (12 * 3_600_000)))) : Math.round(baseOps);
+    for (let k = 0; k < ops; k++) {
+      const fecha = hoy
+        ? new Date(ahora.getTime() - Math.floor(rand(60_000, transcurridoMs)))
+        : (() => {
+            const f = new Date(dia);
+            f.setHours(0, 0, 0, 0);
+            f.setMinutes(Math.floor(rand(9 * 60, 20 * 60)));
+            return f;
+          })();
+      const nLineas = Math.round(rand(1, 4));
+      const lineas: Omit<Prisma.SaleLineCreateManyInput, 'saleId'>[] = [];
+      let subtotal = 0;
+      let tax = 0;
+      for (let l = 0; l < nLineas; l++) {
+        const prod = pick(surtidoCentro);
+        const cant = prod.name.includes(' x KG') ? Math.round(rand(3, 10)) / 10 : Math.round(rand(1, 3));
+        const neto = prod.price / 1.21;
+        const lineSub = neto * cant;
+        const lineTax = lineSub * 0.21;
+        subtotal += lineSub;
+        tax += lineTax;
+        lineas.push({
+          tenantId, productId: prod.id, barcode: '', description: prod.name, quantity: new Prisma.Decimal(cant.toFixed(3)),
+          listPrice: money(prod.price), unitPrice: money(prod.price), taxRate: new Prisma.Decimal(21),
+          lineSubtotal: money(lineSub), lineTax: money(lineTax), lineTotal: money(lineSub + lineTax),
+        });
+      }
+      const total = subtotal + tax;
+      const metodo = pick(['cash', 'cash', 'card', 'transfer', 'qr'] as const);
+      const sale = await prisma.sale.create({
+        data: {
+          tenantId, warehouseId: centroWh.id, userId: user.id, priceListId: priceList.id,
+          pointOfSale: DEMO_POS_2, number: numeroCentro++, subtotal: money(subtotal), taxTotal: money(tax), total: money(total),
+          paymentMethod: metodo, occurredAt: fecha,
+        },
+      });
+      await prisma.saleLine.createMany({ data: lineas.map(l => ({ ...l, saleId: sale.id })) });
+      await prisma.salePayment.createMany({ data: [{ tenantId, saleId: sale.id, method: metodo, amount: money(total) }] });
+      ventasCentro++;
+    }
+  }
+
+  // Una factura de compra sin cargar, de otro proveedor, para esta sucursal.
+  const provNorte = await prisma.supplier.findFirst({ where: { tenantId, name: 'Distribuidora Norte' } });
+  if (provNorte && !(await prisma.purchaseInvoice.findFirst({ where: { tenantId, status: 'draft', supplierId: provNorte.id, warehouseId: centroWh.id } }))) {
+    const items = surtidoCentro.filter(p => ['COCA COLA 500ML', 'AGUA VILLAVICENCIO 2L', 'GASEOSA SPRITE 2.25L'].includes(p.name));
+    if (items.length) {
+      let sub = 0;
+      let iva = 0;
+      const lineas = items.map(p => {
+        const uc = p.cost * 1.05;
+        const ls = uc * 18;
+        const lt = ls * 0.21;
+        sub += ls;
+        iva += lt;
+        return {
+          tenantId, productId: p.id, barcode: '', description: p.name, quantity: new Prisma.Decimal(18),
+          unitCost: money(uc), taxRate: new Prisma.Decimal(21),
+          lineSubtotal: money(ls), lineTax: money(lt), lineTotal: money(ls + lt),
+        };
+      });
+      const inv = await prisma.purchaseInvoice.create({
+        data: {
+          tenantId, supplierId: provNorte.id, warehouseId: centroWh.id, createdById: user.id, status: 'draft',
+          invoiceType: 'A', pointOfSale: '0034', invoiceNumber: '00021488', issueDate: daysFromNow(-2),
+          subtotal: money(sub), taxTotal: money(iva), total: money(sub + iva),
+        },
+      });
+      await prisma.purchaseInvoiceLine.createMany({ data: lineas.map(l => ({ ...l, invoiceId: inv.id })) });
+    }
+  }
+  console.log(`  · 2ª sucursal «Sucursal Centro»: ${surtidoCentro.length} productos, ${ventasCentro} ventas en 8 jornadas`);
 
   console.log('Demo lista.');
 }

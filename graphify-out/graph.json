@@ -5249,7 +5249,7 @@
       "file_type": "code",
       "norm_label": "bare()",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L82"
+      "source_location": "L84"
     },
     {
       "id": "backend_prisma_seed_demo_daysago",
@@ -5261,7 +5261,7 @@
       "file_type": "code",
       "norm_label": "daysago()",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L332"
+      "source_location": "L455"
     },
     {
       "id": "backend_prisma_seed_demo_daysfromnow",
@@ -5273,7 +5273,7 @@
       "file_type": "code",
       "norm_label": "daysfromnow()",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L338"
+      "source_location": "L461"
     },
     {
       "id": "backend_prisma_seed_demo_main",
@@ -5285,7 +5285,7 @@
       "file_type": "code",
       "norm_label": "main()",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L84"
+      "source_location": "L86"
     },
     {
       "id": "backend_prisma_seed_demo_money",
@@ -5297,7 +5297,7 @@
       "file_type": "code",
       "norm_label": "money()",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L71"
+      "source_location": "L73"
     },
     {
       "id": "backend_prisma_seed_demo_pad",
@@ -5309,7 +5309,7 @@
       "file_type": "code",
       "norm_label": "pad()",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L70"
+      "source_location": "L72"
     },
     {
       "id": "backend_prisma_seed_demo_pick",
@@ -5321,7 +5321,7 @@
       "file_type": "code",
       "norm_label": "pick()",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L73"
+      "source_location": "L75"
     },
     {
       "id": "backend_prisma_seed_demo_rand",
@@ -5333,7 +5333,7 @@
       "file_type": "code",
       "norm_label": "rand()",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L72"
+      "source_location": "L74"
     },
     {
       "id": "frontend_src_lib_api_api",
@@ -12041,7 +12041,7 @@
       "file_type": "code",
       "norm_label": "categorias",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L21"
+      "source_location": "L23"
     },
     {
       "id": "backend_prisma_seed_demo_clientes",
@@ -12052,7 +12052,7 @@
       "file_type": "code",
       "norm_label": "clientes",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L61"
+      "source_location": "L63"
     },
     {
       "id": "backend_prisma_seed_demo_prisma",
@@ -12063,7 +12063,7 @@
       "file_type": "code",
       "norm_label": "prisma",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L18"
+      "source_location": "L20"
     },
     {
       "id": "backend_prisma_seed_demo_productos",
@@ -12074,7 +12074,7 @@
       "file_type": "code",
       "norm_label": "productos",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L23"
+      "source_location": "L25"
     },
     {
       "id": "backend_prisma_seed_demo_proveedores",
@@ -12085,7 +12085,7 @@
       "file_type": "code",
       "norm_label": "proveedores",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L68"
+      "source_location": "L70"
     },
     {
       "id": "backend_tsconfig",
@@ -17540,7 +17540,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L336",
+      "source_location": "L459",
       "weight": 1.0
     },
     {
@@ -17552,7 +17552,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L342",
+      "source_location": "L465",
       "weight": 1.0
     },
     {
@@ -17564,7 +17564,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L169",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
@@ -17576,7 +17576,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L179",
+      "source_location": "L182",
       "weight": 1.0
     },
     {
@@ -17588,7 +17588,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L193",
+      "source_location": "L196",
       "weight": 1.0
     },
     {
@@ -17600,7 +17600,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L198",
+      "source_location": "L201",
       "weight": 1.0
     },
     {
@@ -17612,7 +17612,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L205",
+      "source_location": "L208",
       "weight": 1.0
     },
     {
@@ -17624,7 +17624,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L209",
+      "source_location": "L212",
       "weight": 1.0
     },
     {
@@ -17636,7 +17636,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L287",
+      "source_location": "L290",
       "weight": 1.0
     },
     {
@@ -50802,7 +50802,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L18",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -50813,7 +50813,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L21",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -50824,7 +50824,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L23",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -50835,7 +50835,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L332",
+      "source_location": "L455",
       "weight": 1.0
     },
     {
@@ -50846,7 +50846,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L338",
+      "source_location": "L461",
       "weight": 1.0
     },
     {
@@ -50857,7 +50857,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L61",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -50868,7 +50868,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L68",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -50879,7 +50879,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L70",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -50890,7 +50890,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L71",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -50901,7 +50901,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L72",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -50912,7 +50912,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L73",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -50923,7 +50923,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L82",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -50934,7 +50934,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/prisma/seed-demo.ts",
-      "source_location": "L84",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -63516,5 +63516,5 @@
       "source_file": "docs/investigacion-compras-recepcion-stock.md"
     }
   ],
-  "built_at_commit": "be5998179717e80f0e8131a32c7f036a35278170"
+  "built_at_commit": "fba93802589dcd62349e8bd8afcbb2b92d1119f9"
 }
