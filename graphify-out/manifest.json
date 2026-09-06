@@ -654,9 +654,9 @@
     "semantic_hash": "884ec3fca89d6555109935aec2b4fda1"
   },
   "frontend/src/lib/api.ts": {
-    "mtime": 1788685021.9050963,
-    "seen": 1788685700.8431895,
-    "ast_hash": "90d9a24db760ab30ffafff9dd19ce7e3",
+    "mtime": 1788687730.7780707,
+    "seen": 1788688326.907529,
+    "ast_hash": "9ded57cdbf430d3c0c655708e6b41225",
     "semantic_hash": ""
   },
   "frontend/src/lib/auth-context.tsx": {
@@ -708,9 +708,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/auth/login-page.tsx": {
-    "mtime": 1788680802.6599913,
-    "seen": 1788682014.5890791,
-    "ast_hash": "cc0e271dce66d8d5fbf2f8652333e7c7",
+    "mtime": 1788687755.0498734,
+    "seen": 1788688326.9105294,
+    "ast_hash": "8e9f5afc7ec11d0918af8e6ccbd30618",
     "semantic_hash": ""
   },
   "frontend/src/pages/auth/signup-page.tsx": {
@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "docs/diseno.md": {
-    "mtime": 1788687154.4406154,
-    "seen": 1788687231.706703,
-    "ast_hash": "df31a0145cc5411be4c130f69b04fc09",
+    "mtime": 1788688264.9047246,
+    "seen": 1788688326.925027,
+    "ast_hash": "05b4dcbf69fcbf9d350e37dea52a1d30",
     "semantic_hash": ""
   },
   "frontend/src/components/command-palette.tsx": {
@@ -1044,15 +1044,15 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/modules.tsx": {
-    "mtime": 1788680802.6522887,
-    "seen": 1788682014.5890791,
-    "ast_hash": "d2036b262e7f3b38ce8e0372f7e36e12",
+    "mtime": 1788687763.215227,
+    "seen": 1788688326.909529,
+    "ast_hash": "97e5c1435acc2049d4aaaf4e0ff550f4",
     "semantic_hash": ""
   },
   "frontend/src/pages/escritorio-page.tsx": {
-    "mtime": 1788686974.741146,
-    "seen": 1788687231.6923525,
-    "ast_hash": "f7af268935099273afd7062e4e82a60a",
+    "mtime": 1788688177.057778,
+    "seen": 1788688326.9125297,
+    "ast_hash": "5165db31ff8a7e922f36d1bbf6028fed",
     "semantic_hash": ""
   },
   "backend/prisma/seed-demo.ts": {
@@ -1128,15 +1128,15 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/prefs.ts": {
-    "mtime": 1788680802.6539886,
-    "seen": 1788682014.5890791,
-    "ast_hash": "f186b244e9bad0936ad9a2b068ae93e2",
+    "mtime": 1788687725.0278769,
+    "seen": 1788688326.909529,
+    "ast_hash": "e1405c6b7d11f12e9bf9b772a53d565a",
     "semantic_hash": ""
   },
   "frontend/src/pages/ajustes-page.tsx": {
-    "mtime": 1788685166.841251,
-    "seen": 1788685700.8472025,
-    "ast_hash": "a127f993a66b600287f1a3d36472c6f4",
+    "mtime": 1788687939.5329776,
+    "seen": 1788688326.9105294,
+    "ast_hash": "ee6dda4894f5f49f6c1526dac7e94897",
     "semantic_hash": ""
   },
   "backend/src/branches.controller.ts": {

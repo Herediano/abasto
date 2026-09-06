@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowRight, Check, Moon, PencilSimple, Plus, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
@@ -13,8 +13,8 @@ import { AccountList } from '@/components/account-list';
 import { api, errorMessage, type Branch, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { fileToResizedDataUrl } from '@/lib/image';
-import { hueFor, moduleByKey, settingsModules, visibleModules } from '@/lib/modules';
-import { AVATAR_COLORS, useDensity } from '@/lib/prefs';
+import { hueFor, moduleByKey, settingsModules } from '@/lib/modules';
+import { AVATAR_COLORS } from '@/lib/prefs';
 import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
@@ -67,7 +67,7 @@ export function AjustesPage() {
         <Divider label="Mi cuenta" />
         <PerfilSection session={session!} onSaved={refresh} />
         <PasswordSection token={session!.accessToken} />
-        <PreferenciasSection session={session!} onSaved={refresh} />
+        <PreferenciasSection />
         <Section title="Sesiones en este dispositivo" description="Podés tener varias cuentas abiertas y alternar entre ellas sin volver a escribir la contraseña.">
           <AccountList />
         </Section>
@@ -222,47 +222,14 @@ function PasswordSection({ token }: { token: string }) {
   );
 }
 
-function PreferenciasSection({ session, onSaved }: { session: Session; onSaved: () => Promise<void> }) {
-  const { can } = useAuth();
+function PreferenciasSection() {
   const { theme, setTheme } = useTheme();
-  const { density, setDensity } = useDensity();
-  const startup = session.user.preferences?.startup ?? 'escritorio';
-  const [savingStartup, setSavingStartup] = useState(false);
-  const mods = useMemo(() => visibleModules(can), [can]);
-
-  async function pickStartup(value: string) {
-    setSavingStartup(true);
-    try {
-      await api('/auth/me', { method: 'PATCH', body: JSON.stringify({ preferences: { startup: value } }) }, session.accessToken);
-      await onSaved();
-    } finally {
-      setSavingStartup(false);
-    }
-  }
-
   return (
-    <Section title="Preferencias" description="Cómo se ve y por dónde arranca el sistema para vos. Se guardan en este dispositivo.">
-      <div className="grid gap-5">
-        <Choice label="Tema">
-          <Toggle active={theme === 'light'} onClick={() => setTheme('light')}><Sun weight="fill" className="size-4" /> Claro</Toggle>
-          <Toggle active={theme === 'dark'} onClick={() => setTheme('dark')}><Moon weight="fill" className="size-4" /> Oscuro</Toggle>
-        </Choice>
-        <Choice label="Densidad de las tablas">
-          <Toggle active={density === 'comoda'} onClick={() => setDensity('comoda')}>Cómoda</Toggle>
-          <Toggle active={density === 'compacta'} onClick={() => setDensity('compacta')}>Compacta</Toggle>
-        </Choice>
-        <Choice label="Al abrir la app" hint="un cajero puede entrar directo a la caja">
-          <Select
-            className="max-w-xs"
-            value={startup}
-            disabled={savingStartup}
-            onChange={e => void pickStartup(e.target.value)}
-          >
-            <option value="escritorio">El escritorio</option>
-            {mods.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
-          </Select>
-        </Choice>
-      </div>
+    <Section title="Preferencias" description="Se guardan en este dispositivo. La densidad de las tablas se cambia desde «Configurar» en el escritorio.">
+      <Choice label="Tema">
+        <Toggle active={theme === 'light'} onClick={() => setTheme('light')}><Sun weight="fill" className="size-4" /> Claro</Toggle>
+        <Toggle active={theme === 'dark'} onClick={() => setTheme('dark')}><Moon weight="fill" className="size-4" /> Oscuro</Toggle>
+      </Choice>
     </Section>
   );
 }

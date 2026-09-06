@@ -140,9 +140,15 @@ export function moduleForPath(pathname: string): ModuleDef | undefined {
     .sort((a, b) => b.path.length - a.path.length)[0];
 }
 
-/** Las tarjetas del escritorio que este rango puede ver, en el orden del registro. */
+/** Los módulos navegables que este rango puede ver (para el buscador de Ctrl+K). */
 export function visibleModules(can: (permission: string) => boolean): ModuleDef[] {
   return MODULES.filter(m => !m.settings && (!m.permission || can(m.permission)));
+}
+
+/** Las tarjetas de la grilla del escritorio: como `visibleModules` pero sin la Caja,
+ *  que va aparte por ser un modo de trabajo, no un módulo más. */
+export function gridModules(can: (permission: string) => boolean): ModuleDef[] {
+  return visibleModules(can).filter(m => !m.fullscreen);
 }
 
 /** Los módulos que viven dentro de Ajustes (Usuarios, Rangos), filtrados por permiso. */

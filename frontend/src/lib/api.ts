@@ -44,8 +44,6 @@ export async function downloadFile(path: string, token: string, filename: string
 export type UserPreferences = {
   /** Color del avatar (uno de los presets de Ajustes). */
   avatarColor?: string;
-  /** A qué pantalla entrar al abrir la app: 'escritorio' o la clave de un módulo. */
-  startup?: string;
 };
 
 export type Session = {

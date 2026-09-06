@@ -9,10 +9,6 @@ import { AuthBackground } from '@/components/auth-background';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { api, errorMessage, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import { moduleByKey } from '@/lib/modules';
-import { resolveStartupPath } from '@/lib/prefs';
-
-const pathForStartup = (s: Session) => resolveStartupPath(s.user.preferences?.startup, k => moduleByKey(k)?.path);
 
 export function LoginPage() {
   const { session, login } = useAuth();
@@ -23,17 +19,17 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Con sesión abierta se entra directo — salvo que se venga a "Agregar otra cuenta".
-  if (session && !adding) return <Navigate to={pathForStartup(session)} replace />;
+  // Con sesión abierta se entra directo al escritorio — salvo que se venga a
+  // "Agregar otra cuenta".
+  if (session && !adding) return <Navigate to="/" replace />;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError('');
     try {
-      const next = await api<Session>('/auth/login', { method: 'POST', body: JSON.stringify(form) });
-      login(next);
-      navigate(pathForStartup(next), { replace: true });
+      login(await api<Session>('/auth/login', { method: 'POST', body: JSON.stringify(form) }));
+      navigate('/', { replace: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {

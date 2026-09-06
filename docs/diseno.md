@@ -111,18 +111,25 @@ que está todo bien.
 ### Configurable
 
 Un modo «Configurar»: ocultar tarjetas, mostrarlas de nuevo, reordenarlas
-arrastrando. Se guarda por dispositivo en `localStorage`. Con control —
-jerarquía clara, no un caos de widgets. Personalización más profunda (fijar,
-destacar, tamaños, y que el orden viaje con la cuenta) es más adelante.
+arrastrando, y la **densidad de las tablas** (cómoda / compacta) —acá, no en
+Ajustes, para que se cambie sobre los módulos—. Se guarda por dispositivo en
+`localStorage`. Con control — jerarquía clara, no un caos de widgets.
+Personalización más profunda (fijar, destacar, tamaños, y que el orden viaje con
+la cuenta) es más adelante.
 
-### Dos excepciones, por contexto de trabajo
+### La caja no es una tarjeta
 
-- **Cajero** → no cae en el escritorio. Entra directo a la caja (pantalla
-  completa, fuera de todo). Un escritorio sería una parada de más entre el login
-  y escanear.
-- **Celular** (repositor, o cualquiera desde el teléfono) → mismo escritorio,
-  misma idea, **una sola columna**. Es una variante de maquetado, no otro
-  concepto.
+La caja es un **modo de trabajo**, no un módulo que se navega: pantalla
+completa, el mundo del cajero. En el escritorio vive en un **botón propio**
+—ancho, con el color de Caja lleno, con el estado del turno al costado—, arriba
+de la grilla y claramente distinto de las tarjetas. Al abrir la app siempre se
+cae en el escritorio (no hay preferencia de "entrar directo a"); para un cajero,
+ese botón es lo primero que ve.
+
+### El celular
+
+Repositor, o cualquiera desde el teléfono → mismo escritorio, misma idea, **una
+sola columna**. Es una variante de maquetado, no otro concepto.
 
 ## El módulo — también un solo molde
 
@@ -217,8 +224,8 @@ datos a alguien de afuera.**
   dispositivo, alternar sin re-login, "Agregar otra cuenta" y "Salir" (cierra
   sólo la activa) — `lib/auth-context.tsx`, `components/account-list.tsx`.
 - **Ajustes** (`/ajustes`, desde el menú de la cuenta): perfil (nombre, email,
-  color de avatar), contraseña, preferencias (tema, densidad de tablas, pantalla
-  de inicio), sesiones del dispositivo; y sólo para el Dueño, datos de la empresa
+  color de avatar), contraseña, tema, sesiones del dispositivo; y sólo para el
+  Dueño, datos de la empresa
   (nombre, logo, zona horaria), **sucursales** y los accesos a Usuarios y Rangos,
   que salen del escritorio. Backend: `PATCH /auth/me`, `PATCH /auth/tenant`,
   `/branches`.

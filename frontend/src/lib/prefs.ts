@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Preferencias de dispositivo (viven en localStorage, no viajan con la cuenta):
- * la densidad de las tablas. El tema tiene su propio módulo (lib/theme.ts).
- * El color de avatar y la pantalla de inicio son de la cuenta y viven en
- * session.user.preferences (backend).
+ * Preferencia de dispositivo (vive en localStorage, no viaja con la cuenta):
+ * la densidad de las tablas, que se cambia desde "Configurar" en el escritorio.
+ * El tema tiene su propio módulo (lib/theme.ts); el color de avatar es de la
+ * cuenta y vive en session.user.preferences (backend).
  */
 
 export type Density = 'comoda' | 'compacta';
@@ -42,12 +42,3 @@ export function useDensity() {
 export const AVATAR_COLORS = [
   '#1f7355', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#0d9488', '#475569',
 ];
-
-/** Opciones de "al abrir la app": el escritorio, o entrar directo a un módulo. */
-export const startupLabel = (value: string | undefined, moduleLabel: (key: string) => string | undefined) =>
-  !value || value === 'escritorio' ? 'El escritorio' : moduleLabel(value) ?? 'El escritorio';
-
-export const resolveStartupPath = (value: string | undefined, pathForKey: (key: string) => string | undefined) => {
-  if (!value || value === 'escritorio') return '/';
-  return pathForKey(value) ?? '/';
-};
