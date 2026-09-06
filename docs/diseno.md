@@ -101,10 +101,10 @@ la señal de que está todo bien.
 
 ### Configurable
 
-Un modo «Configurar»: ocultar tarjetas, mostrarlas de nuevo, reordenarlas. Se
-guarda por usuario (hoy `localStorage`, mañana en el perfil). Con control —
+Un modo «Configurar»: ocultar tarjetas, mostrarlas de nuevo, reordenarlas
+arrastrando. Se guarda por dispositivo en `localStorage`. Con control —
 jerarquía clara, no un caos de widgets. Personalización más profunda (fijar,
-destacar, tamaños) es más adelante.
+destacar, tamaños, y que el orden viaje con la cuenta) es más adelante.
 
 ### Dos excepciones, por contexto de trabajo
 
@@ -187,7 +187,7 @@ datos a alguien de afuera.**
 - **Caja fuera de todo**: `FullScreenRoute` con su franja de estado del turno.
   Caja por dentro: lector con anillo verde, carrito, panel de cobro, total
   grande, medios como botones. Atajos `F2`/`F3`/`F4`/`F6`/`F7`/`F8`.
-- **Selector de tema** (claro → oscuro → automático, `lib/theme.ts`).
+- **Selector de tema** (claro / oscuro, `lib/theme.ts`).
 - **Íconos Phosphor** en toda la app (Lucide ya no se usa).
 - **Buscador de productos** (`product-search.util.ts` + `ProductSearchDialog`):
   tolera abreviaturas, acentos y errores de tipeo; el mismo `F3` en cualquier
@@ -198,7 +198,20 @@ datos a alguien de afuera.**
 - **El escritorio sin riel**: se sacó `app-shell.tsx`; `/` es la grilla de
   módulos, armada por permiso (`lib/modules.tsx`), con dato vivo por tarjeta
   (`GET /api/escritorio`), puntito de aviso y estado tranquilo. Modo Configurar
-  (ocultar/reordenar). Botón **Preguntar** y selector de tema en el encabezado.
+  (ocultar / reordenar arrastrando, se guarda en `localStorage`). Botón
+  **Preguntar** y selector de tema en el encabezado.
+- **Color por módulo** en las tarjetas (`HUES` en `lib/modules.tsx`): matiz
+  saturado y propio en pastilla del ícono + franja + borde + lavado del fondo,
+  para reconocer el módulo por color. Renglón de contexto con espacio fijo y
+  tipografía pareja, en minúscula con mayúscula inicial.
+- **Menú de la cuenta**: varias cuentas con sesión abierta en el mismo
+  dispositivo, alternar sin re-login, "Agregar otra cuenta" y "Salir" (cierra
+  sólo la activa) — `lib/auth-context.tsx`, `components/account-list.tsx`.
+- **Ajustes** (`/ajustes`, desde el menú de la cuenta): perfil (nombre, email,
+  color de avatar), contraseña, preferencias (tema, densidad de tablas, pantalla
+  de inicio), sesiones del dispositivo; y sólo para el Dueño, datos de la empresa
+  (nombre, logo, zona horaria) más los accesos a Usuarios y Rangos, que salen del
+  escritorio. Backend: `PATCH /auth/me` y `PATCH /auth/tenant`.
 - **Módulo unificado**: `PageHeader` con **← Escritorio** + `Esc` + chip +
   rastro; transición «se despliega» (View Transitions). Ingreso/Egreso/Historial
   son vistas de Stock (`components/stock-nav.tsx`), no tarjetas.
@@ -214,9 +227,9 @@ datos a alguien de afuera.**
 
 1. **El molde de Productos al resto de los listados** (buscador + filtros en
    panel detrás del botón + chips que se sacan de a uno + columnas justas).
-   Hecho: Productos, Proveedores (buscador). Faltan: **Stock** (y arreglar que
-   la cantidad se muestra como `72.000` en vez de `72`), **Vencimientos**,
-   **Ventas**, más ingresos/egresos/historial/reposición/turnos.
+   Hecho: Productos, Proveedores (buscador). Faltan: **Stock**, **Vencimientos**,
+   **Ventas**, más ingresos/egresos/historial/reposición/turnos. (La cantidad
+   que se mostraba como `72.000` ya está: todo pasa por `quantity()`.)
 2. **Margen en el gráfico de Ventas**: hoy hay Facturación / Tickets / Ticket
    promedio. El margen necesita guardar el costo al momento de la venta
    (`SaleLine.unitCost`) — falta migración y que la caja lo grabe.
@@ -224,18 +237,21 @@ datos a alguien de afuera.**
    Proveedores). Falta clientes, precios, promociones, turnos, depósitos.
 4. **La capa de IA en Ctrl+K**: hoy es sólo buscador de módulos; falta que
    responda preguntas del negocio cruzando módulos.
-5. **Zona horaria**: las columnas `DateTime` son `timestamp without time zone`
-   y el sistema mezcla dos convenciones (Prisma escribe UTC, `@default(now())`
-   escribe local). Los reportes del escritorio ya lo esquivan resolviendo en
-   SQL, pero el listado de Ventas muestra la hora corrida. Arreglo real:
-   pasar las columnas a `timestamptz` en una migración.
-6. **Repasar los formularios** con la misma regla de aire y agrupación.
-7. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
+5. **Repasar los formularios** con la misma regla de aire y agrupación.
+6. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
    muestre antes de confirmar).
+7. **Sucursal como entidad propia** (hoy `Warehouse` es sucursal y depósito a la
+   vez): separar, y el selector de sucursal para `sucursales.navegar`. Es la
+   deuda que traba varias cosas de abajo.
 
-Más adelante, con backend detrás (ver `docs/producto.md`): sucursales como
-entidad propia, ARCA, devoluciones/notas de crédito, transferencias de stock,
-conservación de contexto por módulo, personalización profunda del escritorio.
+Zona horaria: **resuelto** — las columnas `DateTime` pasaron a `timestamptz`
+(migración `20260906073516_timestamptz`), Prisma y `@default(now())` ahora
+guardan el instante que es y el listado de Ventas muestra la hora correcta. La
+zona horaria del negocio se elige en Ajustes (`Tenant.timezone`).
+
+Más adelante, con backend detrás (ver `docs/producto.md`): ARCA,
+devoluciones/notas de crédito, transferencias de stock, conservación de
+contexto por módulo, personalización profunda del escritorio.
 
 ## Deudas conocidas
 

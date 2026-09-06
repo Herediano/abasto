@@ -73,13 +73,13 @@ const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
 /**
- * Las columnas DateTime del schema son `timestamp without time zone` y el resto
- * del sistema las trata como hora local (los `@default(now())` los pone la base
- * en hora local). Prisma, en cambio, escribe un JS Date como su UTC. Esta
- * función corrige el desfasaje: devuelve un Date cuyo UTC es la hora local que
- * se quería guardar.
+ * Antes hacía falta corregir un desfasaje: las columnas eran `timestamp without
+ * time zone` y Prisma escribía los Date como UTC mientras `@default(now())` los
+ * ponía en hora local. Con la migración a `timestamptz` eso se terminó — un
+ * `new Date()` se guarda como el instante que es. Queda como identidad para no
+ * tocar los llamados.
  */
-const bare = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
+const bare = (d: Date) => d;
 
 async function main() {
   const nombre = process.argv[2] || process.env.DEMO_TENANT;

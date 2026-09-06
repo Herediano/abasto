@@ -1,0 +1,102 @@
+-- AlterTable
+ALTER TABLE "cash_movements" ALTER COLUMN "occurred_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "cash_registers" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "cash_shifts" ALTER COLUMN "opened_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "closed_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "categories" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "customer_account_movements" ALTER COLUMN "occurred_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "customers" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "price_lists" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "price_rules" ALTER COLUMN "last_run_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "price_tiers" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "product_barcodes" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "product_lots" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "product_price_history" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "product_prices" ALTER COLUMN "valid_from" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "product_reference" ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "product_suppliers" ALTER COLUMN "last_purchase_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "products" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "promotions" ALTER COLUMN "valid_from" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "valid_to" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "purchase_invoice_revisions" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "purchase_invoices" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "rangos" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "rounding_rules" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "sales" ALTER COLUMN "cae_expires_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "occurred_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "stock_movements" ALTER COLUMN "occurred_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "suppliers" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "tenants" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "users" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);
+
+-- AlterTable
+ALTER TABLE "warehouses" ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMPTZ(6),
+ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMPTZ(6);

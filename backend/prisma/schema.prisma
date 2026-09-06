@@ -17,7 +17,7 @@ model ProductReference {
   // usa; queda para una futura clasificación del catálogo.
   category  String?
   source    String   @default("xlsx")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("product_reference")
 }
@@ -85,8 +85,8 @@ model Tenant {
   // la migración de las columnas de fecha a timestamptz.
   timezone                 String                    @default("America/Argentina/Buenos_Aires")
   productCodeSeq           Int                       @default(0) @map("product_code_seq")
-  createdAt                DateTime                  @default(now()) @map("created_at")
-  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
   products                 Product[]
   categories               Category[]
   suppliers                Supplier[]
@@ -130,7 +130,7 @@ model CashRegister {
   warehouseId String      @map("warehouse_id") @db.Uuid
   name        String
   isActive    Boolean     @default(true) @map("is_active")
-  createdAt   DateTime    @default(now()) @map("created_at")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant      Tenant      @relation(fields: [tenantId], references: [id])
   warehouse   Warehouse   @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
   shifts      CashShift[]
@@ -157,8 +157,8 @@ model CashShift {
   status         ShiftStatus    @default(open)
   openingCash    Decimal        @map("opening_cash") @db.Decimal(14, 2)
   openingNotes   String?        @map("opening_notes")
-  openedAt       DateTime       @default(now()) @map("opened_at")
-  closedAt       DateTime?      @map("closed_at")
+  openedAt       DateTime       @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt       DateTime?      @map("closed_at") @db.Timestamptz(6)
   expectedCash   Decimal?       @map("expected_cash") @db.Decimal(14, 2)
   countedCash    Decimal?       @map("counted_cash") @db.Decimal(14, 2)
   cashDifference Decimal?       @map("cash_difference") @db.Decimal(14, 2)
@@ -187,7 +187,7 @@ model CashMovement {
   type       CashMovementType
   amount     Decimal          @db.Decimal(14, 2)
   reason     String
-  occurredAt DateTime         @default(now()) @map("occurred_at")
+  occurredAt DateTime         @default(now()) @map("occurred_at") @db.Timestamptz(6)
   tenant     Tenant           @relation(fields: [tenantId], references: [id])
   shift      CashShift        @relation(fields: [shiftId, tenantId], references: [id, tenantId])
   user       User             @relation(fields: [userId], references: [id])
@@ -232,7 +232,7 @@ model CustomerAccountMovement {
   saleId       String?                     @map("sale_id") @db.Uuid
   userId       String                      @map("user_id") @db.Uuid
   notes        String?
-  occurredAt   DateTime                    @default(now()) @map("occurred_at")
+  occurredAt   DateTime                    @default(now()) @map("occurred_at") @db.Timestamptz(6)
   tenant       Tenant                      @relation(fields: [tenantId], references: [id])
   customer     Customer                    @relation(fields: [customerId, tenantId], references: [id, tenantId])
   sale         Sale?                       @relation(fields: [saleId, tenantId], references: [id, tenantId])
@@ -247,7 +247,7 @@ model Category {
   id        String    @id @default(uuid()) @db.Uuid
   tenantId  String    @map("tenant_id") @db.Uuid
   name      String
-  createdAt DateTime  @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant    Tenant    @relation(fields: [tenantId], references: [id])
   products  Product[]
 
@@ -267,8 +267,8 @@ model PriceList {
   derivesFromId String?        @map("derives_from_id") @db.Uuid
   markupPercent Decimal?       @map("markup_percent") @db.Decimal(6, 2)
   isActive      Boolean        @default(true) @map("is_active")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant        Tenant         @relation(fields: [tenantId], references: [id])
   derivesFrom   PriceList?     @relation("PriceListDerivation", fields: [derivesFromId], references: [id])
   derivedLists  PriceList[]    @relation("PriceListDerivation")
@@ -291,10 +291,10 @@ model ProductPrice {
   productId   String    @map("product_id") @db.Uuid
   priceListId String    @map("price_list_id") @db.Uuid
   price       Decimal   @db.Decimal(14, 2)
-  validFrom   DateTime  @default(now()) @map("valid_from")
+  validFrom   DateTime  @default(now()) @map("valid_from") @db.Timestamptz(6)
   source      String // manual | import | bulk | rule
   userId      String?   @map("user_id") @db.Uuid
-  createdAt   DateTime  @default(now()) @map("created_at")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant      Tenant    @relation(fields: [tenantId], references: [id])
   product     Product   @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
   priceList   PriceList @relation(fields: [priceListId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -317,9 +317,9 @@ model PriceRule {
   operationType  String    @map("operation_type") // percent | margin | round
   operationValue Decimal?  @map("operation_value") @db.Decimal(10, 2)
   rounding       String?
-  lastRunAt      DateTime? @map("last_run_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  lastRunAt      DateTime? @map("last_run_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant         Tenant    @relation(fields: [tenantId], references: [id])
   priceList      PriceList @relation(fields: [priceListId, tenantId], references: [id, tenantId], onDelete: Cascade)
 
@@ -336,7 +336,7 @@ model RoundingRule {
   fromAmount Decimal  @map("from_amount") @db.Decimal(14, 2)
   toAmount   Decimal? @map("to_amount") @db.Decimal(14, 2)
   mode       String // nearest10 | nearest100 | ending99 | none
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant     Tenant   @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId, fromAmount])
@@ -352,7 +352,7 @@ model PriceTier {
   productId   String    @map("product_id") @db.Uuid
   minQty      Decimal   @map("min_qty") @db.Decimal(14, 3)
   price       Decimal   @db.Decimal(14, 2)
-  createdAt   DateTime  @default(now()) @map("created_at")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant      Tenant    @relation(fields: [tenantId], references: [id])
   priceList   PriceList @relation(fields: [priceListId, tenantId], references: [id, tenantId], onDelete: Cascade)
   product     Product   @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -373,11 +373,11 @@ model Promotion {
   config     Json
   scopeType  String    @map("scope_type") // all | category | brand | ids
   scopeValue String?   @map("scope_value")
-  validFrom  DateTime  @map("valid_from")
-  validTo    DateTime? @map("valid_to")
+  validFrom  DateTime  @map("valid_from") @db.Timestamptz(6)
+  validTo    DateTime? @map("valid_to") @db.Timestamptz(6)
   isActive   Boolean   @default(true) @map("is_active")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant     Tenant    @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId, validFrom, validTo])
@@ -402,7 +402,7 @@ model Sale {
   pointOfSale      String                    @map("point_of_sale")
   number           Int
   cae              String?
-  caeExpiresAt     DateTime?                 @map("cae_expires_at")
+  caeExpiresAt     DateTime?                 @map("cae_expires_at") @db.Timestamptz(6)
   subtotal         Decimal                   @db.Decimal(14, 2)
   discountTotal    Decimal                   @default(0) @map("discount_total") @db.Decimal(14, 2)
   taxTotal         Decimal                   @map("tax_total") @db.Decimal(14, 2)
@@ -410,8 +410,8 @@ model Sale {
   paymentMethod    String                    @map("payment_method") // cash | card | transfer
   status           String                    @default("confirmed") // confirmed | cancelled
   cancelReason     String?                   @map("cancel_reason")
-  occurredAt       DateTime                  @default(now()) @map("occurred_at")
-  createdAt        DateTime                  @default(now()) @map("created_at")
+  occurredAt       DateTime                  @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant           Tenant                    @relation(fields: [tenantId], references: [id])
   warehouse        Warehouse                 @relation(fields: [warehouseId], references: [id])
   customer         Customer?                 @relation(fields: [customerId, tenantId], references: [id, tenantId])
@@ -481,8 +481,8 @@ model User {
   // Preferencias personales del usuario: { avatarColor?, startup? } — color de
   // avatar y a qué pantalla entrar al abrir la app ("escritorio" o una clave de módulo).
   preferences              Json?
-  createdAt                DateTime                  @default(now()) @map("created_at")
-  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
   rango                    Rango                     @relation(fields: [rangoId, tenantId], references: [id, tenantId])
   warehouseId              String?                   @map("warehouse_id") @db.Uuid
@@ -509,8 +509,8 @@ model Rango {
   tenantId    String            @map("tenant_id") @db.Uuid
   name        String
   isSystem    Boolean           @default(false) @map("is_system")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant      Tenant            @relation(fields: [tenantId], references: [id])
   permissions RangoPermission[]
   users       User[]
@@ -568,8 +568,8 @@ model Product {
   // resuelve con parseWeighedBarcode() a partir de internalCode.
   isWeighed            Boolean               @default(false) @map("is_weighed")
   isActive             Boolean               @default(true) @map("is_active")
-  createdAt            DateTime              @default(now()) @map("created_at")
-  updatedAt            DateTime              @updatedAt @map("updated_at")
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant               Tenant                @relation(fields: [tenantId], references: [id])
   category             Category?             @relation(fields: [categoryId], references: [id])
   lots                 ProductLot[]
@@ -599,8 +599,8 @@ model Supplier {
   phone            String?
   address          String?
   isActive         Boolean           @default(true) @map("is_active")
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
   lots             ProductLot[]
   purchaseInvoices PurchaseInvoice[]
@@ -618,7 +618,7 @@ model ProductBarcode {
   tenantId  String   @map("tenant_id") @db.Uuid
   productId String   @map("product_id") @db.Uuid
   barcode   String
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
   product   Product  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
 
@@ -636,9 +636,9 @@ model ProductSupplier {
   supplierId     String    @map("supplier_id") @db.Uuid
   supplierCode   String?   @map("supplier_code")
   lastCost       Decimal?  @map("last_cost") @db.Decimal(14, 2)
-  lastPurchaseAt DateTime? @map("last_purchase_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  lastPurchaseAt DateTime? @map("last_purchase_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant         Tenant    @relation(fields: [tenantId], references: [id])
   product        Product   @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
   supplier       Supplier  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
@@ -659,7 +659,7 @@ model ProductPriceHistory {
   newValue  Decimal  @map("new_value") @db.Decimal(14, 2)
   source    String // 'manual' | 'import' | 'bulk' | 'invoice'
   userId    String?  @map("user_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
   product   Product  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Cascade)
 
@@ -684,8 +684,8 @@ model Customer {
   creditLimit      Decimal?                  @map("credit_limit") @db.Decimal(14, 2)
   accountBalance   Decimal                   @default(0) @map("account_balance") @db.Decimal(14, 2)
   isActive         Boolean                   @default(true) @map("is_active")
-  createdAt        DateTime                  @default(now()) @map("created_at")
-  updatedAt        DateTime                  @updatedAt @map("updated_at")
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant           Tenant                    @relation(fields: [tenantId], references: [id])
   sales            Sale[]
   accountMovements CustomerAccountMovement[]
@@ -702,8 +702,8 @@ model Warehouse {
   code             String
   address          String?
   isActive         Boolean           @default(true) @map("is_active")
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
   lots             ProductLot[]
   stockMovements   StockMovement[]
@@ -727,8 +727,8 @@ model ProductLot {
   lotNumber            String                @map("lot_number")
   expirationDate       DateTime?             @map("expiration_date") @db.Date
   receivedAt           DateTime?             @map("received_at") @db.Date
-  createdAt            DateTime              @default(now()) @map("created_at")
-  updatedAt            DateTime              @updatedAt @map("updated_at")
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant               Tenant                @relation(fields: [tenantId], references: [id])
   product              Product               @relation(fields: [productId, tenantId], references: [id, tenantId])
   warehouse            Warehouse             @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
@@ -752,11 +752,11 @@ model StockMovement {
   quantity      Decimal      @db.Decimal(14, 3)
   movementType  MovementType @map("movement_type")
   operationId   String?      @map("operation_id") @db.Uuid
-  occurredAt    DateTime     @default(now()) @map("occurred_at")
+  occurredAt    DateTime     @default(now()) @map("occurred_at") @db.Timestamptz(6)
   referenceType String?      @map("reference_type")
   referenceId   String?      @map("reference_id") @db.Uuid
   notes         String?
-  createdAt     DateTime     @default(now()) @map("created_at")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant        Tenant       @relation(fields: [tenantId], references: [id])
   product       Product      @relation(fields: [productId, tenantId], references: [id, tenantId])
   productLot    ProductLot?  @relation(fields: [productLotId, tenantId], references: [id, tenantId])
@@ -787,8 +787,8 @@ model PurchaseInvoice {
   total           Decimal                   @db.Decimal(14, 2)
   status          PurchaseInvoiceStatus     @default(draft)
   notes           String?
-  createdAt       DateTime                  @default(now()) @map("created_at")
-  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant          Tenant                    @relation(fields: [tenantId], references: [id])
   supplier        Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
   warehouse       Warehouse                 @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
@@ -809,7 +809,7 @@ model PurchaseInvoiceRevision {
   createdById String          @map("created_by_id") @db.Uuid
   reason      String
   snapshot    Json
-  createdAt   DateTime        @default(now()) @map("created_at")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant      Tenant          @relation(fields: [tenantId], references: [id])
   invoice     PurchaseInvoice @relation(fields: [invoiceId, tenantId], references: [id, tenantId])
   createdBy   User            @relation(fields: [createdById], references: [id])

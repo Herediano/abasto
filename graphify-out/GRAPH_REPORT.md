@@ -1,7 +1,7 @@
 # Graph Report - erp-modular-vision-56c436  (2026-09-06)
 
 ## Corpus Check
-- 189 files · ~109,662 words
+- 190 files · ~110,289 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5a608b6f`
+- Built from commit: `0b441e2d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

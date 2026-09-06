@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "docs/diseno.md": {
-    "mtime": 1788678663.3833008,
-    "seen": 1788678725.1433632,
-    "ast_hash": "ce26d9adace6ccdbc08b82849386ae62",
+    "mtime": 1788680363.995006,
+    "seen": 1788680410.5912054,
+    "ast_hash": "baeb58b00d2249d9a8ea5b281e506ae8",
     "semantic_hash": ""
   },
   "frontend/src/components/command-palette.tsx": {
@@ -1056,9 +1056,9 @@
     "semantic_hash": ""
   },
   "backend/prisma/seed-demo.ts": {
-    "mtime": 1788672414.9097407,
-    "seen": 1788672917.2287781,
-    "ast_hash": "e7c01c108fcda71f5683e1d5875b32d2",
+    "mtime": 1788680212.6743233,
+    "seen": 1788680410.5380907,
+    "ast_hash": "288aff8f23d3ce70e224a4b741d4ea1f",
     "semantic_hash": ""
   },
   "backend/src/escritorio.controller.ts": {
