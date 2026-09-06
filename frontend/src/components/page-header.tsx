@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, Storefront } from '@phosphor-icons/react';
+import { ArrowLeft, Rows, Storefront } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { moduleForPath } from '@/lib/modules';
 import { useAuth } from '@/lib/auth-context';
+import { useDensity } from '@/lib/prefs';
 
 /**
  * Cabecera de un módulo. Se pega arriba: título y acciones siguen a la vista al
@@ -18,8 +19,10 @@ export function PageHeader({ title, description, actions }: { title: string; des
   const navigate = useNavigate();
   const { session } = useAuth();
   const mod = moduleForPath(pathname);
+  const { density, setDensity } = useDensity();
   const b = session?.user;
   const otraSucursal = b?.branch && b?.homeBranch && b.branch.id !== b.homeBranch.id ? b.branch.name : null;
+  const compacta = density === 'compacta';
 
   return (
     <div className="sticky top-0 z-20 -mx-6 mb-1 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-background/85 px-6 py-3 backdrop-blur">
@@ -46,16 +49,23 @@ export function PageHeader({ title, description, actions }: { title: string; des
         </div>
       </div>
 
-      {(otraSucursal || actions) && (
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {otraSucursal && (
-            <span className="flex items-center gap-1 rounded-md border border-primary bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground">
-              <Storefront weight="fill" className="size-3" /> {otraSucursal}
-            </span>
-          )}
-          {actions}
-        </div>
-      )}
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        {otraSucursal && (
+          <span className="flex items-center gap-1 rounded-md border border-primary bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground">
+            <Storefront weight="fill" className="size-3" /> {otraSucursal}
+          </span>
+        )}
+        {actions}
+        <button
+          type="button"
+          onClick={() => setDensity(compacta ? 'comoda' : 'compacta')}
+          aria-label={compacta ? 'Filas más cómodas' : 'Filas más compactas'}
+          title={compacta ? 'Filas más cómodas' : 'Filas más compactas'}
+          className="grid size-8 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+        >
+          <Rows weight={compacta ? 'fill' : 'regular'} className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }

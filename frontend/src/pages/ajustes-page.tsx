@@ -225,7 +225,7 @@ function PasswordSection({ token }: { token: string }) {
 function PreferenciasSection() {
   const { theme, setTheme } = useTheme();
   return (
-    <Section title="Preferencias" description="Se guardan en este dispositivo. La densidad de las tablas se cambia desde «Configurar» en el escritorio.">
+    <Section title="Preferencias" description="Se guardan en este dispositivo. La densidad de las tablas se cambia desde la cabecera de cada módulo.">
       <Choice label="Tema">
         <Toggle active={theme === 'light'} onClick={() => setTheme('light')}><Sun weight="fill" className="size-4" /> Claro</Toggle>
         <Toggle active={theme === 'dark'} onClick={() => setTheme('dark')}><Moon weight="fill" className="size-4" /> Oscuro</Toggle>

@@ -2,16 +2,13 @@ import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { ArrowRight, CashRegister, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BranchSwitcher } from '@/components/branch-switcher';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { UserMenu } from '@/components/user-menu';
 import { usePalette } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
 import { api } from '@/lib/api';
 import { pendientes, statFor, type EscritorioSummary } from '@/lib/escritorio';
-import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 import { setActiveBranch } from '@/lib/branch';
-import { useDensity } from '@/lib/prefs';
 import { cn } from '@/lib/utils';
 
 const CONFIG_KEY = 'abasto-escritorio';
@@ -60,33 +57,29 @@ function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
 }
 
 /**
- * La caja no es una tarjeta más: es un modo de trabajo (pantalla completa, el
- * mundo del cajero). Va en un botón propio, ancho, con el color de Caja lleno
- * —distinto de la grilla— y su estado de turno al costado.
+ * La caja no es una tarjeta: es un modo de trabajo (pantalla completa, el mundo
+ * del cajero). Va en la barra de arriba, en su propio botón, y cambia de color
+ * según el turno —verde suave si está abierta, rojo suave si no— para verlo de
+ * un vistazo. El detalle del turno vive adentro de la caja.
  */
-function CajaButton({ summary }: { summary: EscritorioSummary | null }) {
+function CajaPill({ summary }: { summary: EscritorioSummary | null }) {
   const navigate = useNavigate();
   const caja = summary?.caja;
-  const detalle = !caja
-    ? 'Cobrá en el mostrador'
-    : caja.abierta
-      ? ['Abierta', caja.efectivo != null ? money(caja.efectivo).replace(',00', '') : null, caja.registro].filter(Boolean).join(' · ')
-      : 'Sin turno abierto';
+  const abierta = caja?.abierta ?? false;
+  const paleta = abierta
+    ? { bg: '#e8f5e2', text: '#3f7a2e', border: '#bfe0ab' }
+    : { bg: '#fbe9e7', text: '#a6453b', border: '#f0cdc7' };
   return (
     <button
       type="button"
       onClick={() => navigate('/ventas')}
-      style={{ background: hueFor('caja') }}
-      className="group mt-6 flex w-full items-center gap-4 rounded-xl px-5 py-4 text-left text-white shadow-float transition-transform hover:-translate-y-0.5"
+      style={{ background: paleta.bg, color: paleta.text, borderColor: paleta.border }}
+      className="group flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold transition-transform hover:-translate-y-px"
     >
-      <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-white/15">
-        <CashRegister weight="fill" className="size-6" />
-      </span>
-      <span className="min-w-0 flex-1 leading-tight">
-        <span className="block whitespace-nowrap font-display text-[15px] font-bold">Ir a la caja</span>
-        <span className="block truncate text-[12.5px] text-white/80">{detalle}</span>
-      </span>
-      <ArrowRight className="size-5 shrink-0 opacity-80 transition-transform group-hover:translate-x-0.5" />
+      <CashRegister weight="fill" className="size-4" />
+      Caja
+      <span className="font-semibold opacity-80">· {abierta ? 'Abierta' : 'Cerrada'}</span>
+      <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
     </button>
   );
 }
@@ -144,7 +137,6 @@ export function EscritorioPage() {
   const mods = useMemo(() => applyOrder(gridModules(can), config.order), [can, config.order]);
   const visible = mods.filter(m => !config.hidden.includes(m.key));
   const hidden = mods.filter(m => config.hidden.includes(m.key));
-  const { density, setDensity } = useDensity();
 
   const nombre = session?.user.name.split(' ')[0] ?? '';
   const hoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -185,39 +177,39 @@ export function EscritorioPage() {
   }
 
   return (
-    <div className="pt-5">
-      {/* Barra: identidad —los dos logos— a la izquierda, herramientas a la derecha. */}
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-soft pb-5">
-        <div className="flex items-center gap-3.5">
+    <div className="pt-4">
+      {/* Barra: los dos logos a la izquierda; sucursal, caja y cuenta a la derecha. */}
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-soft pb-4">
+        <div className="flex items-center gap-3">
           {session?.tenant.logo ? (
             <img
               src={session.tenant.logo}
               alt={session.tenant.name}
-              className="size-14 shrink-0 rounded-2xl border border-border bg-card object-contain p-1"
+              className="size-12 shrink-0 rounded-xl border border-border bg-card object-contain p-1"
             />
           ) : (
-            <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-primary font-display text-2xl font-bold text-primary-foreground">
+            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary font-display text-xl font-bold text-primary-foreground">
               {session?.tenant.name.slice(0, 1).toUpperCase()}
             </span>
           )}
           <div className="leading-tight">
-            <p className="font-display text-xl font-bold tracking-tight">{session?.tenant.name}</p>
-            <p className="mt-0.5 font-display text-[15px] font-bold tracking-tight text-muted-foreground">
+            <p className="font-display text-[19px] font-bold tracking-tight">{session?.tenant.name}</p>
+            <p className="font-display text-[14px] font-bold tracking-tight text-muted-foreground">
               abasto<span className="text-primary">.ai</span>
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <BranchSwitcher />
-          <ThemeToggle className="size-10 rounded-lg border border-border bg-card hover:bg-background" />
+          {can('caja.operar') && <CajaPill summary={summary} />}
           <UserMenu />
         </div>
       </header>
 
       {/* Saludo y qué hay para mirar. */}
-      <div className="mt-7">
-        <p className="text-[12px] font-medium uppercase tracking-wide text-placeholder first-letter:uppercase">{hoy}</p>
-        <h1 className="mt-1.5 font-display text-[28px] font-bold leading-tight tracking-tight sm:text-[32px]">
+      <div className="mt-4">
+        <p className="text-[11.5px] font-medium uppercase tracking-wide text-placeholder first-letter:uppercase">{hoy}</p>
+        <h1 className="mt-1 font-display text-[24px] font-bold leading-tight tracking-tight sm:text-[27px]">
           {saludo()}{nombre && `, ${nombre}`}.
         </h1>
         <ResumenDelDia summary={summary} />
@@ -235,9 +227,7 @@ export function EscritorioPage() {
         )}
       </div>
 
-      {can('caja.operar') && <CajaButton summary={summary} />}
-
-      <div className="mb-4 mt-9 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-3 mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13px] text-placeholder">
           {visible.length} {visible.length === 1 ? 'módulo' : 'módulos'}
         </p>
@@ -266,28 +256,6 @@ export function EscritorioPage() {
           </button>
         </div>
       </div>
-
-      {configuring && (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-accent-border bg-accent/40 px-4 py-3 text-[13px]">
-          <span className="font-medium">Densidad de las tablas</span>
-          <div className="flex gap-1.5">
-            {(['comoda', 'compacta'] as const).map(d => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDensity(d)}
-                className={cn(
-                  'rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors',
-                  density === d ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-background',
-                )}
-              >
-                {d === 'comoda' ? 'Cómoda' : 'Compacta'}
-              </button>
-            ))}
-          </div>
-          <span className="text-muted-foreground">Se aplica a todos los listados del sistema.</span>
-        </div>
-      )}
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3">
         {visible.map(m => {

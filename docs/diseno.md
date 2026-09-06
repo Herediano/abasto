@@ -33,7 +33,7 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
   interactiva lleva la manito en hover (regla global en `styles.css`); lo
   deshabilitado, `not-allowed`.
 - **Cada módulo tiene su color, y sólo ahí.** En el escritorio, cada tarjeta
-  lleva un matiz propio y saturado (azul Ventas, teal Caja, naranja Stock…) en la
+  lleva un matiz propio (azul Ventas, violeta Turnos, naranja Stock…) en la
   pastilla del ícono, una franja al costado, el borde y un lavado del fondo. Es
   **identidad, para encontrar el módulo por color sin leer** — nunca estado. Se
   mantiene lejos del verde «tocable» y de los tonos del aviso. Adentro del módulo
@@ -110,9 +110,10 @@ que está todo bien.
 
 ### Configurable
 
-Un modo «Configurar»: ocultar tarjetas, mostrarlas de nuevo, reordenarlas
-arrastrando, y la **densidad de las tablas** (cómoda / compacta) —acá, no en
-Ajustes, para que se cambie sobre los módulos—. Se guarda por dispositivo en
+Un modo «Configurar»: ocultar tarjetas, mostrarlas de nuevo y reordenarlas
+arrastrando. La **densidad de las tablas** (cómoda / compacta) vive en la
+cabecera de cada módulo —un botón junto a las acciones—, no acá ni en Ajustes,
+para que se vea el cambio sobre una tabla real. Todo se guarda por dispositivo en
 `localStorage`. Con control — jerarquía clara, no un caos de widgets.
 Personalización más profunda (fijar, destacar, tamaños, y que el orden viaje con
 la cuenta) es más adelante.
@@ -120,11 +121,12 @@ la cuenta) es más adelante.
 ### La caja no es una tarjeta
 
 La caja es un **modo de trabajo**, no un módulo que se navega: pantalla
-completa, el mundo del cajero. En el escritorio vive en un **botón propio**
-—ancho, con el color de Caja lleno, con el estado del turno al costado—, arriba
-de la grilla y claramente distinto de las tarjetas. Al abrir la app siempre se
-cae en el escritorio (no hay preferencia de "entrar directo a"); para un cajero,
-ese botón es lo primero que ve.
+completa, el mundo del cajero. En el escritorio vive en un **botón propio** en la
+barra de arriba, junto al selector de sucursal y la cuenta, claramente distinto
+de las tarjetas. El botón cambia de color según el turno —verde suave si la caja
+está abierta, rojo suave si está cerrada—, en tonos apagados para verlo de un
+vistazo sin que grite. Al abrir la app siempre se cae en el escritorio (no hay
+preferencia de "entrar directo a"); para un cajero, ese botón es lo primero que ve.
 
 ### El celular
 
@@ -215,16 +217,22 @@ datos a alguien de afuera.**
   módulos, armada por permiso (`lib/modules.tsx`), con dato vivo por tarjeta
   (`GET /api/escritorio`), puntito de aviso y estado tranquilo. Modo Configurar
   (ocultar / reordenar arrastrando, se guarda en `localStorage`). Botón
-  **Preguntar** y selector de tema en el encabezado.
-- **Color por módulo** en las tarjetas (`HUES` en `lib/modules.tsx`): matiz
-  saturado y propio en pastilla del ícono + franja + borde + lavado del fondo,
+  **Preguntar** junto a la grilla.
+- **Color por módulo** en las tarjetas (`HUES` en `lib/modules.tsx`): un matiz
+  propio por módulo, los diez de la grilla repartidos por toda la rueda para que
+  ningún par sea confundible y ninguno del mismo aire caiga al lado de otro.
+  Se aplica en grande —pastilla del ícono + franja + borde + lavado del fondo—
   para reconocer el módulo por color. Renglón de contexto con espacio fijo y
   tipografía pareja, en minúscula con mayúscula inicial.
+- **Densidad de tablas** en la cabecera de cada módulo (`useDensity`,
+  `lib/prefs.ts`): un botón junto a las acciones alterna cómoda / compacta y el
+  cambio se ve sobre la tabla que estás mirando.
 - **Menú de la cuenta**: varias cuentas con sesión abierta en el mismo
   dispositivo, alternar sin re-login, "Agregar otra cuenta" y "Salir" (cierra
   sólo la activa) — `lib/auth-context.tsx`, `components/account-list.tsx`.
 - **Ajustes** (`/ajustes`, desde el menú de la cuenta): perfil (nombre, email,
-  color de avatar), contraseña, tema, sesiones del dispositivo; y sólo para el
+  color de avatar), contraseña, tema (también en el menú de la cuenta), sesiones
+  del dispositivo; y sólo para el
   Dueño, datos de la empresa
   (nombre, logo, zona horaria), **sucursales** y los accesos a Usuarios y Rangos,
   que salen del escritorio. Backend: `PATCH /auth/me`, `PATCH /auth/tenant`,
@@ -240,12 +248,13 @@ datos a alguien de afuera.**
   Ajustes → La empresa.
 - **Encabezado del escritorio, en tres franjas**: (1) barra con la identidad
   —logo de la empresa grande, nombre, y `abasto.ai` debajo, ambos legibles— a la
-  izquierda y las herramientas —sucursal, tema, cuenta, todas a la misma
-  altura— a la derecha; (2) fecha, saludo según la hora (Buen día / Buenas
+  izquierda y las herramientas —sucursal, caja, cuenta, todas a la misma
+  altura— a la derecha; el encabezado se mantiene compacto para que la grilla se
+  vea apenas entrás; (2) fecha, saludo según la hora (Buen día / Buenas
   tardes / Buenas noches), y los pendientes del día como **chips con el color de
   su módulo** (o «Hoy no hay nada urgente.»); (3) el conteo de módulos +
   **Preguntar** + Configurar, pegado a la grilla. El menú de la cuenta muestra
-  nombre, email, empresa, rango, sucursal y desde cuándo está la sesión (del
+  nombre, email, empresa, rango, sucursal, tema y desde cuándo está la sesión (del
   `iat` del token), sin repetir nada.
 - **Módulo unificado**: `PageHeader` con **← Escritorio** + `Esc` + chip +
   rastro; transición «se despliega» (View Transitions). Ingreso/Egreso/Historial

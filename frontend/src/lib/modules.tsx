@@ -109,23 +109,24 @@ export const moduleByKey = (key: string) => BY_KEY.get(key);
 /**
  * Un matiz propio y saturado por módulo. No dice estado —es identidad—: se
  * aplica en grande (pastilla del ícono, franja al costado, borde, lavado del
- * fondo) para reconocer el módulo por color sin leer. Se mantiene lejos del
- * verde (que en Yerba significa "tocable") y de los tonos apagados del aviso
- * (ámbar) y el problema (rojo ladrillo) que usa el puntito. Ver docs/diseno.md.
+ * fondo) para reconocer el módulo por color sin leer. Los diez de la grilla
+ * están repartidos por toda la rueda para que ningún par sea confundible, y
+ * ninguno del mismo aire cae al lado de otro en la grilla de 5 columnas.
+ * Ver docs/diseno.md.
  */
 const HUES: Record<string, string> = {
   ventas: '#2563eb', // azul
-  caja: '#0d9488', // verde azulado
-  turnos: '#4f46e5', // índigo
+  turnos: '#7c3aed', // violeta
   stock: '#ea580c', // naranja
-  vencimientos: '#0891b2', // cian
-  reposicion: '#d97706', // ámbar dorado
-  productos: '#7c3aed', // violeta
-  precios: '#e11d48', // carmín
-  proveedores: '#0284c7', // azul cielo
+  vencimientos: '#0d9488', // teal
+  reposicion: '#c026d3', // magenta
+  productos: '#65a30d', // verde lima
+  precios: '#ca8a04', // dorado
+  proveedores: '#4338ca', // índigo
   clientes: '#db2777', // rosa
-  depositos: '#475569', // pizarra (estructura, no acción)
-  ajustes: '#475569', // pizarra (vive en el menú de la cuenta)
+  depositos: '#64748b', // pizarra
+  caja: '#16a34a', // verde (no va en la grilla; el botón cambia de color según el turno)
+  ajustes: '#64748b', // pizarra (vive en el menú de la cuenta)
   usuarios: '#0e7490', // cian oscuro (vive en Ajustes)
   rangos: '#9f1239', // granate (vive en Ajustes)
 };

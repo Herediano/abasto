@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { CaretDown, GearSix, SignOut, Storefront } from '@phosphor-icons/react';
+import { CaretDown, GearSix, Moon, SignOut, Storefront, Sun } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { AccountList } from '@/components/account-list';
 import { useAuth } from '@/lib/auth-context';
 import { AVATAR_COLORS } from '@/lib/prefs';
+import { useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 const iniciales = (name: string) =>
@@ -39,6 +40,7 @@ function haceCuanto(d: Date): string {
  */
 export function UserMenu() {
   const { session, accounts, logout } = useAuth();
+  const { theme, ciclar } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -98,6 +100,21 @@ export function UserMenu() {
               v={sucursal ? <><Storefront weight="fill" className="size-3 text-primary" /> {sucursal}</> : <span className="text-warning">sin asignar</span>}
             />
             {inicio && <Fila k="Sesión" v={haceCuanto(inicio)} title={inicio.toLocaleString('es-AR')} />}
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-muted-foreground">Tema</dt>
+              <dd>
+                <button
+                  type="button"
+                  onClick={ciclar}
+                  aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+                  title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+                  className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                >
+                  {theme === 'dark' ? <Moon weight="fill" className="size-3.5" /> : <Sun weight="fill" className="size-3.5" />}
+                  {theme === 'dark' ? 'Oscuro' : 'Claro'}
+                </button>
+              </dd>
+            </div>
           </dl>
 
           <div className="border-t border-border-soft pt-2">

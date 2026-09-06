@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 /**
  * Preferencia de dispositivo (vive en localStorage, no viaja con la cuenta):
- * la densidad de las tablas, que se cambia desde "Configurar" en el escritorio.
+ * la densidad de las tablas, que se cambia desde la cabecera de cada módulo.
  * El tema tiene su propio módulo (lib/theme.ts); el color de avatar es de la
  * cuenta y vive en session.user.preferences (backend).
  */
