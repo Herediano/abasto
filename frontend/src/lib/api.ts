@@ -37,6 +37,8 @@ export type Session = {
     id: string; name: string; email: string;
     rangoId?: string; rangoName?: string; permissions?: string[];
     warehouseId?: string | null; preferences?: UserPreferences;
+    /** La sucursal donde trabaja el usuario (derivada de su depósito). */
+    branch?: { id: string; name: string } | null;
   };
   tenant: { id: string; name: string; logo?: string | null; timezone?: string };
 };
@@ -223,7 +225,9 @@ export type PriceAuditRow = {
   validFrom: string;
 };
 
-export type Warehouse = { id: string; name: string; code: string; address?: string | null };
+export type Branch = { id: string; name: string; code: string; address?: string | null; isActive?: boolean; _count?: { warehouses: number } };
+
+export type Warehouse = { id: string; name: string; code: string; address?: string | null; branchId?: string; branch?: { id: string; name: string } | null };
 
 export type Supplier = {
   id: string;

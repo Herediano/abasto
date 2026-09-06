@@ -117,8 +117,31 @@ model Tenant {
   customerAccountMovements CustomerAccountMovement[]
   rangos                   Rango[]
   rangoPermissions         RangoPermission[]
+  branches                 Branch[]
 
   @@map("tenants")
+}
+
+// Sucursal: un local físico del negocio. Tiene uno o más depósitos (donde vive
+// el stock), una o más cajas (en el mostrador) y usuarios que trabajan ahí.
+// Toda empresa nace con una ("Casa Central"). Separada del depósito desde la
+// migración `20260906..._sucursales`: antes `Warehouse` era las dos cosas.
+model Branch {
+  id         String      @id @default(uuid()) @db.Uuid
+  tenantId   String      @map("tenant_id") @db.Uuid
+  name       String
+  code       String
+  address    String?
+  isActive   Boolean     @default(true) @map("is_active")
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  warehouses Warehouse[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("branches")
 }
 
 // Un puesto físico de cobro dentro de una sucursal ("Caja 1", "Caja 2"). Cada
@@ -695,9 +718,13 @@ model Customer {
   @@map("customers")
 }
 
+// Depósito: un lugar físico donde se guarda stock, dentro de una sucursal
+// ("Salón", "Depósito fondo", "Cámara"). El stock es por depósito. Una sucursal
+// chica tiene uno solo.
 model Warehouse {
   id               String            @id @default(uuid()) @db.Uuid
   tenantId         String            @map("tenant_id") @db.Uuid
+  branchId         String            @map("branch_id") @db.Uuid
   name             String
   code             String
   address          String?
@@ -705,6 +732,7 @@ model Warehouse {
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  branch           Branch            @relation(fields: [branchId, tenantId], references: [id, tenantId])
   lots             ProductLot[]
   stockMovements   StockMovement[]
   purchaseInvoices PurchaseInvoice[]
@@ -715,6 +743,7 @@ model Warehouse {
   @@unique([id, tenantId])
   @@unique([tenantId, code])
   @@index([tenantId])
+  @@index([tenantId, branchId])
   @@map("warehouses")
 }
 

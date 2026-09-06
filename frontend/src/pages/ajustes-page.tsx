@@ -1,15 +1,16 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, Check, Moon, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ArrowRight, Check, Moon, PencilSimple, Plus, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { AccountList } from '@/components/account-list';
-import { api, errorMessage, type Session } from '@/lib/api';
+import { api, errorMessage, type Branch, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { fileToResizedDataUrl } from '@/lib/image';
 import { hueFor, moduleByKey, settingsModules, visibleModules } from '@/lib/modules';
@@ -75,6 +76,7 @@ export function AjustesPage() {
           <>
             <Divider label="La empresa" />
             <EmpresaSection session={session!} onSaved={refresh} />
+            <SucursalesSection token={session!.accessToken} />
           </>
         )}
 
@@ -368,6 +370,106 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
           {state === 'saving' && <Spinner />} {state === 'ok' ? <><Check /> Guardado</> : 'Guardar cambios'}
         </Button>
       </form>
+    </Section>
+  );
+}
+
+const EMPTY_SUCURSAL = { name: '', code: '', address: '' };
+
+function SucursalesSection({ token }: { token: string }) {
+  const [items, setItems] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Branch | null>(null);
+  const [form, setForm] = useState(EMPTY_SUCURSAL);
+  const [saving, setSaving] = useState(false);
+
+  const load = () =>
+    api<Branch[]>('/branches', {}, token)
+      .then(setItems)
+      .catch(e => setError(errorMessage(e)))
+      .finally(() => setLoading(false));
+  useEffect(() => { void load(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function nueva() {
+    setEditing(null);
+    setForm(EMPTY_SUCURSAL);
+    setError('');
+    setOpen(true);
+  }
+  function editar(b: Branch) {
+    setEditing(b);
+    setForm({ name: b.name, code: b.code, address: b.address ?? '' });
+    setError('');
+    setOpen(true);
+  }
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      const path = editing ? `/branches/${editing.id}` : '/branches';
+      await api(path, { method: editing ? 'PUT' : 'POST', body: JSON.stringify(form) }, token);
+      setOpen(false);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Section title="Sucursales" description="Cada sucursal es un local del negocio. Nace con un depósito y una caja; los depósitos extra se agregan desde el módulo Depósitos.">
+      {error && !open && <Alert variant="destructive" className="mb-3">{error}</Alert>}
+      {loading ? (
+        <Spinner />
+      ) : (
+        <div className="grid gap-2">
+          {items.map(b => (
+            <div key={b.id} className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2.5">
+              <Storefront weight="fill" className="size-4 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold">{b.name}</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  {b.code}{b.address ? ` · ${b.address}` : ''} · {b._count?.warehouses ?? 0} {b._count?.warehouses === 1 ? 'depósito' : 'depósitos'}
+                </span>
+              </span>
+              <Button variant="ghost" size="icon" onClick={() => editar(b)} aria-label="Editar sucursal">
+                <PencilSimple />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={nueva} className="mt-1 justify-self-start">
+            <Plus /> Nueva sucursal
+          </Button>
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? 'Editar sucursal' : 'Nueva sucursal'}</DialogTitle>
+          </DialogHeader>
+          {error && open && <Alert variant="destructive">{error}</Alert>}
+          <form className="grid gap-4" onSubmit={submit}>
+            <Field label="Nombre" htmlFor="suc-name" hint="p. ej. «Casa Central», «Sucursal Norte»">
+              <Input id="suc-name" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            </Field>
+            <Field label="Código" htmlFor="suc-code" hint="corto y único (CC, NORTE…)">
+              <Input id="suc-code" required value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
+            </Field>
+            <Field label="Dirección" htmlFor="suc-addr" hint="(opcional)">
+              <Input id="suc-addr" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+            </Field>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={saving}>{saving && <Spinner />} {editing ? 'Guardar cambios' : 'Crear sucursal'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Section>
   );
 }

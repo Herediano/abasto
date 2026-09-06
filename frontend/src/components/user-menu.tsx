@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { CaretDown, GearSix, Storefront } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { AccountList } from '@/components/account-list';
-import { api, type Warehouse } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { AVATAR_COLORS } from '@/lib/prefs';
 import { cn } from '@/lib/utils';
@@ -19,20 +18,11 @@ export function UserMenu() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [sucursal, setSucursal] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
   const user = session?.user;
-  const warehouseId = user?.warehouseId;
-  const token = session?.accessToken;
+  const sucursal = user?.branch?.name ?? '';
   const color = user?.preferences?.avatarColor ?? AVATAR_COLORS[0];
-
-  useEffect(() => {
-    if (!open || !warehouseId || !token) return;
-    api<Warehouse[]>('/warehouses', {}, token)
-      .then(ws => setSucursal(ws.find(w => w.id === warehouseId)?.name ?? ''))
-      .catch(() => {});
-  }, [open, warehouseId, token]);
 
   useEffect(() => {
     if (!open) return;
@@ -78,7 +68,7 @@ export function UserMenu() {
               <Storefront weight="fill" className="size-3.5 text-primary" /> Sucursal
             </span>
             <span className="font-medium">
-              {warehouseId ? sucursal || '…' : <span className="text-warning">sin asignar</span>}
+              {sucursal || <span className="text-warning">sin asignar</span>}
             </span>
           </div>
 

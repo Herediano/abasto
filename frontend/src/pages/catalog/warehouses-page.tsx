@@ -11,10 +11,10 @@ import { PageHeader } from '@/components/page-header';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type CashRegister, type Warehouse } from '@/lib/api';
+import { api, errorMessage, type Branch, type CashRegister, type Warehouse } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
-const EMPTY_FORM = { name: '', code: '', address: '' };
+const EMPTY_FORM = { name: '', code: '', address: '', branchId: '' };
 
 export function WarehousesPage() {
   const { session, can } = useAuth();
@@ -22,6 +22,7 @@ export function WarehousesPage() {
   const puedeCajas = can('caja.administrar');
   const token = session!.accessToken;
   const [items, setItems] = useState<Warehouse[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [registers, setRegisters] = useState<CashRegister[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,9 +37,10 @@ export function WarehousesPage() {
   const load = () =>
     Promise.all([
       api<Warehouse[]>('/warehouses', {}, token),
+      api<Branch[]>('/branches', {}, token),
       puedeCajas || can('caja.operar') ? api<CashRegister[]>('/cash-registers', {}, token) : Promise.resolve([]),
     ])
-      .then(([ws, regs]) => { setItems(ws); setRegisters(regs); })
+      .then(([ws, bs, regs]) => { setItems(ws); setBranches(bs); setRegisters(regs); })
       .catch(e => setError(errorMessage(e)))
       .finally(() => setLoading(false));
 
@@ -66,14 +68,14 @@ export function WarehousesPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, branchId: branches[0]?.id ?? '' });
     setError('');
     setOpen(true);
   }
 
   function openEdit(w: Warehouse) {
     setEditing(w);
-    setForm({ name: w.name, code: w.code, address: w.address ?? '' });
+    setForm({ name: w.name, code: w.code, address: w.address ?? '', branchId: w.branchId ?? '' });
     setError('');
     setOpen(true);
   }
@@ -98,7 +100,7 @@ export function WarehousesPage() {
     <>
       <PageHeader
         title="Depósitos"
-        description="Sucursales y depósitos donde se guarda stock."
+        description="Dónde se guarda el stock, por sucursal. Las sucursales se administran en Ajustes."
         actions={
           can('depositos.crear') ? (
             <Button onClick={openCreate}>
@@ -117,9 +119,9 @@ export function WarehousesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
+                  <TableHead>Sucursal</TableHead>
+                  <TableHead>Depósito</TableHead>
                   <TableHead>Código</TableHead>
-                  <TableHead>Dirección</TableHead>
                   <TableHead>Cajas</TableHead>
                   {(puedeEditar || puedeCajas) && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
@@ -129,9 +131,9 @@ export function WarehousesPage() {
                   const cajas = registers.filter(r => r.warehouseId === w.id);
                   return (
                   <TableRow key={w.id}>
+                    <TableCell className="text-muted-foreground">{w.branch?.name ?? '—'}</TableCell>
                     <TableCell className="font-medium">{w.name}</TableCell>
                     <TableCell className="font-mono text-xs">{w.code}</TableCell>
-                    <TableCell>{w.address ?? '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {cajas.length ? cajas.map(c => c.name).join(', ') : <span className="text-destructive">sin cajas</span>}
                     </TableCell>
@@ -191,6 +193,14 @@ export function WarehousesPage() {
           </DialogHeader>
           {error && <Alert variant="destructive">{error}</Alert>}
           <form className="grid gap-4" onSubmit={submit}>
+            {!editing && (
+              <Field label="Sucursal" htmlFor="wh-branch" hint="a qué local pertenece este depósito">
+                <Select id="wh-branch" required value={form.branchId} onChange={e => setForm({ ...form, branchId: e.target.value })}>
+                  <option value="" disabled>Elegí una sucursal</option>
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </Select>
+              </Field>
+            )}
             <Field label="Nombre" htmlFor="name">
               <Input id="name" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </Field>

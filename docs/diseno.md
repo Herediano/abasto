@@ -210,8 +210,12 @@ datos a alguien de afuera.**
 - **Ajustes** (`/ajustes`, desde el menú de la cuenta): perfil (nombre, email,
   color de avatar), contraseña, preferencias (tema, densidad de tablas, pantalla
   de inicio), sesiones del dispositivo; y sólo para el Dueño, datos de la empresa
-  (nombre, logo, zona horaria) más los accesos a Usuarios y Rangos, que salen del
-  escritorio. Backend: `PATCH /auth/me` y `PATCH /auth/tenant`.
+  (nombre, logo, zona horaria), **sucursales** y los accesos a Usuarios y Rangos,
+  que salen del escritorio. Backend: `PATCH /auth/me`, `PATCH /auth/tenant`,
+  `/branches`.
+- **Sucursal separada del depósito**: `Branch` es una entidad (`branches`); un
+  depósito (`Warehouse`) pertenece a una sucursal; el usuario deriva la suya del
+  depósito. Toda sucursal nace con depósito + caja. `session.user.branch`.
 - **Módulo unificado**: `PageHeader` con **← Escritorio** + `Esc` + chip +
   rastro; transición «se despliega» (View Transitions). Ingreso/Egreso/Historial
   son vistas de Stock (`components/stock-nav.tsx`), no tarjetas.
@@ -240,9 +244,15 @@ datos a alguien de afuera.**
 5. **Repasar los formularios** con la misma regla de aire y agrupación.
 6. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
    muestre antes de confirmar).
-7. **Sucursal como entidad propia** (hoy `Warehouse` es sucursal y depósito a la
-   vez): separar, y el selector de sucursal para `sucursales.navegar`. Es la
-   deuda que traba varias cosas de abajo.
+7. **Selector de sucursal** (`sucursales.navegar`): la entidad `Branch` ya existe
+   (paso 1 hecho), pero cada consulta sigue scopeada por tenant, no por sucursal.
+   El selector implica pasar `branchId` por todos los controllers — fase aparte.
+
+Sucursal ≠ depósito: **paso 1 hecho** — `Branch` es una entidad propia
+(migración `20260906..._sucursales`), un depósito (`Warehouse`) pertenece a una
+sucursal, y una sucursal nace con su depósito y su caja. Alta/edición de
+sucursales en Ajustes (Dueño); Depósitos muestra a qué sucursal pertenece cada
+uno. Falta el selector para navegar entre sucursales (punto 7).
 
 Zona horaria: **resuelto** — las columnas `DateTime` pasaron a `timestamptz`
 (migración `20260906073516_timestamptz`), Prisma y `@default(now())` ahora

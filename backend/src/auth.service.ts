@@ -56,22 +56,23 @@ export class AuthService {
         // Los 7 rangos de fábrica nacen con la empresa; quien la crea queda
         // como Dueño (todos los permisos), no un flag de admin aparte.
         const rangos = await sembrarRangosDeFabrica(tx, tenantCreated.id);
-        // Toda empresa nace operable: una sucursal, su caja, y el Dueño asignado
-        // a esa sucursal. Sin esto, abrir caja (y por lo tanto vender) es un
-        // callejón sin salida hasta configurar tres pantallas a mano.
-        const sucursal = await tx.warehouse.create({ data: { tenantId: tenantCreated.id, name: 'Casa Central', code: 'CC' } });
-        await tx.cashRegister.create({ data: { tenantId: tenantCreated.id, warehouseId: sucursal.id, name: 'Caja 1' } });
-        const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash, rangoId: rangos.get('Dueño')!, warehouseId: sucursal.id } });
+        // Toda empresa nace operable: una sucursal con su depósito y su caja, y
+        // el Dueño asignado. Sin esto, abrir caja (y por lo tanto vender) es un
+        // callejón sin salida hasta configurar varias pantallas a mano.
+        const sucursal = await tx.branch.create({ data: { tenantId: tenantCreated.id, name: 'Casa Central', code: 'CC' } });
+        const deposito = await tx.warehouse.create({ data: { tenantId: tenantCreated.id, branchId: sucursal.id, name: 'Depósito', code: 'CC-DEP' } });
+        await tx.cashRegister.create({ data: { tenantId: tenantCreated.id, warehouseId: deposito.id, name: 'Caja 1' } });
+        const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash, rangoId: rangos.get('Dueño')!, warehouseId: deposito.id } });
         // Sin lista base no se puede cotizar, y sin cotizar no se puede vender:
         // toda empresa nace con una. Las demás listas (mayorista, por cliente)
         // se crean después desde Precios y pueden derivar de ésta.
         await tx.priceList.create({ data: { tenantId: tenantCreated.id, name: 'Mostrador', isDefault: true } });
-        return { tenant: tenantCreated, user: userCreated };
+        return { tenant: tenantCreated, user: userCreated, sucursal };
       });
       const permisos = await this.prisma.rangoPermission.findMany({ where: { rangoId: created.user.rangoId }, select: { key: true } });
       return {
         ...this.token(created.user),
-        user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId, preferences: {} },
+        user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId, branch: { id: created.sucursal.id, name: created.sucursal.name }, preferences: {} },
         tenant: { id: created.tenant.id, name: created.tenant.name, logo: created.tenant.logo, timezone: created.tenant.timezone },
       };
     } catch (error) {
@@ -80,26 +81,38 @@ export class AuthService {
     }
   }
 
+  private static readonly SESSION_INCLUDE = {
+    tenant: true,
+    rango: { include: { permissions: { select: { key: true } } } },
+    warehouse: { select: { branch: { select: { id: true, name: true } } } },
+  } as const;
+
   async login(body: Record<string, unknown>) {
     const email = normalizeEmail(body.email);
     if (!email || typeof body.password !== 'string') throw new UnauthorizedException('Credenciales inválidas');
-    const user = await this.prisma.user.findUnique({ where: { email }, include: { tenant: true, rango: { include: { permissions: { select: { key: true } } } } } });
+    const user = await this.prisma.user.findUnique({ where: { email }, include: AuthService.SESSION_INCLUDE });
     if (!user || !user.isActive || !(await argon2.verify(user.passwordHash, body.password))) throw new UnauthorizedException('Credenciales inválidas');
     return { ...this.token(user), ...this.shape(user) };
   }
 
   /** Mismo shape que login/signup, para refrescar la sesión sin volver a pedir contraseña. */
   async me(userId: string) {
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, include: { tenant: true, rango: { include: { permissions: { select: { key: true } } } } } });
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, include: AuthService.SESSION_INCLUDE });
     return this.shape(user);
   }
 
   /** El `{ user, tenant }` que consume el frontend, con las mismas claves en login, signup y me. */
-  private shape(user: { id: string; name: string; email: string; rangoId: string; warehouseId: string | null; preferences: unknown; rango: { name: string; permissions: { key: string }[] }; tenant: { id: string; name: string; logo: string | null; timezone: string } }) {
+  private shape(user: {
+    id: string; name: string; email: string; rangoId: string; warehouseId: string | null; preferences: unknown;
+    rango: { name: string; permissions: { key: string }[] };
+    tenant: { id: string; name: string; logo: string | null; timezone: string };
+    warehouse: { branch: { id: string; name: string } } | null;
+  }) {
     return {
       user: {
         id: user.id, name: user.name, email: user.email, rangoId: user.rangoId, rangoName: user.rango.name,
         permissions: user.rango.permissions.map(p => p.key), warehouseId: user.warehouseId,
+        branch: user.warehouse?.branch ?? null,
         preferences: (user.preferences as Record<string, unknown> | null) ?? {},
       },
       tenant: { id: user.tenant.id, name: user.tenant.name, logo: user.tenant.logo, timezone: user.tenant.timezone },
@@ -204,13 +217,17 @@ export class AuthService {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as { sub?: string };
       if (!payload.sub) throw new Error('Invalid token');
-      const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, include: { rango: { include: { permissions: { select: { key: true } } } } } });
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        include: { rango: { include: { permissions: { select: { key: true } } } }, warehouse: { select: { branchId: true } } },
+      });
       if (!user || !user.isActive) throw new Error('Inactive user');
       return {
         id: user.id, tenantId: user.tenantId, name: user.name, email: user.email,
         rangoId: user.rangoId, rangoName: user.rango.name,
         permissions: new Set(user.rango.permissions.map(p => p.key)),
         warehouseId: user.warehouseId,
+        branchId: user.warehouse?.branchId ?? null,
       };
     } catch { throw new UnauthorizedException('Token inválido o vencido'); }
   }

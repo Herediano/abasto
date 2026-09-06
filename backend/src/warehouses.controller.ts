@@ -12,7 +12,11 @@ export class WarehousesController {
 
   @Get() @RequirePermission('depositos.ver')
   list(@Req() request: AuthRequest) {
-    return this.prisma.warehouse.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } });
+    return this.prisma.warehouse.findMany({
+      where: { tenantId: request.user.tenantId, isActive: true },
+      orderBy: { name: 'asc' },
+      include: { branch: { select: { id: true, name: true } } },
+    });
   }
 
   @Post()
@@ -21,15 +25,16 @@ export class WarehousesController {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
     const address = typeof body.address === 'string' ? body.address.trim() : undefined;
+    const branchId = typeof body.branchId === 'string' ? body.branchId : '';
     if (!name || !code) throw new BadRequestException('name y code son obligatorios');
+    if (!branchId) throw new BadRequestException('Elegí a qué sucursal pertenece el depósito');
+    if (!(await this.prisma.branch.findFirst({ where: { id: branchId, tenantId: request.user.tenantId, isActive: true } }))) {
+      throw new BadRequestException('Sucursal no encontrada');
+    }
     try {
-      return await this.prisma.$transaction(async tx => {
-        const deposito = await tx.warehouse.create({ data: { tenantId: request.user.tenantId, name, code, address } });
-        // Sin una caja no hay dónde abrir un turno: nace con una, mismo criterio
-        // que la lista de precios "Mostrador" al crear el tenant.
-        await tx.cashRegister.create({ data: { tenantId: request.user.tenantId, warehouseId: deposito.id, name: 'Caja 1' } });
-        return deposito;
-      });
+      // Un depósito extra es sólo espacio de guardado: la caja vive en la
+      // sucursal, que ya tiene la suya. No se crea una caja acá.
+      return await this.prisma.warehouse.create({ data: { tenantId: request.user.tenantId, branchId, name, code, address } });
     }
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El code ya existe en este tenant'); throw error; }
   }

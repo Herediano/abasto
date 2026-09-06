@@ -9,5 +9,7 @@ export type AuthUser = {
   rangoName: string;
   permissions: Set<string>;
   warehouseId?: string | null;
+  /** La sucursal del usuario, derivada de su depósito. */
+  branchId?: string | null;
 };
 export type AuthRequest = Request & { user: AuthUser };

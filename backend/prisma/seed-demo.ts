@@ -107,10 +107,13 @@ async function main() {
     (await prisma.priceList.findFirst({ where: { tenantId, isDefault: true } })) ??
     (await prisma.priceList.create({ data: { tenantId, name: 'Mostrador', isDefault: true } }));
 
-  // ---- Sucursal / depósito + caja ----
+  // ---- Sucursal + depósito + caja ----
+  const branch =
+    (await prisma.branch.findFirst({ where: { tenantId } })) ??
+    (await prisma.branch.create({ data: { tenantId, name: 'Casa Central', code: 'CC' } }));
   const warehouse =
     (await prisma.warehouse.findFirst({ where: { tenantId } })) ??
-    (await prisma.warehouse.create({ data: { tenantId, name: 'Casa Central', code: 'CC' } }));
+    (await prisma.warehouse.create({ data: { tenantId, branchId: branch.id, name: 'Depósito', code: 'CC-DEP' } }));
   if (!user.warehouseId) {
     await prisma.user.update({ where: { id: user.id }, data: { warehouseId: warehouse.id } });
     console.log(`  · asigné a ${user.name} a la sucursal ${warehouse.name}`);

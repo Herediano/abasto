@@ -7,6 +7,7 @@ import { ProductsController } from './products.controller';
 import { StockController } from './stock.controller';
 import { StockService } from './stock.service';
 import { WarehousesController } from './warehouses.controller';
+import { BranchesController } from './branches.controller';
 import { AuthController } from './auth.controller';
 import { UsersController } from './users.controller';
 import { AuthService } from './auth.service';
@@ -38,7 +39,7 @@ import { BootstrapService } from './bootstrap.service';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController, EscritorioController, ReportesController],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController, EscritorioController, ReportesController],
   providers: [
     StockService, AuthService, JwtAuthGuard, PermissionGuard, PurchasesService, PriceActivationService, PricesService, SalesService,
     CajaService, CuentasCorrientesService, RangosService, BootstrapService,
