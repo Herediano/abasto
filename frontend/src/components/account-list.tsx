@@ -8,22 +8,20 @@ const iniciales = (name: string) =>
   name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
 
 /**
- * Lista de cuentas con sesión abierta en este dispositivo. Se usa en el menú de
- * la cuenta (compacto) y en Ajustes. Tocar una cuenta alterna a ella sin pedir
- * contraseña; "Cerrar sesión" cierra sólo la cuenta activa.
+ * Cuentas con sesión abierta en este dispositivo.
+ * - `full` (Ajustes): todas, la activa con "Salir".
+ * - `switch` (menú de la cuenta): sólo las otras, para alternar; el menú ya
+ *   tiene su propio "Cerrar sesión".
  */
-export function AccountList({ onNavigate }: { onNavigate?: () => void }) {
+export function AccountList({ variant = 'full', onNavigate }: { variant?: 'full' | 'switch'; onNavigate?: () => void }) {
   const { accounts, session, switchAccount, logout } = useAuth();
   const navigate = useNavigate();
 
-  const go = (path: string) => {
-    onNavigate?.();
-    navigate(path);
-  };
+  const shown = variant === 'switch' ? accounts.filter(a => a.user.id !== session?.user.id) : accounts;
 
   return (
     <div className="grid gap-1.5">
-      {accounts.map(a => {
+      {shown.map(a => {
         const activa = a.user.id === session?.user.id;
         const color = a.user.preferences?.avatarColor ?? AVATAR_COLORS[0];
         return (
@@ -48,7 +46,7 @@ export function AccountList({ onNavigate }: { onNavigate?: () => void }) {
                 <span className="block truncate text-[11px] text-muted-foreground">{a.tenant.name}</span>
               </span>
             </button>
-            {activa && (
+            {activa && variant === 'full' && (
               <button
                 type="button"
                 onClick={logout}
@@ -64,7 +62,7 @@ export function AccountList({ onNavigate }: { onNavigate?: () => void }) {
 
       <button
         type="button"
-        onClick={() => go('/login?add=1')}
+        onClick={() => { onNavigate?.(); navigate('/login?add=1'); }}
         className="mt-1 flex items-center gap-2 rounded-md border border-dashed border-border px-2.5 py-2 text-[13px] text-muted-foreground transition-colors hover:border-solid hover:text-foreground"
       >
         <Plus className="size-4" /> Agregar otra cuenta

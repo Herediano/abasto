@@ -123,26 +123,24 @@ export function statFor(key: string, s: EscritorioSummary): TileStat | null {
   }
 }
 
-export type Pendiente = { text: string; path: string };
-
-const una = (n: number, sing: string, plu: string) => (n === 1 ? `una ${sing}` : `${n} ${plu}`);
+export type Pendiente = { text: string; path: string; module: string };
 
 /**
- * Lo que hay "para mirar hoy" — alimenta el renglón de arriba del escritorio.
- * Cada ítem es una frase en minúscula (el escritorio la arma en una oración) y
- * su link al módulo.
+ * Lo que hay "para mirar hoy" — alimenta los chips bajo el saludo del
+ * escritorio. Cada uno lleva el color del módulo al que enlaza (ver `hueFor`),
+ * para que se lean como una versión mínima de su tarjeta.
  */
 export function pendientes(s: EscritorioSummary): Pendiente[] {
   const out: Pendiente[] = [];
   if (s.stock && s.stock.bajoMinimo > 0)
-    out.push({ text: `${plural(s.stock.bajoMinimo, 'producto bajo mínimo', 'productos bajo mínimo')}`, path: '/stock/restock' });
+    out.push({ text: plural(s.stock.bajoMinimo, 'bajo mínimo', 'bajo mínimo'), path: '/stock/restock', module: 'reposicion' });
   if (s.vencimientos && s.vencimientos.lotes > 0)
-    out.push({ text: `${plural(s.vencimientos.lotes, 'lote por vencer', 'lotes por vencer')}`, path: '/stock/expirations' });
+    out.push({ text: plural(s.vencimientos.lotes, 'lote por vencer', 'lotes por vencer'), path: '/stock/expirations', module: 'vencimientos' });
   if (s.compras && s.compras.sinCargar > 0)
-    out.push({ text: `${una(s.compras.sinCargar, 'factura sin cargar', 'facturas sin cargar')}`, path: '/stock/in' });
+    out.push({ text: plural(s.compras.sinCargar, 'compra sin cargar', 'compras sin cargar'), path: '/stock/in', module: 'stock' });
   if (s.precios && s.precios.pendientes > 0)
-    out.push({ text: `${plural(s.precios.pendientes, 'precio sin trasladar', 'precios sin trasladar')}`, path: '/precios' });
+    out.push({ text: plural(s.precios.pendientes, 'precio sin trasladar', 'precios sin trasladar'), path: '/precios', module: 'precios' });
   if (s.cuentacorriente && s.cuentacorriente.vencidos > 0)
-    out.push({ text: `${una(s.cuentacorriente.vencidos, 'cuenta vencida', 'cuentas vencidas')}`, path: '/catalog/customers' });
+    out.push({ text: plural(s.cuentacorriente.vencidos, 'cuenta vencida', 'cuentas vencidas'), path: '/catalog/customers', module: 'clientes' });
   return out;
 }

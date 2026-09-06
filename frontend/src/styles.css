@@ -267,6 +267,25 @@
 :root:not([data-theme='light']) .module-tile:hover .module-tile__motif { opacity: 0.32; }
 
 /*
+ * Chips de "para mirar hoy" bajo el saludo del escritorio: cada uno lleva el
+ * matiz (--h) del módulo al que enlaza, con el mismo tratamiento que una
+ * tarjeta en chico — así se lee como una versión mínima de esa tarjeta.
+ */
+.pendiente-chip {
+  border-color: color-mix(in srgb, var(--h) 38%, var(--color-border));
+  background: color-mix(in srgb, var(--h) 8%, var(--color-card));
+}
+.pendiente-chip:hover {
+  border-color: color-mix(in srgb, var(--h) 66%, var(--color-border));
+  background: color-mix(in srgb, var(--h) 14%, var(--color-card));
+}
+.pendiente-chip__dot { background: var(--h); }
+:root:not([data-theme='light']) .pendiente-chip {
+  background: color-mix(in srgb, var(--h) 16%, var(--color-card));
+  border-color: color-mix(in srgb, var(--h) 36%, var(--color-border));
+}
+
+/*
  * Densidad de las tablas (Ajustes → Preferencias, lib/prefs.ts). "Cómoda" es el
  * default del sistema; "compacta" aprieta las filas para ver más de una vez en
  * listados largos. Ataca el atributo en <html>, más específico que las utilidades.

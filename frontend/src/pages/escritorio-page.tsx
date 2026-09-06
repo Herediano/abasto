@@ -18,26 +18,33 @@ const CONFIG_KEY = 'abasto-escritorio';
 const sentence = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es-AR') + s.slice(1) : s);
 
 /**
- * El renglón "para mirar hoy" bajo el saludo: una oración en gris, sin recuadro,
- * con cada pendiente enlazado a su módulo. En calma es una sola frase.
+ * "Para mirar hoy" bajo el saludo: un chip por pendiente, cada uno con el color
+ * del módulo al que lleva (mismo tratamiento que las tarjetas, en chico). En
+ * calma, una sola frase. Cargando, un placeholder discreto.
  */
 function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
-  if (!summary) return <p className="mt-2 text-[13px] text-placeholder">Cargando el estado del negocio…</p>;
+  if (!summary) return <p className="mt-3 text-[13px] text-placeholder">Cargando el estado del negocio…</p>;
   const items = pendientes(summary);
-  if (items.length === 0) return <p className="mt-2 text-[13px] text-muted-foreground">Hoy no hay nada urgente.</p>;
+  if (items.length === 0) return <p className="mt-3 text-[13px] text-muted-foreground">Hoy no hay nada urgente.</p>;
   return (
-    <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-      Para mirar hoy:{' '}
-      {items.map((it, i) => (
-        <span key={it.path}>
-          {i > 0 && (i === items.length - 1 ? ' y ' : ', ')}
-          <Link to={it.path} viewTransition className="text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
-            {it.text}
+    <div className="mt-4">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-placeholder">Para mirar hoy</p>
+      <div className="flex flex-wrap gap-2">
+        {items.map(it => (
+          <Link
+            key={it.path}
+            to={it.path}
+            viewTransition
+            style={{ ['--h' as string]: hueFor(it.module) }}
+            className="pendiente-chip group flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] font-medium text-foreground transition-colors"
+          >
+            <span className="pendiente-chip__dot size-1.5 rounded-full" />
+            {sentence(it.text)}
+            <ArrowRight className="size-3 text-placeholder transition-transform group-hover:translate-x-0.5" />
           </Link>
-        </span>
-      ))}
-      .
-    </p>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -134,34 +141,27 @@ export function EscritorioPage() {
   }
 
   return (
-    <div className="pt-7">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            {session?.tenant.logo && (
-              <img src={session.tenant.logo} alt={session.tenant.name} className="size-8 shrink-0 rounded-md object-contain" />
-            )}
-            <p className="font-display text-lg font-bold tracking-tight">
+    <div className="pt-5">
+      {/* Barra: identidad de la empresa a la izquierda, herramientas a la derecha. */}
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-soft pb-4">
+        <div className="flex items-center gap-3">
+          {session?.tenant.logo ? (
+            <img
+              src={session.tenant.logo}
+              alt={session.tenant.name}
+              className="size-11 shrink-0 rounded-xl border border-border bg-card object-contain p-0.5"
+            />
+          ) : (
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
+              {session?.tenant.name.slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <div className="leading-tight">
+            <p className="font-display text-[17px] font-bold tracking-tight">{session?.tenant.name}</p>
+            <p className="text-[12px] font-medium text-placeholder">
               abasto<span className="text-primary">.ai</span>
             </p>
           </div>
-          <p className="mt-3 text-xs text-placeholder first-letter:uppercase">{hoy}</p>
-          <h1 className="mt-0.5 font-display text-[26px] font-bold leading-tight tracking-tight sm:text-[30px]">
-            Buen día{nombre && `, ${nombre}`}.
-          </h1>
-          <ResumenDelDia summary={summary} />
-          {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
-            <p className="mt-1.5 text-[12px] text-muted-foreground">
-              Estás viendo {session.user.branch.name}.{' '}
-              <button
-                type="button"
-                onClick={() => setActiveBranch(session.user.id, null)}
-                className="font-medium text-primary hover:underline"
-              >
-                Volver a {session.user.homeBranch.name}
-              </button>
-            </p>
-          )}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <BranchSwitcher />
@@ -179,7 +179,28 @@ export function EscritorioPage() {
         </div>
       </header>
 
-      <div className="mb-5 mt-7 flex items-center justify-between gap-3">
+      {/* Saludo y qué hay para mirar. */}
+      <div className="mt-6">
+        <p className="text-[12px] font-medium uppercase tracking-wide text-placeholder first-letter:uppercase">{hoy}</p>
+        <h1 className="mt-1.5 font-display text-[28px] font-bold leading-tight tracking-tight sm:text-[32px]">
+          Buen día{nombre && `, ${nombre}`}.
+        </h1>
+        <ResumenDelDia summary={summary} />
+        {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            Estás viendo {session.user.branch.name}.{' '}
+            <button
+              type="button"
+              onClick={() => setActiveBranch(session.user.id, null)}
+              className="font-medium text-primary hover:underline"
+            >
+              Volver a {session.user.homeBranch.name}
+            </button>
+          </p>
+        )}
+      </div>
+
+      <div className="mb-4 mt-9 flex items-center justify-between gap-3">
         <p className="text-[13px] text-placeholder">
           {visible.length} {visible.length === 1 ? 'módulo' : 'módulos'}
         </p>

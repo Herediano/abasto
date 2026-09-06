@@ -37,9 +37,9 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
   el color desaparece: manda el verde acción.
 - **El estado lo dice el dato, no un marco.** «3 lotes», «4 vencidos», «+17,8 %
   vs ayer»: texto plano, sin teñir. Un puntito ámbar o rojo arriba a la derecha
-  basta para marcar «acá hay algo». Los avisos del escritorio (pendientes del
-  día, «estás en otra sucursal») son **una línea de texto gris bajo el saludo**,
-  no un recuadro — la jerarquía la da el tamaño y el color.
+  basta para marcar «acá hay algo». Los pendientes del día bajo el saludo son
+  **chips**, uno por cosa, cada uno con el color del módulo al que enlaza —una
+  versión mínima de su tarjeta, no un recuadro de alerta.
 - **Redacción.** Todo texto de interfaz: primera letra en mayúscula, el resto en
   minúscula (salvo nombres propios y siglas). Una oración con sentido, no un
   pegote de palabras. Nunca arranca en minúscula ni con dos puntos. «Para mirar
@@ -228,9 +228,13 @@ datos a alguien de afuera.**
   selector vive en el encabezado del escritorio (`components/branch-switcher.tsx`).
   Alta, edición, **desactivación y borrado** (si está vacía) de sucursales en
   Ajustes → La empresa.
-- **Avisos del escritorio sin recuadro**: el saludo, después una línea gris
-  «Para mirar hoy: …» con cada pendiente enlazado a su módulo (o «Hoy no hay
-  nada urgente.»), y —si mirás otra sucursal— «Estás viendo X. Volver a Y».
+- **Encabezado del escritorio, en tres franjas**: (1) barra con la identidad de
+  la empresa —logo + nombre + `abasto.ai`— a la izquierda y las herramientas
+  —sucursal, Preguntar, tema, cuenta— a la derecha; (2) fecha, saludo, y los
+  pendientes del día como **chips con el color de su módulo** (o «Hoy no hay
+  nada urgente.»); (3) el conteo de módulos + Configurar. El menú de la cuenta
+  muestra nombre, email, empresa, rango, sucursal y desde cuándo está la sesión
+  (del `iat` del token), sin repetir nada.
 - **Módulo unificado**: `PageHeader` con **← Escritorio** + `Esc` + chip +
   rastro; transición «se despliega» (View Transitions). Ingreso/Egreso/Historial
   son vistas de Stock (`components/stock-nav.tsx`), no tarjetas.
