@@ -1050,9 +1050,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/escritorio-page.tsx": {
-    "mtime": 1788679395.7894287,
-    "seen": 1788679652.587561,
-    "ast_hash": "a4730e241a4f7327a9da5d956e545109",
+    "mtime": 1788680686.2236407,
+    "seen": 1788680764.9725862,
+    "ast_hash": "d535dfc4ede5c5e2e5adb17f35103c60",
     "semantic_hash": ""
   },
   "backend/prisma/seed-demo.ts": {
