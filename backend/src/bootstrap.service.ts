@@ -24,7 +24,7 @@ export class BootstrapService implements OnModuleInit {
           (await tx.branch.create({ data: { tenantId: tenant.id, name: 'Casa Central', code: 'CC' } }));
         const deposito = await tx.warehouse.create({ data: { tenantId: tenant.id, branchId: sucursal.id, name: 'Depósito', code: 'CC-DEP' } });
         await tx.cashRegister.create({ data: { tenantId: tenant.id, warehouseId: deposito.id, name: 'Caja 1' } });
-        await tx.user.updateMany({ where: { tenantId: tenant.id, warehouseId: null }, data: { warehouseId: deposito.id } });
+        await tx.user.updateMany({ where: { tenantId: tenant.id, branchId: null }, data: { branchId: sucursal.id, warehouseId: deposito.id } });
       });
       this.log.log(`Empresa «${tenant.name}» quedó operable: sucursal "Casa Central" + depósito + "Caja 1".`);
     }

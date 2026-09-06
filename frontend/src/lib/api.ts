@@ -246,7 +246,13 @@ export type PriceAuditRow = {
   validFrom: string;
 };
 
-export type Branch = { id: string; name: string; code: string; address?: string | null; isActive?: boolean; _count?: { warehouses: number } };
+export type Branch = {
+  id: string; name: string; code: string; address?: string | null; isActive?: boolean;
+  _count?: { warehouses: number; users?: number };
+  /** Sólo en `/branches?includeInactive=1` (Ajustes): si se puede eliminar / desactivar. */
+  canDelete?: boolean;
+  canDeactivate?: boolean;
+};
 
 export type Warehouse = { id: string; name: string; code: string; address?: string | null; branchId?: string; branch?: { id: string; name: string } | null };
 
@@ -357,8 +363,8 @@ export type TeamUser = {
   rangoId: string;
   rangoName: string;
   isActive: boolean;
-  warehouseId?: string | null;
-  warehouse?: { name: string } | null;
+  branchId?: string | null;
+  branch?: { name: string } | null;
 };
 
 export class ApiError extends Error {

@@ -63,7 +63,7 @@ export class AuthService {
         const sucursal = await tx.branch.create({ data: { tenantId: tenantCreated.id, name: 'Casa Central', code: 'CC' } });
         const deposito = await tx.warehouse.create({ data: { tenantId: tenantCreated.id, branchId: sucursal.id, name: 'Depósito', code: 'CC-DEP' } });
         await tx.cashRegister.create({ data: { tenantId: tenantCreated.id, warehouseId: deposito.id, name: 'Caja 1' } });
-        const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash, rangoId: rangos.get('Dueño')!, warehouseId: deposito.id } });
+        const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash, rangoId: rangos.get('Dueño')!, branchId: sucursal.id, warehouseId: deposito.id } });
         // Sin lista base no se puede cotizar, y sin cotizar no se puede vender:
         // toda empresa nace con una. Las demás listas (mayorista, por cliente)
         // se crean después desde Precios y pueden derivar de ésta.
@@ -85,8 +85,14 @@ export class AuthService {
   private static readonly SESSION_INCLUDE = {
     tenant: true,
     rango: { include: { permissions: { select: { key: true } } } },
+    branch: { select: { id: true, name: true } },
     warehouse: { select: { branch: { select: { id: true, name: true } } } },
   } as const;
+
+  /** La sucursal propia del usuario: la asignada, o —para datos viejos— la de su depósito. */
+  private static home(user: { branch: { id: string; name: string } | null; warehouse: { branch: { id: string; name: string } } | null }) {
+    return user.branch ?? user.warehouse?.branch ?? null;
+  }
 
   async login(body: Record<string, unknown>) {
     const email = normalizeEmail(body.email);
@@ -94,7 +100,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email }, include: AuthService.SESSION_INCLUDE });
     if (!user || !user.isActive || !(await argon2.verify(user.passwordHash, body.password))) throw new UnauthorizedException('Credenciales inválidas');
     const canNav = user.rango.permissions.some(p => p.key === 'sucursales.navegar');
-    return { ...this.token(user), ...this.shape(user, user.warehouse?.branch ?? null, canNav) };
+    return { ...this.token(user), ...this.shape(user, AuthService.home(user), canNav) };
   }
 
   /**
@@ -104,7 +110,7 @@ export class AuthService {
    */
   async me(actor: { id: string; branchId?: string | null; canNavigateBranches?: boolean; warehouseId?: string | null }) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: actor.id }, include: AuthService.SESSION_INCLUDE });
-    const home = user.warehouse?.branch ?? null;
+    const home = AuthService.home(user);
     const activa =
       actor.branchId && actor.branchId !== home?.id
         ? await this.prisma.branch.findUnique({ where: { id: actor.branchId }, select: { id: true, name: true } })
@@ -119,12 +125,13 @@ export class AuthService {
       id: string; name: string; email: string; rangoId: string; warehouseId: string | null; preferences: unknown;
       rango: { name: string; permissions: { key: string }[] };
       tenant: { id: string; name: string; logo: string | null; timezone: string };
+      branch: { id: string; name: string } | null;
       warehouse: { branch: { id: string; name: string } } | null;
     },
     activeBranch: { id: string; name: string } | null,
     canNavigateBranches: boolean,
   ) {
-    const home = user.warehouse?.branch ?? null;
+    const home = AuthService.home(user);
     return {
       user: {
         id: user.id, name: user.name, email: user.email, rangoId: user.rangoId, rangoName: user.rango.name,
@@ -195,6 +202,20 @@ export class AuthService {
     return this.me(actor);
   }
 
+  /**
+   * Un usuario se asigna a una SUCURSAL. El depósito operativo se deriva: el
+   * primero de esa sucursal. Devuelve el par listo para escribir en `user`.
+   */
+  async resolveBranchAssignment(tenantId: string, branchId: unknown) {
+    if (typeof branchId !== 'string' || !branchId) return { branchId: null, warehouseId: null };
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: branchId, tenantId, isActive: true },
+      select: { id: true, warehouses: { where: { isActive: true }, select: { id: true }, orderBy: { createdAt: 'asc' } } },
+    });
+    if (!branch) throw new UnprocessableEntityException('La sucursal no existe o está inactiva');
+    return { branchId: branch.id, warehouseId: branch.warehouses[0]?.id ?? null };
+  }
+
   async createUser(tenantId: string, body: Record<string, unknown>) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const email = normalizeEmail(body.email);
@@ -205,9 +226,8 @@ export class AuthService {
     validatePassword(body.password);
     const passwordHash = await argon2.hash(body.password as string, { type: argon2.argon2id });
     try {
-      const warehouseId = typeof body.warehouseId === 'string' ? body.warehouseId : undefined;
-      if (warehouseId && !(await this.prisma.warehouse.findFirst({ where: { id: warehouseId, tenantId } }))) throw new UnprocessableEntityException('warehouseId no pertenece al tenant');
-      const user = await this.prisma.user.create({ data: { tenantId, name, email, passwordHash, rangoId, warehouseId } });
+      const { branchId, warehouseId } = await this.resolveBranchAssignment(tenantId, body.branchId);
+      const user = await this.prisma.user.create({ data: { tenantId, name, email, passwordHash, rangoId, branchId, warehouseId } });
       return { id: user.id, name: user.name, email: user.email, tenantId: user.tenantId, rangoId: user.rangoId, isActive: user.isActive };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El email ya está registrado');
@@ -237,30 +257,27 @@ export class AuthService {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as { sub?: string };
       if (!payload.sub) throw new Error('Invalid token');
+      const branchSel = {
+        select: { id: true, warehouses: { where: { isActive: true }, select: { id: true }, orderBy: { createdAt: 'asc' } } },
+      } as const;
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
         include: {
           rango: { include: { permissions: { select: { key: true } } } },
-          warehouse: {
-            select: {
-              branch: {
-                select: {
-                  id: true,
-                  warehouses: { where: { isActive: true }, select: { id: true }, orderBy: { createdAt: 'asc' } },
-                },
-              },
-            },
-          },
+          branch: branchSel,
+          warehouse: { select: { branch: branchSel } },
         },
       });
       if (!user || !user.isActive) throw new Error('Inactive user');
       const permissions = new Set(user.rango.permissions.map(p => p.key));
       const canNavigateBranches = permissions.has('sucursales.navegar');
-      const homeBranchId = user.warehouse?.branch?.id ?? null;
+      // Sucursal propia: la asignada, o —datos viejos— la del depósito.
+      const homeBranch = user.branch ?? user.warehouse?.branch ?? null;
+      const homeBranchId = homeBranch?.id ?? null;
 
       // Sucursal activa: la propia salvo que se pida otra y el rango lo permita.
       let branchId = homeBranchId;
-      let branchWarehouseIds = user.warehouse?.branch?.warehouses.map(w => w.id) ?? [];
+      let branchWarehouseIds = homeBranch?.warehouses.map(w => w.id) ?? [];
       if (requestedBranchId && requestedBranchId !== homeBranchId && canNavigateBranches) {
         const otra = await this.prisma.branch.findFirst({
           where: { id: requestedBranchId, tenantId: user.tenantId, isActive: true },

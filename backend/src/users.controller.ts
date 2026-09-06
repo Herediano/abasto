@@ -20,7 +20,7 @@ export class UsersController {
   list(@Req() request: AuthRequest) {
     return this.prisma.user.findMany({
       where: { tenantId: request.user.tenantId },
-      select: { id: true, name: true, email: true, rangoId: true, rango: { select: { name: true } }, isActive: true, warehouseId: true, warehouse: { select: { name: true } } },
+      select: { id: true, name: true, email: true, rangoId: true, rango: { select: { name: true } }, isActive: true, branchId: true, branch: { select: { name: true } } },
       orderBy: { name: 'asc' },
     }).then(rows => rows.map(({ rango, ...u }) => ({ ...u, rangoName: rango.name })));
   }
@@ -41,9 +41,11 @@ export class UsersController {
     const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : current.name;
     const rangoId = typeof body.rangoId === 'string' && body.rangoId ? body.rangoId : current.rangoId;
     const isActive = typeof body.isActive === 'boolean' ? body.isActive : current.isActive;
-    const warehouseId = body.warehouseId === null ? null : typeof body.warehouseId === 'string' && body.warehouseId ? body.warehouseId : current.warehouseId;
+    // Se asigna una sucursal; el depósito operativo se deriva de ella.
+    const asignacion = body.branchId === undefined
+      ? { branchId: current.branchId, warehouseId: current.warehouseId }
+      : await this.auth.resolveBranchAssignment(tenantId, body.branchId);
 
-    if (warehouseId && !(await this.prisma.warehouse.findFirst({ where: { id: warehouseId, tenantId } }))) throw new BadRequestException('Depósito no encontrado');
     if (rangoId !== current.rangoId && !(await this.prisma.rango.findFirst({ where: { id: rangoId, tenantId } }))) throw new BadRequestException('Rango no encontrado');
 
     // Misma protección que antes con "al menos un admin", generalizada: no se
@@ -60,7 +62,11 @@ export class UsersController {
       }
     }
 
-    const updated = await this.prisma.user.update({ where: { id }, data: { name, rangoId, isActive, warehouseId }, include: { rango: { select: { name: true } } } });
-    return { id: updated.id, name: updated.name, email: updated.email, rangoId: updated.rangoId, rangoName: updated.rango.name, isActive: updated.isActive, warehouseId: updated.warehouseId };
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { name, rangoId, isActive, branchId: asignacion.branchId, warehouseId: asignacion.warehouseId },
+      include: { rango: { select: { name: true } }, branch: { select: { name: true } } },
+    });
+    return { id: updated.id, name: updated.name, email: updated.email, rangoId: updated.rangoId, rangoName: updated.rango.name, isActive: updated.isActive, branchId: updated.branchId, branch: updated.branch };
   }
 }

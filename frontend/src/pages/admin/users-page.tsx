@@ -14,17 +14,17 @@ import { PageHeader } from '@/components/page-header';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type Rango, type TeamUser, type Warehouse } from '@/lib/api';
+import { api, errorMessage, type Branch, type Rango, type TeamUser } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
-const EMPTY_CREATE_FORM = { name: '', email: '', password: '', rangoId: '', warehouseId: '' };
-const EMPTY_EDIT_FORM = { name: '', rangoId: '', warehouseId: '', isActive: true };
+const EMPTY_CREATE_FORM = { name: '', email: '', password: '', rangoId: '', branchId: '' };
+const EMPTY_EDIT_FORM = { name: '', rangoId: '', branchId: '', isActive: true };
 
 export function UsersPage() {
   const { session, refresh } = useAuth();
   const token = session!.accessToken;
   const [items, setItems] = useState<TeamUser[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [rangos, setRangos] = useState<Rango[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,12 +42,12 @@ export function UsersPage() {
 
   useEffect(() => {
     void load();
-    api<Warehouse[]>('/warehouses', {}, token).then(setWarehouses).catch(e => setError(errorMessage(e)));
+    api<Branch[]>('/branches', {}, token).then(setBranches).catch(e => setError(errorMessage(e)));
     api<Rango[]>('/rangos', {}, token).then(setRangos).catch(e => setError(errorMessage(e)));
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openCreate() {
-    setCreateForm({ ...EMPTY_CREATE_FORM, rangoId: rangos[0]?.id ?? '' });
+    setCreateForm({ ...EMPTY_CREATE_FORM, rangoId: rangos[0]?.id ?? '', branchId: branches[0]?.id ?? '' });
     setError('');
     setCreateOpen(true);
   }
@@ -57,7 +57,7 @@ export function UsersPage() {
     setSaving(true);
     setError('');
     try {
-      await api('/users', { method: 'POST', body: JSON.stringify({ ...createForm, warehouseId: createForm.warehouseId || undefined }) }, token);
+      await api('/users', { method: 'POST', body: JSON.stringify({ ...createForm, branchId: createForm.branchId || undefined }) }, token);
       setCreateOpen(false);
       await load();
     } catch (err) {
@@ -69,7 +69,7 @@ export function UsersPage() {
 
   function openEdit(u: TeamUser) {
     setEditing(u);
-    setEditForm({ name: u.name, rangoId: u.rangoId, warehouseId: u.warehouseId ?? '', isActive: u.isActive });
+    setEditForm({ name: u.name, rangoId: u.rangoId, branchId: u.branchId ?? '', isActive: u.isActive });
     setError('');
   }
 
@@ -79,7 +79,7 @@ export function UsersPage() {
     setSaving(true);
     setError('');
     try {
-      await api(`/users/${editing.id}`, { method: 'PUT', body: JSON.stringify({ ...editForm, warehouseId: editForm.warehouseId || null }) }, token);
+      await api(`/users/${editing.id}`, { method: 'PUT', body: JSON.stringify({ ...editForm, branchId: editForm.branchId || null }) }, token);
       // Si te editaste a vos mismo (rango o sucursal), la sesión en memoria quedó vieja.
       if (editing.id === session!.user.id) await refresh();
       setEditing(null);
@@ -95,7 +95,7 @@ export function UsersPage() {
     <>
       <PageHeader
         title="Usuarios"
-        description="Gestioná el equipo, su rango y el depósito que tienen asignado."
+        description="El equipo, su rango y la sucursal donde trabaja cada uno."
         actions={
           <Button onClick={openCreate}>
             <Plus /> Nuevo usuario
@@ -116,7 +116,7 @@ export function UsersPage() {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Rango</TableHead>
-                  <TableHead>Depósito</TableHead>
+                  <TableHead>Sucursal</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -129,7 +129,7 @@ export function UsersPage() {
                     <TableCell>
                       <Badge variant={u.rangoName === 'Dueño' ? 'default' : 'secondary'}>{u.rangoName}</Badge>
                     </TableCell>
-                    <TableCell>{u.warehouse?.name ?? '—'}</TableCell>
+                    <TableCell>{u.branch?.name ?? <span className="text-warning">sin asignar</span>}</TableCell>
                     <TableCell>
                       <Badge variant={u.isActive ? 'success' : 'destructive'}>{u.isActive ? 'Activo' : 'Inactivo'}</Badge>
                     </TableCell>
@@ -168,14 +168,10 @@ export function UsersPage() {
                 {rangos.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </Select>
             </Field>
-            <Field label="Depósito" htmlFor="create-warehouse" hint="(opcional)">
-              <Select id="create-warehouse" value={createForm.warehouseId} onChange={e => setCreateForm({ ...createForm, warehouseId: e.target.value })}>
+            <Field label="Sucursal" htmlFor="create-branch" hint="dónde trabaja">
+              <Select id="create-branch" value={createForm.branchId} onChange={e => setCreateForm({ ...createForm, branchId: e.target.value })}>
                 <option value="">Sin asignar</option>
-                {warehouses.map(w => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </Select>
             </Field>
             <DialogFooter>
@@ -205,14 +201,10 @@ export function UsersPage() {
                 {rangos.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </Select>
             </Field>
-            <Field label="Depósito" htmlFor="edit-warehouse">
-              <Select id="edit-warehouse" value={editForm.warehouseId} onChange={e => setEditForm({ ...editForm, warehouseId: e.target.value })}>
+            <Field label="Sucursal" htmlFor="edit-branch">
+              <Select id="edit-branch" value={editForm.branchId} onChange={e => setEditForm({ ...editForm, branchId: e.target.value })}>
                 <option value="">Sin asignar</option>
-                {warehouses.map(w => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </Select>
             </Field>
             <div className="flex items-center gap-2">

@@ -137,6 +137,7 @@ model Branch {
   updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant     Tenant      @relation(fields: [tenantId], references: [id])
   warehouses Warehouse[]
+  users      User[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])
@@ -508,6 +509,10 @@ model User {
   updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
   rango                    Rango                     @relation(fields: [rangoId, tenantId], references: [id, tenantId])
+  // La sucursal donde trabaja el usuario. Es la asignación real (editable en
+  // Usuarios); `warehouseId` es el depósito operativo, se deriva de ésta.
+  branchId                 String?                   @map("branch_id") @db.Uuid
+  branch                   Branch?                   @relation(fields: [branchId, tenantId], references: [id, tenantId])
   warehouseId              String?                   @map("warehouse_id") @db.Uuid
   warehouse                Warehouse?                @relation(fields: [warehouseId], references: [id])
   purchaseInvoices         PurchaseInvoice[]
@@ -520,6 +525,7 @@ model User {
 
   @@index([tenantId])
   @@index([tenantId, rangoId])
+  @@index([tenantId, branchId])
   @@map("users")
 }
 

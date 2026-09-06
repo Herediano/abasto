@@ -384,9 +384,11 @@ function SucursalesSection({ token }: { token: string }) {
   const [editing, setEditing] = useState<Branch | null>(null);
   const [form, setForm] = useState(EMPTY_SUCURSAL);
   const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Branch | null>(null);
 
   const load = () =>
-    api<Branch[]>('/branches', {}, token)
+    api<Branch[]>('/branches?includeInactive=1', {}, token)
       .then(setItems)
       .catch(e => setError(errorMessage(e)))
       .finally(() => setLoading(false));
@@ -419,6 +421,23 @@ function SucursalesSection({ token }: { token: string }) {
       setSaving(false);
     }
   }
+  async function accion(id: string, run: () => Promise<unknown>) {
+    setBusyId(id);
+    setError('');
+    try {
+      await run();
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusyId(null);
+      setConfirmDelete(null);
+    }
+  }
+  const toggleActiva = (b: Branch) =>
+    accion(b.id, () => api(`/branches/${b.id}`, { method: 'PUT', body: JSON.stringify({ isActive: !b.isActive }) }, token));
+  const eliminar = (b: Branch) =>
+    accion(b.id, () => api(`/branches/${b.id}`, { method: 'DELETE' }, token));
 
   return (
     <Section title="Sucursales" description="Cada sucursal es un local del negocio. Nace con un depósito y una caja; los depósitos extra se agregan desde el módulo Depósitos.">
@@ -428,17 +447,43 @@ function SucursalesSection({ token }: { token: string }) {
       ) : (
         <div className="grid gap-2">
           {items.map(b => (
-            <div key={b.id} className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2.5">
-              <Storefront weight="fill" className="size-4 shrink-0 text-primary" />
+            <div
+              key={b.id}
+              className={cn(
+                'flex items-center gap-3 rounded-md border px-3 py-2.5',
+                b.isActive ? 'border-border bg-background' : 'border-dashed border-border bg-muted/40',
+              )}
+            >
+              <Storefront weight="fill" className={cn('size-4 shrink-0', b.isActive ? 'text-primary' : 'text-placeholder')} />
               <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-semibold">{b.name}</span>
+                <span className="flex items-center gap-2 text-[13px] font-semibold">
+                  {b.name}
+                  {!b.isActive && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Inactiva</span>}
+                </span>
                 <span className="block text-[11px] text-muted-foreground">
                   {b.code}{b.address ? ` · ${b.address}` : ''} · {b._count?.warehouses ?? 0} {b._count?.warehouses === 1 ? 'depósito' : 'depósitos'}
+                  {b._count?.users ? ` · ${b._count.users} ${b._count.users === 1 ? 'usuario' : 'usuarios'}` : ''}
                 </span>
               </span>
-              <Button variant="ghost" size="icon" onClick={() => editar(b)} aria-label="Editar sucursal">
-                <PencilSimple />
-              </Button>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button variant="ghost" size="icon" onClick={() => editar(b)} aria-label="Editar sucursal" disabled={busyId === b.id}>
+                  <PencilSimple />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleActiva(b)}
+                  disabled={busyId === b.id || (b.isActive && !b.canDeactivate)}
+                  title={b.isActive && !b.canDeactivate ? 'Reasigná los usuarios y dejá otra activa primero' : undefined}
+                >
+                  {busyId === b.id ? <Spinner /> : b.isActive ? 'Desactivar' : 'Activar'}
+                </Button>
+                {b.canDelete && (
+                  <Button variant="ghost" size="icon" onClick={() => setConfirmDelete(b)} aria-label="Eliminar sucursal" disabled={busyId === b.id}>
+                    <Trash />
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
           <Button variant="outline" size="sm" onClick={nueva} className="mt-1 justify-self-start">
@@ -446,6 +491,23 @@ function SucursalesSection({ token }: { token: string }) {
           </Button>
         </div>
       )}
+
+      <Dialog open={!!confirmDelete} onOpenChange={o => !o && setConfirmDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar {confirmDelete?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Se borra la sucursal con su depósito y su caja. No se puede deshacer. Sólo se permite porque no tiene ventas, stock ni turnos.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
+            <Button type="button" variant="destructive" disabled={!!busyId} onClick={() => confirmDelete && eliminar(confirmDelete)}>
+              {busyId ? <Spinner /> : <Trash />} Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

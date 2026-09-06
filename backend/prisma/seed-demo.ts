@@ -116,9 +116,9 @@ async function main() {
   const warehouse =
     (await prisma.warehouse.findFirst({ where: { tenantId } })) ??
     (await prisma.warehouse.create({ data: { tenantId, branchId: branch.id, name: 'Depósito', code: 'CC-DEP' } }));
-  if (!user.warehouseId) {
-    await prisma.user.update({ where: { id: user.id }, data: { warehouseId: warehouse.id } });
-    console.log(`  · asigné a ${user.name} a la sucursal ${warehouse.name}`);
+  if (!user.branchId || !user.warehouseId) {
+    await prisma.user.update({ where: { id: user.id }, data: { branchId: branch.id, warehouseId: warehouse.id } });
+    console.log(`  · asigné a ${user.name} a la sucursal ${branch.name}`);
   }
   await prisma.cashRegister.upsert({
     where: { tenantId_warehouseId_name: { tenantId, warehouseId: warehouse.id, name: 'Caja 1' } },

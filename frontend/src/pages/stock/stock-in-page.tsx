@@ -17,7 +17,7 @@ import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { api, errorMessage, type Lot, type Product, type PurchaseInvoice, type Supplier, type TeamUser } from '@/lib/api';
+import { api, errorMessage, type Lot, type Product, type PurchaseInvoice, type Supplier } from '@/lib/api';
 import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -107,11 +107,11 @@ export function StockInPage() {
   const loadInvoices = () => api<PurchaseInvoice[]>('/purchases/invoices', {}, token).then(setInvoices).catch(e => setError(errorMessage(e)));
 
   useEffect(() => {
-    Promise.all([api<Supplier[]>('/suppliers', {}, token), api<PurchaseInvoice[]>('/purchases/invoices', {}, token), api<TeamUser[]>('/users', {}, token)])
-      .then(([s, i, users]) => {
+    setMyWarehouseId(session!.user.warehouseId ?? null);
+    Promise.all([api<Supplier[]>('/suppliers', {}, token), api<PurchaseInvoice[]>('/purchases/invoices', {}, token)])
+      .then(([s, i]) => {
         setSuppliers(s);
         setInvoices(i);
-        setMyWarehouseId(users.find(u => u.id === session!.user.id)?.warehouseId ?? null);
       })
       .catch(e => setError(errorMessage(e)));
   }, [token]);
