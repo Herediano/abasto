@@ -111,9 +111,14 @@ export function EscritorioPage() {
     <div className="pt-7">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="font-display text-lg font-bold tracking-tight">
-            abasto<span className="text-primary">.ai</span>
-          </p>
+          <div className="flex items-center gap-2.5">
+            {session?.tenant.logo && (
+              <img src={session.tenant.logo} alt={session.tenant.name} className="size-8 shrink-0 rounded-md object-contain" />
+            )}
+            <p className="font-display text-lg font-bold tracking-tight">
+              abasto<span className="text-primary">.ai</span>
+            </p>
+          </div>
           <p className="mt-3 text-xs text-placeholder first-letter:uppercase">{hoy}</p>
           <h1 className="mt-0.5 font-display text-[26px] font-bold leading-tight tracking-tight sm:text-[30px]">
             Buen día{nombre && `, ${nombre}`}

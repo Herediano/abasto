@@ -1,5 +1,5 @@
 import {
-  ArrowsClockwise, Barcode, CashRegister, Gear, Hourglass, Package, Receipt,
+  ArrowsClockwise, Barcode, CashRegister, Gear, GearSix, Hourglass, Package, Receipt,
   ShieldCheck, Tag, Truck, UsersThree, Vault, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
@@ -87,6 +87,11 @@ export const MODULES: ModuleDef[] = [
     motif: '<path d="M3 21V9l9-5 9 5v12M3 21h18M9 21v-6h6v6"/>',
   },
   {
+    key: 'ajustes', label: 'Ajustes', path: '/ajustes', Icon: GearSix, settings: true,
+    blurb: 'Tu perfil, tus preferencias y la empresa.', crumb: 'Escritorio /',
+    motif: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M16.9 16.9l2.1 2.1M19.1 4.9l-2.1 2.1M7 16.9l-2.1 2.1"/>',
+  },
+  {
     key: 'usuarios', label: 'Usuarios', path: '/admin/users', permission: 'usuarios.ver', Icon: Gear, settings: true,
     blurb: 'Quién entra al sistema y con qué rango.', crumb: 'Escritorio / Ajustes /',
     motif: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.7-3.8 3.2-5.8 6-5.8S14.3 16.2 15 20"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 20c.4-2.4 1.3-4 2.7-4.8"/>',
@@ -120,6 +125,7 @@ const HUES: Record<string, string> = {
   proveedores: '#0284c7', // azul cielo
   clientes: '#db2777', // rosa
   depositos: '#475569', // pizarra (estructura, no acción)
+  ajustes: '#475569', // pizarra (vive en el menú de la cuenta)
   usuarios: '#0e7490', // cian oscuro (vive en Ajustes)
   rangos: '#9f1239', // granate (vive en Ajustes)
 };
@@ -141,7 +147,7 @@ export function visibleModules(can: (permission: string) => boolean): ModuleDef[
 
 /** Los módulos que viven dentro de Ajustes (Usuarios, Rangos), filtrados por permiso. */
 export function settingsModules(can: (permission: string) => boolean): ModuleDef[] {
-  return MODULES.filter(m => m.settings && (!m.permission || can(m.permission)));
+  return MODULES.filter(m => m.settings && m.key !== 'ajustes' && (!m.permission || can(m.permission)));
 }
 
 /** El motivo de línea de una tarjeta: SVG grande y tenue que le da identidad sin gastar color. */

@@ -1,10 +1,20 @@
-import { ConflictException, Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { sembrarRangosDeFabrica } from './rangos.util';
 import * as argon2 from 'argon2';
 import * as jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'local-development-secret-change-me';
+
+/** El rango de fábrica que manda: único que ve y toca la configuración de la empresa. */
+const OWNER_RANGO = 'Dueño';
+
+/** Zonas horarias que ofrece Ajustes (IANA). Argentina primero. */
+const TIMEZONES = new Set([
+  'America/Argentina/Buenos_Aires', 'America/Argentina/Cordoba', 'America/Argentina/Mendoza',
+  'America/Argentina/Salta', 'America/Argentina/Tucuman', 'America/Argentina/Ushuaia',
+  'America/Montevideo', 'America/Santiago', 'America/Asuncion', 'America/La_Paz', 'America/Sao_Paulo',
+]);
 
 function normalizeEmail(email: unknown) {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
@@ -61,8 +71,8 @@ export class AuthService {
       const permisos = await this.prisma.rangoPermission.findMany({ where: { rangoId: created.user.rangoId }, select: { key: true } });
       return {
         ...this.token(created.user),
-        user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId },
-        tenant: { id: created.tenant.id, name: created.tenant.name },
+        user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId, preferences: {} },
+        tenant: { id: created.tenant.id, name: created.tenant.name, logo: created.tenant.logo, timezone: created.tenant.timezone },
       };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El taxId o email ya está registrado');
@@ -75,20 +85,81 @@ export class AuthService {
     if (!email || typeof body.password !== 'string') throw new UnauthorizedException('Credenciales inválidas');
     const user = await this.prisma.user.findUnique({ where: { email }, include: { tenant: true, rango: { include: { permissions: { select: { key: true } } } } } });
     if (!user || !user.isActive || !(await argon2.verify(user.passwordHash, body.password))) throw new UnauthorizedException('Credenciales inválidas');
-    return {
-      ...this.token(user),
-      user: { id: user.id, name: user.name, email: user.email, rangoId: user.rangoId, rangoName: user.rango.name, permissions: user.rango.permissions.map(p => p.key), warehouseId: user.warehouseId },
-      tenant: { id: user.tenant.id, name: user.tenant.name },
-    };
+    return { ...this.token(user), ...this.shape(user) };
   }
 
   /** Mismo shape que login/signup, para refrescar la sesión sin volver a pedir contraseña. */
   async me(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, include: { tenant: true, rango: { include: { permissions: { select: { key: true } } } } } });
+    return this.shape(user);
+  }
+
+  /** El `{ user, tenant }` que consume el frontend, con las mismas claves en login, signup y me. */
+  private shape(user: { id: string; name: string; email: string; rangoId: string; warehouseId: string | null; preferences: unknown; rango: { name: string; permissions: { key: string }[] }; tenant: { id: string; name: string; logo: string | null; timezone: string } }) {
     return {
-      user: { id: user.id, name: user.name, email: user.email, rangoId: user.rangoId, rangoName: user.rango.name, permissions: user.rango.permissions.map(p => p.key), warehouseId: user.warehouseId },
-      tenant: { id: user.tenant.id, name: user.tenant.name },
+      user: {
+        id: user.id, name: user.name, email: user.email, rangoId: user.rangoId, rangoName: user.rango.name,
+        permissions: user.rango.permissions.map(p => p.key), warehouseId: user.warehouseId,
+        preferences: (user.preferences as Record<string, unknown> | null) ?? {},
+      },
+      tenant: { id: user.tenant.id, name: user.tenant.name, logo: user.tenant.logo, timezone: user.tenant.timezone },
     };
+  }
+
+  /** El propio usuario cambia su nombre, email, contraseña o preferencias. Para la contraseña pide la actual. */
+  async updateMe(userId: string, body: Record<string, unknown>) {
+    const data: Record<string, unknown> = {};
+    if (typeof body.name === 'string') {
+      const name = body.name.trim();
+      if (!name) throw new UnprocessableEntityException('El nombre no puede quedar vacío');
+      data.name = name;
+    }
+    if (typeof body.email === 'string') {
+      const email = normalizeEmail(body.email);
+      if (!email) throw new UnprocessableEntityException('Email inválido');
+      data.email = email;
+    }
+    if (body.newPassword !== undefined) {
+      validatePassword(body.newPassword);
+      const current = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      if (typeof body.currentPassword !== 'string' || !(await argon2.verify(current.passwordHash, body.currentPassword))) {
+        throw new UnauthorizedException('La contraseña actual no coincide');
+      }
+      data.passwordHash = await argon2.hash(body.newPassword as string, { type: argon2.argon2id });
+    }
+    if (body.preferences !== undefined && body.preferences !== null && typeof body.preferences === 'object') {
+      const prev = ((await this.prisma.user.findUniqueOrThrow({ where: { id: userId } })).preferences as Record<string, unknown> | null) ?? {};
+      data.preferences = { ...prev, ...(body.preferences as Record<string, unknown>) };
+    }
+    try {
+      await this.prisma.user.update({ where: { id: userId }, data });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ese email ya está en uso');
+      throw error;
+    }
+    return this.me(userId);
+  }
+
+  /** Sólo el Dueño toca los datos de la empresa: nombre, logo y zona horaria. */
+  async updateTenant(actor: { id: string; tenantId: string; rangoName: string }, body: Record<string, unknown>) {
+    if (actor.rangoName !== OWNER_RANGO) throw new ForbiddenException('Sólo el Dueño puede cambiar los datos de la empresa');
+    const data: Record<string, unknown> = {};
+    if (typeof body.name === 'string') {
+      const name = body.name.trim();
+      if (!name) throw new UnprocessableEntityException('El nombre de la empresa no puede quedar vacío');
+      data.name = name;
+    }
+    if (body.logo === null || body.logo === '') data.logo = null;
+    else if (typeof body.logo === 'string') {
+      if (!body.logo.startsWith('data:image/') || body.logo.length > 500_000) throw new UnprocessableEntityException('El logo tiene que ser una imagen y pesar menos de ~350 KB');
+      data.logo = body.logo;
+    }
+    if (typeof body.timezone === 'string') {
+      if (!TIMEZONES.has(body.timezone)) throw new UnprocessableEntityException('Zona horaria no reconocida');
+      data.timezone = body.timezone;
+    }
+    await this.prisma.tenant.update({ where: { id: actor.tenantId }, data });
+    return this.me(actor.id);
   }
 
   async createUser(tenantId: string, body: Record<string, unknown>) {

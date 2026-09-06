@@ -1,25 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { CaretDown, SignOut, Storefront, UserSwitch } from '@phosphor-icons/react';
+import { CaretDown, GearSix, Storefront } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
+import { AccountList } from '@/components/account-list';
 import { api, type Warehouse } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { AVATAR_COLORS } from '@/lib/prefs';
 import { cn } from '@/lib/utils';
 
 const iniciales = (name: string) =>
-  name
-    .split(' ')
-    .slice(0, 2)
-    .map(p => p[0] ?? '')
-    .join('')
-    .toUpperCase();
+  name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
 
 /**
- * El menú de la cuenta: perfil (nombre, email, rango, sucursal), cerrar sesión
- * y cambiar de cuenta. Vivía en el pie del riel; ahora en el encabezado del
- * escritorio.
+ * El menú de la cuenta en el encabezado del escritorio: perfil, cuentas
+ * abiertas en este dispositivo (alternar / agregar / cerrar sesión) y el
+ * acceso a Ajustes.
  */
 export function UserMenu() {
-  const { session, logout } = useAuth();
+  const { session } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [sucursal, setSucursal] = useState('');
@@ -28,6 +25,7 @@ export function UserMenu() {
   const user = session?.user;
   const warehouseId = user?.warehouseId;
   const token = session?.accessToken;
+  const color = user?.preferences?.avatarColor ?? AVATAR_COLORS[0];
 
   useEffect(() => {
     if (!open || !warehouseId || !token) return;
@@ -47,11 +45,6 @@ export function UserMenu() {
 
   if (!user) return null;
 
-  function cambiarCuenta() {
-    logout();
-    navigate('/login');
-  }
-
   return (
     <div ref={ref} className="relative">
       <button
@@ -61,7 +54,7 @@ export function UserMenu() {
         aria-expanded={open}
         className="flex items-center gap-2 rounded-full border border-border py-1 pl-1 pr-2.5 transition-colors hover:bg-card"
       >
-        <span className="grid size-7 place-items-center rounded-full bg-primary font-display text-xs font-bold text-primary-foreground">
+        <span className="grid size-7 place-items-center rounded-full font-display text-xs font-bold text-white" style={{ background: color }}>
           {iniciales(user.name)}
         </span>
         <span className="hidden text-xs font-semibold sm:inline">{user.name.split(' ')[0]}</span>
@@ -69,9 +62,9 @@ export function UserMenu() {
       </button>
 
       {open && (
-        <div role="menu" className="absolute right-0 z-40 mt-1.5 w-64 rounded-lg border border-border bg-card p-1.5 shadow-float">
-          <div className="flex items-center gap-3 border-b border-border-soft px-2.5 pb-3 pt-2">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary font-display text-sm font-bold text-primary-foreground">
+        <div role="menu" className="absolute right-0 z-40 mt-1.5 w-72 rounded-lg border border-border bg-card p-2 shadow-float">
+          <div className="flex items-center gap-3 px-1.5 pb-2.5 pt-1">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full font-display text-sm font-bold text-white" style={{ background: color }}>
               {iniciales(user.name)}
             </span>
             <div className="min-w-0">
@@ -80,40 +73,27 @@ export function UserMenu() {
             </div>
           </div>
 
-          <div className="grid gap-1.5 px-2.5 py-3 text-[12px]">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Empresa</span>
-              <span className="font-medium">{session?.tenant.name}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Rango</span>
-              <span className="font-medium">{user.rangoName}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Sucursal</span>
-              <span className="flex items-center gap-1 font-medium">
-                <Storefront weight="fill" className="size-3 text-primary" />
-                {warehouseId ? sucursal || '…' : <span className="text-warning">sin asignar</span>}
-              </span>
-            </div>
+          <div className="flex items-center justify-between border-t border-border-soft px-1.5 py-2 text-[12px]">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Storefront weight="fill" className="size-3.5 text-primary" /> Sucursal
+            </span>
+            <span className="font-medium">
+              {warehouseId ? sucursal || '…' : <span className="text-warning">sin asignar</span>}
+            </span>
           </div>
 
-          <div className="border-t border-border-soft pt-1.5">
+          <div className="border-t border-border-soft pt-2">
+            <AccountList onNavigate={() => setOpen(false)} />
+          </div>
+
+          <div className="mt-1 border-t border-border-soft pt-1">
             <button
               type="button"
-              onClick={cambiarCuenta}
+              onClick={() => { setOpen(false); navigate('/ajustes', { viewTransition: true }); }}
               className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] hover:bg-background"
             >
-              <UserSwitch className="size-4 text-muted-foreground" />
-              Cambiar de cuenta
-            </button>
-            <button
-              type="button"
-              onClick={logout}
-              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-destructive hover:bg-destructive-soft"
-            >
-              <SignOut className="size-4" />
-              Cerrar sesión
+              <GearSix className="size-4 text-muted-foreground" />
+              Ajustes
             </button>
           </div>
         </div>

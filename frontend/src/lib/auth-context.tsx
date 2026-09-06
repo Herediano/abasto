@@ -1,39 +1,87 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, type Session } from './api';
 
-const STORAGE_KEY = 'abasto-session';
+// Varias cuentas con la sesión iniciada en el mismo dispositivo: se guarda la
+// lista y cuál está activa. `abasto-session` (una sola sesión) es el formato
+// viejo — se migra a la lista la primera vez.
+const ACCOUNTS_KEY = 'abasto-accounts';
+const ACTIVE_KEY = 'abasto-active';
+const LEGACY_KEY = 'abasto-session';
 
 type AuthContextValue = {
   session: Session | null;
+  /** Todas las cuentas con sesión abierta en este dispositivo (la activa incluida). */
+  accounts: Session[];
   /** ¿Tiene el usuario actual esta clave del catálogo (ver permissions.catalog.ts en el backend)? */
   can: (permission: string) => boolean;
+  /** Inicia sesión y la deja activa; si esa cuenta ya estaba, la reemplaza. */
   login: (session: Session) => void;
+  /** Cierra la sesión de la cuenta activa nada más; si quedan otras, pasa a la primera. */
   logout: () => void;
-  /** Vuelve a pedir /auth/me y actualiza la sesión (rango, permisos, sucursal). */
+  /** Alterna a otra cuenta ya logueada, sin volver a pedir contraseña. */
+  switchAccount: (userId: string) => void;
+  /** Vuelve a pedir /auth/me para la cuenta activa y la actualiza (rango, permisos, sucursal, empresa). */
   refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function readStoredSession(): Session | null {
+function readAccounts(): Session[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Session) : null;
+    const raw = localStorage.getItem(ACCOUNTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Session[];
+      if (Array.isArray(parsed)) return parsed.filter(s => s?.accessToken && s?.user?.id);
+    }
+    // Migración del formato viejo (una sola sesión).
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      const s = JSON.parse(legacy) as Session;
+      if (s?.accessToken && s?.user?.id) return [s];
+    }
   } catch {
-    return null;
+    // Sin persistencia: no hay sesión guardada.
+  }
+  return [];
+}
+
+function persist(accounts: Session[], activeId: string | null) {
+  try {
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    if (activeId) localStorage.setItem(ACTIVE_KEY, activeId);
+    else localStorage.removeItem(ACTIVE_KEY);
+    localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    // Modo privado: la sesión vale para esta pestaña y nada más.
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(readStoredSession);
+  const [accounts, setAccounts] = useState<Session[]>(readAccounts);
+  const [activeId, setActiveId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(ACTIVE_KEY) ?? readAccounts()[0]?.user.id ?? null;
+    } catch {
+      return null;
+    }
+  });
+
+  const session = useMemo(
+    () => accounts.find(a => a.user.id === activeId) ?? accounts[0] ?? null,
+    [accounts, activeId],
+  );
+
+  useEffect(() => {
+    persist(accounts, session?.user.id ?? null);
+  }, [accounts, session]);
 
   const refresh = useMemo(
     () => async () => {
-      const token = readStoredSession()?.accessToken;
-      if (!token) return;
+      const current = readAccounts().find(a => a.user.id === (localStorage.getItem(ACTIVE_KEY) ?? '')) ?? readAccounts()[0];
+      if (!current) return;
       try {
-        const fresh = await api<{ user: Session['user']; tenant: Session['tenant'] }>('/auth/me', {}, token);
-        setSession(prev => (prev ? { ...prev, user: fresh.user, tenant: fresh.tenant } : prev));
+        const fresh = await api<{ user: Session['user']; tenant: Session['tenant'] }>('/auth/me', {}, current.accessToken);
+        setAccounts(prev => prev.map(a => (a.user.id === current.user.id ? { ...a, user: fresh.user, tenant: fresh.tenant } : a)));
       } catch {
         // token inválido o backend caído: se mantiene lo que había
       }
@@ -51,23 +99,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
+      accounts,
       can: permission => !!session?.user.permissions?.includes(permission),
       login: next => {
-        setSession(next);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        setAccounts(prev => [...prev.filter(a => a.user.id !== next.user.id), next]);
+        setActiveId(next.user.id);
       },
       logout: () => {
-        setSession(null);
-        localStorage.removeItem(STORAGE_KEY);
+        setAccounts(prev => {
+          const rest = prev.filter(a => a.user.id !== session?.user.id);
+          setActiveId(rest[0]?.user.id ?? null);
+          return rest;
+        });
+      },
+      switchAccount: userId => {
+        if (accounts.some(a => a.user.id === userId)) setActiveId(userId);
       },
       refresh,
     }),
-    [session, refresh],
+    [session, accounts, refresh],
   );
-
-  useEffect(() => {
-    if (session) localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  }, [session]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -78,6 +78,12 @@ model Tenant {
   legalName                String?                   @map("legal_name")
   taxId                    String?                   @unique @map("tax_id")
   status                   String                    @default("active")
+  // Logo del negocio como data URI (base64). Chico — hoy sólo se muestra en el
+  // encabezado del escritorio; el uso en comprobantes viene después.
+  logo                     String?
+  // Zona horaria del negocio (IANA). Hoy informativa; se vuelve operativa con
+  // la migración de las columnas de fecha a timestamptz.
+  timezone                 String                    @default("America/Argentina/Buenos_Aires")
   productCodeSeq           Int                       @default(0) @map("product_code_seq")
   createdAt                DateTime                  @default(now()) @map("created_at")
   updatedAt                DateTime                  @updatedAt @map("updated_at")
@@ -472,6 +478,9 @@ model User {
   passwordHash             String                    @map("password_hash")
   rangoId                  String                    @map("rango_id") @db.Uuid
   isActive                 Boolean                   @default(true) @map("is_active")
+  // Preferencias personales del usuario: { avatarColor?, startup? } — color de
+  // avatar y a qué pantalla entrar al abrir la app ("escritorio" o una clave de módulo).
+  preferences              Json?
   createdAt                DateTime                  @default(now()) @map("created_at")
   updatedAt                DateTime                  @updatedAt @map("updated_at")
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id])

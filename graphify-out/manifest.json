@@ -234,10 +234,10 @@
     "semantic_hash": ""
   },
   "backend/src/auth.controller.ts": {
-    "mtime": 1788662773.949736,
-    "seen": 1788663735.1328664,
-    "ast_hash": "80e16f72dd6658f8b6b3883d1fd7837d",
-    "semantic_hash": "80e16f72dd6658f8b6b3883d1fd7837d"
+    "mtime": 1788678998.1325812,
+    "seen": 1788679652.5611112,
+    "ast_hash": "652b531184d5cf1e160f162b48c7a8d2",
+    "semantic_hash": ""
   },
   "backend/src/auth.guard.ts": {
     "mtime": 1788662773.957788,
@@ -246,9 +246,9 @@
     "semantic_hash": "5db775b98637eccc26e58fb2b5d7e256"
   },
   "backend/src/auth.service.ts": {
-    "mtime": 1788675831.2597587,
-    "seen": 1788676543.8806036,
-    "ast_hash": "fe10a5bbc702ef6b3cd686429d179801",
+    "mtime": 1788678980.7730708,
+    "seen": 1788679652.5621114,
+    "ast_hash": "fabf9318e48e18c4c76983b7dfcc7c30",
     "semantic_hash": ""
   },
   "backend/src/auth.types.ts": {
@@ -522,9 +522,9 @@
     "semantic_hash": ""
   },
   "frontend/src/App.tsx": {
-    "mtime": 1788669449.2423842,
-    "seen": 1788669762.4804168,
-    "ast_hash": "b3d46051d6291b461cbf7b2d02aab100",
+    "mtime": 1788679353.0621228,
+    "seen": 1788679652.5748117,
+    "ast_hash": "4719c514f4f051593aa19c7fb88c31de",
     "semantic_hash": ""
   },
   "frontend/src/components/empty-state.tsx": {
@@ -654,15 +654,15 @@
     "semantic_hash": "884ec3fca89d6555109935aec2b4fda1"
   },
   "frontend/src/lib/api.ts": {
-    "mtime": 1788673364.174925,
-    "seen": 1788674116.1530323,
-    "ast_hash": "3374a3da164b9a0e89c526a8af21b9db",
+    "mtime": 1788679064.434003,
+    "seen": 1788679652.5828118,
+    "ast_hash": "7f7f6d5d55ecdf9355dfb6c579a82a79",
     "semantic_hash": ""
   },
   "frontend/src/lib/auth-context.tsx": {
-    "mtime": 1788675937.3015463,
-    "seen": 1788676543.8806036,
-    "ast_hash": "d1268598036d5602c48e41dbedf542c7",
+    "mtime": 1788679095.4417708,
+    "seen": 1788679652.5828118,
+    "ast_hash": "802445ec0d0913bb9b657c89ecfb1f65",
     "semantic_hash": ""
   },
   "frontend/src/lib/format.ts": {
@@ -708,9 +708,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/auth/login-page.tsx": {
-    "mtime": 1788662774.1568468,
-    "seen": 1788663735.1328664,
-    "ast_hash": "ec98e29eb1c1dda533e99bd6ea503fb1",
+    "mtime": 1788679383.9433737,
+    "seen": 1788679652.5855622,
+    "ast_hash": "cc0e271dce66d8d5fbf2f8652333e7c7",
     "semantic_hash": ""
   },
   "frontend/src/pages/auth/signup-page.tsx": {
@@ -1044,15 +1044,15 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/modules.tsx": {
-    "mtime": 1788678589.1263833,
-    "seen": 1788678725.1433632,
-    "ast_hash": "38252264b7111936410dbd8d4026f921",
+    "mtime": 1788679187.0833893,
+    "seen": 1788679652.584283,
+    "ast_hash": "79f32fd06f7defcc0c30c2a3c18e21ce",
     "semantic_hash": ""
   },
   "frontend/src/pages/escritorio-page.tsx": {
-    "mtime": 1788678347.8766873,
-    "seen": 1788678725.1433632,
-    "ast_hash": "6fb09581b92969d331bdbb67cf2805cb",
+    "mtime": 1788679395.7894287,
+    "seen": 1788679652.587561,
+    "ast_hash": "a4730e241a4f7327a9da5d956e545109",
     "semantic_hash": ""
   },
   "backend/prisma/seed-demo.ts": {
@@ -1110,9 +1110,33 @@
     "semantic_hash": ""
   },
   "frontend/src/components/user-menu.tsx": {
-    "mtime": 1788676095.7624226,
-    "seen": 1788676543.8806036,
-    "ast_hash": "c40da0c6cc6e6229455bca877281aac2",
+    "mtime": 1788679343.8782563,
+    "seen": 1788679652.5828118,
+    "ast_hash": "9eea889a7357c2c7baf87b7da651f5b8",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/account-list.tsx": {
+    "mtime": 1788679319.5386288,
+    "seen": 1788679652.5748117,
+    "ast_hash": "dbe46e6019174dd2911bf0c1fc95f06b",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/image.ts": {
+    "mtime": 1788679223.668679,
+    "seen": 1788679652.584283,
+    "ast_hash": "a4d1d6f68dde57d54976f0ecce920807",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/prefs.ts": {
+    "mtime": 1788679117.4914,
+    "seen": 1788679652.58456,
+    "ast_hash": "3ef2136ec062cec8de0a739b154f2c8d",
+    "semantic_hash": ""
+  },
+  "frontend/src/pages/ajustes-page.tsx": {
+    "mtime": 1788679288.8762715,
+    "seen": 1788679652.5855622,
+    "ast_hash": "c9d479c7b6b39c1aadba9c5d9a9481ac",
     "semantic_hash": ""
   }
 }

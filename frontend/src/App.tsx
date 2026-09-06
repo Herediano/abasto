@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { PermissionRoute } from '@/components/layout/admin-route';
 import { FullScreenRoute, ProtectedRoute } from '@/components/layout/protected-route';
 import { EscritorioPage } from '@/pages/escritorio-page';
+import { AjustesPage } from '@/pages/ajustes-page';
 import { UsersPage } from '@/pages/admin/users-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { SignupPage } from '@/pages/auth/signup-page';
@@ -35,6 +36,7 @@ function App() {
       <Route element={<ProtectedRoute />}>
         {/* El escritorio es el índice y la única navegación (ver docs/diseno.md). */}
         <Route path="/" element={<EscritorioPage />} />
+        <Route path="/ajustes" element={<AjustesPage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/in" element={<StockInPage />} />
         <Route path="/stock/out" element={<StockOutPage />} />

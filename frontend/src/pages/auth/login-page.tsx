@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/field';
@@ -9,21 +9,31 @@ import { AuthBackground } from '@/components/auth-background';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { api, errorMessage, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { moduleByKey } from '@/lib/modules';
+import { resolveStartupPath } from '@/lib/prefs';
+
+const pathForStartup = (s: Session) => resolveStartupPath(s.user.preferences?.startup, k => moduleByKey(k)?.path);
 
 export function LoginPage() {
   const { session, login } = useAuth();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const adding = params.get('add') === '1';
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  if (session) return <Navigate to="/" replace />;
+  // Con sesión abierta se entra directo — salvo que se venga a "Agregar otra cuenta".
+  if (session && !adding) return <Navigate to={pathForStartup(session)} replace />;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError('');
     try {
-      login(await api<Session>('/auth/login', { method: 'POST', body: JSON.stringify(form) }));
+      const next = await api<Session>('/auth/login', { method: 'POST', body: JSON.stringify(form) });
+      login(next);
+      navigate(pathForStartup(next), { replace: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -32,7 +42,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout description="Ingresá con tu email y contraseña.">
+    <AuthLayout description={adding ? 'Sumá otra cuenta a este dispositivo. Vas a poder alternar sin cerrar sesión.' : 'Ingresá con tu email y contraseña.'}>
       {error && <Alert variant="destructive">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <Field label="Email" htmlFor="email">
@@ -46,7 +56,9 @@ export function LoginPage() {
         </Button>
       </form>
       <p className="text-center text-sm text-muted-foreground">
-        ¿No tenés cuenta todavía? <Link to="/signup" className="font-medium text-primary hover:underline">Registrá tu empresa</Link>
+        {adding
+          ? <Link to="/" className="font-medium text-primary hover:underline">Volver sin agregar</Link>
+          : <>¿No tenés cuenta todavía? <Link to="/signup" className="font-medium text-primary hover:underline">Registrá tu empresa</Link></>}
       </p>
     </AuthLayout>
   );

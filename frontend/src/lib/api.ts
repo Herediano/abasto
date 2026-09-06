@@ -24,10 +24,21 @@ export async function downloadFile(path: string, token: string, filename: string
   URL.revokeObjectURL(url);
 }
 
+export type UserPreferences = {
+  /** Color del avatar (uno de los presets de Ajustes). */
+  avatarColor?: string;
+  /** A qué pantalla entrar al abrir la app: 'escritorio' o la clave de un módulo. */
+  startup?: string;
+};
+
 export type Session = {
   accessToken: string;
-  user: { id: string; name: string; email: string; rangoId?: string; rangoName?: string; permissions?: string[]; warehouseId?: string | null };
-  tenant: { id: string; name: string };
+  user: {
+    id: string; name: string; email: string;
+    rangoId?: string; rangoName?: string; permissions?: string[];
+    warehouseId?: string | null; preferences?: UserPreferences;
+  };
+  tenant: { id: string; name: string; logo?: string | null; timezone?: string };
 };
 
 export type Permission = { key: string; area: string; label: string; dangerous: boolean };

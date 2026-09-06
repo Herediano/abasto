@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
@@ -19,6 +19,20 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, PermissionGuard)
   me(@Req() request: AuthRequest) {
     return this.auth.me(request.user.id);
+  }
+
+  /** El propio usuario edita su perfil (nombre, email, contraseña) y preferencias desde Ajustes. */
+  @Patch('me')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  updateMe(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
+    return this.auth.updateMe(request.user.id, body);
+  }
+
+  /** Datos de la empresa (nombre, logo, zona horaria) — sólo el Dueño. */
+  @Patch('tenant')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  updateTenant(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
+    return this.auth.updateTenant(request.user, body);
   }
 
   @Post('authorize-supervisor')
