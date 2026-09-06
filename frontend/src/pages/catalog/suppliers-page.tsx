@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { PencilSimple, Plus, Truck } from '@phosphor-icons/react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { MagnifyingGlass, PencilSimple, Plus, Truck } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +23,14 @@ export function SuppliersPage() {
   const [items, setItems] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+
+  const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const filtered = useMemo(() => {
+    const q = norm(search.trim());
+    if (!q) return items;
+    return items.filter(s => norm(`${s.name} ${s.legalName ?? ''} ${s.taxId ?? ''}`).includes(q));
+  }, [items, search]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -83,26 +91,38 @@ export function SuppliersPage() {
           </>
         }
       />
+      <div className="relative max-w-sm">
+        <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-placeholder" />
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar proveedor, razón social o CUIT…"
+          className="pl-9"
+        />
+      </div>
+
       <Card>
         <CardContent className="p-0">
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
             <EmptyState icon={Truck} title="Sin proveedores" description="Registrá tu primer proveedor para poder cargar facturas de compra." />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={Truck} title="Sin resultados" description={`Ningún proveedor coincide con «${search}».`} />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Razón social</TableHead>
-                  <TableHead>Tax ID</TableHead>
+                  <TableHead>CUIT</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Teléfono</TableHead>
                   {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map(s => (
+                {filtered.map(s => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.name}</TableCell>
                     <TableCell>{s.legalName ?? '—'}</TableCell>

@@ -186,28 +186,42 @@ datos a alguien de afuera.**
 - **Turno de caja, arqueo y pago dividido**; **cuenta corriente**; **pesables**;
   **anular ítem con autorización de supervisor**; **rangos** (7 de fábrica,
   clonables; nav y rutas por permiso). Detalle en `docs/producto.md`.
+- **El escritorio sin riel**: se sacó `app-shell.tsx`; `/` es la grilla de
+  módulos, armada por permiso (`lib/modules.tsx`), con dato vivo por tarjeta
+  (`GET /api/escritorio`), puntito de aviso y estado tranquilo. Modo Configurar
+  (ocultar/reordenar). Botón **Preguntar** y selector de tema en el encabezado.
+- **Módulo unificado**: `PageHeader` con **← Escritorio** + `Esc` + chip +
+  rastro; transición «se despliega» (View Transitions). Ingreso/Egreso/Historial
+  son vistas de Stock (`components/stock-nav.tsx`), no tarjetas.
+- **Gráfico de Ventas** dentro del módulo (Hoy/Semana/Mes/Año, hover,
+  comparación con el período anterior; `GET /api/reportes/ventas`).
+- **Exportar** unificado (Excel / CSV / copiar) en Productos, Stock, Ventas y
+  Proveedores (`components/export-menu.tsx` + `export.util.ts`).
+- **Ctrl+K**: buscador de módulos (la capa de IA, después).
+- **Seed de demo** (`npm run db:seed-demo -- "<empresa>"`) para ver todo con
+  datos.
 
 ## Lo que sigue, en orden
 
-1. **El shell nuevo**: sacar el riel (`app-shell.tsx`), el escritorio como índice
-   (`/`), el registro `MODULES` (ícono, motivo, ruta, permiso, rastro), la
-   cabecera de módulo unificada con **← Escritorio** + `Esc`, y la transición
-   tarjeta → módulo. Todas las páginas actuales siguen funcionando, adaptadas al
-   molde.
-2. **Datos vivos en las tarjetas**: endpoints de resumen por módulo para el dato
-   clave (ventas de hoy, lotes por vencer, facturas sin cargar, bajo mínimo,
-   saldo en la calle…). Hasta que existan, las tarjetas son lanzadores con el
-   nombre y un contador simple.
-3. **Ventas como módulo**: mover el gráfico interactivo (Hoy/Semana/Mes/Año ×
-   Facturación/Margen/Tickets/Ticket promedio, hover, comparación) adentro del
-   módulo, sobre datos reales.
-4. **Exportar** como componente único en la cabecera de cada listado.
-5. **Ctrl+K**: buscador de módulos primero; la capa de preguntas a la IA después.
-6. **Pasar el resto de las páginas al molde de Productos** (buscador + filtros en
-   panel + chips, columnas justas): stock, ingresos, egresos, historial,
-   vencimientos, reposición, proveedores, ventas, turnos.
-7. **Repasar los formularios** con la misma regla de aire y agrupación.
-8. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
+1. **El molde de Productos al resto de los listados** (buscador + filtros en
+   panel detrás del botón + chips que se sacan de a uno + columnas justas).
+   Hecho: Productos, Proveedores (buscador). Faltan: **Stock** (y arreglar que
+   la cantidad se muestra como `72.000` en vez de `72`), **Vencimientos**,
+   **Ventas**, más ingresos/egresos/historial/reposición/turnos.
+2. **Margen en el gráfico de Ventas**: hoy hay Facturación / Tickets / Ticket
+   promedio. El margen necesita guardar el costo al momento de la venta
+   (`SaleLine.unitCost`) — falta migración y que la caja lo grabe.
+3. **Exportar en el resto de los listados** (hoy: Productos, Stock, Ventas,
+   Proveedores). Falta clientes, precios, promociones, turnos, depósitos.
+4. **La capa de IA en Ctrl+K**: hoy es sólo buscador de módulos; falta que
+   responda preguntas del negocio cruzando módulos.
+5. **Zona horaria**: las columnas `DateTime` son `timestamp without time zone`
+   y el sistema mezcla dos convenciones (Prisma escribe UTC, `@default(now())`
+   escribe local). Los reportes del escritorio ya lo esquivan resolviendo en
+   SQL, pero el listado de Ventas muestra la hora corrida. Arreglo real:
+   pasar las columnas a `timestamptz` en una migración.
+6. **Repasar los formularios** con la misma regla de aire y agrupación.
+7. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
    muestre antes de confirmar).
 
 Más adelante, con backend detrás (ver `docs/producto.md`): sucursales como
