@@ -18,14 +18,14 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard, PermissionGuard)
   me(@Req() request: AuthRequest) {
-    return this.auth.me(request.user.id);
+    return this.auth.me(request.user);
   }
 
   /** El propio usuario edita su perfil (nombre, email, contraseña) y preferencias desde Ajustes. */
   @Patch('me')
   @UseGuards(JwtAuthGuard, PermissionGuard)
   updateMe(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
-    return this.auth.updateMe(request.user.id, body);
+    return this.auth.updateMe(request.user, body);
   }
 
   /** Datos de la empresa (nombre, logo, zona horaria) — sólo el Dueño. */

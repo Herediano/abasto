@@ -213,9 +213,12 @@ datos a alguien de afuera.**
   (nombre, logo, zona horaria), **sucursales** y los accesos a Usuarios y Rangos,
   que salen del escritorio. Backend: `PATCH /auth/me`, `PATCH /auth/tenant`,
   `/branches`.
-- **Sucursal separada del depósito**: `Branch` es una entidad (`branches`); un
-  depósito (`Warehouse`) pertenece a una sucursal; el usuario deriva la suya del
-  depósito. Toda sucursal nace con depósito + caja. `session.user.branch`.
+- **Sucursal separada del depósito** + **selector de sucursal**: `Branch` es una
+  entidad (`branches`); un depósito (`Warehouse`) pertenece a una sucursal. Toda
+  sucursal nace con depósito + caja. La sucursal activa viaja en el header
+  `X-Branch` (validado contra `sucursales.navegar`) y acota stock, ventas, caja,
+  compras y vencimientos; el selector vive en el encabezado del escritorio
+  (`components/branch-switcher.tsx`), con aviso cuando mirás una que no es la tuya.
 - **Módulo unificado**: `PageHeader` con **← Escritorio** + `Esc` + chip +
   rastro; transición «se despliega» (View Transitions). Ingreso/Egreso/Historial
   son vistas de Stock (`components/stock-nav.tsx`), no tarjetas.
@@ -244,15 +247,17 @@ datos a alguien de afuera.**
 5. **Repasar los formularios** con la misma regla de aire y agrupación.
 6. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
    muestre antes de confirmar).
-7. **Selector de sucursal** (`sucursales.navegar`): la entidad `Branch` ya existe
-   (paso 1 hecho), pero cada consulta sigue scopeada por tenant, no por sucursal.
-   El selector implica pasar `branchId` por todos los controllers — fase aparte.
+7. **Transferencias de stock entre sucursales** (mover mercadería de un depósito
+   a otro, con el ledger de las dos puntas).
 
-Sucursal ≠ depósito: **paso 1 hecho** — `Branch` es una entidad propia
-(migración `20260906..._sucursales`), un depósito (`Warehouse`) pertenece a una
-sucursal, y una sucursal nace con su depósito y su caja. Alta/edición de
-sucursales en Ajustes (Dueño); Depósitos muestra a qué sucursal pertenece cada
-uno. Falta el selector para navegar entre sucursales (punto 7).
+Sucursales: **resuelto** — `Branch` es una entidad propia
+(migración `..._sucursales`), un depósito (`Warehouse`) pertenece a una sucursal
+y una sucursal nace con su depósito y su caja. Alta/edición en Ajustes (Dueño).
+La **sucursal activa** viaja en el header `X-Branch` (localStorage, no en el
+token), validada en cada pedido contra `sucursales.navegar`; el selector está en
+el encabezado del escritorio. Stock, ventas, caja, turnos, compras, vencimientos,
+reposición y el gráfico de Ventas quedan acotados a la sucursal activa; catálogo,
+precios, proveedores, clientes y cuenta corriente son de toda la empresa.
 
 Zona horaria: **resuelto** — las columnas `DateTime` pasaron a `timestamptz`
 (migración `20260906073516_timestamptz`), Prisma y `@default(now())` ahora

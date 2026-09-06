@@ -29,6 +29,7 @@ export class SalesController {
     const rows = await this.prisma.sale.findMany({
       where: {
         tenantId,
+        ...(request.user.branchWarehouseIds ? { warehouseId: { in: request.user.branchWarehouseIds } } : {}),
         ...(query.status ? { status: query.status } : {}),
         ...(query.paymentMethod ? { paymentMethod: query.paymentMethod } : {}),
         ...(query.from || query.to

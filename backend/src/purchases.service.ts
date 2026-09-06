@@ -164,5 +164,5 @@ export class PurchasesService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
-  list(tenantId: string) { return this.prisma.purchaseInvoice.findMany({ where: { tenantId }, include: { supplier: { select: { name: true } }, warehouse: { select: { name: true } }, lines: true }, orderBy: { issueDate: 'desc' } }); }
+  list(tenantId: string, warehouseIds?: string[]) { return this.prisma.purchaseInvoice.findMany({ where: { tenantId, ...(warehouseIds ? { warehouseId: { in: warehouseIds } } : {}) }, include: { supplier: { select: { name: true } }, warehouse: { select: { name: true } }, lines: true }, orderBy: { issueDate: 'desc' } }); }
 }

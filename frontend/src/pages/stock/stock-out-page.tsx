@@ -32,14 +32,17 @@ export function StockOutPage() {
   const [productLotId, setProductLotId] = useState('');
   const [form, setForm] = useState({ warehouseId: '', quantity: '', movementType: 'sale_out' as string, notes: '' });
 
+  const branchId = session?.user.branch?.id;
   useEffect(() => {
     api<Warehouse[]>('/warehouses', {}, token)
-      .then(w => {
+      .then(all => {
+        // Sólo los depósitos de la sucursal activa: el egreso sale de acá.
+        const w = branchId ? all.filter(x => x.branchId === branchId) : all;
         setWarehouses(w);
         setForm(f => ({ ...f, warehouseId: w[0]?.id ?? '' }));
       })
       .catch(e => setError(errorMessage(e)));
-  }, [token]);
+  }, [token, branchId]);
 
   useEffect(() => {
     if (!product) {

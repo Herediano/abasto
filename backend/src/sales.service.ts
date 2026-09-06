@@ -8,7 +8,7 @@ const FORMAS_PAGO = ['cash', 'card', 'transfer', 'qr', 'account'] as const;
 const PUNTO_VENTA_DEFAULT = '0001';
 const TOLERANCIA = 0.01;
 
-type Usuario = { id: string; tenantId: string; permissions: Set<string>; warehouseId?: string | null };
+type Usuario = { id: string; tenantId: string; permissions: Set<string>; warehouseId?: string | null; branchWarehouseIds?: string[] };
 
 type PagoPedido = { method: (typeof FORMAS_PAGO)[number]; amount: number; reference: string | null };
 
@@ -253,9 +253,8 @@ export class SalesService {
 
   /**
    * Sin `caja.ver_todas`, sólo las ventas propias: un cajero no navega la
-   * facturación de sus compañeros. Con o sin ese permiso, siempre acotado a
-   * la sucursal del que pregunta — cruzar sucursales es un permiso aparte
-   * (`sucursales.navegar`) que todavía no tiene desde dónde elegir otra.
+   * facturación de sus compañeros. Siempre acotado a la sucursal activa (la
+   * propia, o la que se está mirando con `sucursales.navegar`).
    */
   async list(user: Usuario, query: Record<string, string | undefined>) {
     const tenantId = user.tenantId;
@@ -263,7 +262,7 @@ export class SalesService {
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
     const where: Prisma.SaleWhereInput = {
       tenantId,
-      ...(user.warehouseId ? { warehouseId: user.warehouseId } : {}),
+      ...(user.branchWarehouseIds ? { warehouseId: { in: user.branchWarehouseIds } } : {}),
       ...(user.permissions.has('caja.ver_todas') ? {} : { userId: user.id }),
       ...(query.status ? { status: query.status } : {}),
       ...(query.paymentMethod ? { paymentMethod: query.paymentMethod } : {}),

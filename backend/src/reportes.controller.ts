@@ -44,9 +44,10 @@ export class ReportesController {
       : 'semana';
     const cfg = CFG[period];
 
+    const whIds = request.user.branchWarehouseIds ?? [];
     const [cur, prev] = await Promise.all([
-      this.serie(tenantId, cfg.slot, `occurred_at >= ${cfg.start} AND occurred_at < now()`, cfg.n),
-      this.serie(tenantId, cfg.slot, `occurred_at >= ${cfg.start} - ${cfg.shift} AND occurred_at < now() - ${cfg.shift}`, cfg.n),
+      this.serie(tenantId, whIds, cfg.slot, `occurred_at >= ${cfg.start} AND occurred_at < now()`, cfg.n),
+      this.serie(tenantId, whIds, cfg.slot, `occurred_at >= ${cfg.start} - ${cfg.shift} AND occurred_at < now() - ${cfg.shift}`, cfg.n),
     ]);
 
     // El período anterior se muestra completo sólo hasta donde llegó el actual.
@@ -62,13 +63,14 @@ export class ReportesController {
     };
   }
 
-  private async serie(tenantId: string, slot: string, windowSql: string, n: number) {
+  private async serie(tenantId: string, warehouseIds: string[], slot: string, windowSql: string, n: number) {
     const rows = await this.prisma.$queryRawUnsafe<{ slot: number; fact: number; tick: number }[]>(
       `SELECT (${slot}) AS slot, SUM(total)::float8 AS fact, COUNT(*)::int AS tick
        FROM sales
-       WHERE tenant_id = $1::uuid AND status = 'confirmed' AND ${windowSql}
+       WHERE tenant_id = $1::uuid AND status = 'confirmed' AND warehouse_id = ANY($2::uuid[]) AND ${windowSql}
        GROUP BY 1`,
       tenantId,
+      warehouseIds,
     );
     const fact: (number | null)[] = Array(n).fill(null);
     const tick: (number | null)[] = Array(n).fill(null);

@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { sembrarRangosDeFabrica } from './rangos.util';
+import type { AuthUser } from './auth.types';
 import * as argon2 from 'argon2';
 import * as jwt from 'jsonwebtoken';
 
@@ -72,7 +73,7 @@ export class AuthService {
       const permisos = await this.prisma.rangoPermission.findMany({ where: { rangoId: created.user.rangoId }, select: { key: true } });
       return {
         ...this.token(created.user),
-        user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId, branch: { id: created.sucursal.id, name: created.sucursal.name }, preferences: {} },
+        user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId, branch: { id: created.sucursal.id, name: created.sucursal.name }, homeBranch: { id: created.sucursal.id, name: created.sucursal.name }, canNavigateBranches: permisos.some(p => p.key === 'sucursales.navegar'), preferences: {} },
         tenant: { id: created.tenant.id, name: created.tenant.name, logo: created.tenant.logo, timezone: created.tenant.timezone },
       };
     } catch (error) {
@@ -92,27 +93,45 @@ export class AuthService {
     if (!email || typeof body.password !== 'string') throw new UnauthorizedException('Credenciales inválidas');
     const user = await this.prisma.user.findUnique({ where: { email }, include: AuthService.SESSION_INCLUDE });
     if (!user || !user.isActive || !(await argon2.verify(user.passwordHash, body.password))) throw new UnauthorizedException('Credenciales inválidas');
-    return { ...this.token(user), ...this.shape(user) };
+    const canNav = user.rango.permissions.some(p => p.key === 'sucursales.navegar');
+    return { ...this.token(user), ...this.shape(user, user.warehouse?.branch ?? null, canNav) };
   }
 
-  /** Mismo shape que login/signup, para refrescar la sesión sin volver a pedir contraseña. */
-  async me(userId: string) {
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, include: AuthService.SESSION_INCLUDE });
-    return this.shape(user);
+  /**
+   * Mismo shape que login/signup, para refrescar la sesión sin volver a pedir
+   * contraseña. Recibe el usuario ya resuelto por el guard, así sabe cuál es la
+   * sucursal activa (la propia, o la que se está mirando).
+   */
+  async me(actor: { id: string; branchId?: string | null; canNavigateBranches?: boolean; warehouseId?: string | null }) {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: actor.id }, include: AuthService.SESSION_INCLUDE });
+    const home = user.warehouse?.branch ?? null;
+    const activa =
+      actor.branchId && actor.branchId !== home?.id
+        ? await this.prisma.branch.findUnique({ where: { id: actor.branchId }, select: { id: true, name: true } })
+        : home;
+    // El depósito operativo de la sucursal activa lo resolvió el guard.
+    return this.shape({ ...user, warehouseId: actor.warehouseId ?? user.warehouseId }, activa ?? home, actor.canNavigateBranches ?? false);
   }
 
   /** El `{ user, tenant }` que consume el frontend, con las mismas claves en login, signup y me. */
-  private shape(user: {
-    id: string; name: string; email: string; rangoId: string; warehouseId: string | null; preferences: unknown;
-    rango: { name: string; permissions: { key: string }[] };
-    tenant: { id: string; name: string; logo: string | null; timezone: string };
-    warehouse: { branch: { id: string; name: string } } | null;
-  }) {
+  private shape(
+    user: {
+      id: string; name: string; email: string; rangoId: string; warehouseId: string | null; preferences: unknown;
+      rango: { name: string; permissions: { key: string }[] };
+      tenant: { id: string; name: string; logo: string | null; timezone: string };
+      warehouse: { branch: { id: string; name: string } } | null;
+    },
+    activeBranch: { id: string; name: string } | null,
+    canNavigateBranches: boolean,
+  ) {
+    const home = user.warehouse?.branch ?? null;
     return {
       user: {
         id: user.id, name: user.name, email: user.email, rangoId: user.rangoId, rangoName: user.rango.name,
         permissions: user.rango.permissions.map(p => p.key), warehouseId: user.warehouseId,
-        branch: user.warehouse?.branch ?? null,
+        branch: activeBranch ?? home,
+        homeBranch: home,
+        canNavigateBranches,
         preferences: (user.preferences as Record<string, unknown> | null) ?? {},
       },
       tenant: { id: user.tenant.id, name: user.tenant.name, logo: user.tenant.logo, timezone: user.tenant.timezone },
@@ -120,7 +139,8 @@ export class AuthService {
   }
 
   /** El propio usuario cambia su nombre, email, contraseña o preferencias. Para la contraseña pide la actual. */
-  async updateMe(userId: string, body: Record<string, unknown>) {
+  async updateMe(actor: AuthUser, body: Record<string, unknown>) {
+    const userId = actor.id;
     const data: Record<string, unknown> = {};
     if (typeof body.name === 'string') {
       const name = body.name.trim();
@@ -150,7 +170,7 @@ export class AuthService {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ese email ya está en uso');
       throw error;
     }
-    return this.me(userId);
+    return this.me(actor);
   }
 
   /** Sólo el Dueño toca los datos de la empresa: nombre, logo y zona horaria. */
@@ -172,7 +192,7 @@ export class AuthService {
       data.timezone = body.timezone;
     }
     await this.prisma.tenant.update({ where: { id: actor.tenantId }, data });
-    return this.me(actor.id);
+    return this.me(actor);
   }
 
   async createUser(tenantId: string, body: Record<string, unknown>) {
@@ -213,21 +233,55 @@ export class AuthService {
     return { authorized: true, supervisorName: supervisor.name };
   }
 
-  async authenticate(token: string) {
+  async authenticate(token: string, requestedBranchId?: string) {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as { sub?: string };
       if (!payload.sub) throw new Error('Invalid token');
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
-        include: { rango: { include: { permissions: { select: { key: true } } } }, warehouse: { select: { branchId: true } } },
+        include: {
+          rango: { include: { permissions: { select: { key: true } } } },
+          warehouse: {
+            select: {
+              branch: {
+                select: {
+                  id: true,
+                  warehouses: { where: { isActive: true }, select: { id: true }, orderBy: { createdAt: 'asc' } },
+                },
+              },
+            },
+          },
+        },
       });
       if (!user || !user.isActive) throw new Error('Inactive user');
+      const permissions = new Set(user.rango.permissions.map(p => p.key));
+      const canNavigateBranches = permissions.has('sucursales.navegar');
+      const homeBranchId = user.warehouse?.branch?.id ?? null;
+
+      // Sucursal activa: la propia salvo que se pida otra y el rango lo permita.
+      let branchId = homeBranchId;
+      let branchWarehouseIds = user.warehouse?.branch?.warehouses.map(w => w.id) ?? [];
+      if (requestedBranchId && requestedBranchId !== homeBranchId && canNavigateBranches) {
+        const otra = await this.prisma.branch.findFirst({
+          where: { id: requestedBranchId, tenantId: user.tenantId, isActive: true },
+          select: { id: true, warehouses: { where: { isActive: true }, select: { id: true }, orderBy: { createdAt: 'asc' } } },
+        });
+        if (otra) {
+          branchId = otra.id;
+          branchWarehouseIds = otra.warehouses.map(w => w.id);
+        }
+      }
+
       return {
         id: user.id, tenantId: user.tenantId, name: user.name, email: user.email,
         rangoId: user.rangoId, rangoName: user.rango.name,
-        permissions: new Set(user.rango.permissions.map(p => p.key)),
-        warehouseId: user.warehouseId,
-        branchId: user.warehouse?.branchId ?? null,
+        permissions,
+        // El depósito operativo es el primero de la sucursal activa (o el propio, de fallback).
+        warehouseId: branchWarehouseIds[0] ?? user.warehouseId,
+        branchId,
+        homeBranchId,
+        branchWarehouseIds,
+        canNavigateBranches,
       };
     } catch { throw new UnauthorizedException('Token inválido o vencido'); }
   }

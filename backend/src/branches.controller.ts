@@ -3,7 +3,6 @@ import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
-import { RequirePermission } from './require-permission.decorator';
 
 /** El rango de fábrica que administra la empresa; único que da de alta sucursales. */
 const OWNER_RANGO = 'Dueño';
@@ -13,9 +12,8 @@ const OWNER_RANGO = 'Dueño';
 export class BranchesController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  /** Lista para elegir sucursal al crear un depósito (por eso alcanza con `depositos.ver`). */
+  /** Lista de sucursales: la usa el selector de sucursal y el alta de depósitos. Sólo pide sesión. */
   @Get()
-  @RequirePermission('depositos.ver')
   list(@Req() request: AuthRequest) {
     return this.prisma.branch.findMany({
       where: { tenantId: request.user.tenantId, isActive: true },

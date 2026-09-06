@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft } from '@phosphor-icons/react';
+import { ArrowLeft, Storefront } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { moduleForPath } from '@/lib/modules';
+import { useAuth } from '@/lib/auth-context';
 
 /**
  * Cabecera de un módulo. Se pega arriba: título y acciones siguen a la vista al
@@ -15,7 +16,10 @@ import { moduleForPath } from '@/lib/modules';
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { session } = useAuth();
   const mod = moduleForPath(pathname);
+  const b = session?.user;
+  const otraSucursal = b?.branch && b?.homeBranch && b.branch.id !== b.homeBranch.id ? b.branch.name : null;
 
   return (
     <div className="sticky top-0 z-20 -mx-6 mb-1 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-background/85 px-6 py-3 backdrop-blur">
@@ -42,7 +46,16 @@ export function PageHeader({ title, description, actions }: { title: string; des
         </div>
       </div>
 
-      {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
+      {(otraSucursal || actions) && (
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {otraSucursal && (
+            <span className="flex items-center gap-1 rounded-md border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] font-semibold text-warning">
+              <Storefront weight="fill" className="size-3" /> {otraSucursal}
+            </span>
+          )}
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

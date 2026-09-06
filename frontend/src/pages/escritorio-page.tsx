@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { ArrowRight, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle } from '@phosphor-icons/react';
+import { ArrowRight, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle, Storefront } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
+import { BranchSwitcher } from '@/components/branch-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserMenu } from '@/components/user-menu';
 import { usePalette } from '@/components/layout/escritorio-shell';
@@ -125,6 +126,7 @@ export function EscritorioPage() {
           </h1>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <BranchSwitcher />
           <button
             type="button"
             onClick={openPalette}
@@ -138,6 +140,13 @@ export function EscritorioPage() {
           <UserMenu />
         </div>
       </header>
+
+      {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
+        <div className="mt-4 flex items-center gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-[13px] text-warning">
+          <Storefront weight="fill" className="size-3.5 shrink-0" />
+          Estás viendo <strong className="font-semibold">{session.user.branch.name}</strong>, no tu sucursal. Stock, ventas y caja son de acá.
+        </div>
+      )}
 
       {(() => {
         const items = summary ? pendientes(summary) : [];

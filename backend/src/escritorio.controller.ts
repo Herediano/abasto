@@ -20,6 +20,9 @@ export class EscritorioController {
   async summary(@Req() request: AuthRequest) {
     const tenantId = request.user.tenantId;
     const can = (k: string) => request.user.permissions.has(k);
+    // Los bloques de stock, ventas, caja y compras se acotan a la sucursal
+    // activa; catálogo, precios y clientes son de toda la empresa.
+    const whIds = request.user.branchWarehouseIds ?? [];
 
     const now = new Date();
     const out: Record<string, unknown> = {};
@@ -38,8 +41,9 @@ export class EscritorioController {
              AND occurred_at < date_trunc('day', now())), 0)::float8 AS ayer,
            COALESCE(SUM(total) FILTER (WHERE occurred_at >= date_trunc('day', now()) - interval '7 days'
              AND occurred_at < date_trunc('day', now()) - interval '6 days'), 0)::float8 AS semana_pasada
-         FROM sales WHERE tenant_id = $1::uuid AND status = 'confirmed'`,
+         FROM sales WHERE tenant_id = $1::uuid AND status = 'confirmed' AND warehouse_id = ANY($2::uuid[])`,
         tenantId,
+        whIds,
       );
       out.ventas = {
         hoy: Number(row?.hoy ?? 0),
@@ -52,7 +56,7 @@ export class EscritorioController {
     // ---- Caja: turno abierto ----
     if (can('caja.ver_todas') || can('caja.operar')) {
       const shift = await this.prisma.cashShift.findFirst({
-        where: { tenantId, status: 'open', ...(can('caja.ver_todas') ? {} : { openedById: request.user.id }) },
+        where: { tenantId, status: 'open', cashRegister: { warehouseId: { in: whIds } }, ...(can('caja.ver_todas') ? {} : { openedById: request.user.id }) },
         orderBy: { openedAt: 'desc' },
         include: { openedBy: { select: { name: true } }, cashRegister: { select: { name: true } } },
       });
@@ -81,7 +85,7 @@ export class EscritorioController {
 
     // ---- Turnos abiertos ----
     if (can('caja.ver_todas')) {
-      out.turnos = { abiertos: await this.prisma.cashShift.count({ where: { tenantId, status: 'open' } }) };
+      out.turnos = { abiertos: await this.prisma.cashShift.count({ where: { tenantId, status: 'open', cashRegister: { warehouseId: { in: whIds } } } }) };
     }
 
     // ---- Stock bajo mínimo (SUM(quantity) del ledger vs minStock) ----
@@ -92,7 +96,7 @@ export class EscritorioController {
       });
       const sums = await this.prisma.stockMovement.groupBy({
         by: ['productId'],
-        where: { tenantId, productId: { in: conMin.map(p => p.id) } },
+        where: { tenantId, productId: { in: conMin.map(p => p.id) }, warehouseId: { in: whIds } },
         _sum: { quantity: true },
       });
       const stockOf = new Map(sums.map(s => [s.productId, Number(s._sum.quantity ?? 0)]));
@@ -110,7 +114,7 @@ export class EscritorioController {
       const limite = new Date(hoyDate);
       limite.setDate(limite.getDate() + 14);
       const lotes = await this.prisma.productLot.findMany({
-        where: { tenantId, expirationDate: { not: null, lte: limite, gte: hoyDate } },
+        where: { tenantId, warehouseId: { in: whIds }, expirationDate: { not: null, lte: limite, gte: hoyDate } },
         select: { expirationDate: true, product: { select: { name: true } } },
         orderBy: { expirationDate: 'asc' },
       });
@@ -123,7 +127,7 @@ export class EscritorioController {
     // ---- Compras sin cargar (borradores) ----
     if (can('compras.ver')) {
       const drafts = await this.prisma.purchaseInvoice.findMany({
-        where: { tenantId, status: 'draft' },
+        where: { tenantId, status: 'draft', warehouseId: { in: whIds } },
         select: { supplier: { select: { name: true } } },
         take: 5,
       });

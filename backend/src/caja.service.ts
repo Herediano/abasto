@@ -27,9 +27,14 @@ function monto(v: unknown) {
 export class CajaService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async listRegisters(tenantId: string, warehouseId?: string) {
+  async listRegisters(tenantId: string, warehouseIds?: string[], warehouseId?: string) {
     return this.prisma.cashRegister.findMany({
-      where: { tenantId, isActive: true, ...(warehouseId ? { warehouseId } : {}) },
+      where: {
+        tenantId,
+        isActive: true,
+        ...(warehouseIds ? { warehouseId: { in: warehouseIds } } : {}),
+        ...(warehouseId ? { warehouseId } : {}),
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -161,12 +166,13 @@ export class CajaService {
     return this.detail(user, shiftId);
   }
 
-  /** Historial de turnos: para el supervisor, todas las cajas de la sucursal; filtra por caja/estado/fecha. */
-  async list(tenantId: string, query: Record<string, string | undefined>) {
+  /** Historial de turnos: para el supervisor, todas las cajas de la sucursal activa; filtra por caja/estado/fecha. */
+  async list(tenantId: string, query: Record<string, string | undefined>, warehouseIds?: string[]) {
     const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
     const where: Prisma.CashShiftWhereInput = {
       tenantId,
+      ...(warehouseIds ? { cashRegister: { warehouseId: { in: warehouseIds } } } : {}),
       ...(query.cashRegisterId ? { cashRegisterId: query.cashRegisterId } : {}),
       ...(query.status ? { status: query.status as 'open' | 'closed' } : {}),
       ...(query.from || query.to

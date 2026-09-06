@@ -9,7 +9,11 @@ export class JwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthRequest>();
     const header = request.headers.authorization;
     if (!header?.startsWith('Bearer ')) throw new UnauthorizedException('Falta el token Bearer');
-    request.user = await this.auth.authenticate(header.slice(7));
+    // La sucursal activa viaja en un header (no en el token): el cliente la
+    // cambia sin re-loguearse y acá se valida contra el rango en cada pedido.
+    const branchHeader = request.headers['x-branch'];
+    const requestedBranchId = typeof branchHeader === 'string' && branchHeader ? branchHeader : undefined;
+    request.user = await this.auth.authenticate(header.slice(7), requestedBranchId);
     return true;
   }
 }

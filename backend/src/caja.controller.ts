@@ -11,7 +11,7 @@ export class CashRegistersController {
   constructor(@Inject(CajaService) private readonly caja: CajaService) {}
 
   @Get() @RequirePermission('caja.operar') list(@Req() request: AuthRequest, @Query('warehouseId') warehouseId?: string) {
-    return this.caja.listRegisters(request.user.tenantId, warehouseId);
+    return this.caja.listRegisters(request.user.tenantId, request.user.branchWarehouseIds, warehouseId);
   }
 
   @Post() @RequirePermission('caja.administrar') create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
@@ -26,7 +26,7 @@ export class CashShiftsController {
 
   /** Historial de turnos: sólo quien puede ver todas las cajas de la sucursal. */
   @Get() @RequirePermission('caja.ver_todas') list(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
-    return this.caja.list(request.user.tenantId, query);
+    return this.caja.list(request.user.tenantId, query, request.user.branchWarehouseIds);
   }
 
   /** El turno abierto del usuario que consulta, o null. Lo primero que pregunta la pantalla de caja. */

@@ -82,7 +82,14 @@ export class StockService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
-  async current(tenantId: string, productId: string, warehouseId?: string, productLotId?: string) {
+  /** `AND` que limita a los depósitos de la sucursal activa (lista vacía = no ve nada). */
+  private branchFilter(warehouseIds: string[] | undefined) {
+    if (!warehouseIds) return Prisma.empty;
+    if (warehouseIds.length === 0) return Prisma.sql`AND false`;
+    return Prisma.sql`AND sm.warehouse_id IN (${Prisma.join(warehouseIds.map(id => Prisma.sql`${id}::uuid`))})`;
+  }
+
+  async current(tenantId: string, productId: string, warehouseId?: string, productLotId?: string, warehouseIds?: string[]) {
     const product = await this.prisma.product.findFirst({ where: { id: productId, tenantId } });
     if (!product) throw new NotFoundException('Producto no encontrado');
     const rows = await this.prisma.$queryRaw<Array<{ warehouseId: string; warehouseName: string; productLotId: string | null; lotNumber: string | null; expirationDate: Date | null; supplierName: string | null; quantity: Prisma.Decimal }>>`
@@ -94,13 +101,14 @@ export class StockService {
       WHERE sm.tenant_id = ${tenantId}::uuid AND sm.product_id = ${productId}::uuid
         ${warehouseId ? Prisma.sql`AND sm.warehouse_id = ${warehouseId}::uuid` : Prisma.empty}
         ${productLotId ? Prisma.sql`AND sm.product_lot_id = ${productLotId}::uuid` : Prisma.empty}
+        ${this.branchFilter(warehouseIds)}
       GROUP BY sm.warehouse_id, w.name, sm.product_lot_id, pl.lot_number, pl.expiration_date, s.name
       HAVING SUM(sm.quantity) <> 0 ORDER BY w.name, pl.lot_number
     `;
     return { productId, items: rows.map(row => ({ ...row, quantity: row.quantity.toFixed(3) })) };
   }
 
-  async currentAll(tenantId: string) {
+  async currentAll(tenantId: string, warehouseIds?: string[]) {
     const rows = await this.prisma.$queryRaw<Array<{ productId: string; productName: string; warehouseId: string; warehouseName: string; productLotId: string | null; lotNumber: string | null; expirationDate: Date | null; supplierName: string | null; quantity: Prisma.Decimal }>>`
       SELECT sm.product_id AS "productId", p.name AS "productName", sm.warehouse_id AS "warehouseId", w.name AS "warehouseName",
         sm.product_lot_id AS "productLotId", pl.lot_number AS "lotNumber", pl.expiration_date AS "expirationDate", s.name AS "supplierName", SUM(sm.quantity) AS quantity
@@ -110,17 +118,19 @@ export class StockService {
       LEFT JOIN product_lots pl ON pl.id = sm.product_lot_id AND pl.tenant_id = sm.tenant_id
       LEFT JOIN suppliers s ON s.id = pl.supplier_id AND s.tenant_id = sm.tenant_id
       WHERE sm.tenant_id = ${tenantId}::uuid
+        ${this.branchFilter(warehouseIds)}
       GROUP BY sm.product_id, p.name, sm.warehouse_id, w.name, sm.product_lot_id, pl.lot_number, pl.expiration_date, s.name
       HAVING SUM(sm.quantity) <> 0 ORDER BY p.name, w.name, pl.lot_number
     `;
     return { items: rows.map(row => ({ ...row, quantity: row.quantity.toFixed(3) })) };
   }
 
-  async history(tenantId: string, query: Record<string, string | undefined>) {
+  async history(tenantId: string, query: Record<string, string | undefined>, warehouseIds?: string[]) {
     const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
 
     const conditions: Prisma.StockMovementWhereInput[] = [{ tenantId }];
+    if (warehouseIds) conditions.push({ warehouseId: { in: warehouseIds } });
     if (query.warehouseId) conditions.push({ warehouseId: query.warehouseId });
     if (query.movementType) conditions.push({ movementType: query.movementType as MovementType });
     if (query.fromDate || query.toDate) {

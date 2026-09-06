@@ -15,12 +15,12 @@ export class StockController {
 
   @Post('in') @RequirePermission('stock.mover') createIn(@Req() request: AuthRequest, @Body() body: MovementInput) { return this.stock.createIn(request.user.tenantId, body); }
   @Post('out') @RequirePermission('stock.mover') createOut(@Req() request: AuthRequest, @Body() body: MovementInput) { return this.stock.createOut(request.user.tenantId, body); }
-  @Get() @RequirePermission('stock.ver') all(@Req() request: AuthRequest) { return this.stock.currentAll(request.user.tenantId); }
+  @Get() @RequirePermission('stock.ver') all(@Req() request: AuthRequest) { return this.stock.currentAll(request.user.tenantId, request.user.branchWarehouseIds); }
 
   @Get('export')
   @RequirePermission('stock.ver')
   async export(@Req() request: AuthRequest, @Res() res: Response, @Query('format') format?: string) {
-    const { items } = await this.stock.currentAll(request.user.tenantId);
+    const { items } = await this.stock.currentAll(request.user.tenantId, request.user.branchWarehouseIds);
     await sendExport(
       res,
       format,
@@ -43,6 +43,6 @@ export class StockController {
       })),
     );
   }
-  @Get('products/:productId') @RequirePermission('stock.ver') current(@Req() request: AuthRequest, @Param('productId') productId: string, @Query('warehouseId') warehouseId?: string, @Query('productLotId') productLotId?: string) { return this.stock.current(request.user.tenantId, productId, warehouseId, productLotId); }
-  @Get('movements') @RequirePermission('stock.ver') history(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) { return this.stock.history(request.user.tenantId, query); }
+  @Get('products/:productId') @RequirePermission('stock.ver') current(@Req() request: AuthRequest, @Param('productId') productId: string, @Query('warehouseId') warehouseId?: string, @Query('productLotId') productLotId?: string) { return this.stock.current(request.user.tenantId, productId, warehouseId, productLotId, request.user.branchWarehouseIds); }
+  @Get('movements') @RequirePermission('stock.ver') history(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) { return this.stock.history(request.user.tenantId, query, request.user.branchWarehouseIds); }
 }

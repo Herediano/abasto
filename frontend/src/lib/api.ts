@@ -1,17 +1,34 @@
 export const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 
+/**
+ * Header de la sucursal activa. Se lee de localStorage sin pasar por el
+ * auth-context para no armar un ciclo de imports. Sólo se manda si la
+ * sucursal guardada es la de la cuenta activa.
+ */
+function branchHeaders(): Record<string, string> {
+  try {
+    const activeUserId = localStorage.getItem('abasto-active');
+    const raw = localStorage.getItem('abasto-branch');
+    if (!activeUserId || !raw) return {};
+    const b = JSON.parse(raw) as { userId?: string; branchId?: string };
+    return b.userId === activeUserId && b.branchId ? { 'X-Branch': b.branchId } : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function uploadFile<T>(path: string, token: string, file: File, fields: Record<string, string> = {}): Promise<T> {
   const formData = new FormData();
   formData.append('file', file);
   for (const [key, value] of Object.entries(fields)) formData.append(key, value);
-  const response = await fetch(`${API}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+  const response = await fetch(`${API}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, ...branchHeaders() }, body: formData });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new ApiError(response.status, data);
   return data as T;
 }
 
 export async function downloadFile(path: string, token: string, filename: string) {
-  const response = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  const response = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}`, ...branchHeaders() } });
   if (!response.ok) throw new ApiError(response.status, await response.json().catch(() => ({})));
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
@@ -37,8 +54,12 @@ export type Session = {
     id: string; name: string; email: string;
     rangoId?: string; rangoName?: string; permissions?: string[];
     warehouseId?: string | null; preferences?: UserPreferences;
-    /** La sucursal donde trabaja el usuario (derivada de su depósito). */
+    /** La sucursal activa: la propia, o la que se está mirando con `sucursales.navegar`. */
     branch?: { id: string; name: string } | null;
+    /** La sucursal propia del usuario (la que deriva de su depósito). */
+    homeBranch?: { id: string; name: string } | null;
+    /** ¿Puede mirar otras sucursales además de la suya? */
+    canNavigateBranches?: boolean;
   };
   tenant: { id: string; name: string; logo?: string | null; timezone?: string };
 };
@@ -353,7 +374,7 @@ export class ApiError extends Error {
 export async function api<T>(path: string, options: RequestInit = {}, token = ''): Promise<T> {
   const response = await fetch(`${API}${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...branchHeaders(), ...options.headers },
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));

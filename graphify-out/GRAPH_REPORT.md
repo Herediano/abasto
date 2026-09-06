@@ -1,16 +1,16 @@
 # Graph Report - erp-modular-vision-56c436  (2026-09-06)
 
 ## Corpus Check
-- 192 files · ~113,360 words
+- 194 files · ~114,899 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1465 nodes · 3888 edges · 101 communities (74 shown, 9 thin omitted)
+- 1474 nodes · 3919 edges · 100 communities (72 shown, 10 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 148 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `589c119e`
+- Built from commit: `be599817`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -35,15 +35,15 @@
 - dependencies
 - CajaService
 - Product Definition (Abasto Vision)
-- PricesController
-- products table
+- AuthRequest
+- StockController
 - PriceListsController
 - PriceRulesController
 - WarehousesPage
 - CustomersController
 - price-import.util.ts
 - StockInPage
-- prisma.service.ts
+- products.controller.ts
 - ventas-chart.tsx
 - seed-demo.ts
 - compilerOptions
@@ -62,7 +62,7 @@
 - price-resolver.util.ts
 - ProductReferenceController
 - Base Data Model
-- HealthController
+- promotions.controller.ts
 - allowScripts
 - import-reference-from-xlsx.ts
 - Purchases/Reception/Stock Research
@@ -80,7 +80,7 @@
 - App
 - graphify.js
 - @nestjs/platform-express
-- theme.ts
+- CategoriesPage
 - @prisma/client
 - reflect-metadata
 - 0015_product_reference/migration.sql
@@ -88,24 +88,23 @@
 - Mayorista ERP README Overview
 - rxjs
 - RangosPage
-- AuthRequest
+- CashShiftsController
 - SuppliersController
 - WarehousesController
-- EmpresaSection
+- branch.ts
 - Diseño — Abasto
 - ExpirationsPage
 - ProductSearchDialog
-- ProductDetailPage
-- Auth Architecture (JWT, Guards, Argon2id)
-- .get
+- SuppliersPage
+- .constructor
 
 ## God Nodes (most connected - your core abstractions)
 1. `AuthRequest` - 126 edges
-2. `RequirePermission()` - 104 edges
-3. `errorMessage()` - 103 edges
-4. `api` - 96 edges
-5. `cn()` - 69 edges
-6. `useAuth()` - 65 edges
+2. `errorMessage()` - 103 edges
+3. `RequirePermission()` - 102 edges
+4. `api` - 99 edges
+5. `cn()` - 71 edges
+6. `useAuth()` - 69 edges
 7. `PrismaService` - 60 edges
 8. `"tenants"` - 31 edges
 9. `JwtAuthGuard` - 30 edges
@@ -132,19 +131,19 @@
 - **Multi-Tenant Data Isolation Pattern** — claude_multi_tenancy, docs_modelo_datos_base_overview, backend_prisma_schema_schema, docs_producto_empresa_sucursal_usuario [INFERRED 0.85]
 - **Purchase Invoice Confirmation Flow** — claude_purchase_invoice_lifecycle, docs_investigacion_compras_flow, docs_api_purchases_endpoints, backend_src_purchases_service_purchasesservice, docs_modelo_datos_base_stock_movements [INFERRED 0.85]
 
-## Communities (101 total, 9 thin omitted)
+## Communities (100 total, 10 thin omitted)
 
 ### Community 0 - "api.ts"
-Cohesion: 0.05
-Nodes (144): AccountList(), iniciales(), EmptyState(), ExportMenu(), download(), Field(), PermissionRoute(), FullScreenRoute() (+136 more)
+Cohesion: 0.06
+Nodes (141): BranchSwitcher(), EmptyState(), ExportMenu(), download(), Field(), PermissionRoute(), EscritorioShell(), FullScreenRoute() (+133 more)
 
 ### Community 1 - "SalesService"
 Cohesion: 0.06
 Nodes (28): Db, registrarMovimientoCuenta(), CuentasCorrientesController, Body, Controller, Get, Inject, Param (+20 more)
 
 ### Community 2 - "app.module.ts"
-Cohesion: 0.21
-Nodes (13): JwtAuthGuard, Injectable, AuthUser, PermissionGuard, Injectable, SCOPES, Tipo, TIPOS (+5 more)
+Cohesion: 0.26
+Nodes (9): JwtAuthGuard, Injectable, PermissionGuard, Injectable, CFG, LABELS, Period, PERMISSION_KEY (+1 more)
 
 ### Community 3 - "dependencies"
 Cohesion: 0.04
@@ -159,8 +158,8 @@ Cohesion: 0.11
 Nodes (31): "customers", "product_lots", "products", "suppliers", "tenants", "warehouses", "stock_movements", "users" (+23 more)
 
 ### Community 6 - "RequirePermission"
-Cohesion: 0.15
-Nodes (18): assertTaxRate(), parseOptionalDecimal(), ProductsController, Body, Controller, Delete, Get, Inject (+10 more)
+Cohesion: 0.16
+Nodes (17): assertTaxRate(), parseOptionalDecimal(), ProductsController, Body, Controller, Delete, Get, Param (+9 more)
 
 ### Community 7 - "prices.service.ts"
 Cohesion: 0.17
@@ -171,16 +170,16 @@ Cohesion: 0.07
 Nodes (39): CLAUDE.md graphify Pointer, Add URL & Watch Folder Reference, Extra Exports & Benchmark Reference, Confidence Score Rubric, Extraction Subagent Prompt Spec, Node ID Format Rule, GitHub Clone & Cross-Repo Merge Reference, Commit Hook & CLAUDE.md Integration Reference (+31 more)
 
 ### Community 9 - "StockService"
-Cohesion: 0.11
-Nodes (18): StockController, Body, Controller, Get, Inject, Param, Post, Query (+10 more)
+Cohesion: 0.14
+Nodes (10): Body, Inject, Post, Scope, StockService, Inject, Injectable, IN_MOVEMENT_TYPES (+2 more)
 
 ### Community 10 - "escritorio-page.tsx"
-Cohesion: 0.07
-Nodes (37): CommandPalette(), norm(), EscritorioShell(), PaletteContext, usePalette(), compact(), ejemplos(), EscritorioSummary (+29 more)
+Cohesion: 0.06
+Nodes (50): AccountList(), iniciales(), CommandPalette(), norm(), PaletteContext, usePalette(), TEMAS, ThemeToggle() (+42 more)
 
 ### Community 11 - "PromotionsController"
-Cohesion: 0.14
-Nodes (14): entero(), monto(), parseConfig(), PromotionsController, Body, Controller, Delete, Get (+6 more)
+Cohesion: 0.17
+Nodes (11): PromotionsController, Body, Controller, Delete, Get, Inject, Param, Post (+3 more)
 
 ### Community 12 - "compilerOptions"
 Cohesion: 0.09
@@ -211,16 +210,16 @@ Cohesion: 0.18
 Nodes (6): Inject, CajaService, monto(), texto(), Inject, Injectable
 
 ### Community 19 - "Product Definition (Abasto Vision)"
+Cohesion: 0.15
+Nodes (13): Integración con ARCA (sin definir), Caja / Arqueo, CashMovement Model, CashRegister Model, CashShift Model, Cuenta Corriente de Clientes, CustomerAccountMovement Model, Empresa → Sucursal → Usuario Structure (+5 more)
+
+### Community 20 - "AuthRequest"
 Cohesion: 0.17
-Nodes (12): Integración con ARCA (sin definir), Caja / Arqueo, CashMovement Model, CashRegister Model, CashShift Model, Cuenta Corriente de Clientes, CustomerAccountMovement Model, Empresa → Sucursal → Usuario Structure (+4 more)
+Nodes (13): AuthRequest, Get, Req, PricesController, Body, Controller, Delete, Get (+5 more)
 
-### Community 20 - "PricesController"
-Cohesion: 0.20
-Nodes (10): PricesController, Body, Controller, Delete, Get, Param, Post, Query (+2 more)
-
-### Community 21 - "products table"
-Cohesion: 0.33
-Nodes (7): Category Model (per-tenant), POST /products/import-reference, product_reference Global Table, GET /product-reference/:ean, SEPA Open Data Source, products table, Productos por Peso (Pesables)
+### Community 21 - "StockController"
+Cohesion: 0.29
+Nodes (8): StockController, Controller, Get, Param, Query, Req, Res, UseGuards
 
 ### Community 22 - "PriceListsController"
 Cohesion: 0.17
@@ -246,8 +245,8 @@ Nodes (14): BARCODE_ALIASES, COST_ALIASES, detectDelimiter(), findColumn(), matr
 Cohesion: 0.16
 Nodes (8): draftKey(), readDraft(), StockInPage(), addLine(), cancelCorrection(), createProductInline(), submit(), submitCancelInvoice()
 
-### Community 28 - "prisma.service.ts"
-Cohesion: 0.17
+### Community 28 - "products.controller.ts"
+Cohesion: 0.18
 Nodes (13): csvCell(), ExportColumn, sendExport(), Decimalish, priceChange(), PriceField, PriceHistoryEntry, PriceSource (+5 more)
 
 ### Community 29 - "ventas-chart.tsx"
@@ -267,16 +266,16 @@ Cohesion: 0.15
 Nodes (13): devDependencies, prisma, tsx, @types/express, @types/multer, @types/node, typescript, typescript (+5 more)
 
 ### Community 33 - "api"
-Cohesion: 0.11
-Nodes (17): api, PasswordSection(), submit(), PreferenciasSection(), pickStartup(), SucursalesSection(), submit(), CategoriesPage() (+9 more)
+Cohesion: 0.13
+Nodes (21): api, iniciales(), PasswordSection(), submit(), PerfilSection(), submit(), SucursalesSection(), submit() (+13 more)
 
 ### Community 35 - "enrich-reference-categories.ts"
 Cohesion: 0.27
 Nodes (11): apiGet(), Categoria, HEADERS, main(), pickSucursalBatches(), prisma, Producto, productosDeRubro() (+3 more)
 
 ### Community 36 - "Mayorista ERP Project Overview"
-Cohesion: 0.24
-Nodes (10): Graphify Knowledge Graph Workflow (AGENTS.md), main.ts Bootstrap (ValidationPipe), Graphify Knowledge Graph Workflow (CLAUDE.md), Mayorista ERP Project Overview, Purchase Invoice Lifecycle (draft/confirm/corrected), Append-only Stock Ledger, Manual Validation Style (no DTOs), Purchase Invoices Endpoints (+2 more)
+Cohesion: 0.16
+Nodes (15): Graphify Knowledge Graph Workflow (AGENTS.md), main.ts Bootstrap (ValidationPipe), AdminGuard (admin-only write gate), Auth Architecture (JWT, Guards, Argon2id), Graphify Knowledge Graph Workflow (CLAUDE.md), Mayorista ERP Project Overview, Purchase Invoice Lifecycle (draft/confirm/corrected), Append-only Stock Ledger (+7 more)
 
 ### Community 37 - "Rangos Permission System (RBAC)"
 Cohesion: 0.33
@@ -311,16 +310,16 @@ Cohesion: 0.16
 Nodes (11): PriceActivationService, Inject, Injectable, activarPreciosVigentes(), Db, ListaResuelta, precioExplicito(), PriceSource (+3 more)
 
 ### Community 45 - "ProductReferenceController"
-Cohesion: 0.40
-Nodes (4): ProductReferenceController, Controller, Inject, UseGuards
+Cohesion: 0.25
+Nodes (6): ProductReferenceController, Controller, Get, Inject, Param, UseGuards
 
 ### Community 46 - "Base Data Model"
-Cohesion: 0.50
-Nodes (8): Catalog Endpoints (Warehouses/Suppliers/Lots), customers table, Base Data Model, product_lots table, stock_movements table, suppliers table, tenants table, warehouses table
+Cohesion: 0.44
+Nodes (9): Catalog Endpoints (Warehouses/Suppliers/Lots), customers table, Base Data Model, product_lots table, products table, stock_movements table, suppliers table, tenants table (+1 more)
 
-### Community 47 - "HealthController"
-Cohesion: 0.29
-Nodes (4): HealthController, Controller, Get, Inject
+### Community 47 - "promotions.controller.ts"
+Cohesion: 0.38
+Nodes (6): entero(), monto(), parseConfig(), SCOPES, Tipo, TIPOS
 
 ### Community 48 - "allowScripts"
 Cohesion: 0.33
@@ -335,8 +334,8 @@ Cohesion: 0.33
 Nodes (6): ARCA: Emisión y Autorización de Factura Electrónica, ARCA: Régimen General y Clases de Comprobantes, GS1 Global Traceability Standard, Oracle Procurement Three-Way Match Docs, Purchases/Reception/Stock Research, Three-Way Match Concept
 
 ### Community 51 - "auth.service.ts"
-Cohesion: 0.19
-Nodes (10): TIMEZONES, ALL, DEFAULT_RANGOS, PERMISSION_KEYS, PermissionDef, PermissionKey, PERMISSIONS, SYSTEM_RANGO_NAMES (+2 more)
+Cohesion: 0.17
+Nodes (11): TIMEZONES, AuthUser, ALL, DEFAULT_RANGOS, PERMISSION_KEYS, PermissionDef, PermissionKey, PERMISSIONS (+3 more)
 
 ### Community 52 - "SalesController"
 Cohesion: 0.23
@@ -360,7 +359,7 @@ Nodes (7): ReportesController, Controller, Get, Inject, Query, Req, UseGuards
 
 ### Community 57 - "errorMessage"
 Cohesion: 0.15
-Nodes (16): errorMessage(), UsersPage(), submitCreate(), submitEdit(), iniciales(), PerfilSection(), submit(), submit() (+8 more)
+Nodes (15): errorMessage(), fileToResizedDataUrl(), UsersPage(), submitCreate(), submitEdit(), EmpresaSection(), pickLogo(), submit() (+7 more)
 
 ### Community 58 - "EscritorioController"
 Cohesion: 0.40
@@ -368,7 +367,7 @@ Nodes (4): EscritorioController, Controller, Inject, UseGuards
 
 ### Community 59 - "PrismaService"
 Cohesion: 0.06
-Nodes (21): BootstrapService, Inject, Injectable, TIPOS_MOVIMIENTO, Usuario, CuentasCorrientesService, Inject, Injectable (+13 more)
+Nodes (25): BootstrapService, Inject, Injectable, TIPOS_MOVIMIENTO, Usuario, CuentasCorrientesService, Inject, Injectable (+17 more)
 
 ### Community 60 - "SalesHistoryPage"
 Cohesion: 0.50
@@ -382,21 +381,21 @@ Nodes (3): SupervisorAuthDialog(), reset(), submit()
 Cohesion: 0.29
 Nodes (6): Frontend Architecture (single App.tsx, no router), frontend/index.html Entry Point, App(), AuthProvider(), persist(), readAccounts()
 
-### Community 65 - "theme.ts"
-Cohesion: 0.53
-Nodes (5): aplicar(), leer(), prefiereOscuro(), Theme, useTheme()
+### Community 65 - "CategoriesPage"
+Cohesion: 0.33
+Nodes (3): CategoriesPage(), confirmDelete(), submit()
 
 ### Community 88 - "Mayorista ERP README Overview"
-Cohesion: 0.29
-Nodes (6): classify-reference-categories.ts script, enrich-reference-categories.ts script, Brand/Keyword Offline Classifier, Reference Catalog Category Classification, Precios Claros API (category tree), Mayorista ERP README Overview
+Cohesion: 0.17
+Nodes (11): classify-reference-categories.ts script, enrich-reference-categories.ts script, Category Model (per-tenant), POST /products/import-reference, product_reference Global Table, GET /product-reference/:ean, Brand/Keyword Offline Classifier, Reference Catalog Category Classification (+3 more)
 
 ### Community 90 - "RangosPage"
 Cohesion: 0.40
 Nodes (5): RangosPage(), abrirEdicion(), borrar(), crear(), guardar()
 
-### Community 91 - "AuthRequest"
-Cohesion: 0.21
-Nodes (13): AuthRequest, CashRegistersController, CashShiftsController, Body, Controller, Get, Param, Post (+5 more)
+### Community 91 - "CashShiftsController"
+Cohesion: 0.24
+Nodes (10): CashRegistersController, CashShiftsController, Body, Controller, Get, Param, Post, Query (+2 more)
 
 ### Community 92 - "SuppliersController"
 Cohesion: 0.15
@@ -406,9 +405,9 @@ Nodes (12): SuppliersController, Body, Controller, Get, Inject, Param, Post, Put
 Cohesion: 0.18
 Nodes (10): Body, Controller, Get, Inject, Param, Post, Put, Req (+2 more)
 
-### Community 94 - "EmpresaSection"
-Cohesion: 0.50
-Nodes (4): fileToResizedDataUrl(), EmpresaSection(), pickLogo(), submit()
+### Community 94 - "branch.ts"
+Cohesion: 0.67
+Nodes (3): activeBranchFor(), read(), Stored
 
 ### Community 95 - "Diseño — Abasto"
 Cohesion: 0.12
@@ -422,32 +421,24 @@ Nodes (4): daysRemaining(), ExpirationsPage(), submitEdit(), urgencyBadge()
 Cohesion: 0.83
 Nodes (4): ProductSearchDialog(), alTeclear(), elegible(), elegir()
 
-### Community 98 - "ProductDetailPage"
-Cohesion: 0.33
-Nodes (6): margin(), ProductDetailPage(), addBarcode(), addTier(), removeBarcode(), removeTier()
-
-### Community 99 - "Auth Architecture (JWT, Guards, Argon2id)"
-Cohesion: 0.40
-Nodes (5): AdminGuard (admin-only write gate), Auth Architecture (JWT, Guards, Argon2id), Auth Endpoints (signup/login/users), API Base Reference, Products Endpoints
-
 ## Knowledge Gaps
 - **279 isolated node(s):** `name`, `private`, `start:dev`, `start`, `db:generate` (+274 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 521 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AuthService` connect `AuthService` to `app.module.ts`, `Auth Architecture (JWT, Guards, Argon2id)`, `Mayorista ERP Project Overview`, `.token`, `auth.service.ts`?**
-  _High betweenness centrality (0.258) - this node is a cross-community bridge._
-- **Why does `AuthRequest` connect `AuthRequest` to `SalesService`, `app.module.ts`, `AuthService`, `RequirePermission`, `prices.service.ts`, `StockService`, `PromotionsController`, `PricesController`, `PriceListsController`, `PriceRulesController`, `CustomersController`, `prisma.service.ts`, `Tenants Controller`, `BranchesController`, `RangosController`, `SalesController`, `PurchasesController`, `CategoriesController`, `ReportesController`, `SuppliersController`, `WarehousesController`, `Auth Architecture (JWT, Guards, Argon2id)`?**
+- **Why does `AuthService` connect `AuthService` to `app.module.ts`, `auth.service.ts`, `Mayorista ERP Project Overview`, `.token`?**
+  _High betweenness centrality (0.262) - this node is a cross-community bridge._
+- **Why does `AuthRequest` connect `AuthRequest` to `SalesService`, `app.module.ts`, `AuthService`, `RequirePermission`, `prices.service.ts`, `StockService`, `PromotionsController`, `StockController`, `PriceListsController`, `PriceRulesController`, `CustomersController`, `products.controller.ts`, `Mayorista ERP Project Overview`, `Tenants Controller`, `BranchesController`, `RangosController`, `promotions.controller.ts`, `SalesController`, `PurchasesController`, `CategoriesController`, `ReportesController`, `CashShiftsController`, `SuppliersController`, `WarehousesController`?**
   _High betweenness centrality (0.179) - this node is a cross-community bridge._
-- **Why does `errorMessage()` connect `errorMessage` to `api.ts`, `ProductSearchDialog`, `api`, `ProductDetailPage`, `ExpirationsPage`, `escritorio-page.tsx`, `money`, `.token`, `WarehousesPage`, `RangosPage`, `StockInPage`, `SalesHistoryPage`, `SupervisorAuthDialog`, `EmpresaSection`?**
-  _High betweenness centrality (0.097) - this node is a cross-community bridge._
+- **Why does `api` connect `api` to `api.ts`, `CategoriesPage`, `SuppliersPage`, `ExpirationsPage`, `escritorio-page.tsx`, `money`, `.token`, `WarehousesPage`, `errorMessage`, `RangosPage`, `StockInPage`, `SalesHistoryPage`, `ventas-chart.tsx`?**
+  _High betweenness centrality (0.100) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `start:dev` to the rest of the system?**
   _279 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `api.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.05472369897088231 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05624079995939293 - nodes in this community are weakly interconnected._
 - **Should `SalesService` be split into smaller, more focused modules?**
   _Cohesion score 0.06448979591836734 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**
