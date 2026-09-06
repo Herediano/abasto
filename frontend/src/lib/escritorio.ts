@@ -123,14 +123,26 @@ export function statFor(key: string, s: EscritorioSummary): TileStat | null {
   }
 }
 
-/** Cuántas cosas hay "para mirar" — alimenta el resumen de arriba del escritorio. */
-export function pendientes(s: EscritorioSummary): string[] {
-  const out: string[] = [];
-  if (s.stock && s.stock.bajoMinimo > 0) out.push(`${plural(s.stock.bajoMinimo, 'producto bajo mínimo', 'productos bajo mínimo')}`);
-  if (s.vencimientos && s.vencimientos.lotes > 0) out.push(`${plural(s.vencimientos.lotes, 'lote por vencer', 'lotes por vencer')}`);
-  if (s.compras && s.compras.sinCargar > 0) out.push(`${plural(s.compras.sinCargar, 'factura sin cargar', 'facturas sin cargar')}`);
-  if (s.precios && s.precios.pendientes > 0) out.push(`${s.precios.pendientes} precios pendientes`);
+export type Pendiente = { text: string; path: string };
+
+const una = (n: number, sing: string, plu: string) => (n === 1 ? `una ${sing}` : `${n} ${plu}`);
+
+/**
+ * Lo que hay "para mirar hoy" — alimenta el renglón de arriba del escritorio.
+ * Cada ítem es una frase en minúscula (el escritorio la arma en una oración) y
+ * su link al módulo.
+ */
+export function pendientes(s: EscritorioSummary): Pendiente[] {
+  const out: Pendiente[] = [];
+  if (s.stock && s.stock.bajoMinimo > 0)
+    out.push({ text: `${plural(s.stock.bajoMinimo, 'producto bajo mínimo', 'productos bajo mínimo')}`, path: '/stock/restock' });
+  if (s.vencimientos && s.vencimientos.lotes > 0)
+    out.push({ text: `${plural(s.vencimientos.lotes, 'lote por vencer', 'lotes por vencer')}`, path: '/stock/expirations' });
+  if (s.compras && s.compras.sinCargar > 0)
+    out.push({ text: `${una(s.compras.sinCargar, 'factura sin cargar', 'facturas sin cargar')}`, path: '/stock/in' });
+  if (s.precios && s.precios.pendientes > 0)
+    out.push({ text: `${plural(s.precios.pendientes, 'precio sin trasladar', 'precios sin trasladar')}`, path: '/precios' });
   if (s.cuentacorriente && s.cuentacorriente.vencidos > 0)
-    out.push(`${plural(s.cuentacorriente.vencidos, 'cuenta vencida', 'cuentas vencidas')}`);
+    out.push({ text: `${una(s.cuentacorriente.vencidos, 'cuenta vencida', 'cuentas vencidas')}`, path: '/catalog/customers' });
   return out;
 }

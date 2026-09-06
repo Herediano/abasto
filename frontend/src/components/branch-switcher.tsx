@@ -54,7 +54,7 @@ export function BranchSwitcher() {
         className={cn(
           'flex items-center gap-1.5 rounded-md border px-2.5 py-2 text-xs font-semibold transition-colors',
           fueraDeCasa
-            ? 'border-warning/40 bg-warning-soft text-warning'
+            ? 'border-primary bg-primary text-primary-foreground'
             : 'border-border text-muted-foreground hover:bg-card hover:text-foreground',
         )}
       >

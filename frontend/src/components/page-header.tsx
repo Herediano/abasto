@@ -49,7 +49,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
       {(otraSucursal || actions) && (
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {otraSucursal && (
-            <span className="flex items-center gap-1 rounded-md border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] font-semibold text-warning">
+            <span className="flex items-center gap-1 rounded-md border border-primary bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground">
               <Storefront weight="fill" className="size-3" /> {otraSucursal}
             </span>
           )}

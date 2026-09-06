@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { ArrowRight, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle, Storefront } from '@phosphor-icons/react';
+import { ArrowRight, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BranchSwitcher } from '@/components/branch-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -9,12 +9,37 @@ import { ModuleMotif, hueFor, visibleModules, type ModuleDef } from '@/lib/modul
 import { api } from '@/lib/api';
 import { pendientes, statFor, type EscritorioSummary } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
+import { setActiveBranch } from '@/lib/branch';
 import { cn } from '@/lib/utils';
 
 const CONFIG_KEY = 'abasto-escritorio';
 
 /** Mayúscula inicial y nada más: el renglón de contexto ya viene en minúscula. */
 const sentence = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es-AR') + s.slice(1) : s);
+
+/**
+ * El renglón "para mirar hoy" bajo el saludo: una oración en gris, sin recuadro,
+ * con cada pendiente enlazado a su módulo. En calma es una sola frase.
+ */
+function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
+  if (!summary) return <p className="mt-2 text-[13px] text-placeholder">Cargando el estado del negocio…</p>;
+  const items = pendientes(summary);
+  if (items.length === 0) return <p className="mt-2 text-[13px] text-muted-foreground">Hoy no hay nada urgente.</p>;
+  return (
+    <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+      Para mirar hoy:{' '}
+      {items.map((it, i) => (
+        <span key={it.path}>
+          {i > 0 && (i === items.length - 1 ? ' y ' : ', ')}
+          <Link to={it.path} viewTransition className="text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
+            {it.text}
+          </Link>
+        </span>
+      ))}
+      .
+    </p>
+  );
+}
 
 type Config = { hidden: string[]; order: string[] };
 
@@ -122,8 +147,21 @@ export function EscritorioPage() {
           </div>
           <p className="mt-3 text-xs text-placeholder first-letter:uppercase">{hoy}</p>
           <h1 className="mt-0.5 font-display text-[26px] font-bold leading-tight tracking-tight sm:text-[30px]">
-            Buen día{nombre && `, ${nombre}`}
+            Buen día{nombre && `, ${nombre}`}.
           </h1>
+          <ResumenDelDia summary={summary} />
+          {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
+            <p className="mt-1.5 text-[12px] text-muted-foreground">
+              Estás viendo {session.user.branch.name}.{' '}
+              <button
+                type="button"
+                onClick={() => setActiveBranch(session.user.id, null)}
+                className="font-medium text-primary hover:underline"
+              >
+                Volver a {session.user.homeBranch.name}
+              </button>
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <BranchSwitcher />
@@ -141,39 +179,9 @@ export function EscritorioPage() {
         </div>
       </header>
 
-      {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
-        <div className="mt-4 flex items-center gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-[13px] text-warning">
-          <Storefront weight="fill" className="size-3.5 shrink-0" />
-          Estás viendo <strong className="font-semibold">{session.user.branch.name}</strong>, no tu sucursal. Stock, ventas y caja son de acá.
-        </div>
-      )}
-
-      {(() => {
-        const items = summary ? pendientes(summary) : [];
-        return (
-          <div
-            className={cn(
-              'mt-6 flex items-center gap-3 rounded-md border border-border bg-card px-4 py-2.5 text-sm',
-              items.length ? 'border-l-[3px] border-l-warning' : 'border-l-[3px] border-l-success',
-            )}
-          >
-            <span className={cn('font-display text-[15px] font-bold', items.length ? 'text-warning' : 'text-success')}>
-              {items.length || '✓'}
-            </span>
-            <span className="text-muted-foreground">
-              {!summary
-                ? 'Cargando el estado del negocio…'
-                : items.length === 0
-                  ? 'no hay nada urgente. Buen día.'
-                  : `para mirar hoy: ${items.join(', ')}.`}
-            </span>
-          </div>
-        );
-      })()}
-
-      <div className="mb-5 mt-4 flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Tu escritorio — {visible.length} {visible.length === 1 ? 'módulo' : 'módulos'}.
+      <div className="mb-5 mt-7 flex items-center justify-between gap-3">
+        <p className="text-[13px] text-placeholder">
+          {visible.length} {visible.length === 1 ? 'módulo' : 'módulos'}
         </p>
         <button
           type="button"
@@ -284,8 +292,8 @@ export function EscritorioPage() {
       )}
 
       <p className="mt-8 max-w-prose border-t border-border pt-4 text-[11.5px] text-placeholder">
-        El escritorio se arma por permiso: esto es lo que puede tocar tu rango. Tocá una tarjeta para
-        entrar; <kbd className="rounded border border-border px-1 font-mono">Esc</kbd> vuelve acá.
+        El escritorio muestra lo que tu rango puede tocar. Tocá una tarjeta para entrar y
+        <kbd className="mx-1 rounded border border-border px-1 font-mono">Esc</kbd> te trae de vuelta.
       </p>
     </div>
   );

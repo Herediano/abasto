@@ -37,7 +37,13 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
   el color desaparece: manda el verde acción.
 - **El estado lo dice el dato, no un marco.** «3 lotes», «4 vencidos», «+17,8 %
   vs ayer»: texto plano, sin teñir. Un puntito ámbar o rojo arriba a la derecha
-  basta para marcar «acá hay algo».
+  basta para marcar «acá hay algo». Los avisos del escritorio (pendientes del
+  día, «estás en otra sucursal») son **una línea de texto gris bajo el saludo**,
+  no un recuadro — la jerarquía la da el tamaño y el color.
+- **Redacción.** Todo texto de interfaz: primera letra en mayúscula, el resto en
+  minúscula (salvo nombres propios y siglas). Una oración con sentido, no un
+  pegote de palabras. Nunca arranca en minúscula ni con dos puntos. «Para mirar
+  hoy: 2 productos bajo mínimo y 4 lotes por vencer.», no «para mirar hoy: …».
 - **Bento para mirar, formularios tranquilos para hacer.** La elevación y los
   grupos siempre significan algo; no se decora con tarjetas.
 - **Consistencia.** Si editar un registro se hace de una manera en Clientes, la
@@ -95,9 +101,9 @@ cada uno ve su recorte. El encargado no ve otra pantalla: ve más tarjetas.
 ### Estado tranquilo
 
 Si no hay nada pendiente, el escritorio no queda vacío: queda **tranquilo**. Cada
-tarjeta muestra su versión en calma (`✓ Todo sobre el mínimo`, `✓ Nada vence en
-7 días`) y el resumen de arriba pasa a ser un saludo. Un escritorio en calma es
-la señal de que está todo bien.
+tarjeta muestra su versión en calma (`Al día`, `0 lotes`) y el renglón bajo el
+saludo pasa a «Hoy no hay nada urgente.». Un escritorio en calma es la señal de
+que está todo bien.
 
 ### Configurable
 
@@ -215,10 +221,16 @@ datos a alguien de afuera.**
   `/branches`.
 - **Sucursal separada del depósito** + **selector de sucursal**: `Branch` es una
   entidad (`branches`); un depósito (`Warehouse`) pertenece a una sucursal. Toda
-  sucursal nace con depósito + caja. La sucursal activa viaja en el header
-  `X-Branch` (validado contra `sucursales.navegar`) y acota stock, ventas, caja,
-  compras y vencimientos; el selector vive en el encabezado del escritorio
-  (`components/branch-switcher.tsx`), con aviso cuando mirás una que no es la tuya.
+  sucursal nace con depósito + caja. El usuario se asigna a una **sucursal**
+  (`User.branchId`, editable en Usuarios); el depósito operativo se deriva. La
+  sucursal activa viaja en el header `X-Branch` (validado contra
+  `sucursales.navegar`) y acota stock, ventas, caja, compras y vencimientos; el
+  selector vive en el encabezado del escritorio (`components/branch-switcher.tsx`).
+  Alta, edición, **desactivación y borrado** (si está vacía) de sucursales en
+  Ajustes → La empresa.
+- **Avisos del escritorio sin recuadro**: el saludo, después una línea gris
+  «Para mirar hoy: …» con cada pendiente enlazado a su módulo (o «Hoy no hay
+  nada urgente.»), y —si mirás otra sucursal— «Estás viendo X. Volver a Y».
 - **Módulo unificado**: `PageHeader` con **← Escritorio** + `Esc` + chip +
   rastro; transición «se despliega» (View Transitions). Ingreso/Egreso/Historial
   son vistas de Stock (`components/stock-nav.tsx`), no tarjetas.
