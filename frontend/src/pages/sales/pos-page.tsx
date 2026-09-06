@@ -90,7 +90,7 @@ function fmtHora(iso: string) {
 }
 
 export function PosPage() {
-  const { session, can } = useAuth();
+  const { session, can, refresh } = useAuth();
   const puedeAutorizarAnulacion = can('caja.autorizar_anulacion');
   const token = session!.accessToken;
   const [items, setItems] = useState<Item[]>([]);
@@ -433,9 +433,14 @@ export function PosPage() {
             <h1 className="font-display text-lg font-bold">Abrir turno</h1>
           </div>
           {!session?.user.warehouseId ? (
-            <Alert variant="destructive">Tu usuario no tiene una sucursal asignada. Pedile a un administrador que te la asigne en Usuarios.</Alert>
+            <div className="flex flex-col gap-3">
+              <Alert variant="destructive">
+                Tu usuario no tiene una sucursal asignada. Un administrador te la asigna en <b>Usuarios</b>; si ya lo hizo, actualizá la sesión.
+              </Alert>
+              <Button variant="outline" onClick={() => void refresh()}>Actualizar sesión</Button>
+            </div>
           ) : registers.length === 0 ? (
-            <Alert variant="destructive">No hay cajas configuradas en tu sucursal.</Alert>
+            <Alert variant="destructive">No hay cajas configuradas en tu sucursal. Un administrador crea una en <b>Depósitos</b>.</Alert>
           ) : (
             <div className="flex flex-col gap-4">
               {openError && <Alert variant="destructive">{openError}</Alert>}

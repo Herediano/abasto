@@ -9,6 +9,8 @@ type AuthContextValue = {
   can: (permission: string) => boolean;
   login: (session: Session) => void;
   logout: () => void;
+  /** Vuelve a pedir /auth/me y actualiza la sesión (rango, permisos, sucursal). */
+  refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -25,13 +27,24 @@ function readStoredSession(): Session | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(readStoredSession);
 
+  const refresh = useMemo(
+    () => async () => {
+      const token = readStoredSession()?.accessToken;
+      if (!token) return;
+      try {
+        const fresh = await api<{ user: Session['user']; tenant: Session['tenant'] }>('/auth/me', {}, token);
+        setSession(prev => (prev ? { ...prev, user: fresh.user, tenant: fresh.tenant } : prev));
+      } catch {
+        // token inválido o backend caído: se mantiene lo que había
+      }
+    },
+    [],
+  );
+
   // La sesión no vence: si un supervisor te cambió el rango hace un rato, te
   // enterás al abrir la app de nuevo, sin tener que desloguearte a mano.
   useEffect(() => {
-    if (!session) return;
-    api<{ user: Session['user']; tenant: Session['tenant'] }>('/auth/me', {}, session.accessToken)
-      .then(fresh => setSession(prev => (prev ? { ...prev, user: fresh.user, tenant: fresh.tenant } : prev)))
-      .catch(() => {});
+    void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -47,8 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(null);
         localStorage.removeItem(STORAGE_KEY);
       },
+      refresh,
     }),
-    [session],
+    [session, refresh],
   );
 
   useEffect(() => {

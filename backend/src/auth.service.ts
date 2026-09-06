@@ -46,7 +46,12 @@ export class AuthService {
         // Los 7 rangos de fábrica nacen con la empresa; quien la crea queda
         // como Dueño (todos los permisos), no un flag de admin aparte.
         const rangos = await sembrarRangosDeFabrica(tx, tenantCreated.id);
-        const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash, rangoId: rangos.get('Dueño')! } });
+        // Toda empresa nace operable: una sucursal, su caja, y el Dueño asignado
+        // a esa sucursal. Sin esto, abrir caja (y por lo tanto vender) es un
+        // callejón sin salida hasta configurar tres pantallas a mano.
+        const sucursal = await tx.warehouse.create({ data: { tenantId: tenantCreated.id, name: 'Casa Central', code: 'CC' } });
+        await tx.cashRegister.create({ data: { tenantId: tenantCreated.id, warehouseId: sucursal.id, name: 'Caja 1' } });
+        const userCreated = await tx.user.create({ data: { tenantId: tenantCreated.id, name, email, passwordHash, rangoId: rangos.get('Dueño')!, warehouseId: sucursal.id } });
         // Sin lista base no se puede cotizar, y sin cotizar no se puede vender:
         // toda empresa nace con una. Las demás listas (mayorista, por cliente)
         // se crean después desde Precios y pueden derivar de ésta.
@@ -56,7 +61,7 @@ export class AuthService {
       const permisos = await this.prisma.rangoPermission.findMany({ where: { rangoId: created.user.rangoId }, select: { key: true } });
       return {
         ...this.token(created.user),
-        user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key) },
+        user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId },
         tenant: { id: created.tenant.id, name: created.tenant.name },
       };
     } catch (error) {

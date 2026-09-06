@@ -21,7 +21,7 @@ const EMPTY_CREATE_FORM = { name: '', email: '', password: '', rangoId: '', ware
 const EMPTY_EDIT_FORM = { name: '', rangoId: '', warehouseId: '', isActive: true };
 
 export function UsersPage() {
-  const { session } = useAuth();
+  const { session, refresh } = useAuth();
   const token = session!.accessToken;
   const [items, setItems] = useState<TeamUser[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -80,6 +80,8 @@ export function UsersPage() {
     setError('');
     try {
       await api(`/users/${editing.id}`, { method: 'PUT', body: JSON.stringify({ ...editForm, warehouseId: editForm.warehouseId || null }) }, token);
+      // Si te editaste a vos mismo (rango o sucursal), la sesión en memoria quedó vieja.
+      if (editing.id === session!.user.id) await refresh();
       setEditing(null);
       await load();
     } catch (err) {
