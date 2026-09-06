@@ -17,6 +17,14 @@ const CONFIG_KEY = 'abasto-escritorio';
 /** Mayúscula inicial y nada más: el renglón de contexto ya viene en minúscula. */
 const sentence = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es-AR') + s.slice(1) : s);
 
+/** El saludo según la hora: mañana, tarde o noche. */
+function saludo(): string {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Buen día';
+  if (h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
 /**
  * "Para mirar hoy" bajo el saludo: un chip por pendiente, cada uno con el color
  * del módulo al que lleva (mismo tratamiento que las tarjetas, en chico). En
@@ -36,10 +44,11 @@ function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
             to={it.path}
             viewTransition
             style={{ ['--h' as string]: hueFor(it.module) }}
-            className="pendiente-chip group flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] font-medium text-foreground transition-colors"
+            className="pendiente-chip group flex items-center gap-2 rounded-md border px-3 py-1.5 text-[12.5px] font-medium text-foreground transition-colors"
           >
             <span className="pendiente-chip__dot size-1.5 rounded-full" />
-            {sentence(it.text)}
+            {it.label}
+            {it.count > 1 && <span className="font-semibold text-muted-foreground">{it.count}</span>}
             <ArrowRight className="size-3 text-placeholder transition-transform group-hover:translate-x-0.5" />
           </Link>
         ))}
@@ -142,48 +151,39 @@ export function EscritorioPage() {
 
   return (
     <div className="pt-5">
-      {/* Barra: identidad de la empresa a la izquierda, herramientas a la derecha. */}
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-soft pb-4">
-        <div className="flex items-center gap-3">
+      {/* Barra: identidad —los dos logos— a la izquierda, herramientas a la derecha. */}
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-soft pb-5">
+        <div className="flex items-center gap-3.5">
           {session?.tenant.logo ? (
             <img
               src={session.tenant.logo}
               alt={session.tenant.name}
-              className="size-11 shrink-0 rounded-xl border border-border bg-card object-contain p-0.5"
+              className="size-14 shrink-0 rounded-2xl border border-border bg-card object-contain p-1"
             />
           ) : (
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
+            <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-primary font-display text-2xl font-bold text-primary-foreground">
               {session?.tenant.name.slice(0, 1).toUpperCase()}
             </span>
           )}
           <div className="leading-tight">
-            <p className="font-display text-[17px] font-bold tracking-tight">{session?.tenant.name}</p>
-            <p className="text-[12px] font-medium text-placeholder">
+            <p className="font-display text-xl font-bold tracking-tight">{session?.tenant.name}</p>
+            <p className="mt-0.5 font-display text-[15px] font-bold tracking-tight text-muted-foreground">
               abasto<span className="text-primary">.ai</span>
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <BranchSwitcher />
-          <button
-            type="button"
-            onClick={openPalette}
-            className="group flex items-center gap-2 rounded-md border border-accent-border bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-          >
-            <Sparkle weight="fill" className="size-3.5" />
-            Preguntar
-            <kbd className="rounded bg-primary/10 px-1 font-mono text-[10px] font-normal group-hover:bg-primary-foreground/15">Ctrl K</kbd>
-          </button>
-          <ThemeToggle className="border border-border" />
+          <ThemeToggle className="size-10 rounded-lg border border-border bg-card hover:bg-background" />
           <UserMenu />
         </div>
       </header>
 
       {/* Saludo y qué hay para mirar. */}
-      <div className="mt-6">
+      <div className="mt-7">
         <p className="text-[12px] font-medium uppercase tracking-wide text-placeholder first-letter:uppercase">{hoy}</p>
         <h1 className="mt-1.5 font-display text-[28px] font-bold leading-tight tracking-tight sm:text-[32px]">
-          Buen día{nombre && `, ${nombre}`}.
+          {saludo()}{nombre && `, ${nombre}`}.
         </h1>
         <ResumenDelDia summary={summary} />
         {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
@@ -200,23 +200,34 @@ export function EscritorioPage() {
         )}
       </div>
 
-      <div className="mb-4 mt-9 flex items-center justify-between gap-3">
+      <div className="mb-4 mt-9 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13px] text-placeholder">
           {visible.length} {visible.length === 1 ? 'módulo' : 'módulos'}
         </p>
-        <button
-          type="button"
-          onClick={() => setConfiguring(v => !v)}
-          className={cn(
-            'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors',
-            configuring
-              ? 'border-accent-border bg-accent text-accent-foreground'
-              : 'border-border text-muted-foreground hover:bg-card hover:text-foreground',
-          )}
-        >
-          <GearSix weight={configuring ? 'fill' : 'regular'} className="size-3.5" />
-          {configuring ? 'Listo' : 'Configurar'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openPalette}
+            className="group flex items-center gap-2 rounded-md border border-accent-border bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+          >
+            <Sparkle weight="fill" className="size-3.5" />
+            Preguntar
+            <kbd className="rounded bg-primary/10 px-1 font-mono text-[10px] font-normal group-hover:bg-primary-foreground/15">Ctrl K</kbd>
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfiguring(v => !v)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors',
+              configuring
+                ? 'border-accent-border bg-accent text-accent-foreground'
+                : 'border-border text-muted-foreground hover:bg-card hover:text-foreground',
+            )}
+          >
+            <GearSix weight={configuring ? 'fill' : 'regular'} className="size-3.5" />
+            {configuring ? 'Listo' : 'Configurar'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3">

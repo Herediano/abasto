@@ -66,13 +66,16 @@ export function UserMenu() {
         onClick={() => setOpen(o => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-full border border-border py-1 pl-1 pr-2.5 transition-colors hover:bg-card"
+        className={cn(
+          'flex h-10 items-center gap-2 rounded-lg border bg-card pl-1.5 pr-2.5 transition-colors',
+          open ? 'border-accent-border bg-accent' : 'border-border hover:bg-background',
+        )}
       >
-        <span className="grid size-7 place-items-center rounded-full font-display text-xs font-bold text-white" style={{ background: color }}>
+        <span className="grid size-7 place-items-center rounded-md font-display text-xs font-bold text-white" style={{ background: color }}>
           {iniciales(user.name)}
         </span>
-        <span className="hidden text-xs font-semibold sm:inline">{user.name.split(' ')[0]}</span>
-        <CaretDown className={cn('size-3 text-placeholder transition-transform', open && 'rotate-180')} />
+        <span className="hidden text-[13px] font-semibold sm:inline">{user.name.split(' ')[0]}</span>
+        <CaretDown className={cn('size-3.5 text-placeholder transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (

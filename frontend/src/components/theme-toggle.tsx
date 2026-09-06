@@ -17,7 +17,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={ciclar}
       aria-label={TEMAS[theme].label}
       title={TEMAS[theme].label}
-      className={cn('rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground', className)}
+      className={cn('grid size-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground', className)}
     >
       <TemaIcon weight="fill" className="size-[18px]" />
     </button>

@@ -183,6 +183,21 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /*
+   * Si se puede tocar, el cursor lo dice. Los navegadores no ponen la manito en
+   * <button> por su cuenta (sí en <a href>), así que se hace acá — mismo criterio
+   * que en las tarjetas del escritorio. Lo deshabilitado no invita.
+   */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label:has(> input[type="checkbox"], > input[type="radio"]),
+  summary {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 /*

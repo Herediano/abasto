@@ -123,24 +123,23 @@ export function statFor(key: string, s: EscritorioSummary): TileStat | null {
   }
 }
 
-export type Pendiente = { text: string; path: string; module: string };
+export type Pendiente = { label: string; count: number; path: string; module: string };
 
 /**
  * Lo que hay "para mirar hoy" — alimenta los chips bajo el saludo del
  * escritorio. Cada uno lleva el color del módulo al que enlaza (ver `hueFor`),
- * para que se lean como una versión mínima de su tarjeta.
+ * para que se lean como una versión mínima de su tarjeta. `label` es una frase
+ * con mayúscula inicial; `count` va como número al lado cuando es más de uno.
  */
 export function pendientes(s: EscritorioSummary): Pendiente[] {
   const out: Pendiente[] = [];
-  if (s.stock && s.stock.bajoMinimo > 0)
-    out.push({ text: plural(s.stock.bajoMinimo, 'bajo mínimo', 'bajo mínimo'), path: '/stock/restock', module: 'reposicion' });
-  if (s.vencimientos && s.vencimientos.lotes > 0)
-    out.push({ text: plural(s.vencimientos.lotes, 'lote por vencer', 'lotes por vencer'), path: '/stock/expirations', module: 'vencimientos' });
-  if (s.compras && s.compras.sinCargar > 0)
-    out.push({ text: plural(s.compras.sinCargar, 'compra sin cargar', 'compras sin cargar'), path: '/stock/in', module: 'stock' });
-  if (s.precios && s.precios.pendientes > 0)
-    out.push({ text: plural(s.precios.pendientes, 'precio sin trasladar', 'precios sin trasladar'), path: '/precios', module: 'precios' });
-  if (s.cuentacorriente && s.cuentacorriente.vencidos > 0)
-    out.push({ text: plural(s.cuentacorriente.vencidos, 'cuenta vencida', 'cuentas vencidas'), path: '/catalog/customers', module: 'clientes' });
+  const add = (n: number, sing: string, plu: string, path: string, module: string) => {
+    if (n > 0) out.push({ label: n === 1 ? sing : plu, count: n, path, module });
+  };
+  if (s.stock) add(s.stock.bajoMinimo, 'Producto bajo mínimo', 'Productos bajo mínimo', '/stock/restock', 'reposicion');
+  if (s.vencimientos) add(s.vencimientos.lotes, 'Lote por vencer', 'Lotes por vencer', '/stock/expirations', 'vencimientos');
+  if (s.compras) add(s.compras.sinCargar, 'Compra sin cargar', 'Compras sin cargar', '/stock/in', 'stock');
+  if (s.precios) add(s.precios.pendientes, 'Precio sin trasladar', 'Precios sin trasladar', '/precios', 'precios');
+  if (s.cuentacorriente) add(s.cuentacorriente.vencidos, 'Cuenta vencida', 'Cuentas vencidas', '/catalog/customers', 'clientes');
   return out;
 }

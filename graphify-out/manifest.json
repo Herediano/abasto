@@ -1020,15 +1020,15 @@
     "semantic_hash": ""
   },
   "frontend/src/components/theme-toggle.tsx": {
-    "mtime": 1788662774.1112807,
-    "seen": 1788663735.1328664,
-    "ast_hash": "d607f0251f53c32c14463e8888a124d5",
+    "mtime": 1788686968.7530272,
+    "seen": 1788687231.6783946,
+    "ast_hash": "cbdc8216d09e8d85869ab4c56af13a71",
     "semantic_hash": ""
   },
   "docs/diseno.md": {
-    "mtime": 1788686485.3323772,
-    "seen": 1788686539.9682512,
-    "ast_hash": "ec304131600c346f5a8181c225d9d422",
+    "mtime": 1788687154.4406154,
+    "seen": 1788687231.706703,
+    "ast_hash": "df31a0145cc5411be4c130f69b04fc09",
     "semantic_hash": ""
   },
   "frontend/src/components/command-palette.tsx": {
@@ -1050,9 +1050,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/escritorio-page.tsx": {
-    "mtime": 1788686243.8959062,
-    "seen": 1788686539.96617,
-    "ast_hash": "bc662c12f5b40edba672a93be5cfe45b",
+    "mtime": 1788686974.741146,
+    "seen": 1788687231.6923525,
+    "ast_hash": "f7af268935099273afd7062e4e82a60a",
     "semantic_hash": ""
   },
   "backend/prisma/seed-demo.ts": {
@@ -1074,9 +1074,9 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/escritorio.ts": {
-    "mtime": 1788686169.5914123,
-    "seen": 1788686539.9571655,
-    "ast_hash": "752a1a78e64db09fea1c1c909f475285",
+    "mtime": 1788686828.2681696,
+    "seen": 1788687231.6843898,
+    "ast_hash": "027d8eb05e94bb2b68257bbf38c15fd6",
     "semantic_hash": ""
   },
   "backend/src/export.util.ts": {
@@ -1110,9 +1110,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/user-menu.tsx": {
-    "mtime": 1788686298.9938343,
-    "seen": 1788686539.9561677,
-    "ast_hash": "1d0043f85cb2269bdc7d9c2ee158928c",
+    "mtime": 1788686933.364216,
+    "seen": 1788687231.6833978,
+    "ast_hash": "656875ccfd87fc9e05fc25b7d3165e74",
     "semantic_hash": ""
   },
   "frontend/src/components/account-list.tsx": {
@@ -1146,9 +1146,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/branch-switcher.tsx": {
-    "mtime": 1788685268.0123813,
-    "seen": 1788685700.8320718,
-    "ast_hash": "5613819757979c8789298755c9d946bf",
+    "mtime": 1788686940.2075229,
+    "seen": 1788687231.674408,
+    "ast_hash": "e3cf710378c82641ee0746206ee0e10b",
     "semantic_hash": ""
   },
   "frontend/src/lib/branch.ts": {

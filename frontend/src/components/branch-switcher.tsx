@@ -52,10 +52,10 @@ export function BranchSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
-          'flex items-center gap-1.5 rounded-md border px-2.5 py-2 text-xs font-semibold transition-colors',
+          'flex h-10 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors',
           fueraDeCasa
             ? 'border-primary bg-primary text-primary-foreground'
-            : 'border-border text-muted-foreground hover:bg-card hover:text-foreground',
+            : 'border-border bg-card text-muted-foreground hover:bg-background hover:text-foreground',
         )}
       >
         <Storefront weight="fill" className="size-3.5" />

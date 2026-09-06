@@ -29,6 +29,9 @@ componente que use los tokens semánticos (`bg-card`, `text-muted-foreground`,
   estresar.
 - **El verde es la única acción sólida.** Si aparece verde lleno, se puede
   tocar. El ámbar es aviso, el rojo es problema.
+- **Si se puede tocar, el cursor lo dice.** Todo botón, toggle y fila
+  interactiva lleva la manito en hover (regla global en `styles.css`); lo
+  deshabilitado, `not-allowed`.
 - **Cada módulo tiene su color, y sólo ahí.** En el escritorio, cada tarjeta
   lleva un matiz propio y saturado (azul Ventas, teal Caja, naranja Stock…) en la
   pastilla del ícono, una franja al costado, el borde y un lavado del fondo. Es
@@ -228,13 +231,15 @@ datos a alguien de afuera.**
   selector vive en el encabezado del escritorio (`components/branch-switcher.tsx`).
   Alta, edición, **desactivación y borrado** (si está vacía) de sucursales en
   Ajustes → La empresa.
-- **Encabezado del escritorio, en tres franjas**: (1) barra con la identidad de
-  la empresa —logo + nombre + `abasto.ai`— a la izquierda y las herramientas
-  —sucursal, Preguntar, tema, cuenta— a la derecha; (2) fecha, saludo, y los
-  pendientes del día como **chips con el color de su módulo** (o «Hoy no hay
-  nada urgente.»); (3) el conteo de módulos + Configurar. El menú de la cuenta
-  muestra nombre, email, empresa, rango, sucursal y desde cuándo está la sesión
-  (del `iat` del token), sin repetir nada.
+- **Encabezado del escritorio, en tres franjas**: (1) barra con la identidad
+  —logo de la empresa grande, nombre, y `abasto.ai` debajo, ambos legibles— a la
+  izquierda y las herramientas —sucursal, tema, cuenta, todas a la misma
+  altura— a la derecha; (2) fecha, saludo según la hora (Buen día / Buenas
+  tardes / Buenas noches), y los pendientes del día como **chips con el color de
+  su módulo** (o «Hoy no hay nada urgente.»); (3) el conteo de módulos +
+  **Preguntar** + Configurar, pegado a la grilla. El menú de la cuenta muestra
+  nombre, email, empresa, rango, sucursal y desde cuándo está la sesión (del
+  `iat` del token), sin repetir nada.
 - **Módulo unificado**: `PageHeader` con **← Escritorio** + `Esc` + chip +
   rastro; transición «se despliega» (View Transitions). Ingreso/Egreso/Historial
   son vistas de Stock (`components/stock-nav.tsx`), no tarjetas.
