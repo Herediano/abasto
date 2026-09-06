@@ -32,10 +32,12 @@ import { CuentasCorrientesService } from './cuentas-corrientes.service';
 import { RangosController } from './rangos.controller';
 import { RangosService } from './rangos.service';
 import { PermissionGuard } from './permission.guard';
+import { EscritorioController } from './escritorio.controller';
+import { ReportesController } from './reportes.controller';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController, EscritorioController, ReportesController],
   providers: [
     StockService, AuthService, JwtAuthGuard, PermissionGuard, PurchasesService, PriceActivationService, PricesService, SalesService,
     CajaService, CuentasCorrientesService, RangosService,
