@@ -17,11 +17,14 @@ export type EscritorioSummary = {
 };
 
 export type TileStat = {
-  /** El dato clave, grande. */
+  /** El dato clave, grande. Siempre lo mismo: un número (con unidad corta) o
+   *  una palabra de estado. Monocromo —el color no describe estado acá, el
+   *  puntito lo hace. */
   value: string;
-  /** El renglón de contexto: una sola línea, en minúscula (el escritorio le pone
-   *  la mayúscula inicial). Todas las tarjetas lo muestran con la misma fuente,
-   *  tamaño y lugar. */
+  /** El renglón de contexto: una sola línea corta y en minúscula (la tarjeta
+   *  pone la mayúscula inicial). Lleva UN dato útil que el value no cuenta
+   *  (ejemplos, tendencia, plazos). Gris, uniforme, sin tintes: la consistencia
+   *  está en que todas las tarjetas hablan igual. */
   hint: string;
   /** Puntito de aviso arriba a la derecha. */
   flag?: 'warn' | 'hot';
@@ -37,34 +40,31 @@ const plural = (n: number, sing: string, plu: string) => `${n} ${n === 1 ? sing 
 const lc = (s: string) => s.toLocaleLowerCase('es-AR');
 const ejemplos = (xs: string[], max = 2) => xs.slice(0, max).map(lc).join(', ');
 
-/** El dato clave y la línea de contexto de una tarjeta, según el módulo. */
+/** El dato clave y la línea de contexto de una tarjeta, según el módulo.
+ *  Regla: `value` = número o estado; `hint` = una línea de dato útil, gris. */
 export function statFor(key: string, s: EscritorioSummary): TileStat | null {
   switch (key) {
     case 'ventas': {
       if (!s.ventas) return null;
       const { hoy, tickets, ayer } = s.ventas;
       const dp = ayer > 0 ? ((hoy - ayer) / ayer) * 100 : null;
-      const delta = dp == null ? '' : `${dp >= 0 ? '+' : '−'}${Math.abs(dp).toLocaleString('es-AR', { maximumFractionDigits: 1 })} % vs ayer · `;
-      return { value: compact(hoy), hint: `${delta}${plural(tickets, 'ticket', 'tickets')} hoy` };
+      const delta = dp == null ? '' : `${dp >= 0 ? '+' : '−'}${Math.abs(dp).toLocaleString('es-AR', { maximumFractionDigits: 1 })} % que ayer · `;
+      return { value: compact(hoy), hint: `${delta}${plural(tickets, 'ticket', 'tickets')} vendidos` };
     }
     case 'caja': {
       if (!s.caja) return null;
       if (!s.caja.abierta) return { value: 'Cerrada', hint: 'sin turno abierto' };
-      return {
-        value: 'Abierta',
-        hint: `${s.caja.efectivo != null ? money(s.caja.efectivo).replace(',00', '') + ' · ' : ''}${lc(s.caja.registro ?? 'en mostrador')}`,
-      };
+      const efectivo = s.caja.efectivo != null ? `${money(s.caja.efectivo).replace(',00', '')} en efectivo` : '';
+      const donde = lc(s.caja.registro ?? 'en mostrador');
+      return { value: 'Abierta', hint: [efectivo, donde].filter(Boolean).join(' · ') };
     }
     case 'turnos':
-      return s.turnos ? { value: plural(s.turnos.abiertos, 'turno abierto', 'turnos abiertos'), hint: 'aperturas, cierres y arqueos' } : null;
+      return s.turnos ? { value: plural(s.turnos.abiertos, 'turno', 'turnos'), hint: 'aperturas, cierres y arqueos del día' } : null;
     case 'stock': {
       if (!s.stock) return null;
       if (s.stock.bajoMinimo === 0) return { value: 'Al día', hint: 'todo por encima del mínimo' };
-      return {
-        value: plural(s.stock.bajoMinimo, 'bajo mínimo', 'bajo mínimo'),
-        hint: ejemplos(s.stock.ejemplos) || 'productos por reponer',
-        flag: 'hot',
-      };
+      const ex = ejemplos(s.stock.ejemplos);
+      return { value: `${s.stock.bajoMinimo}`, hint: ex ? `bajo el mínimo · ${ex}` : 'bajo el mínimo', flag: 'hot' };
     }
     case 'reposicion': {
       if (!s.reposicion) return null;
@@ -76,20 +76,13 @@ export function statFor(key: string, s: EscritorioSummary): TileStat | null {
       if (s.vencimientos.lotes === 0) return { value: '0 lotes', hint: 'nada vence en 14 días' };
       const dias = s.vencimientos.dias ?? 14;
       const ej = ejemplos(s.vencimientos.ejemplos, 1);
-      return {
-        value: plural(s.vencimientos.lotes, 'lote', 'lotes'),
-        hint: `${s.vencimientos.lotes === 1 ? 'vence' : 'vencen'} en ≤ ${dias} día${dias === 1 ? '' : 's'}${ej ? ` · ${ej}` : ''}`,
-        flag: 'warn',
-      };
+      return { value: `${s.vencimientos.lotes}`, hint: `vencen en ≤ ${dias} día${dias === 1 ? '' : 's'}${ej ? ` · ${ej}` : ''}`, flag: 'warn' };
     }
     case 'compras': {
       if (!s.compras) return null;
       if (s.compras.sinCargar === 0) return { value: 'Todo cargado', hint: 'sin facturas pendientes' };
-      return {
-        value: plural(s.compras.sinCargar, 'sin cargar', 'sin cargar'),
-        hint: ejemplos(s.compras.proveedores) || 'facturas por cargar',
-        flag: 'warn',
-      };
+      const pr = ejemplos(s.compras.proveedores);
+      return { value: `${s.compras.sinCargar}`, hint: pr ? `por cargar · ${pr}` : 'facturas por cargar', flag: 'warn' };
     }
     case 'proveedores':
       return s.proveedores ? { value: `${s.proveedores.activos}`, hint: 'proveedores activos' } : null;
@@ -103,18 +96,14 @@ export function statFor(key: string, s: EscritorioSummary): TileStat | null {
     case 'precios': {
       if (!s.precios) return null;
       if (s.precios.pendientes === 0) return { value: 'Sin pendientes', hint: 'costos trasladados a precio' };
-      return { value: `${s.precios.pendientes}`, hint: 'con costo nuevo sin trasladar', flag: 'warn' };
+      return { value: `${s.precios.pendientes}`, hint: 'costos nuevos por trasladar', flag: 'warn' };
     }
     case 'clientes': {
       // La cuenta corriente es lo accionable; si no hay saldo en la calle, el
       // conteo de clientes.
       if (s.cuentacorriente && s.cuentacorriente.enLaCalle > 0) {
         const { enLaCalle, vencidos } = s.cuentacorriente;
-        return {
-          value: compact(enLaCalle),
-          hint: `en la calle · ${vencidos === 0 ? 'nadie vencido' : plural(vencidos, 'cliente vencido', 'clientes vencidos')}`,
-          flag: vencidos > 0 ? 'hot' : undefined,
-        };
+        return { value: compact(enLaCalle), hint: 'en la calle', flag: vencidos > 0 ? 'hot' : undefined };
       }
       return s.clientes ? { value: s.clientes.total.toLocaleString('es-AR'), hint: 'clientes registrados' } : null;
     }

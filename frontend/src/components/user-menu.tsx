@@ -76,7 +76,7 @@ export function UserMenu() {
         <span className="grid size-7 place-items-center rounded-md font-display text-xs font-bold text-white" style={{ background: color }}>
           {iniciales(user.name)}
         </span>
-        <span className="hidden text-[13px] font-semibold sm:inline">{user.name.split(' ')[0]}</span>
+        <span className="hidden text-chico font-semibold sm:inline">{user.name.split(' ')[0]}</span>
         <CaretDown className={cn('size-3.5 text-placeholder transition-transform', open && 'rotate-180')} />
       </button>
 
@@ -88,11 +88,11 @@ export function UserMenu() {
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{user.name}</p>
-              <p className="truncate text-[11px] text-placeholder">{user.email}</p>
+              <p className="truncate text-micro text-placeholder">{user.email}</p>
             </div>
           </div>
 
-          <dl className="grid gap-1.5 border-t border-border-soft px-1.5 py-2.5 text-[12px]">
+          <dl className="grid gap-1.5 border-t border-border-soft px-1.5 py-2.5 text-chico">
             <Fila k="Empresa" v={session.tenant.name} />
             <Fila k="Rango" v={user.rangoName ?? '—'} />
             <Fila
@@ -108,7 +108,7 @@ export function UserMenu() {
                   onClick={ciclar}
                   aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
                   title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
-                  className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                  className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-chico font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
                 >
                   {theme === 'dark' ? <Moon weight="fill" className="size-3.5" /> : <Sun weight="fill" className="size-3.5" />}
                   {theme === 'dark' ? 'Oscuro' : 'Claro'}
@@ -128,7 +128,7 @@ export function UserMenu() {
             <button
               type="button"
               onClick={() => { setOpen(false); navigate('/ajustes', { viewTransition: true }); }}
-              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] hover:bg-background"
+              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-chico hover:bg-background"
             >
               <GearSix className="size-4 text-muted-foreground" />
               Ajustes
@@ -136,7 +136,7 @@ export function UserMenu() {
             <button
               type="button"
               onClick={() => { setOpen(false); logout(); }}
-              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-destructive hover:bg-destructive-soft"
+              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-chico text-destructive hover:bg-destructive-soft"
             >
               <SignOut className="size-4" />
               Cerrar sesión

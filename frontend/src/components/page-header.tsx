@@ -22,7 +22,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
   const { density, setDensity } = useDensity();
   const b = session?.user;
   const otraSucursal = b?.branch && b?.homeBranch && b.branch.id !== b.homeBranch.id ? b.branch.name : null;
-  const compacta = density === 'compacta';
+  const compacto = density === 'compacto';
 
   return (
     <div className="sticky top-0 z-20 -mx-6 mb-1 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-background/85 px-6 py-3 backdrop-blur">
@@ -33,7 +33,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
       >
         <ArrowLeft className="size-3.5" />
         Escritorio
-        <kbd className="ml-0.5 rounded border border-border px-1 font-mono text-[10px] font-normal text-placeholder">Esc</kbd>
+        <kbd className="ml-0.5 rounded border border-border px-1 font-mono text-micro font-normal text-placeholder">Esc</kbd>
       </button>
 
       <div className="flex items-center gap-2.5" style={{ viewTransitionName: 'module-hero' }}>
@@ -43,7 +43,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
           </div>
         )}
         <div className="leading-tight">
-          {mod && <p className="text-[11px] font-medium text-placeholder">{mod.crumb}</p>}
+          {mod && <p className="text-micro font-medium text-placeholder">{mod.crumb}</p>}
           <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
           {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
         </div>
@@ -51,19 +51,19 @@ export function PageHeader({ title, description, actions }: { title: string; des
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {otraSucursal && (
-          <span className="flex items-center gap-1 rounded-md border border-primary bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground">
+          <span className="flex items-center gap-1 rounded-md border border-primary bg-primary px-2 py-1 text-micro font-semibold text-primary-foreground">
             <Storefront weight="fill" className="size-3" /> {otraSucursal}
           </span>
         )}
         {actions}
         <button
           type="button"
-          onClick={() => setDensity(compacta ? 'comoda' : 'compacta')}
-          aria-label={compacta ? 'Filas más cómodas' : 'Filas más compactas'}
-          title={compacta ? 'Filas más cómodas' : 'Filas más compactas'}
+          onClick={() => setDensity(compacto ? 'espacioso' : 'compacto')}
+          aria-label={compacto ? 'Filas más espaciadas' : 'Filas más compactas'}
+          title={compacto ? 'Filas más espaciadas' : 'Filas más compactas'}
           className="grid size-8 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
         >
-          <Rows weight={compacta ? 'fill' : 'regular'} className="size-4" />
+          <Rows weight={compacto ? 'fill' : 'regular'} className="size-4" />
         </button>
       </div>
     </div>

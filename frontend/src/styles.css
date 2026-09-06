@@ -39,6 +39,12 @@
   --ab-shadow-1: 0 1px 2px rgb(20 30 25 / 0.05);
   --ab-shadow-2: 0 1px 2px rgb(20 30 25 / 0.04), 0 10px 28px -14px rgb(20 30 25 / 0.16);
 
+  /* Fondo del sistema: base arena, un lavado tenue de verde pino por dos
+     esquinas y una fina grilla de puntos que pega con los motivos de línea.
+     Todo es pintura única, sin animar, sin imágenes, sin JS: no cuesta nada
+     en runtime. Ver docs/diseno.md, "Fondo". */
+  --ab-pattern: color-mix(in srgb, var(--ab-primary) 26%, transparent);
+
   color-scheme: light;
 }
 
@@ -67,6 +73,8 @@
 
     --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
     --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
+
+    --ab-pattern: color-mix(in srgb, var(--ab-primary) 15%, transparent);
 
     color-scheme: dark;
   }
@@ -184,10 +192,23 @@
     border-color: var(--color-border);
   }
   body {
-    background: var(--color-background);
+    background-color: var(--color-background);
+    background-image:
+      radial-gradient(1500px 850px at 12% -10%, color-mix(in srgb, var(--ab-primary) 15%, transparent), transparent 62%),
+      radial-gradient(1400px 750px at 112% 120%, color-mix(in srgb, var(--ab-primary) 12%, transparent), transparent 58%),
+      radial-gradient(circle, var(--ab-pattern) 1px, transparent 1.5px);
+    background-size: auto, auto, 24px 24px;
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-position: 0 0, 100% 100%, 0 0;
+    background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+  }
+  /* En pantallas táctiles el fondo fijo puede repintar en cada scroll: se deja
+     solo la base plana (barata), que ya hereda el lavado tenue del gradiente. */
+  @media (hover: none) {
+    body { background-attachment: scroll; }
   }
   /* Una sola familia; el carácter del título sale del peso y el tracking. */
   h1, h2, h3 {
@@ -330,26 +351,41 @@
 
 /*
  * Densidad de las tablas (se cambia desde el botón de la cabecera del módulo,
- * lib/prefs.ts). "Cómoda" es el default; "compacta" aprieta las filas para ver
+ * lib/prefs.ts). "Espacioso" es el default; "compacto" aprieta las filas para ver
  * más de una vez en listados largos. Fuera de capa: gana a las utilidades sin
  * pelear especificidad.
  */
-:root[data-density='compacta'] td {
+:root[data-density='compacto'] td {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
 }
-:root[data-density='compacta'] th {
+:root[data-density='compacto'] th {
   height: 1.75rem;
   padding-top: 0;
   padding-bottom: 0;
 }
-:root[data-density='compacta'] table {
+:root[data-density='compacto'] table {
   font-size: 0.8125rem;
 }
 /* Sin aire entre elementos apilados dentro de una celda (nombre + subtítulo). */
-:root[data-density='compacta'] td > * + * {
+:root[data-density='compacto'] td > * + * {
   margin-top: 0;
 }
-:root[data-density='compacta'] tbody tr {
+:root[data-density='compacto'] tbody tr {
   line-height: 1.35;
+}
+
+/* Tamaño de las tarjetas del escritorio (se cambia desde el modo Configurar,
+   lib/prefs.ts). "Mediana" (default) es la grilla de 190px / 168px. */
+.escritorio-grid.tiles-chica {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+.escritorio-grid.tiles-chica .module-tile {
+  min-height: 152px;
+}
+.escritorio-grid.tiles-grande {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.escritorio-grid.tiles-grande .module-tile {
+  min-height: 196px;
 }

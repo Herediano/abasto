@@ -90,7 +90,8 @@ referenciados por `@theme inline`), así el tema cambia en tiempo de ejecución.
 
 Regla: **el color de acción es uno solo**. El ámbar y el rojo no son decorativos
 —aparecen cuando hay algo que avisar o algo que está mal, y en dosis mínimas (un
-puntito, una cifra teñida), nunca como fondo de un bloque.
+puntito), nunca como fondo de un bloque. El dato clave de las tarjetas es
+siempre monocromo: la alerta la lleva el puntito, sola.
 
 #### Color por módulo — identidad, no estado
 
@@ -101,19 +102,40 @@ desaparece: manda el verde acción.
 
 Los matices se generan con una receta, no a ojo:
 
-- **OKLCH con luz y croma fijos**, se rota **solo el matiz** (`H`). Así los ~10
-  colores tienen el mismo peso visual y ninguno grita más que otro.
-- El arco permitido esquiva el **verde** (acción) y el **naranja/ámbar** (aviso):
-  se usan matices de ~200° a ~360° y de 0° a ~30° (azules, violetas, magentas,
-  rojos fríos, rosas). Nada entre 40° y 150°.
-- **Distancia mínima** entre dos módulos cualesquiera ≥ ~22° de matiz, para que
-  se distingan de un vistazo.
+- **Arcoíris completo** a OKLCH con croma alto (0.20) y luz media fija (0.60),
+  rotando solo el matiz (`H`). La distinción manda: cada módulo es de una
+  familia de color diferente —rojo, naranja, oro, lima, esmeralda, cian, azul,
+  violeta, magenta.
+- **Distancia mínima** de matiz entre dos módulos cualesquiera ≥ ~30° —varios
+  pares quedan a 40-50°. La separación se ve de un vistazo.
+- **No se esquiva verde ni ámbar** (decisión del dueño del producto): los
+  colores de identidad pueden rozar los de semáforo porque la alerta la lleva
+  el puntito, no el color de la tarjeta.
 - Máximo ~10 matices. Los módulos que viven adentro de Ajustes (Usuarios,
   Rangos) comparten un **pizarra de croma bajo** —son sistema, no operación.
 - En oscuro se ajusta la luz del matiz, no el croma, contra la superficie
   correspondiente.
 
 Los valores concretos viven en `frontend/src/lib/modules.tsx`; acá va la receta.
+
+### Fondo
+
+El fondo es la base del sistema (arena en claro, forestal en oscuro) con un
+**lavado tenue de verde pino** por dos esquinas —arriba a la izquierda y abajo
+a la derecha— y una **fina grilla de puntos** de 1 px cada 24 px que pega con
+los motivos de línea de los módulos. Acompaña, no compite. Reglas:
+
+- **Cero costo de runtime**: gradientes radiales CSS (lavados) + un
+  `radial-gradient` repetido para la grilla de puntos. Pintura única, sin
+  animar, sin imágenes, sin JS, sin `transition`. No compite con los motivos
+  de los módulos ni con las tarjetas (que llevan sus propios lavados).
+- **Sutil siempre**: los lavados van entre 12 % y 15 % de alfa, los puntos en
+  15 % (oscuro) / 26 % (claro) del `--ab-primary`. Si se nota como un "diseño
+  de fondo" cargado, pasó de largo.
+- **`background-attachment: fixed`** en puntero fino (pintura única); en
+  táctiles se vuelve a `scroll` para no repintar en cada scroll.
+- El color de la grilla vive en `--ab-pattern` (una por paleta); el `body`
+  compone la base, los lavados y la grilla en `background-image`.
 
 ### Forma
 
@@ -191,10 +213,13 @@ está para reconocer, no para decorar: si no ayuda a identificar algo, no va.
 - **El verde es la única acción sólida.** Si aparece verde lleno, se puede tocar.
   El ámbar es aviso, el rojo es problema.
 - **El estado lo dice el dato, no un marco.** «3 lotes», «4 vencidos», «+17,8 %
-  vs ayer»: texto plano, sin teñir. Un puntito ámbar o rojo arriba a la derecha
-  basta para marcar «acá hay algo». Los pendientes del día bajo el saludo son
-  **chips**, uno por cosa, cada uno con el color del módulo al que enlaza —una
-  versión mínima de su tarjeta, no un recuadro de alerta.
+  vs ayer»: el texto lleva la noticia, y **la cifra clave se tiñe** —con el matiz
+  del módulo para lo que le es propio (nombres, montos), ámbar cuando es un aviso
+  (plazos, conteos pendientes), rojo cuando está mal. Nunca el bloque entero, una
+  cifra en dosis mínimas. Un puntito ámbar o rojo arriba a la derecha basta para
+  marcar «acá hay algo». Los pendientes del día bajo el saludo son **chips**, uno
+  por cosa, cada uno con el color del módulo al que enlaza —una versión mínima de
+  su tarjeta, no un recuadro de alerta.
 - **Si se puede tocar, el cursor lo dice.** Todo botón, toggle y fila
   interactiva lleva la manito en hover (regla global en `styles.css`); lo
   deshabilitado, `not-allowed`.
@@ -269,17 +294,29 @@ del módulo).
 
 Anatomía, siempre en el mismo lugar:
 
-1. **Ícono** en un chip redondeado (radio `md`), relleno del **color del
-   módulo**, arriba a la izquierda, con una **franja** del mismo color por el
-   borde izquierdo.
-2. **Nombre** del módulo.
-3. **Dato clave** en display chico, lo único que de verdad importa saber sin
-   entrar (`$ 1,28 M`, `3 lotes`, `Abierta`, `43 pendientes`).
-4. **Un renglón de contexto** debajo, con espacio fijo en todas las tarjetas:
-   misma cara, mismo tamaño, mismo lugar, pegado abajo. Capitalización normal,
-   sin teñir (`Vencen en ≤ 2 días · jamón cocido`).
-5. **Puntito de aviso** (ámbar/rojo) arriba a la derecha, solo si hay algo
-   pendiente.
+1. **Cabecera**: el ícono en un chip redondeado (radio `md`, 32 px, relleno del
+   **color del módulo**) y el **nombre** a su derecha, en la misma fila, escala
+   `h3` (20 px, peso 600) —el título de la tarjeta, lo primero que se lee. Una
+   **franja** del color del módulo corre por el borde izquierdo.
+2. **Dato clave** en display (escala `h2`, 24 px), lo único que de verdad
+   importa saber sin entrar (`$ 1,28 M`, `Abierta`, `3`). **Siempre lo mismo**:
+   un número (con unidad corta) o una palabra de estado —nunca una frase. Es
+   **monocromo**: el color no describe estado acá.
+3. **Un renglón de contexto** de **una sola línea**, con espacio fijo en todas
+   las tarjetas: misma cara, mismo tamaño (escala `micro`, 12 px), mismo lugar,
+   pegado abajo. Lleva **solo la información útil que el dato clave no cuenta**
+   (ejemplos de productos, tendencia, plazos, proveedor); **gris, uniforme, sin
+   tintes** (`bajo el mínimo · jamón cocido`, `+17,8 % que ayer · 43 tickets`).
+   Sin relleno, sin repetir el dato: lo que no aporta, no va. El nombre del
+   módulo nunca queda por debajo de esta línea.
+4. **Puntito de aviso** (ámbar/rojo) arriba a la derecha, solo si hay algo
+   pendiente. Los puntos 2 y 3 son siempre del mismo gris robusto: **la única
+   señal de alerta en la tarjeta es el puntito** —una cifra teñida no compite
+   con él, todas las tarjetas hablan igual y la mirada busca una única cosa.
+
+Identidad de marca: el **header** lleva únicamente el logo y el nombre de la
+empresa; el brand completo **"abasto.ai"** (logo + nombre + marca) vive en el
+**footer**, discreto y al pie.
 
 La identidad se refuerza con el **color del módulo** (punto 1, más el borde y el
 lavado del fondo) y con un **motivo de línea** propio —grande y tenue, saliéndose
@@ -304,24 +341,28 @@ que está todo bien.
 
 ### Configurable
 
-Un modo «Configurar»: ocultar tarjetas, mostrarlas de nuevo y reordenarlas
-arrastrando. La **densidad de las tablas** (cómoda / compacta) vive en la
-cabecera de cada módulo —un botón junto a las acciones—, no acá ni en Ajustes,
-para que se vea el cambio sobre una tabla real. Todo se guarda por dispositivo en
-`localStorage`. Con control — jerarquía clara, no un caos de widgets.
-Personalización más profunda (fijar, destacar, tamaños, y que el orden viaje con
-la cuenta) es más adelante.
+Un modo «Configurar»: ocultar tarjetas, mostrarlas de nuevo, reordenarlas
+arrastrando y elegir el **tamaño de las tarjetas** (chica / mediana / grande).
+La densidad de las tablas es otra cosa: vive sola en la cabecera de cada módulo
+(espacioso / compacto), donde el cambio se ve sobre la tabla real. Todo se
+guarda por dispositivo en `localStorage`. Con control — jerarquía clara, no un
+caos de widgets. Personalización más profunda (fijar, destacar, y que el orden
+viaje con la cuenta) es más adelante.
 
 ### La caja no es una tarjeta
 
 La caja es un **modo de trabajo**, no un módulo que se navega: pantalla
-completa, el mundo del cajero. En el escritorio vive en un **botón propio** en la
-barra de arriba, junto al selector de sucursal y la cuenta, claramente distinto
-de las tarjetas. El botón cambia de color según el turno —verde suave si la caja
-está abierta, rojo suave si está cerrada—, en tonos apagados para verlo de un
-vistazo sin que grite. Sin flecha pegada al texto: la etiqueta y el estado del
-turno alcanzan. Al abrir la app siempre se cae en el escritorio (no hay
-preferencia de "entrar directo a"); para un cajero, ese botón es lo primero que ve.
+completa, el mundo del cajero. En el escritorio vive en un **botón ancho** que se
+diseña **como una tarjeta** —borde, lavado del fondo y **dos barras de color, una
+por cada costado** (en vez de la franja única a la izquierda de las tarjetas)—
+para que el ojo lo lea como la tarjeta principal. Se llama **«Abrir Mostrador»**
+y se apoya **abajo de la fila de Configurar / Preguntar, pegado al grid**, un
+poco más bajo que el resto de la barra (altura `10`): el cajero lo ve antes de
+mirar las tarjetas y no compite con los botones chicos. La **barra de estado se
+lee del color de las dos rieles** —verde sólido si el turno está abierto, rojo
+sólido si no—, no de las letras: el texto es siempre del tinte de lectura. Al
+abrir la app siempre se cae en el escritorio (no hay preferencia de "entrar
+directo a"); para un cajero, ese botón es lo primero que ve.
 
 ### El celular
 
@@ -436,9 +477,14 @@ datos a alguien de afuera.**
   confundible. Se aplica en grande —pastilla del ícono + franja + borde + lavado
   del fondo— para reconocer el módulo por color. Renglón de contexto con espacio
   fijo y tipografía pareja, en capitalización normal.
-- **Densidad de tablas** en la cabecera de cada módulo (`useDensity`,
-  `lib/prefs.ts`): un botón junto a las acciones alterna cómoda / compacta y el
-  cambio se ve sobre la tabla que estás mirando.
+- **Densidad de tablas** (espacioso / compacto) en la cabecera de cada módulo
+  (`useDensity`, `lib/prefs.ts`): un botón junto a las acciones alterna y el
+  cambio se ve sobre la tabla que estás mirando (`styles.css`, `data-density`).
+- **Tamaño de las tarjetas** del escritorio (chica / mediana / grande) desde el
+  modo **Configurar** (`useTiles`, `lib/prefs.ts`): cambia la grilla y la altura
+  de las tarjetas (`tiles-chica` / `tiles-grande` en `styles.css`).
+- **Refactor visual completo**: escala tipográfica en tokens `text-*` (sin
+  `text-[Npx]` arbitrarios) y radios limitados a `lg` / `md` / `sm`.
 - **Tipografía Archivo** (una familia; escala en tokens `--text-*`; `.type-display`
   para la marca y el número hero). El monoespacio solo para identificadores.
 - **Menú de la cuenta**: varias cuentas con sesión abierta en el mismo
@@ -483,46 +529,22 @@ datos a alguien de afuera.**
 
 ## Lo que sigue, en orden
 
-### Refactor del sistema visual (este documento)
-
-1. **Tipografía a Archivo, una sola familia.** Cambiar `index.html` y los tokens
-   `--font-*` en `styles.css`. Marca y número hero en Expanded/700; el resto en
-   ancho normal. Sacar Bricolage y Spline Sans.
-2. **Achicar el monoespacio a identificadores de máquina.** Sacar `font-mono` de
-   toda etiqueta y toda columna de datos; dejarlo en SKU, código de barras,
-   lote, CUIT, token. Las columnas numéricas pasan a `tabular-nums` +
-   `slashed-zero` de Archivo.
-3. **Escala tipográfica en tokens.** Reemplazar los `text-[13px]`, `text-[12.5px]`
-   y compañía por los ocho pasos de la escala.
-4. **Los ~14 matices por módulo en OKLCH.** Reescribir `HUES` en `lib/modules.tsx`
-   con luz y croma fijos, rotando solo `H`, dentro del arco permitido, ≥ 22° de
-   separación, bajando a ~10; Reposición sale del ámbar; Usuarios/Rangos comparten
-   el pizarra. Ajustar el dark con luz, no croma.
-5. **Radios a los tres tokens.** Sacar todo `rounded-[Npx]` y `rounded-2xl` /
-   `rounded-xl` que no sea `lg` / `md` / `sm`.
-6. **Calmar el movimiento.** Sacar el `hover:-translate-y` de las tarjetas y del
-   botón de caja, la flechita que se corre, y cualquier animación de entrada. La
-   transición tarjeta → módulo es la única.
-7. **Sacar las versalitas.** «Para mirar hoy», «Ocultos», la fecha del
-   escritorio, los encabezados de columna: capitalización normal.
-8. **Sacar el `→`** del texto del botón de caja y de los chips de pendientes.
-
 ### Producto
 
-9. **El molde de Productos al resto de los listados** (buscador + filtros en
+1. **El molde de Productos al resto de los listados** (buscador + filtros en
    panel + chips que se sacan de a uno + columnas justas). Faltan Stock,
    Vencimientos, Ventas, ingresos/egresos/historial/reposición/turnos.
-10. **Margen en el gráfico de Ventas**: guardar el costo al momento de la venta
-    (`SaleLine.unitCost`) —falta migración y que la caja lo grabe.
-11. **Exportar en el resto de los listados** (falta clientes, precios,
-    promociones, turnos, depósitos).
-12. **La capa de IA en Ctrl+K**: hoy es solo buscador de módulos; falta que
-    responda preguntas del negocio cruzando módulos.
-13. **Repasar los formularios** con la regla de aire y agrupación.
-14. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
-    muestre antes de confirmar).
-15. **Transferencias de stock entre sucursales** (mover mercadería de un depósito
-    a otro, con el ledger de las dos puntas).
+2. **Margen en el gráfico de Ventas**: guardar el costo al momento de la venta
+   (`SaleLine.unitCost`) —falta migración y que la caja lo grabe.
+3. **Exportar en el resto de los listados** (falta clientes, precios,
+   promociones, turnos, depósitos).
+4. **La capa de IA en Ctrl+K**: hoy es solo buscador de módulos; falta que
+   responda preguntas del negocio cruzando módulos.
+5. **Repasar los formularios** con la regla de aire y agrupación.
+6. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
+   muestre antes de confirmar).
+7. **Transferencias de stock entre sucursales** (mover mercadería de un depósito
+   a otro, con el ledger de las dos puntas).
 
 ---
 

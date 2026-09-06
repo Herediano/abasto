@@ -151,7 +151,7 @@ export function ShiftsHistoryPage() {
               )}
               {!!detalle.totalsByMethod?.length && (
                 <div className="flex flex-col gap-1">
-                  <p className="text-[11px] font-semibold text-placeholder">Por medio de pago</p>
+                  <p className="text-micro font-semibold text-placeholder">Por medio de pago</p>
                   {detalle.totalsByMethod.map(t => (
                     <div key={t.method} className="flex justify-between tabular">
                       <span className="text-muted-foreground">{PAGOS[t.method] ?? t.method}</span>
@@ -161,7 +161,7 @@ export function ShiftsHistoryPage() {
                 </div>
               )}
               <div className="flex flex-col gap-1">
-                <p className="text-[11px] font-semibold text-placeholder">Movimientos de efectivo</p>
+                <p className="text-micro font-semibold text-placeholder">Movimientos de efectivo</p>
                 {!detalle.movements?.length ? (
                   <p className="text-muted-foreground">Sin movimientos.</p>
                 ) : (

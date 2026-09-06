@@ -42,8 +42,8 @@ export function AccountList({ variant = 'full', onNavigate }: { variant?: 'full'
                 {iniciales(a.user.name)}
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[13px] font-semibold">{a.user.name}</span>
-                <span className="block truncate text-[11px] text-muted-foreground">{a.tenant.name}</span>
+                <span className="block truncate text-chico font-semibold">{a.user.name}</span>
+                <span className="block truncate text-micro text-muted-foreground">{a.tenant.name}</span>
               </span>
             </button>
             {activa && variant === 'full' && (
@@ -51,7 +51,7 @@ export function AccountList({ variant = 'full', onNavigate }: { variant?: 'full'
                 type="button"
                 onClick={logout}
                 title="Cerrar la sesión de esta cuenta"
-                className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive-soft"
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-micro font-medium text-destructive hover:bg-destructive-soft"
               >
                 <SignOut className="size-3.5" /> Salir
               </button>
@@ -63,7 +63,7 @@ export function AccountList({ variant = 'full', onNavigate }: { variant?: 'full'
       <button
         type="button"
         onClick={() => { onNavigate?.(); navigate('/login?add=1'); }}
-        className="mt-1 flex items-center gap-2 rounded-md border border-dashed border-border px-2.5 py-2 text-[13px] text-muted-foreground transition-colors hover:border-solid hover:text-foreground"
+        className="mt-1 flex items-center gap-2 rounded-md border border-dashed border-border px-2.5 py-2 text-chico text-muted-foreground transition-colors hover:border-solid hover:text-foreground"
       >
         <Plus className="size-4" /> Agregar otra cuenta
       </button>

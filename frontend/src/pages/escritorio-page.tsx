@@ -8,13 +8,14 @@ import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules'
 import { api } from '@/lib/api';
 import { pendientes, statFor, type EscritorioSummary } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
+import { useTiles } from '@/lib/prefs';
 import { setActiveBranch } from '@/lib/branch';
 import { cn } from '@/lib/utils';
 
 const CONFIG_KEY = 'abasto-escritorio';
 
 /** Mayúscula inicial y nada más: el renglón de contexto ya viene en minúscula. */
-const sentence = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es-AR') + s.slice(1) : s);
+const cap = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es-AR') + s.slice(1) : s);
 
 /** El saludo según la hora: mañana, tarde o noche. */
 function saludo(): string {
@@ -30,9 +31,9 @@ function saludo(): string {
  * calma, una sola frase. Cargando, un placeholder discreto.
  */
 function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
-  if (!summary) return <p className="mt-3 text-[13px] text-placeholder">Cargando el estado del negocio…</p>;
+  if (!summary) return <p className="mt-3 text-chico text-placeholder">Cargando el estado del negocio…</p>;
   const items = pendientes(summary);
-  if (items.length === 0) return <p className="mt-3 text-[13px] text-muted-foreground">Hoy no hay nada urgente.</p>;
+  if (items.length === 0) return <p className="mt-3 text-chico text-muted-foreground">Hoy no hay nada urgente.</p>;
   return (
     <div className="mt-4">
       <p className="mb-2 text-chico font-medium text-muted-foreground">Para mirar hoy</p>
@@ -43,7 +44,7 @@ function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
             to={it.path}
             viewTransition
             style={{ ['--h' as string]: hueFor(it.module) }}
-            className="pendiente-chip flex items-center gap-2 rounded-md border px-3 py-1.5 text-chico font-medium text-foreground transition-colors"
+            className="pendiente-chip flex items-center gap-2 rounded-md border px-3 py-1.5 text-chico font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
           >
             <span className="pendiente-chip__dot size-1.5 rounded-full" />
             {it.label}
@@ -57,27 +58,35 @@ function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
 
 /**
  * La caja no es una tarjeta: es un modo de trabajo (pantalla completa, el mundo
- * del cajero). Va en la barra de arriba, en su propio botón, y cambia de color
- * según el turno —verde suave si está abierta, rojo suave si no— para verlo de
- * un vistazo. El detalle del turno vive adentro de la caja.
+ * del cajero). Vive abajo, pegado a las tarjetas, y se diseña como ellas —borde,
+ * lavado y DOS barras de color (una por lado)— para que el ojo lo lea como una
+ * tarjeta más, ancha. El estado se lee de las BARRAS —verde si el turno está
+ * abierto, rojo si no—, no de las letras: el texto es siempre del tinte de
+ * lectura. El detalle del turno vive adentro de la caja.
  */
-function CajaPill({ summary }: { summary: EscritorioSummary | null }) {
+function AbrirMostrador({ summary }: { summary: EscritorioSummary | null }) {
   const navigate = useNavigate();
-  const caja = summary?.caja;
-  const abierta = caja?.abierta ?? false;
-  const paleta = abierta
-    ? { bg: '#e8f5e2', text: '#3f7a2e', border: '#bfe0ab' }
-    : { bg: '#fbe9e7', text: '#a6453b', border: '#f0cdc7' };
+  const abierta = summary?.caja?.abierta ?? false;
   return (
     <button
       type="button"
       onClick={() => navigate('/ventas')}
-      style={{ background: paleta.bg, color: paleta.text, borderColor: paleta.border }}
-      className="flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold"
+      style={{ ['--ab-tile-hue' as string]: abierta ? 'var(--color-success)' : 'var(--color-destructive)' }}
+      className="module-tile relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-lg border pl-5 pr-6 text-sm font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
     >
+      <span
+        className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
+        style={{ background: 'var(--ab-tile-hue)' }}
+        aria-hidden="true"
+      />
+      <span
+        className="pointer-events-none absolute inset-y-0 right-0 w-1.5"
+        style={{ background: 'var(--ab-tile-hue)' }}
+        aria-hidden="true"
+      />
       <CashRegister weight="fill" className="size-4" />
-      Caja
-      <span className="font-semibold opacity-80">· {abierta ? 'Abierta' : 'Cerrada'}</span>
+      Abrir Mostrador
+      <span className="font-semibold opacity-70">· {abierta ? 'Abierta' : 'Cerrada'}</span>
     </button>
   );
 }
@@ -115,6 +124,7 @@ export function EscritorioPage() {
   const { session, can } = useAuth();
   const navigate = useNavigate();
   const openPalette = usePalette();
+  const { tiles, setTiles } = useTiles();
   const [config, setConfig] = useState<Config>(readConfig);
   const [configuring, setConfiguring] = useState(false);
   const [summary, setSummary] = useState<EscritorioSummary | null>(null);
@@ -176,7 +186,8 @@ export function EscritorioPage() {
 
   return (
     <div className="pt-4">
-      {/* Barra: los dos logos a la izquierda; sucursal, caja y cuenta a la derecha. */}
+      {/* Barra: logo y nombre de la empresa a la izquierda; sucursal y cuenta a la
+          derecha. El brand "abasto.ai" vive en el footer. */}
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-soft pb-4">
         <div className="flex items-center gap-3">
           {session?.tenant.logo ? (
@@ -190,16 +201,10 @@ export function EscritorioPage() {
               {session?.tenant.name.slice(0, 1).toUpperCase()}
             </span>
           )}
-          <div className="leading-tight">
-            <p className="font-display text-grande font-semibold">{session?.tenant.name}</p>
-            <p className="type-display mt-0.5 text-chico text-muted-foreground">
-              abasto<span className="text-primary">.ai</span>
-            </p>
-          </div>
+          <p className="font-display text-grande font-semibold">{session?.tenant.name}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <BranchSwitcher />
-          {can('caja.operar') && <CajaPill summary={summary} />}
           <UserMenu />
         </div>
       </header>
@@ -212,7 +217,7 @@ export function EscritorioPage() {
         </h1>
         <ResumenDelDia summary={summary} />
         {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
-          <p className="mt-3 text-[12px] text-muted-foreground">
+          <p className="mt-3 text-chico text-muted-foreground">
             Estás viendo {session.user.branch.name}.{' '}
             <button
               type="button"
@@ -225,25 +230,13 @@ export function EscritorioPage() {
         )}
       </div>
 
-      <div className="mb-3 mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-chico text-placeholder">
-          {visible.length} {visible.length === 1 ? 'módulo' : 'módulos'}
-        </p>
+      <div className="mb-3 mt-5 flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={openPalette}
-            className="group flex items-center gap-2 rounded-md border border-accent-border bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-          >
-            <Sparkle weight="fill" className="size-3.5" />
-            Preguntar
-            <kbd className="rounded bg-primary/10 px-1 font-mono text-[10px] font-normal group-hover:bg-primary-foreground/15">Ctrl K</kbd>
-          </button>
           <button
             type="button"
             onClick={() => setConfiguring(v => !v)}
             className={cn(
-              'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors',
+              'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
               configuring
                 ? 'border-accent-border bg-accent text-accent-foreground'
                 : 'border-border text-muted-foreground hover:bg-card hover:text-foreground',
@@ -252,10 +245,48 @@ export function EscritorioPage() {
             <GearSix weight={configuring ? 'fill' : 'regular'} className="size-3.5" />
             {configuring ? 'Listo' : 'Configurar'}
           </button>
+          {configuring && (
+            <div
+              role="group"
+              aria-label="Tamaño de las tarjetas"
+              className="flex items-center overflow-hidden rounded-md border border-border"
+            >
+              {(['chica', 'mediana', 'grande'] as const).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTiles(t)}
+                  aria-pressed={tiles === t}
+                  className={cn(
+                    'px-2.5 py-1.5 text-xs font-semibold transition-colors first-letter:uppercase',
+                    tiles === t ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-card hover:text-foreground',
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={openPalette}
+            className="group flex items-center gap-2 rounded-md border border-accent-border bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+          >
+            <Sparkle weight="fill" className="size-3.5" />
+            Preguntar
+            <kbd className="rounded bg-primary/10 px-1 font-mono text-micro font-normal group-hover:bg-primary-foreground/15">Ctrl K</kbd>
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3">
+      {/* La caja, abajo de Configurar/Preguntar y pegada al grid. */}
+      {can('caja.operar') && (
+        <div className="mb-3">
+          <AbrirMostrador summary={summary} />
+        </div>
+      )}
+
+      <div className={cn('escritorio-grid grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3', tiles === 'chica' ? 'tiles-chica' : tiles === 'grande' ? 'tiles-grande' : '')}>
         {visible.map(m => {
           const stat = summary ? statFor(m.key, summary) : null;
           return (
@@ -274,7 +305,7 @@ export function EscritorioPage() {
               }
             }}
             className={cn(
-              'module-tile group relative flex min-h-[168px] flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 transition-colors',
+              'module-tile group relative flex min-h-[168px] flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
               configuring && 'cursor-grab active:cursor-grabbing',
               dragKey === m.key && 'opacity-40',
             )}
@@ -292,18 +323,25 @@ export function EscritorioPage() {
                 )}
               />
             )}
-            <div className="module-tile__chip flex size-9 items-center justify-center rounded-md">
-              <m.Icon weight="fill" className="size-[18px]" />
+            <div className="flex items-center gap-2">
+              <span className="module-tile__chip flex size-8 shrink-0 items-center justify-center rounded-md">
+                <m.Icon weight="fill" className="size-[18px]" />
+              </span>
+              <h2 className="min-w-0 flex-1 truncate font-display text-h3 font-semibold tracking-tight [text-wrap:balance]">
+                {m.label}
+              </h2>
             </div>
-            <p className="text-chico font-semibold">{m.label}</p>
-            {/* Renglón de contexto: espacio fijo en todas las tarjetas, misma
-                fuente y tamaño, pegado abajo. El dato clave crece por encima. */}
-            <div className="mt-auto flex min-h-[3.25rem] flex-col justify-end">
+            {/* El dato clave arriba; la descripción abajo es SOLO lo que el dato
+                no cuenta (ejemplos, tendencia, plazos) — una línea, lo útil.
+                Monocromo: el dato no se tiñe; si algo está mal, lo dice el puntito. */}
+            <div className="mt-auto flex flex-col justify-end">
               {stat && (
-                <p className="tabular font-display text-h3 font-semibold leading-tight tracking-tight">{stat.value}</p>
+                <p className="tabular truncate font-display text-h2 font-semibold leading-tight tracking-tight">
+                  {stat.value}
+                </p>
               )}
-              <p className="mt-0.5 line-clamp-2 min-h-[2rem] text-micro leading-snug text-muted-foreground">
-                {sentence(stat?.hint ?? m.blurb)}
+              <p className="mt-0.5 truncate text-micro leading-snug text-muted-foreground">
+                {cap(stat?.hint ?? m.blurb)}
               </p>
             </div>
 
@@ -317,7 +355,7 @@ export function EscritorioPage() {
                     e.preventDefault();
                     toggleHidden(m.key);
                   }}
-                  className="absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground shadow-float hover:bg-background hover:text-foreground"
+                  className="absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground shadow-float hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
                 >
                   <EyeSlash className="size-3.5" />
                 </button>
@@ -344,11 +382,6 @@ export function EscritorioPage() {
           ))}
         </div>
       )}
-
-      <p className="mt-8 max-w-prose border-t border-border pt-4 text-micro text-placeholder">
-        El escritorio muestra lo que tu rango puede tocar. Tocá una tarjeta para entrar y
-        <kbd className="mx-1 rounded border border-border px-1 font-mono">Esc</kbd> te trae de vuelta.
-      </p>
     </div>
   );
 }

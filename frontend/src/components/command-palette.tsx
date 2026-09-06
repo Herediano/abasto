@@ -67,7 +67,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               onChange={e => setQuery(e.target.value)}
               placeholder="Buscá un módulo…"
               autoComplete="off"
-              className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-placeholder"
+              className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-placeholder"
             />
           </form>
 
@@ -83,7 +83,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                     type="button"
                     onClick={() => go(m.path)}
                     className={cn(
-                      'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-[13px] transition-colors',
+                      'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-chico transition-colors',
                       'hover:bg-background',
                     )}
                   >
@@ -92,14 +92,14 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                     </span>
                     <span className="min-w-0">
                       <span className="block font-medium">{m.label}</span>
-                      <span className="block truncate text-[11px] text-placeholder">{m.blurb}</span>
+                      <span className="block truncate text-micro text-placeholder">{m.blurb}</span>
                     </span>
                   </button>
                 ))}
               </>
             )}
 
-            <p className="mt-1 flex items-center gap-2 border-t border-border-soft px-2.5 pb-1 pt-2.5 text-[11px] text-placeholder">
+            <p className="mt-1 flex items-center gap-2 border-t border-border-soft px-2.5 pb-1 pt-2.5 text-micro text-placeholder">
               <Sparkle className="size-3.5" />
               Preguntarle a la IA sobre el negocio — próximamente.
             </p>

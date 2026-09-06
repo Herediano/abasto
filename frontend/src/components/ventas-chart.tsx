@@ -143,7 +143,7 @@ export function VentasChart() {
             onClick={() => setMetric(m.key)}
             aria-pressed={metric === m.key}
             className={cn(
-              'rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors',
+              'rounded-full border px-2.5 py-1 text-micro font-semibold transition-colors',
               metric === m.key ? 'border-accent-border bg-accent text-accent-foreground' : 'border-border text-muted-foreground hover:text-foreground',
             )}
           >
@@ -222,7 +222,7 @@ export function VentasChart() {
               })}
             </svg>
             {hover != null && derived.cur[hover] != null && (
-              <div className="pointer-events-none absolute -top-1 left-0 rounded-md border border-border bg-foreground px-2.5 py-1.5 text-[11px] leading-tight text-background shadow-float"
+              <div className="pointer-events-none absolute -top-1 left-0 rounded-md border border-border bg-foreground px-2.5 py-1.5 text-micro leading-tight text-background shadow-float"
                 style={{ left: `${((hover + 0.5) / serie.labels.length) * 100}%`, transform: 'translate(-50%,-100%)' }}
               >
                 <b className="font-mono">{serie.labels[hover]}</b>
@@ -247,12 +247,12 @@ export function VentasChart() {
             )}
           </>
         )}
-        <div className="mt-2.5 flex gap-4 text-[11px] text-muted-foreground">
+        <div className="mt-2.5 flex gap-4 text-micro text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <i className="inline-block size-2.5 rounded-[2px]" style={{ background: 'var(--color-primary)' }} /> Período actual
+            <i className="inline-block size-2.5 rounded-sm" style={{ background: 'var(--color-primary)' }} /> Período actual
           </span>
           <span className="flex items-center gap-1.5">
-            <i className="inline-block size-2.5 rounded-[2px]" style={{ background: 'color-mix(in srgb, var(--color-muted-foreground) 34%, transparent)' }} /> Período anterior
+            <i className="inline-block size-2.5 rounded-sm" style={{ background: 'color-mix(in srgb, var(--color-muted-foreground) 34%, transparent)' }} /> Período anterior
           </span>
         </div>
       </div>

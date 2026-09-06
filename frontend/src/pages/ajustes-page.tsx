@@ -42,7 +42,7 @@ function Section({ title, description, children }: { title: string; description?
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <h2 className="font-display text-grande font-semibold">{title}</h2>
-      {description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
+      {description && <p className="mt-0.5 text-chico text-muted-foreground">{description}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -50,7 +50,7 @@ function Section({ title, description, children }: { title: string; description?
 
 function Divider({ label }: { label: string }) {
   return (
-    <p className="mb-3 mt-9 text-[11px] font-semibold text-placeholder first:mt-0">{label}</p>
+    <p className="mb-3 mt-9 text-micro font-semibold text-placeholder first:mt-0">{label}</p>
   );
 }
 
@@ -106,8 +106,8 @@ function ModuleLink({ moduleKey }: { moduleKey: string }) {
         <m.Icon weight="fill" className="size-4" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-semibold">{m.label}</span>
-        <span className="block truncate text-[11px] text-muted-foreground">{m.blurb}</span>
+        <span className="block text-chico font-semibold">{m.label}</span>
+        <span className="block truncate text-micro text-muted-foreground">{m.blurb}</span>
       </span>
       <ArrowRight className="size-4 shrink-0 text-placeholder" />
     </button>
@@ -173,7 +173,7 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
           <Button type="submit" disabled={!dirty || state === 'saving'}>
             {state === 'saving' && <Spinner />} {state === 'ok' ? <><Check /> Guardado</> : 'Guardar cambios'}
           </Button>
-          <span className="text-[12px] text-muted-foreground">Empresa: <strong className="font-medium text-foreground">{session.tenant.name}</strong> · Rango: <strong className="font-medium text-foreground">{user.rangoName}</strong></span>
+          <span className="text-chico text-muted-foreground">Empresa: <strong className="font-medium text-foreground">{session.tenant.name}</strong> · Rango: <strong className="font-medium text-foreground">{user.rangoName}</strong></span>
         </div>
       </form>
     </Section>
@@ -238,8 +238,8 @@ function Choice({ label, hint, children }: { label: string; hint?: string; child
   return (
     <div className="grid gap-2 sm:grid-cols-[220px_1fr] sm:items-center">
       <div>
-        <p className="text-[13px] font-medium">{label}</p>
-        {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+        <p className="text-chico font-medium">{label}</p>
+        {hint && <p className="text-micro text-muted-foreground">{hint}</p>}
       </div>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
@@ -252,7 +252,7 @@ function Toggle({ active, onClick, children }: { active: boolean; onClick: () =>
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[13px] font-medium transition-colors',
+        'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-chico font-medium transition-colors',
         active ? 'border-accent-border bg-accent text-accent-foreground' : 'border-border text-muted-foreground hover:bg-background hover:text-foreground',
       )}
     >
@@ -303,7 +303,7 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <div className="flex items-center gap-4">
-          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-background">
+          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-background">
             {logo
               ? <img src={logo} alt="Logo" className="size-full object-contain" />
               : <span className="font-display text-lg font-bold text-primary">{name.slice(0, 1).toUpperCase() || 'A'}</span>}
@@ -318,7 +318,7 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
                 <Trash /> Quitar
               </Button>
             )}
-            <p className="w-full text-[11px] text-muted-foreground">
+            <p className="w-full text-micro text-muted-foreground">
               Por ahora se muestra en el escritorio. En los comprobantes, más adelante.
             </p>
           </div>
@@ -423,11 +423,11 @@ function SucursalesSection({ token }: { token: string }) {
             >
               <Storefront weight="fill" className={cn('size-4 shrink-0', b.isActive ? 'text-primary' : 'text-placeholder')} />
               <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-[13px] font-semibold">
+                <span className="flex items-center gap-2 text-chico font-semibold">
                   {b.name}
                   {!b.isActive && <span className="rounded bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground">Inactiva</span>}
                 </span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-micro text-muted-foreground">
                   {b.code}{b.address ? ` · ${b.address}` : ''} · {b._count?.warehouses ?? 0} {b._count?.warehouses === 1 ? 'depósito' : 'depósitos'}
                   {b._count?.users ? ` · ${b._count.users} ${b._count.users === 1 ? 'usuario' : 'usuarios'}` : ''}
                 </span>

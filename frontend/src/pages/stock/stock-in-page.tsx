@@ -376,7 +376,7 @@ export function StockInPage() {
                           nombre. Mismo buscador que la caja. */}
                       <Button type="button" variant="outline" className="shrink-0" onClick={() => setBuscarOpen(true)} title="Buscar producto (F3)">
                         <MagnifyingGlass />
-                        <kbd className="font-mono text-[10px] text-placeholder">F3</kbd>
+                        <kbd className="font-mono text-micro text-placeholder">F3</kbd>
                       </Button>
                     </div>
                   </Field>

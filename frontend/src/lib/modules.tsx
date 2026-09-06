@@ -111,25 +111,27 @@ export const moduleByKey = (key: string) => BY_KEY.get(key);
  * (pastilla del ícono, franja al costado, borde, lavado del fondo) para
  * reconocer el módulo por color sin leer.
  *
- * Receta (ver docs/diseno.md, "Color por módulo"): OKLCH con luz y croma fijos,
- * se rota solo el matiz. El arco esquiva el verde (~150°, acción) y el
- * naranja/ámbar (~40–110°, aviso); se usa de 195° a 360° y de 0° a 25°, con ≥
- * ~21° de separación entre módulos —repartidos por toda la rueda para que ningún
- * par sea confundible. Los que viven adentro de Ajustes comparten un pizarra de
+ * Receta (ver docs/diseno.md, "Color por módulo"): un ARCOÍRIS completo a
+ * croma alto (0.20) y luz media fija (0.60), con ≥ ~30° de matiz entre
+ * módulos. El arco NO esquiva verde ni ámbar (decisión del dueño del producto:
+ * distinguibilidad por encima de la jerarquía de semáforo; la alerta la lleva
+ * el puntito, no el color de identidad). Cada tarjeta es de una familia
+ * diferente: rojo, naranja, oro, lima, esmeralda, cian, azul, violeta,
+ * magenta. Los que viven adentro de Ajustes comparten un pizarra de
  * croma bajo —son sistema, no operación.
  */
-const OP = (h: number) => `oklch(0.62 0.15 ${h})`;
+const OP = (h: number) => `oklch(0.60 0.20 ${h})`;
 const HUES: Record<string, string> = {
-  caja: OP(195),
-  vencimientos: OP(216),
-  proveedores: OP(237),
-  ventas: OP(258),
-  turnos: OP(279),
-  productos: OP(300),
-  precios: OP(321),
-  clientes: OP(342),
-  stock: OP(3),
-  reposicion: OP(24),
+  stock: OP(20), // rojo carmín
+  reposicion: OP(50), // naranja
+  vencimientos: OP(85), // oro
+  precios: OP(125), // lima
+  productos: OP(160), // esmeralda
+  proveedores: OP(195), // cian
+  ventas: OP(240), // azul
+  turnos: OP(285), // violeta
+  clientes: OP(330), // magenta
+  caja: OP(210), // cian-azul (no es tarjeta, pero conserva su matiz)
   depositos: 'oklch(0.55 0.03 255)', // pizarra: estructura, no operación
   ajustes: 'oklch(0.55 0.03 255)', // pizarra: vive en el menú de la cuenta
   usuarios: 'oklch(0.55 0.04 216)', // sistema, vive en Ajustes

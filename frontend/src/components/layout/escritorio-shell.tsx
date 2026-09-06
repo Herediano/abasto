@@ -43,10 +43,15 @@ export function EscritorioShell() {
 
   return (
     <PaletteContext.Provider value={() => setPalette(true)}>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 pb-16">
           <Outlet />
         </div>
+        <footer className="mx-auto flex max-w-6xl justify-end px-6 pb-10">
+          <p className="font-display text-h3 font-semibold tracking-tight text-muted-foreground">
+            abasto<span className="text-primary">.ai</span>
+          </p>
+        </footer>
         <CommandPalette open={palette} onOpenChange={setPalette} />
       </div>
     </PaletteContext.Provider>

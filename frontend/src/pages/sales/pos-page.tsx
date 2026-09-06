@@ -651,7 +651,7 @@ export function PosPage() {
               <span>IVA</span><span>+ {quote ? money(quote.taxTotal) : money(0)}</span>
             </div>
             <div className="mt-2">
-              <p className="text-[11px] font-semibold text-placeholder">Total a cobrar</p>
+              <p className="text-micro font-semibold text-placeholder">Total a cobrar</p>
               <p className="type-display text-display leading-none tabular">
                 {quote ? money(quote.total) : money(0)}
               </p>
@@ -659,7 +659,7 @@ export function PosPage() {
           </div>
 
           <div className="flex flex-1 flex-col gap-3 p-4">
-            <p className="text-[11px] font-semibold text-placeholder">Medio de pago</p>
+            <p className="text-micro font-semibold text-placeholder">Medio de pago</p>
             <div className="grid grid-cols-2 gap-2">
               {PAGOS.map(p => {
                 const bloqueado = p.id === 'account' && !customerId;
@@ -826,7 +826,7 @@ export function PosPage() {
               </p>
 
               <div className="flex flex-col gap-2">
-                <p className="text-[11px] font-semibold text-placeholder">Movimientos del turno</p>
+                <p className="text-micro font-semibold text-placeholder">Movimientos del turno</p>
                 <div className="max-h-40 overflow-y-auto rounded-md border border-border">
                   {!shift.movements?.length ? (
                     <p className="p-4 text-center text-sm text-muted-foreground">Sin movimientos todavía.</p>
@@ -911,7 +911,7 @@ export function PosPage() {
               </div>
               {!!closeResult.totalsByMethod?.length && (
                 <div className="flex flex-col gap-1 text-sm">
-                  <p className="text-[11px] font-semibold text-placeholder">Por medio de pago</p>
+                  <p className="text-micro font-semibold text-placeholder">Por medio de pago</p>
                   {closeResult.totalsByMethod.map(t => (
                     <div key={t.method} className="flex justify-between tabular">
                       <span className="capitalize text-muted-foreground">{PAGOS.find(p => p.id === t.method)?.label ?? t.method}</span>

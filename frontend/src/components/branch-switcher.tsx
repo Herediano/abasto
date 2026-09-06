@@ -71,11 +71,11 @@ export function BranchSwitcher() {
               key={b.id}
               type="button"
               onClick={() => pick(b.id)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] hover:bg-background"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-chico hover:bg-background"
             >
               <Storefront weight={b.id === active.id ? 'fill' : 'regular'} className={cn('size-4', b.id === active.id ? 'text-primary' : 'text-muted-foreground')} />
               <span className="flex-1 truncate">{b.name}</span>
-              {b.id === home?.id && <span className="text-[10px] text-placeholder">la tuya</span>}
+              {b.id === home?.id && <span className="text-micro text-placeholder">la tuya</span>}
               {b.id === active.id && <Check className="size-3.5 text-primary" />}
             </button>
           ))}
@@ -83,7 +83,7 @@ export function BranchSwitcher() {
             <button
               type="button"
               onClick={() => pick(home!.id)}
-              className="mt-1 flex w-full items-center gap-2 border-t border-border-soft px-2 pb-1.5 pt-2 text-left text-[12px] font-medium text-primary hover:underline"
+              className="mt-1 flex w-full items-center gap-2 border-t border-border-soft px-2 pb-1.5 pt-2 text-left text-chico font-medium text-primary hover:underline"
             >
               <ArrowUUpLeft className="size-3.5" /> Volver a {home!.name}
             </button>

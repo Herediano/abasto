@@ -79,14 +79,14 @@ export function AuthLayout({ title, description, children }: { title?: string; d
       <div className="relative w-full max-w-md">
         <div
           ref={tarjetaRef}
-          className="rounded-xl border border-border/70 bg-card/75 p-10 pt-9 shadow-float ring-1 ring-inset ring-white/10 backdrop-blur-xl"
+          className="rounded-lg border border-border/70 bg-card/75 p-10 pt-9 shadow-float ring-1 ring-inset ring-white/10 backdrop-blur-xl"
         >
           {/* La marca vive adentro de la tarjeta ahora: es lo que tiene
               colisión contra los íconos del fondo, y afuera quedaba flotando
               sin nada que la proteja. Un solo bloque con la marca y el texto
               pegados -- separarlos en dos secciones los alejaba de más. */}
           <div className="mb-6 text-center">
-            <p className="font-display text-3xl font-bold tracking-tight text-foreground">
+            <p className="type-display text-3xl font-bold tracking-tight text-foreground">
               abasto<span className="text-primary">.ai</span>
             </p>
             {title && <h1 className="mt-4 text-lg font-semibold">{title}</h1>}

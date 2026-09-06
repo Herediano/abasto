@@ -302,7 +302,7 @@ export function CustomersPage() {
               </form>
 
               <div className="flex flex-col gap-1">
-                <p className="text-[11px] font-semibold text-placeholder">Movimientos</p>
+                <p className="text-micro font-semibold text-placeholder">Movimientos</p>
                 <div className="max-h-64 overflow-y-auto rounded-md border border-border">
                   {cuenta.movements.length === 0 ? (
                     <p className="p-4 text-center text-sm text-muted-foreground">Sin movimientos todavía.</p>
