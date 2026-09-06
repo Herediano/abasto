@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
+import { StockNav } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type LowStockProduct } from '@/lib/api';
@@ -28,6 +29,7 @@ export function RestockPage() {
   return (
     <>
       <PageHeader title="Reposición" description="Productos con stock mínimo configurado que hoy están por debajo de ese umbral." />
+      <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       <Card>
         <CardContent className="p-0">

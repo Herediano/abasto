@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
+import { StockNav } from '@/components/stock-nav';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type StockItem } from '@/lib/api';
@@ -83,6 +84,7 @@ export function ExpirationsPage() {
   return (
     <>
       <PageHeader title="Vencimientos" description="Stock con fecha de vencimiento, ordenado del más próximo al más lejano." />
+      <StockNav />
       {error && !editing && <Alert variant="destructive">{error}</Alert>}
       <Card>
         <CardContent className="p-0">

@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
+import { StockNav } from '@/components/stock-nav';
 import { ProductPicker } from '@/components/product-picker';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
@@ -76,6 +77,7 @@ export function StockOutPage() {
   return (
     <>
       <PageHeader title="Registrar egreso" description="Descuenta stock por venta, transferencia o ajuste." />
+      <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       <Card>
         <CardContent>

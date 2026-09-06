@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
+import { StockNav } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -109,6 +110,7 @@ export function StockHistoryPage() {
   return (
     <>
       <PageHeader title="Historial de movimientos" description="Todos los movimientos de stock del tenant, del más reciente al más antiguo." />
+      <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       <Card>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

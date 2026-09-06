@@ -1,6 +1,6 @@
 import {
-  ArrowLineDown, ArrowLineUp, ArrowsClockwise, Barcode, CashRegister, ClockCounterClockwise,
-  Gear, Hourglass, Package, Receipt, ShieldCheck, Tag, Truck, UsersThree, Vault, Warehouse,
+  ArrowsClockwise, Barcode, CashRegister, Gear, Hourglass, Package, Receipt,
+  ShieldCheck, Tag, Truck, UsersThree, Vault, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
 
@@ -48,21 +48,6 @@ export const MODULES: ModuleDef[] = [
     key: 'stock', label: 'Stock', path: '/stock', permission: 'stock.ver', Icon: Package,
     blurb: 'Existencias por producto, depósito y lote.', crumb: 'Escritorio /',
     motif: '<path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8M12 12v8"/>',
-  },
-  {
-    key: 'ingreso', label: 'Ingreso', path: '/stock/in', permission: 'stock.mover', Icon: ArrowLineDown,
-    blurb: 'Recepción de mercadería y facturas de compra.', crumb: 'Escritorio /',
-    motif: '<rect x="3" y="12" width="18" height="9" rx="1"/><path d="M12 3v7M8.5 6.5L12 10l3.5-3.5"/>',
-  },
-  {
-    key: 'egreso', label: 'Egreso', path: '/stock/out', permission: 'stock.mover', Icon: ArrowLineUp,
-    blurb: 'Salidas de stock y ajustes hacia abajo.', crumb: 'Escritorio /',
-    motif: '<rect x="3" y="12" width="18" height="9" rx="1"/><path d="M12 10V3M8.5 6.5L12 3l3.5 3.5"/>',
-  },
-  {
-    key: 'historial', label: 'Historial de stock', path: '/stock/history', permission: 'stock.ver', Icon: ClockCounterClockwise,
-    blurb: 'El libro de movimientos, entrada por entrada.', crumb: 'Escritorio /',
-    motif: '<path d="M4 12a8 8 0 108-8 8 8 0 00-7 4"/><path d="M4 3v5h5"/><path d="M12 8v4l3 2"/>',
   },
   {
     key: 'vencimientos', label: 'Vencimientos', path: '/stock/expirations', permission: 'stock.ver', Icon: Hourglass,

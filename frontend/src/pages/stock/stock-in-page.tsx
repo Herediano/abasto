@@ -12,6 +12,7 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
+import { StockNav } from '@/components/stock-nav';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -324,6 +325,7 @@ export function StockInPage() {
   return (
     <>
       <PageHeader title={editingInvoice ? 'Corregir factura' : 'Ingreso por factura'} description="La sucursal/depósito se toma del usuario logueado. Al confirmar se genera el ingreso de stock." />
+      <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       {editingInvoice && <Alert>Estás corrigiendo una factura confirmada. La original queda registrada en el historial.</Alert>}
 
