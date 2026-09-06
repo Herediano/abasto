@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
+import { VentasChart } from '@/components/ventas-chart';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -70,6 +71,8 @@ export function SalesHistoryPage() {
     <>
       <PageHeader title="Ventas" description="Comprobantes emitidos. Una venta no se edita: se anula y el stock vuelve." />
       {error && <Alert variant="destructive">{error}</Alert>}
+
+      <VentasChart />
 
       <Card>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
