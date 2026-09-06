@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { ArrowRight, CashRegister, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle } from '@phosphor-icons/react';
+import { CashRegister, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BranchSwitcher } from '@/components/branch-switcher';
 import { UserMenu } from '@/components/user-menu';
@@ -35,7 +35,7 @@ function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
   if (items.length === 0) return <p className="mt-3 text-[13px] text-muted-foreground">Hoy no hay nada urgente.</p>;
   return (
     <div className="mt-4">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-placeholder">Para mirar hoy</p>
+      <p className="mb-2 text-chico font-medium text-muted-foreground">Para mirar hoy</p>
       <div className="flex flex-wrap gap-2">
         {items.map(it => (
           <Link
@@ -43,12 +43,11 @@ function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
             to={it.path}
             viewTransition
             style={{ ['--h' as string]: hueFor(it.module) }}
-            className="pendiente-chip group flex items-center gap-2 rounded-md border px-3 py-1.5 text-[12.5px] font-medium text-foreground transition-colors"
+            className="pendiente-chip flex items-center gap-2 rounded-md border px-3 py-1.5 text-chico font-medium text-foreground transition-colors"
           >
             <span className="pendiente-chip__dot size-1.5 rounded-full" />
             {it.label}
             {it.count > 1 && <span className="font-semibold text-muted-foreground">{it.count}</span>}
-            <ArrowRight className="size-3 text-placeholder transition-transform group-hover:translate-x-0.5" />
           </Link>
         ))}
       </div>
@@ -74,12 +73,11 @@ function CajaPill({ summary }: { summary: EscritorioSummary | null }) {
       type="button"
       onClick={() => navigate('/ventas')}
       style={{ background: paleta.bg, color: paleta.text, borderColor: paleta.border }}
-      className="group flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold transition-transform hover:-translate-y-px"
+      className="flex h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold"
     >
       <CashRegister weight="fill" className="size-4" />
       Caja
       <span className="font-semibold opacity-80">· {abierta ? 'Abierta' : 'Cerrada'}</span>
-      <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
     </button>
   );
 }
@@ -185,16 +183,16 @@ export function EscritorioPage() {
             <img
               src={session.tenant.logo}
               alt={session.tenant.name}
-              className="size-12 shrink-0 rounded-xl border border-border bg-card object-contain p-1"
+              className="size-11 shrink-0 rounded-md border border-border bg-card object-contain p-1"
             />
           ) : (
-            <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary font-display text-xl font-bold text-primary-foreground">
+            <span className="type-display grid size-11 shrink-0 place-items-center rounded-md bg-primary text-h3 text-primary-foreground">
               {session?.tenant.name.slice(0, 1).toUpperCase()}
             </span>
           )}
           <div className="leading-tight">
-            <p className="font-display text-[19px] font-bold tracking-tight">{session?.tenant.name}</p>
-            <p className="font-display text-[14px] font-bold tracking-tight text-muted-foreground">
+            <p className="font-display text-grande font-semibold">{session?.tenant.name}</p>
+            <p className="type-display mt-0.5 text-chico text-muted-foreground">
               abasto<span className="text-primary">.ai</span>
             </p>
           </div>
@@ -208,8 +206,8 @@ export function EscritorioPage() {
 
       {/* Saludo y qué hay para mirar. */}
       <div className="mt-4">
-        <p className="text-[11.5px] font-medium uppercase tracking-wide text-placeholder first-letter:uppercase">{hoy}</p>
-        <h1 className="mt-1 font-display text-[24px] font-bold leading-tight tracking-tight sm:text-[27px]">
+        <p className="text-chico text-placeholder first-letter:uppercase">{hoy}</p>
+        <h1 className="type-display mt-1 text-h1 leading-tight">
           {saludo()}{nombre && `, ${nombre}`}.
         </h1>
         <ResumenDelDia summary={summary} />
@@ -228,7 +226,7 @@ export function EscritorioPage() {
       </div>
 
       <div className="mb-3 mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[13px] text-placeholder">
+        <p className="text-chico text-placeholder">
           {visible.length} {visible.length === 1 ? 'módulo' : 'módulos'}
         </p>
         <div className="flex items-center gap-2">
@@ -276,8 +274,8 @@ export function EscritorioPage() {
               }
             }}
             className={cn(
-              'module-tile group relative flex min-h-[168px] flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 transition-all',
-              configuring ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5',
+              'module-tile group relative flex min-h-[168px] flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 transition-colors',
+              configuring && 'cursor-grab active:cursor-grabbing',
               dragKey === m.key && 'opacity-40',
             )}
           >
@@ -294,17 +292,17 @@ export function EscritorioPage() {
                 )}
               />
             )}
-            <div className="module-tile__chip flex size-9 items-center justify-center rounded-[10px]">
+            <div className="module-tile__chip flex size-9 items-center justify-center rounded-md">
               <m.Icon weight="fill" className="size-[18px]" />
             </div>
-            <p className="text-[13px] font-semibold">{m.label}</p>
+            <p className="text-chico font-semibold">{m.label}</p>
             {/* Renglón de contexto: espacio fijo en todas las tarjetas, misma
                 fuente y tamaño, pegado abajo. El dato clave crece por encima. */}
             <div className="mt-auto flex min-h-[3.25rem] flex-col justify-end">
               {stat && (
-                <p className="tabular font-display text-[18px] font-bold leading-tight tracking-tight">{stat.value}</p>
+                <p className="tabular font-display text-h3 font-semibold leading-tight tracking-tight">{stat.value}</p>
               )}
-              <p className="mt-0.5 line-clamp-2 min-h-[2rem] text-[11px] leading-snug text-muted-foreground">
+              <p className="mt-0.5 line-clamp-2 min-h-[2rem] text-micro leading-snug text-muted-foreground">
                 {sentence(stat?.hint ?? m.blurb)}
               </p>
             </div>
@@ -325,9 +323,6 @@ export function EscritorioPage() {
                 </button>
               </>
             )}
-            {!configuring && !stat?.flag && (
-              <ArrowRight className="absolute right-4 top-4 size-4 text-placeholder opacity-0 transition-opacity group-hover:opacity-100" />
-            )}
           </Link>
           );
         })}
@@ -335,7 +330,7 @@ export function EscritorioPage() {
 
       {configuring && hidden.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-[11px] uppercase tracking-wider text-placeholder">Ocultos</span>
+          <span className="text-chico text-placeholder">Ocultos</span>
           {hidden.map(m => (
             <button
               key={m.key}
@@ -350,7 +345,7 @@ export function EscritorioPage() {
         </div>
       )}
 
-      <p className="mt-8 max-w-prose border-t border-border pt-4 text-[11.5px] text-placeholder">
+      <p className="mt-8 max-w-prose border-t border-border pt-4 text-micro text-placeholder">
         El escritorio muestra lo que tu rango puede tocar. Tocá una tarjeta para entrar y
         <kbd className="mx-1 rounded border border-border px-1 font-mono">Esc</kbd> te trae de vuelta.
       </p>

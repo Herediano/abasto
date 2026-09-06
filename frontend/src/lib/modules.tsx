@@ -107,28 +107,33 @@ const BY_KEY = new Map(MODULES.map(m => [m.key, m]));
 export const moduleByKey = (key: string) => BY_KEY.get(key);
 
 /**
- * Un matiz propio y saturado por módulo. No dice estado —es identidad—: se
- * aplica en grande (pastilla del ícono, franja al costado, borde, lavado del
- * fondo) para reconocer el módulo por color sin leer. Los diez de la grilla
- * están repartidos por toda la rueda para que ningún par sea confundible, y
- * ninguno del mismo aire cae al lado de otro en la grilla de 5 columnas.
- * Ver docs/diseno.md.
+ * Un matiz propio por módulo. No dice estado —es identidad—: se aplica en grande
+ * (pastilla del ícono, franja al costado, borde, lavado del fondo) para
+ * reconocer el módulo por color sin leer.
+ *
+ * Receta (ver docs/diseno.md, "Color por módulo"): OKLCH con luz y croma fijos,
+ * se rota solo el matiz. El arco esquiva el verde (~150°, acción) y el
+ * naranja/ámbar (~40–110°, aviso); se usa de 195° a 360° y de 0° a 25°, con ≥
+ * ~21° de separación entre módulos —repartidos por toda la rueda para que ningún
+ * par sea confundible. Los que viven adentro de Ajustes comparten un pizarra de
+ * croma bajo —son sistema, no operación.
  */
+const OP = (h: number) => `oklch(0.62 0.15 ${h})`;
 const HUES: Record<string, string> = {
-  ventas: '#2563eb', // azul
-  turnos: '#7c3aed', // violeta
-  stock: '#ea580c', // naranja
-  vencimientos: '#0d9488', // teal
-  reposicion: '#c026d3', // magenta
-  productos: '#65a30d', // verde lima
-  precios: '#ca8a04', // dorado
-  proveedores: '#4338ca', // índigo
-  clientes: '#db2777', // rosa
-  depositos: '#64748b', // pizarra
-  caja: '#16a34a', // verde (no va en la grilla; el botón cambia de color según el turno)
-  ajustes: '#64748b', // pizarra (vive en el menú de la cuenta)
-  usuarios: '#0e7490', // cian oscuro (vive en Ajustes)
-  rangos: '#9f1239', // granate (vive en Ajustes)
+  caja: OP(195),
+  vencimientos: OP(216),
+  proveedores: OP(237),
+  ventas: OP(258),
+  turnos: OP(279),
+  productos: OP(300),
+  precios: OP(321),
+  clientes: OP(342),
+  stock: OP(3),
+  reposicion: OP(24),
+  depositos: 'oklch(0.55 0.03 255)', // pizarra: estructura, no operación
+  ajustes: 'oklch(0.55 0.03 255)', // pizarra: vive en el menú de la cuenta
+  usuarios: 'oklch(0.55 0.04 216)', // sistema, vive en Ajustes
+  rangos: 'oklch(0.50 0.06 3)', // sistema, vive en Ajustes
 };
 export const hueFor = (key: string) => HUES[key] ?? 'var(--color-primary)';
 

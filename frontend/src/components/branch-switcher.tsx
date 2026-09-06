@@ -65,7 +65,7 @@ export function BranchSwitcher() {
 
       {open && (
         <div role="menu" className="absolute right-0 z-40 mt-1.5 w-60 rounded-lg border border-border bg-card p-1.5 shadow-float">
-          <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wider text-placeholder">Ver la sucursal</p>
+          <p className="px-2 pb-1.5 pt-1 text-chico font-medium text-placeholder">Ver la sucursal</p>
           {branches.map(b => (
             <button
               key={b.id}

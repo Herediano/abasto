@@ -38,7 +38,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
 
       <div className="flex items-center gap-2.5" style={{ viewTransitionName: 'module-hero' }}>
         {mod && (
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-accent text-accent-foreground">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
             <mod.Icon weight="fill" className="size-4" />
           </div>
         )}

@@ -116,7 +116,7 @@ export function VentasChart() {
       </div>
 
       <div className="mt-3.5 flex flex-wrap items-end gap-4">
-        <p className="font-display text-[clamp(28px,4vw,40px)] font-bold leading-none tracking-tight tabular-nums">
+        <p className="type-display text-display leading-none tabular-nums">
           {derived ? fmt(metric, derived.totalCur) : '—'}
         </p>
         {derived?.dp != null && (

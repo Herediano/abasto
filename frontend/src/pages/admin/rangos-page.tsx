@@ -179,7 +179,7 @@ export function RangosPage() {
             <div className="flex max-h-[50vh] flex-col gap-4 overflow-y-auto pr-1">
               {areas.map(([area, perms]) => (
                 <div key={area} className="rounded-md border border-border">
-                  <p className="border-b border-border-soft bg-subtle px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-placeholder">{area}</p>
+                  <p className="border-b border-border-soft bg-subtle px-3 py-1.5 text-xs font-semibold text-placeholder">{area}</p>
                   <div className="divide-y divide-border-soft">
                     {perms.map(p => (
                       <label key={p.key} className="flex items-center gap-2.5 px-3 py-2 text-sm">

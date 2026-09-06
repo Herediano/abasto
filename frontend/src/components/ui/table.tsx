@@ -38,7 +38,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLT
   <th
     ref={ref}
     className={cn(
-      'h-10 whitespace-nowrap px-4 text-left align-middle text-[11px] font-semibold uppercase tracking-widest text-placeholder',
+      'h-10 whitespace-nowrap px-4 text-left align-middle text-chico font-semibold text-muted-foreground',
       className,
     )}
     {...props}

@@ -41,7 +41,7 @@ const iniciales = (name: string) =>
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-card p-5">
-      <h2 className="font-display text-[15px] font-bold tracking-tight">{title}</h2>
+      <h2 className="font-display text-grande font-semibold">{title}</h2>
       {description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
       <div className="mt-4">{children}</div>
     </section>
@@ -50,7 +50,7 @@ function Section({ title, description, children }: { title: string; description?
 
 function Divider({ label }: { label: string }) {
   return (
-    <p className="mb-3 mt-9 text-[11px] font-semibold uppercase tracking-widest text-placeholder first:mt-0">{label}</p>
+    <p className="mb-3 mt-9 text-[11px] font-semibold text-placeholder first:mt-0">{label}</p>
   );
 }
 
@@ -109,7 +109,7 @@ function ModuleLink({ moduleKey }: { moduleKey: string }) {
         <span className="block text-[13px] font-semibold">{m.label}</span>
         <span className="block truncate text-[11px] text-muted-foreground">{m.blurb}</span>
       </span>
-      <ArrowRight className="size-4 shrink-0 text-placeholder transition-transform group-hover:translate-x-0.5" />
+      <ArrowRight className="size-4 shrink-0 text-placeholder" />
     </button>
   );
 }
@@ -425,7 +425,7 @@ function SucursalesSection({ token }: { token: string }) {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2 text-[13px] font-semibold">
                   {b.name}
-                  {!b.isActive && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Inactiva</span>}
+                  {!b.isActive && <span className="rounded bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground">Inactiva</span>}
                 </span>
                 <span className="block text-[11px] text-muted-foreground">
                   {b.code}{b.address ? ` · ${b.address}` : ''} · {b._count?.warehouses ?? 0} {b._count?.warehouses === 1 ? 'depósito' : 'depósitos'}

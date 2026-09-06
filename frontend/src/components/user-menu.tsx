@@ -119,7 +119,7 @@ export function UserMenu() {
 
           <div className="border-t border-border-soft pt-2">
             {accounts.length > 1 && (
-              <p className="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-placeholder">Cambiar de cuenta</p>
+              <p className="px-1.5 pb-1 text-chico font-medium text-placeholder">Cambiar de cuenta</p>
             )}
             <AccountList variant="switch" onNavigate={() => setOpen(false)} />
           </div>

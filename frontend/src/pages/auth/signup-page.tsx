@@ -38,7 +38,7 @@ export function SignupPage() {
         {/* Dos bloques, no seis campos sueltos: primero la empresa que se
             está dando de alta, después la cuenta de quien la crea. */}
         <div className="grid gap-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-placeholder">Tu empresa</p>
+          <p className="text-[10px] font-semibold text-placeholder">Tu empresa</p>
           <Field label="Nombre de la empresa" htmlFor="tenantName">
             <Input id="tenantName" required autoFocus value={form.tenantName} onChange={e => setForm({ ...form, tenantName: e.target.value })} />
           </Field>
@@ -50,7 +50,7 @@ export function SignupPage() {
           </Field>
         </div>
         <div className="grid gap-4 border-t border-border-soft pt-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-placeholder">Tu cuenta</p>
+          <p className="text-[10px] font-semibold text-placeholder">Tu cuenta</p>
           <Field label="Tu nombre" htmlFor="name">
             <Input id="name" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           </Field>

@@ -76,7 +76,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nada coincide con «{query}».</p>
             ) : (
               <>
-                <p className="px-2 pb-1 pt-1.5 text-[10px] uppercase tracking-wider text-placeholder">Ir a un módulo</p>
+                <p className="px-2 pb-1 pt-1.5 text-chico font-medium text-placeholder">Ir a un módulo</p>
                 {results.map(m => (
                   <button
                     key={m.key}

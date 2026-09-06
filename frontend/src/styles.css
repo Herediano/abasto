@@ -101,10 +101,26 @@
 }
 
 @theme inline {
-  /* Spline Sans para trabajar, Bricolage para los títulos y la marca. */
-  --font-sans: "Spline Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque", "Spline Sans", ui-sans-serif, sans-serif;
+  /*
+   * Archivo (Omnibus-Type, Buenos Aires) para todo: marca, títulos, cuerpo,
+   * interfaz y los números de los datos. La jerarquía sale del peso y el ancho
+   * de la misma familia, no de una segunda cara. El monoespacio es la excepción:
+   * solo identificadores de máquina (SKU, código de barras, lote, CUIT, token).
+   * Ver docs/diseno.md.
+   */
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Archivo", ui-sans-serif, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Escala tipográfica: pasos fijos, no se inventan tamaños entre medio. */
+  --text-micro: 0.6875rem;
+  --text-chico: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-grande: 1rem;
+  --text-h3: 1.125rem;
+  --text-h2: 1.5rem;
+  --text-h1: 1.75rem;
+  --text-display: 2.75rem;
 
   --color-background: var(--ab-ground);
   --color-foreground: var(--ab-ink);
@@ -173,11 +189,22 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  /* Los títulos llevan la cara con carácter; el resto, la tranquila. */
+  /* Una sola familia; el carácter del título sale del peso y el tracking. */
   h1, h2, h3 {
     font-family: var(--font-display);
+    font-weight: 600;
     letter-spacing: -0.02em;
     text-wrap: balance;
+  }
+  /*
+   * El único ancho Expanded del sistema: la marca (abasto.ai) y el número hero
+   * de Ventas. En ningún otro lado. Ver docs/diseno.md, "Tipografía".
+   */
+  .type-display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-stretch: 115%;
+    letter-spacing: -0.03em;
   }
   /* Toda columna de números se alinea por dígito. */
   .tabular {
@@ -253,10 +280,11 @@
   border-color: color-mix(in srgb, var(--ab-tile-hue) 50%, var(--color-border));
   background: color-mix(in srgb, var(--ab-tile-hue) 9%, var(--color-card));
 }
+/* En hover se intensifican el borde y el motivo, y nada más: la tarjeta no se
+   levanta ni proyecta sombra. Ver docs/diseno.md, "Movimiento". */
 .module-tile:hover {
   border-color: color-mix(in srgb, var(--ab-tile-hue) 78%, var(--color-border));
   background: color-mix(in srgb, var(--ab-tile-hue) 14%, var(--color-card));
-  box-shadow: var(--ab-shadow-2), 0 8px 24px -12px color-mix(in srgb, var(--ab-tile-hue) 55%, transparent);
 }
 .module-tile__spine {
   background: var(--ab-tile-hue);
