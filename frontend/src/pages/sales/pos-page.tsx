@@ -437,13 +437,13 @@ export function PosPage() {
   if (!shift) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-6 bg-background p-4">
-        <p className="font-display text-2xl font-bold tracking-tight">
+        <p className="type-display text-h1 leading-none">
           abasto<span className="text-primary">.ai</span>
         </p>
-        <div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-sm">
+        <div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-float">
           <div className="mb-4 flex items-center gap-2.5">
             <Wallet weight="fill" className="size-5 text-primary" />
-            <h1 className="font-display text-lg font-bold">Abrir turno</h1>
+            <h1 className="font-display text-h3 font-semibold">Abrir turno</h1>
           </div>
           {!session?.user.warehouseId ? (
             <div className="flex flex-col gap-3">
@@ -530,7 +530,7 @@ export function PosPage() {
               autoFocus
               aria-label="Código de barras"
               placeholder="Escaneá o escribí el código"
-              className="min-w-0 flex-1 bg-transparent text-lg outline-none placeholder:text-placeholder"
+              className="min-w-0 flex-1 bg-transparent text-grande outline-none placeholder:text-placeholder"
               value={barcode}
               onChange={e => setBarcode(e.target.value)}
               onKeyDown={e => {
@@ -550,7 +550,7 @@ export function PosPage() {
             {items.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 p-10 text-center">
                 <ShoppingCartSimple className="size-10 text-placeholder" />
-                <p className="font-display text-lg font-semibold">Carrito vacío</p>
+                <p className="font-display text-h3 font-semibold">Carrito vacío</p>
                 <p className="text-sm text-muted-foreground">Escaneá un producto para empezar la venta.</p>
               </div>
             ) : (
@@ -700,7 +700,7 @@ export function PosPage() {
 
             <Button
               size="lg"
-              className="mt-auto h-14 font-display text-lg font-bold"
+              className="mt-auto h-14 font-display text-h3 font-bold"
               onClick={abrirCobrar}
               disabled={!puedeCobrar}
             >
@@ -819,7 +819,7 @@ export function PosPage() {
           {recargoTotal !== 0 && (
             <div className="flex items-center justify-between border-t border-border-soft pt-2 text-sm">
               <span className="text-muted-foreground">Total a cobrar (con {recargoTotal > 0 ? 'recargo' : 'descuento'})</span>
-              <span className="font-display text-lg font-bold tabular">{money(totalACobrar)}</span>
+              <span className="font-display text-h3 font-bold tabular">{money(totalACobrar)}</span>
             </div>
           )}
 

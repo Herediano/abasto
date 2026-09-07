@@ -446,7 +446,7 @@ export function PricesPage() {
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold">Listas de precios</h2>
+              <h2 className="font-display text-grande font-semibold">Listas de precios</h2>
               <p className="text-sm text-muted-foreground">
                 Una lista puede tener precios propios o calcularse desde otra con un recargo.
               </p>
@@ -502,7 +502,7 @@ export function PricesPage() {
       <Card>
         <CardContent className="flex flex-col gap-4">
           <div>
-            <h2 className="text-sm font-semibold">Planillas de precios</h2>
+            <h2 className="font-display text-grande font-semibold">Planillas de precios</h2>
             <p className="text-sm text-muted-foreground">Exportá el listado o actualizá precios desde un Excel.</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -520,7 +520,7 @@ export function PricesPage() {
       <Card>
         <CardContent className="flex flex-col gap-4">
           <div>
-            <h2 className="text-sm font-semibold">Actualización masiva</h2>
+            <h2 className="font-display text-grande font-semibold">Actualización masiva</h2>
             <p className="text-sm text-muted-foreground">Calculá primero para ver qué cambia. Nada se guarda hasta que apliques.</p>
           </div>
 
@@ -679,7 +679,7 @@ export function PricesPage() {
         <Card>
           <CardContent className="flex flex-col gap-3">
             <div>
-              <h2 className="text-sm font-semibold">Cambios programados</h2>
+              <h2 className="font-display text-grande font-semibold">Cambios programados</h2>
               <p className="text-sm text-muted-foreground">
                 Todavía no rigen. Entran solos en la fecha indicada; hasta entonces se pueden cancelar.
               </p>
@@ -717,7 +717,7 @@ export function PricesPage() {
       <Card>
         <CardContent className="flex flex-col gap-3">
           <div>
-            <h2 className="text-sm font-semibold">Criterios guardados</h2>
+            <h2 className="font-display text-grande font-semibold">Criterios guardados</h2>
             <p className="text-sm text-muted-foreground">
               Configuraciones que se vuelven a aplicar con un clic. Recalculan con los valores del momento, no repiten los precios de la vez pasada.
             </p>
@@ -771,7 +771,7 @@ export function PricesPage() {
       <Card>
         <CardContent className="flex flex-col gap-3">
           <div>
-            <h2 className="text-sm font-semibold">Política de redondeo</h2>
+            <h2 className="font-display text-grande font-semibold">Política de redondeo</h2>
             <p className="text-sm text-muted-foreground">
               Tramos por monto: un producto de $500 y otro de $50.000 no se redondean igual. Se usan al elegir «Según los tramos configurados».
             </p>
@@ -814,7 +814,7 @@ export function PricesPage() {
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold">Promociones</h2>
+              <h2 className="font-display text-grande font-semibold">Promociones</h2>
               <p className="text-sm text-muted-foreground">
                 Se configuran acá y quedan listas. <strong>Todavía no se aplican</strong>: hace falta el módulo de ventas para que
                 se descuenten al cobrar.
@@ -869,7 +869,7 @@ export function PricesPage() {
       <Card>
         <CardContent className="flex flex-col gap-3">
           <div>
-            <h2 className="text-sm font-semibold">Auditoría de precios</h2>
+            <h2 className="font-display text-grande font-semibold">Auditoría de precios</h2>
             <p className="text-sm text-muted-foreground">
               Cada cambio de precio, con su origen y quién lo hizo. Es sólo lectura: nada de esto se edita ni se borra.
             </p>

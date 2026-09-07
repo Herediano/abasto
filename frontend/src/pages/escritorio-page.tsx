@@ -393,14 +393,14 @@ export function EscritorioPage() {
             {stat?.flag && !configuring && (
               <span
                 className={cn(
-                  'absolute right-3.5 top-3.5 size-[7px] rounded-full',
+                  'absolute right-3.5 top-3.5 size-2 rounded-full',
                   stat.flag === 'hot' ? 'bg-destructive' : 'bg-warning',
                 )}
               />
             )}
             <div className="flex items-center gap-2">
               <span className="module-tile__chip flex size-8 shrink-0 items-center justify-center rounded-md">
-                <m.Icon weight="fill" className="size-[18px]" />
+                <m.Icon weight="fill" className="size-5" />
               </span>
               <h2 className="min-w-0 flex-1 truncate font-display text-h3 font-semibold tracking-tight [text-wrap:balance]">
                 {m.label}

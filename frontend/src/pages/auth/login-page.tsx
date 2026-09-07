@@ -86,10 +86,10 @@ export function AuthLayout({ title, description, children }: { title?: string; d
               sin nada que la proteja. Un solo bloque con la marca y el texto
               pegados -- separarlos en dos secciones los alejaba de más. */}
           <div className="mb-6 text-center">
-            <p className="type-display text-3xl font-bold tracking-tight text-foreground">
+            <p className="type-display text-h1 leading-none text-foreground">
               abasto<span className="text-primary">.ai</span>
             </p>
-            {title && <h1 className="mt-4 text-lg font-semibold">{title}</h1>}
+            {title && <h1 className="mt-4 text-h3 font-semibold">{title}</h1>}
             <p className={title ? 'mt-1 text-sm text-muted-foreground' : 'mt-2 text-sm text-muted-foreground'}>{description}</p>
           </div>
           <div className="grid gap-6">{children}</div>

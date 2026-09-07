@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
+import { Section } from '@/components/section';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage } from '@/lib/api';
@@ -36,14 +37,7 @@ function Tile({ label, value, hint }: { label: string; value: string; hint?: str
 }
 
 function Bloque({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {children}
-      </CardContent>
-    </Card>
-  );
+  return <Section title={title}>{children}</Section>;
 }
 
 export function ReportesPage() {

@@ -108,7 +108,7 @@ export function UsersPage() {
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={UsersIcon} title="Sin usuarios" description="Todavía no hay usuarios en este tenant." />
+            <EmptyState icon={UsersIcon} title="Sin usuarios" description="Todavía no hay nadie más en el equipo." />
           ) : (
             <Table>
               <TableHeader>
