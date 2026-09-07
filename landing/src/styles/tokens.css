@@ -1,10 +1,17 @@
 /*
  * Sistema de diseño "Yerba" — copia fiel de los tokens de la app
  * (frontend/src/styles.css). Se mantiene sincronizado a mano: si cambian
- * los --ab-* en la app, se copian acá. Verde pino sobre neutros arena.
+ * los --ab-* en la app, se copian acá. Cian vibrante sobre neutros arena.
  *
- * El verde es la única acción sólida: si aparece verde lleno, se toca.
+ * El cian es la única acción sólida: si aparece cian lleno, se toca.
  * Ámbar = aviso, rojo = problema. El color es estado, nunca identidad.
+ *
+ * Paleta cian (base #0FA3C1 · escala Tailwind-esque):
+ *   50 #E7F6FA · 100 #CBEAF3 · 200 #A9DCE9 · 300 #6CC6DA · 400 #35B0CC
+ *   500 #0FA3C1 · 600 #0D8CA8 · 700 #0B748C · 800 #0A5E73 · 900 #084A5A
+ *
+ * Claro es la paleta de :root; el oscuro se redefine para el sistema y para
+ * un data-theme explícito (lo maneja el ThemeToggle).
  */
 
 :root {
@@ -17,14 +24,14 @@
   --ab-line: #e7e1d6;
   --ab-line-soft: #f0ece4;
 
-  --ab-primary: #1f7355;
-  --ab-primary-soft: #e3eee8;
-  --ab-primary-line: #bfdace;
+  --ab-primary: #0b748c;
+  --ab-primary-soft: #e7f6fa;
+  --ab-primary-line: #a9dce9;
   --ab-on-solid: #ffffff;
 
   --ab-warn: #a76322;
   --ab-warn-soft: #f7ede0;
-  --ab-ok: #2f7d4f;
+  --ab-ok: #0d8ca8;
   --ab-danger: #a6453b;
   --ab-danger-soft: #f8e9e7;
 
@@ -35,6 +42,7 @@
   color-scheme: light;
 }
 
+/* Oscuro del sistema — no se aplica si el usuario eligió claro a mano. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --ab-ground: #101512;
@@ -46,14 +54,14 @@
     --ab-line: #262c27;
     --ab-line-soft: #212722;
 
-    --ab-primary: #57b994;
-    --ab-primary-soft: #1b2a24;
-    --ab-primary-line: #2e4a3e;
-    --ab-on-solid: #06130d;
+    --ab-primary: #3fc7e2;
+    --ab-primary-soft: #0f2a33;
+    --ab-primary-line: #265663;
+    --ab-on-solid: #04232c;
 
     --ab-warn: #d08a3c;
     --ab-warn-soft: #2a2118;
-    --ab-ok: #63b37c;
+    --ab-ok: #45c9e3;
     --ab-danger: #e0776a;
     --ab-danger-soft: #2b1b19;
 
@@ -65,6 +73,7 @@
   }
 }
 
+/* Oscuro elegido a mano — gana sobre el sistema en claro. */
 :root[data-theme="dark"] {
   --ab-ground: #101512;
   --ab-surface: #191e1a;
@@ -75,14 +84,14 @@
   --ab-line: #262c27;
   --ab-line-soft: #212722;
 
-  --ab-primary: #57b994;
-  --ab-primary-soft: #1b2a24;
-  --ab-primary-line: #2e4a3e;
-  --ab-on-solid: #06130d;
+  --ab-primary: #3fc7e2;
+  --ab-primary-soft: #0f2a33;
+  --ab-primary-line: #265663;
+  --ab-on-solid: #04232c;
 
   --ab-warn: #d08a3c;
   --ab-warn-soft: #2a2118;
-  --ab-ok: #63b37c;
+  --ab-ok: #45c9e3;
   --ab-danger: #e0776a;
   --ab-danger-soft: #2b1b19;
 

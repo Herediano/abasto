@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { CashRegister, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle, type Icon } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BranchSwitcher } from '@/components/branch-switcher';
+import { NotificationBell } from '@/components/notification-bell';
 import { UserMenu } from '@/components/user-menu';
 import { usePalette } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
 import { Kbd } from '@/components/ui/kbd';
 import { api } from '@/lib/api';
 import { hora as fmtHora } from '@/lib/format';
-import { pendientes, statFor, type EscritorioSummary } from '@/lib/escritorio';
+import { statFor, type EscritorioSummary } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
 import { useTiles } from '@/lib/prefs';
 import { setActiveBranch } from '@/lib/branch';
@@ -25,37 +26,6 @@ function saludo(): string {
   if (h >= 5 && h < 12) return 'Buen día';
   if (h < 20) return 'Buenas tardes';
   return 'Buenas noches';
-}
-
-/**
- * "Para mirar hoy" bajo el saludo: un chip por pendiente, cada uno con el color
- * del módulo al que lleva (mismo tratamiento que las tarjetas, en chico). En
- * calma, una sola frase. Cargando, un placeholder discreto.
- */
-function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
-  if (!summary) return <p className="mt-3 text-chico text-placeholder">Cargando el estado del negocio…</p>;
-  const items = pendientes(summary);
-  if (items.length === 0) return <p className="mt-3 text-chico text-muted-foreground">Hoy no hay nada urgente.</p>;
-  return (
-    <div className="mt-4">
-      <p className="mb-2 text-chico font-medium text-muted-foreground">Para mirar hoy</p>
-      <div className="flex flex-wrap gap-2">
-        {items.map(it => (
-          <Link
-            key={it.path}
-            to={it.path}
-            viewTransition
-            style={{ ['--h' as string]: hueFor(it.module) }}
-            className="pendiente-chip flex items-center gap-2 rounded-md border px-3 py-1.5 text-chico font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
-          >
-            <span className="pendiente-chip__dot size-1.5 rounded-full" />
-            {it.label}
-            {it.count > 1 && <span className="font-semibold text-muted-foreground">{it.count}</span>}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 /**
@@ -279,17 +249,17 @@ export function EscritorioPage() {
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <BranchSwitcher />
+          <NotificationBell summary={summary} />
           <UserMenu />
         </div>
       </header>
 
-      {/* Saludo y qué hay para mirar. */}
+      {/* Saludo (y lo que hay para mirar, en la campana de arriba). */}
       <div className="mt-4">
         <p className="text-chico text-placeholder first-letter:uppercase">{hoy}</p>
         <h1 className="type-display mt-1 text-h1 leading-tight">
           {saludo()}{nombre && `, ${nombre}`}.
         </h1>
-        <ResumenDelDia summary={summary} />
         {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
           <p className="mt-3 text-chico text-muted-foreground">
             Estás viendo {session.user.branch.name}.{' '}

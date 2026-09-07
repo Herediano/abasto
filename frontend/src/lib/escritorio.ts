@@ -115,7 +115,7 @@ export function statFor(key: string, s: EscritorioSummary): TileStat | null {
 export type Pendiente = { label: string; count: number; path: string; module: string };
 
 /**
- * Lo que hay "para mirar hoy" — alimenta los chips bajo el saludo del
+ * Lo que hay "para mirar hoy" — alimenta la campana de notificaciones del
  * escritorio. Cada uno lleva el color del módulo al que enlaza (ver `hueFor`),
  * para que se lean como una versión mínima de su tarjeta. `label` es una frase
  * con mayúscula inicial; `count` va como número al lado cuando es más de uno.

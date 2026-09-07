@@ -69,7 +69,7 @@ export function useTiles() {
   return { tiles, setTiles };
 }
 
-/** Los colores de avatar que ofrece Ajustes. El primero es el verde de la marca. */
+/** Los colores de avatar que ofrece Ajustes. El primero es el cian de la marca. */
 export const AVATAR_COLORS = [
-  '#1f7355', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#0d9488', '#475569',
+  '#0b748c', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#0d9488', '#475569',
 ];

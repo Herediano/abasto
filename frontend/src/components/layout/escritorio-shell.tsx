@@ -4,7 +4,7 @@ import { CommandPalette } from '@/components/command-palette';
 import { useAuth } from '@/lib/auth-context';
 
 /** Abre el buscador de Ctrl+K desde cualquier pantalla (botón "Preguntar" del escritorio, etc.). */
-const PaletteContext = createContext<() => void>(() => {});
+export const PaletteContext = createContext<() => void>(() => {});
 export const usePalette = () => useContext(PaletteContext);
 
 /**

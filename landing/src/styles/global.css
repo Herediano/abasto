@@ -8,9 +8,9 @@
  * (claro/oscuro/auto) no necesita recompilar nada.
  */
 @theme inline {
-  --font-sans: "Spline Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque", "Spline Sans", ui-sans-serif, sans-serif;
-  --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-background: var(--ab-ground);
   --color-foreground: var(--ab-ink);
@@ -170,9 +170,6 @@
   .u-section {
     padding-block: clamp(4rem, 2.5rem + 7vw, 8rem);
     position: relative;
-  }
-  .u-section--tint {
-    background: color-mix(in oklab, var(--ab-surface-2) 70%, transparent);
   }
   .u-head {
     max-width: 46rem;

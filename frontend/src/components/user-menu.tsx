@@ -35,7 +35,7 @@ function haceCuanto(d: Date): string {
  * de la sesión, alternar entre cuentas y el acceso a Ajustes. El nombre y el
  * email aparecen una sola vez.
  */
-export function UserMenu() {
+export function UserMenu({ className }: { className?: string }) {
   const { session, accounts, switchAccount, logout } = useAuth();
   const { theme, ciclar } = useTheme();
   const navigate = useNavigate();
@@ -54,6 +54,7 @@ export function UserMenu() {
         className={cn(
           'group flex h-10 items-center gap-2 rounded-lg border bg-card pl-1.5 pr-2.5 transition-colors',
           'border-border hover:bg-background data-[state=open]:border-accent-border data-[state=open]:bg-accent',
+          className,
         )}
       >
         <span className="grid size-7 place-items-center rounded-full font-display text-micro font-bold text-white" style={{ background: color }}>

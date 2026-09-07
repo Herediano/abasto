@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  * pantallas —stock, ventas, caja, escritorio— vuelven a pedir sus datos ya
  * acotados a la sucursal elegida.
  */
-export function BranchSwitcher() {
+export function BranchSwitcher({ className }: { className?: string }) {
   const { session } = useAuth();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [open, setOpen] = useState(false);
@@ -42,6 +42,7 @@ export function BranchSwitcher() {
           fueraDeCasa
             ? 'border-transparent bg-warning/10 text-warning'
             : 'border-border bg-card text-muted-foreground hover:bg-background hover:text-foreground',
+          className,
         )}
       >
         <Storefront weight="fill" className="size-3.5" />

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, Check, Moon, Percent, PencilSimple, Plus, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
+import { ArrowRight, Check, Layout, Moon, Percent, PencilSimple, Plus, Sidebar, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -211,11 +211,44 @@ function PasswordSection({ token }: { token: string }) {
 
 function PreferenciasSection() {
   const { theme, setTheme } = useTheme();
+  const { session, refresh } = useAuth();
+  const [state, setState] = useState<'idle' | 'saving' | 'ok'>('idle');
+  const [error, setError] = useState('');
+  const mode = session?.user.preferences?.uiMode ?? 'blocks';
+
+  async function pick(next: 'blocks' | 'classic') {
+    if (!session || next === mode) return;
+    setState('saving');
+    setError('');
+    try {
+      await api('/auth/me', { method: 'PATCH', body: JSON.stringify({ preferences: { uiMode: next } }) }, session.accessToken);
+      await refresh();
+      setState('ok');
+      setTimeout(() => setState('idle'), 1200);
+    } catch (err) {
+      setError(errorMessage(err));
+      setState('idle');
+    }
+  }
+
   return (
-    <Section title="Preferencias" description="Se guardan en este dispositivo. La densidad de las tablas se cambia desde la cabecera de cada módulo.">
+    <Section title="Preferencias" description="El tema se guarda en este dispositivo; la interfaz, en tu cuenta">
+      {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <Choice label="Tema">
         <Toggle active={theme === 'light'} onClick={() => setTheme('light')}><Sun weight="fill" className="size-4" /> Claro</Toggle>
         <Toggle active={theme === 'dark'} onClick={() => setTheme('dark')}><Moon weight="fill" className="size-4" /> Oscuro</Toggle>
+      </Choice>
+      <Choice
+        label="Interfaz"
+        hint="Es tuya, no del equipo: entra con tu usuario y se aplica en cualquier dispositivo."
+      >
+        <Toggle active={mode === 'blocks'} onClick={() => void pick('blocks')} disabled={state === 'saving'}>
+          <Layout className="size-4" /> De tarjetas
+        </Toggle>
+        <Toggle active={mode === 'classic'} onClick={() => void pick('classic')} disabled={state === 'saving'}>
+          <Sidebar className="size-4" /> Con barra lateral
+        </Toggle>
+        {state === 'saving' && <Spinner className="m-1.5" />}
       </Choice>
     </Section>
   );
@@ -233,13 +266,15 @@ function Choice({ label, hint, children }: { label: string; hint?: string; child
   );
 }
 
-function Toggle({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Toggle({ active, disabled, onClick, children }: { active: boolean; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         'flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-chico font-medium transition-colors',
+        disabled && 'opacity-50',
         active ? 'border-accent-border bg-accent text-accent-foreground' : 'border-border text-muted-foreground hover:bg-background hover:text-foreground',
       )}
     >

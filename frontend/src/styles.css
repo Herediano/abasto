@@ -4,8 +4,8 @@
 /*
  * Sistema de diseño "Yerba" — ver docs/producto.md y la dirección visual.
  *
- * Verde pino sobre neutros arena cálidos. El verde es la única acción sólida
- * de la pantalla: si aparece verde, se puede tocar. El ámbar queda reservado
+ * Cian vibrante sobre neutros arena cálidos. El cian es la única acción sólida
+ * de la pantalla: si aparece cian, se puede tocar. El ámbar queda reservado
  * para avisos (sin precio, por vencer) y el rojo para lo que está mal.
  *
  * La paleta vive en variables crudas (--ab-*) y @theme las referencia con
@@ -24,26 +24,24 @@
   --ab-line: #e7e1d6;
   --ab-line-soft: #f0ece4;
 
-  --ab-primary: #1f7355;
-  --ab-primary-soft: #e3eee8;
-  --ab-primary-line: #bfdace;
+  --ab-primary: #0b748c;
+  --ab-primary-soft: #e7f6fa;
+  --ab-primary-line: #a9dce9;
   /* Texto sobre cualquier relleno sólido (primario, peligro, aviso). */
   --ab-on-solid: #ffffff;
 
   --ab-warn: #a76322;
   --ab-warn-soft: #f7ede0;
-  --ab-ok: #2f7d4f;
+  --ab-ok: #0d8ca8;
   --ab-danger: #a6453b;
   --ab-danger-soft: #f8e9e7;
 
   --ab-shadow-1: 0 1px 2px rgb(20 30 25 / 0.05);
   --ab-shadow-2: 0 1px 2px rgb(20 30 25 / 0.04), 0 10px 28px -14px rgb(20 30 25 / 0.16);
 
-  /* Fondo del sistema: base arena, un lavado tenue de verde pino por dos
-     esquinas y una fina grilla de puntos que pega con los motivos de línea.
-     Todo es pintura única, sin animar, sin imágenes, sin JS: no cuesta nada
-     en runtime. Ver docs/diseno.md, "Fondo". */
-  --ab-pattern: color-mix(in srgb, var(--ab-primary) 26%, transparent);
+  /* Fondo del sistema: base arena con un lavado tenue de cian por dos
+     esquinas. Todo es pintura única, sin animar, sin imágenes, sin JS: no
+     cuesta nada en runtime. Ver docs/diseno.md, "Fondo". */
 
   color-scheme: light;
 }
@@ -60,21 +58,19 @@
     --ab-line: #262c27;
     --ab-line-soft: #212722;
 
-    --ab-primary: #57b994;
-    --ab-primary-soft: #1b2a24;
-    --ab-primary-line: #2e4a3e;
-    --ab-on-solid: #06130d;
+    --ab-primary: #3fc7e2;
+    --ab-primary-soft: #0f2a33;
+    --ab-primary-line: #265663;
+    --ab-on-solid: #04232c;
 
     --ab-warn: #d08a3c;
     --ab-warn-soft: #2a2118;
-    --ab-ok: #63b37c;
+    --ab-ok: #45c9e3;
     --ab-danger: #e0776a;
     --ab-danger-soft: #2b1b19;
 
     --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
     --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
-
-    --ab-pattern: color-mix(in srgb, var(--ab-primary) 15%, transparent);
 
     color-scheme: dark;
   }
@@ -91,14 +87,14 @@
   --ab-line: #262c27;
   --ab-line-soft: #212722;
 
-  --ab-primary: #57b994;
-  --ab-primary-soft: #1b2a24;
-  --ab-primary-line: #2e4a3e;
-  --ab-on-solid: #06130d;
+  --ab-primary: #3fc7e2;
+  --ab-primary-soft: #0f2a33;
+  --ab-primary-line: #265663;
+  --ab-on-solid: #04232c;
 
   --ab-warn: #d08a3c;
   --ab-warn-soft: #2a2118;
-  --ab-ok: #63b37c;
+  --ab-ok: #45c9e3;
   --ab-danger: #e0776a;
   --ab-danger-soft: #2b1b19;
 
@@ -110,15 +106,15 @@
 
 @theme inline {
   /*
-   * Archivo (Omnibus-Type, Buenos Aires) para todo: marca, títulos, cuerpo,
-   * interfaz y los números de los datos. La jerarquía sale del peso y el ancho
-   * de la misma familia, no de una segunda cara. El monoespacio es la excepción:
-   * solo identificadores de máquina (SKU, código de barras, lote, CUIT, token).
-   * Ver docs/diseno.md.
+   * Geist (Vercel) para todo: marca, títulos, cuerpo, interfaz y los números de
+   * los datos. Una sola familia, más fina y neutra que la grotesca anterior —
+   * la jerarquía sale del peso y del tracking, no de una segunda cara. El
+   * monoespacio es la excepción: solo identificadores de máquina (SKU, código
+   * de barras, lote, CUIT, token).
    */
-  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Archivo", ui-sans-serif, sans-serif;
-  --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist", ui-sans-serif, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Escala tipográfica: pasos fijos, no se inventan tamaños entre medio. */
   --text-micro: 0.6875rem;
@@ -195,11 +191,10 @@
     background-color: var(--color-background);
     background-image:
       radial-gradient(1500px 850px at 12% -10%, color-mix(in srgb, var(--ab-primary) 15%, transparent), transparent 62%),
-      radial-gradient(1400px 750px at 112% 120%, color-mix(in srgb, var(--ab-primary) 12%, transparent), transparent 58%),
-      radial-gradient(circle, var(--ab-pattern) 1px, transparent 1.5px);
-    background-size: auto, auto, 24px 24px;
-    background-repeat: no-repeat, no-repeat, repeat;
-    background-position: 0 0, 100% 100%, 0 0;
+      radial-gradient(1400px 750px at 112% 120%, color-mix(in srgb, var(--ab-primary) 12%, transparent), transparent 58%);
+    background-size: auto, auto;
+    background-repeat: no-repeat, no-repeat;
+    background-position: 0 0, 100% 100%;
     background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
@@ -217,14 +212,11 @@
     letter-spacing: -0.02em;
     text-wrap: balance;
   }
-  /*
-   * El único ancho Expanded del sistema: la marca (abasto.ai) y el número hero
-   * de Ventas. En ningún otro lado. Ver docs/diseno.md, "Tipografía".
-   */
+  /* El único display del sistema: la marca (abasto.ai) y el número hero
+   * de Ventas. En ningún otro lado. Ver docs/diseno.md, "Tipografía". */
   .type-display {
     font-family: var(--font-display);
-    font-weight: 700;
-    font-stretch: 115%;
+    font-weight: 800;
     letter-spacing: -0.03em;
   }
   /* Toda columna de números se alinea por dígito. */
@@ -276,18 +268,19 @@
 }
 
 /*
- * Grilla de puntos del fondo de login/signup: textura de base fija (sin
- * animación propia) detrás de las cajas geométricas con física real que
- * dibuja AuthBackground en un <canvas> — ver frontend/src/components/
+ * Lavado de fondo de login/signup: una textura de base fija (sin animación
+ * propia) detrás de las cajas geométricas con física real que dibuja
+ * AuthBackground en un <canvas> — ver frontend/src/components/
  * auth-background.tsx. Usa las variables --ab-* del tema, así cambia sola
  * entre claro y oscuro.
  */
 .auth-aurora__grid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(var(--ab-soft) 1px, transparent 1px);
-  background-size: 26px 26px;
-  opacity: 0.12;
+  background-image:
+    radial-gradient(900px 600px at 20% 15%, color-mix(in srgb, var(--ab-primary) 10%, transparent), transparent 62%),
+    radial-gradient(800px 600px at 85% 90%, color-mix(in srgb, var(--ab-primary) 8%, transparent), transparent 60%);
+  opacity: 0.55;
   mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 40%, transparent 90%);
 }
 
@@ -321,7 +314,7 @@
  * (--ab-tile-hue, ver lib/modules.tsx) en cuatro lugares a la vez —la pastilla
  * del ícono, una franja al costado, el borde y un lavado del fondo— para
  * reconocer el módulo por color de un vistazo, sin leer. Es identidad, no
- * estado: no compite con el verde acción ni con el puntito de aviso. Ver
+ * estado: no compite con el cian acción ni con el puntito de aviso. Ver
  * docs/diseno.md.
  */
 .module-tile {
@@ -357,24 +350,8 @@
 :root:not([data-theme='light']) .module-tile__motif { opacity: 0.2; }
 :root:not([data-theme='light']) .module-tile:hover .module-tile__motif { opacity: 0.32; }
 
-/*
- * Chips de "para mirar hoy" bajo el saludo del escritorio: cada uno lleva el
- * matiz (--h) del módulo al que enlaza, con el mismo tratamiento que una
- * tarjeta en chico — así se lee como una versión mínima de esa tarjeta.
- */
-.pendiente-chip {
-  border-color: color-mix(in srgb, var(--h) 38%, var(--color-border));
-  background: color-mix(in srgb, var(--h) 8%, var(--color-card));
-}
-.pendiente-chip:hover {
-  border-color: color-mix(in srgb, var(--h) 66%, var(--color-border));
-  background: color-mix(in srgb, var(--h) 14%, var(--color-card));
-}
-.pendiente-chip__dot { background: var(--h); }
-:root:not([data-theme='light']) .pendiente-chip {
-  background: color-mix(in srgb, var(--h) 16%, var(--color-card));
-  border-color: color-mix(in srgb, var(--h) 36%, var(--color-border));
-}
+/* (Los pendientes del escritorio viven hoy en la campana de notificaciones —
+   ver frontend/src/components/notification-bell.tsx.) */
 
 /*
  * Densidad de las tablas (se cambia desde el botón de la cabecera del módulo,
