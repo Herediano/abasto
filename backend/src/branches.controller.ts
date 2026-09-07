@@ -6,6 +6,7 @@ import { AuthRequest } from './auth.types';
 
 /** El rango de fábrica que administra la empresa; único que da de alta sucursales. */
 const OWNER_RANGO = 'Dueño';
+const METODOS_PAGO = ['cash', 'card', 'transfer', 'qr', 'account'] as const;
 
 @Controller('branches')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -103,6 +104,59 @@ export class BranchesController {
       await tx.branch.delete({ where: { id } });
     });
     return { deleted: true };
+  }
+
+  // --- Recargo / descuento por medio de pago, por sucursal ---
+
+  /** Los ajustes de la sucursal activa, para que la caja los muestre antes de cobrar. */
+  @Get('payment-adjustments/current')
+  async currentAdjustments(@Req() request: AuthRequest) {
+    const branchId = request.user.branchId;
+    if (!branchId) return [];
+    const filas = await this.prisma.paymentAdjustment.findMany({ where: { tenantId: request.user.tenantId, branchId } });
+    return filas.map(f => ({ method: f.method, percent: Number(f.percent) }));
+  }
+
+  /** Los ajustes de una sucursal (Ajustes → La empresa). Devuelve los 5 medios, con 0 los que no tienen regla. */
+  @Get(':id/payment-adjustments')
+  async listAdjustments(@Req() request: AuthRequest, @Param('id') id: string) {
+    this.soloDueno(request);
+    const tenantId = request.user.tenantId;
+    if (!(await this.prisma.branch.findFirst({ where: { id, tenantId } }))) throw new NotFoundException('Sucursal no encontrada');
+    const filas = await this.prisma.paymentAdjustment.findMany({ where: { tenantId, branchId: id } });
+    const porMetodo = new Map(filas.map(f => [f.method, Number(f.percent)]));
+    return METODOS_PAGO.map(method => ({ method, percent: porMetodo.get(method) ?? 0 }));
+  }
+
+  /** Reemplaza los ajustes de una sucursal. `percent` 0 borra la regla; + recarga, − descuenta. */
+  @Put(':id/payment-adjustments')
+  async saveAdjustments(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
+    this.soloDueno(request);
+    const tenantId = request.user.tenantId;
+    if (!(await this.prisma.branch.findFirst({ where: { id, tenantId } }))) throw new NotFoundException('Sucursal no encontrada');
+    const raw = Array.isArray(body.adjustments) ? body.adjustments : [];
+    const limpios = raw.map(a => {
+      const row = a as Record<string, unknown>;
+      const method = String(row.method ?? '');
+      if (!METODOS_PAGO.includes(method as (typeof METODOS_PAGO)[number])) throw new BadRequestException(`Medio de pago inválido: ${method}`);
+      const percent = Number(row.percent);
+      if (!Number.isFinite(percent) || percent <= -100 || percent > 100) throw new BadRequestException('El porcentaje tiene que estar entre -100 y 100');
+      return { method: method as (typeof METODOS_PAGO)[number], percent: Math.round(percent * 1000) / 1000 };
+    });
+    await this.prisma.$transaction(async tx => {
+      for (const { method, percent } of limpios) {
+        if (percent === 0) {
+          await tx.paymentAdjustment.deleteMany({ where: { tenantId, branchId: id, method } });
+        } else {
+          await tx.paymentAdjustment.upsert({
+            where: { tenantId_branchId_method: { tenantId, branchId: id, method } },
+            create: { tenantId, branchId: id, method, percent },
+            update: { percent },
+          });
+        }
+      }
+    });
+    return this.listAdjustments(request, id);
   }
 
   private soloDueno(request: AuthRequest) {

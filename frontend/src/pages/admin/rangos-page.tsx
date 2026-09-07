@@ -166,12 +166,11 @@ export function RangosPage() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
-          <form onSubmit={guardar} className="flex flex-col gap-4">
-            <DialogHeader>
-              <DialogTitle>{editing?.name}</DialogTitle>
-            </DialogHeader>
-            {formError && <Alert variant="destructive">{formError}</Alert>}
-
+          <DialogHeader>
+            <DialogTitle>{editing?.name}</DialogTitle>
+          </DialogHeader>
+          {formError && <Alert variant="destructive">{formError}</Alert>}
+          <form onSubmit={guardar} className="grid gap-4">
             <Field label="Nombre" htmlFor="r-name">
               <Input id="r-name" required value={name} onChange={e => setName(e.target.value)} disabled={!puedeGestionar} />
             </Field>
@@ -199,7 +198,7 @@ export function RangosPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
-              {puedeGestionar && <Button type="submit" disabled={saving}>{saving && <Spinner />} Guardar</Button>}
+              {puedeGestionar && <Button type="submit" disabled={saving}>{saving && <Spinner />} Guardar cambios</Button>}
             </DialogFooter>
           </form>
         </DialogContent>
@@ -207,11 +206,11 @@ export function RangosPage() {
 
       <Dialog open={nuevoOpen} onOpenChange={setNuevoOpen}>
         <DialogContent>
-          <form onSubmit={crear} className="flex flex-col gap-4">
-            <DialogHeader>
-              <DialogTitle>Nuevo rango</DialogTitle>
-            </DialogHeader>
-            {nuevoError && <Alert variant="destructive">{nuevoError}</Alert>}
+          <DialogHeader>
+            <DialogTitle>Nuevo rango</DialogTitle>
+          </DialogHeader>
+          {nuevoError && <Alert variant="destructive">{nuevoError}</Alert>}
+          <form onSubmit={crear} className="grid gap-4">
             <Field label="Nombre" htmlFor="n-name">
               <Input id="n-name" required autoFocus value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} />
             </Field>

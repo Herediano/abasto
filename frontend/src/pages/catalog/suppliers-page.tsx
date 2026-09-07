@@ -150,27 +150,31 @@ export function SuppliersPage() {
             <DialogTitle>{editing ? 'Editar proveedor' : 'Nuevo proveedor'}</DialogTitle>
           </DialogHeader>
           {error && <Alert variant="destructive">{error}</Alert>}
-          <form className="grid gap-4" onSubmit={submit}>
-            <Field label="Nombre comercial" htmlFor="name">
-              <Input id="name" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-            </Field>
-            <Field label="Razón social" htmlFor="legalName" hint="(opcional)">
-              <Input id="legalName" value={form.legalName} onChange={e => setForm({ ...form, legalName: e.target.value })} />
-            </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="CUIT / Tax ID" htmlFor="taxId" hint="(opcional)">
-                <Input id="taxId" value={form.taxId} onChange={e => setForm({ ...form, taxId: e.target.value })} />
+          <form className="grid gap-6" onSubmit={submit}>
+            <div className="grid gap-3">
+              <Field label="Nombre comercial" htmlFor="name">
+                <Input id="name" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
               </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Razón social" htmlFor="legalName" hint="(opcional)">
+                  <Input id="legalName" value={form.legalName} onChange={e => setForm({ ...form, legalName: e.target.value })} />
+                </Field>
+                <Field label="CUIT" htmlFor="taxId" hint="(opcional)">
+                  <Input id="taxId" value={form.taxId} onChange={e => setForm({ ...form, taxId: e.target.value })} />
+                </Field>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Teléfono" htmlFor="phone" hint="(opcional)">
                 <Input id="phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
               </Field>
+              <Field label="Email" htmlFor="email" hint="(opcional)">
+                <Input id="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              </Field>
+              <Field label="Dirección" htmlFor="address" hint="(opcional)" className="col-span-2">
+                <Input id="address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+              </Field>
             </div>
-            <Field label="Email" htmlFor="email" hint="(opcional)">
-              <Input id="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-            </Field>
-            <Field label="Dirección" htmlFor="address" hint="(opcional)">
-              <Input id="address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
-            </Field>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar

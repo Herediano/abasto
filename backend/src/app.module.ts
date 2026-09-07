@@ -35,14 +35,16 @@ import { RangosService } from './rangos.service';
 import { PermissionGuard } from './permission.guard';
 import { EscritorioController } from './escritorio.controller';
 import { ReportesController } from './reportes.controller';
+import { CreditNotesController } from './credit-notes.controller';
+import { CreditNotesService } from './credit-notes.service';
 import { BootstrapService } from './bootstrap.service';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController, EscritorioController, ReportesController],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController, EscritorioController, ReportesController, CreditNotesController],
   providers: [
     StockService, AuthService, JwtAuthGuard, PermissionGuard, PurchasesService, PriceActivationService, PricesService, SalesService,
-    CajaService, CuentasCorrientesService, RangosService, BootstrapService,
+    CajaService, CuentasCorrientesService, RangosService, BootstrapService, CreditNotesService,
   ],
 })
 export class AppModule {}

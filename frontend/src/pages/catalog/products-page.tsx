@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ShoppingCartSimple, DownloadSimple, Eye, Package, PencilSimple, Plus, MagnifyingGlass, SlidersHorizontal, Trash, X } from '@phosphor-icons/react';
+import { ShoppingCartSimple, DownloadSimple, Eye, Package, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
+import { ListFilters } from '@/components/list-filters';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
 import { ExportMenu } from '@/components/export-menu';
@@ -61,7 +62,6 @@ export function ProductsPage() {
   const [savingCategory, setSavingCategory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [referenceHint, setReferenceHint] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Lo que está filtrado se muestra como chips: se ve de un vistazo qué está
   // acotando el listado y se saca de a uno sin abrir el panel.
@@ -279,46 +279,73 @@ export function ProductsPage() {
       />
       {catalogMessage && <Alert>{catalogMessage}</Alert>}
       {error && !open && <Alert variant="destructive">{error}</Alert>}
-      {/* Buscar está siempre a mano; el resto de los filtros vive en un panel y
-          lo que queda activo vuelve como chips que se sacan de a uno. Siete
-          selectores en fila era ruido: la mayoría de las veces se busca y nada
-          más. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1 sm:max-w-md">
-          <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-placeholder" />
-          <Input
-            aria-label="Buscar productos"
-            className="pl-9"
-            placeholder="Nombre, código de barras o interno"
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" onClick={() => setFiltersOpen(true)}>
-          <SlidersHorizontal /> Filtros
-          {activeFilters.length > 0 && (
-            <span className="ml-0.5 rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-foreground">
-              {activeFilters.length}
-            </span>
-          )}
-        </Button>
-        {activeFilters.map(f => (
-          <button
-            key={f.key}
-            type="button"
-            onClick={f.clear}
-            className="inline-flex items-center gap-1.5 rounded-full border border-accent-border bg-accent py-1 pl-3 pr-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-80"
-          >
-            {f.label}
-            <X className="size-3.5 opacity-70" />
-          </button>
-        ))}
-        {activeFilters.length > 1 && (
-          <Button variant="ghost" size="sm" onClick={() => activeFilters.forEach(f => f.clear())}>
-            Limpiar
-          </Button>
+      <ListFilters
+        search={searchInput}
+        onSearch={setSearchInput}
+        searchPlaceholder="Nombre, código de barras o interno"
+        searchLabel="Buscar productos"
+        activeFilters={activeFilters}
+      >
+        <Field label="Categoría" htmlFor="filter-category">
+          <Select id="filter-category" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+            <option value="">Todas</option>
+            <option value="none">Sin categoría</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Marca" htmlFor="filter-brand">
+          <Select id="filter-brand" value={brand} onChange={e => setBrand(e.target.value)}>
+            <option value="">Todas</option>
+            {brands.map(b => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Estado" htmlFor="filter-status">
+          <Select id="filter-status" value={status} onChange={e => setStatus(e.target.value)}>
+            <option value="active">Activos</option>
+            <option value="inactive">Desactivados</option>
+            <option value="all">Todos</option>
+          </Select>
+        </Field>
+        <Field label="Precio de venta" htmlFor="filter-priced">
+          <Select id="filter-priced" value={priced} onChange={e => setPriced(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="yes">Con precio</option>
+            <option value="no">Sin precio</option>
+          </Select>
+        </Field>
+        <Field label="Stock" htmlFor="filter-stock">
+          <Select id="filter-stock" value={stock} onChange={e => setStock(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="low">Bajo mínimo</option>
+            <option value="out">Sin stock</option>
+          </Select>
+        </Field>
+        <Field label="Ordenar por" htmlFor="filter-sort">
+          <Select id="filter-sort" value={sort} onChange={e => setSort(e.target.value)}>
+            <option value="name">Nombre (A-Z)</option>
+            <option value="newest">Más nuevos</option>
+            <option value="updated">Actualizados recién</option>
+            <option value="price_desc">Mayor precio</option>
+            <option value="price_asc">Menor precio</option>
+          </Select>
+        </Field>
+        {priceLists.length > 1 && (
+          <Field label="Ver precios de" htmlFor="filter-pricelist" className="sm:col-span-2">
+            <Select id="filter-pricelist" value={priceListId} onChange={e => setPriceListId(e.target.value)}>
+              {priceLists.map(l => (
+                <option key={l.id} value={l.isDefault ? '' : l.id}>
+                  {l.name}
+                  {l.derivesFromName ? ` (${l.derivesFromName} ${Number(l.markupPercent) >= 0 ? '+' : ''}${Number(l.markupPercent)}%)` : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
         )}
-      </div>
+      </ListFilters>
 
       <Card>
         <CardContent className="p-0">
@@ -419,7 +446,8 @@ export function ProductsPage() {
             <DialogTitle>{editing ? 'Editar producto' : 'Nuevo producto'}</DialogTitle>
           </DialogHeader>
           {error && <Alert variant="destructive">{error}</Alert>}
-          <form className="grid gap-4" onSubmit={submit}>
+          <form className="grid gap-6" onSubmit={submit}>
+            <div className="grid gap-3">
             <Field label="Código de barras" htmlFor="barcode">
               <Input id="barcode" required value={form.barcode} onChange={e => setForm({ ...form, barcode: e.target.value })} />
             </Field>
@@ -431,9 +459,11 @@ export function ProductsPage() {
             <Field label="Nombre" htmlFor="name">
               <Input id="name" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </Field>
-            {referenceHint && !editing && <p className="-mt-2 text-xs text-muted-foreground">Nombre y marca autocompletados desde la base de referencia. Revisalos antes de guardar.</p>}
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Categoría" htmlFor="categoryId" hint="(opcional)">
+            {referenceHint && !editing && <p className="text-xs text-muted-foreground">Nombre y marca autocompletados desde la base de referencia. Revisalos antes de guardar.</p>}
+            <Field label="Marca" htmlFor="brand" hint="(opcional)">
+              <Input id="brand" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} />
+            </Field>
+            <Field label="Categoría" htmlFor="categoryId" hint="(opcional)">
                 {creatingCategory ? (
                   <div className="flex gap-2">
                     <Input
@@ -472,14 +502,17 @@ export function ProductsPage() {
                   </div>
                 )}
               </Field>
-              <Field label="Unidad de venta" htmlFor="unit">
-                <Input id="unit" required value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} />
-              </Field>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Unidad de compra" htmlFor="purchaseUnit" hint="(opcional · bulto, caja, pack)">
-                <Input id="purchaseUnit" value={form.purchaseUnit} onChange={e => setForm({ ...form, purchaseUnit: e.target.value })} placeholder="bulto" />
-              </Field>
+
+            <div className="grid gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Unidad de venta" htmlFor="unit">
+                  <Input id="unit" required value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} />
+                </Field>
+                <Field label="Unidad de compra" htmlFor="purchaseUnit" hint="(opcional · bulto, caja, pack)">
+                  <Input id="purchaseUnit" value={form.purchaseUnit} onChange={e => setForm({ ...form, purchaseUnit: e.target.value })} placeholder="bulto" />
+                </Field>
+              </div>
               <Field
                 label={`Unidades de venta por ${form.purchaseUnit.trim() || 'bulto'}`}
                 htmlFor="unitsPerPurchase"
@@ -488,35 +521,39 @@ export function ProductsPage() {
                 <Input id="unitsPerPurchase" min="0.001" step="0.001" type="number" value={form.unitsPerPurchase} onChange={e => setForm({ ...form, unitsPerPurchase: e.target.value })} />
               </Field>
             </div>
-            <Field label="Marca" htmlFor="brand" hint="(opcional)">
-              <Input id="brand" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} />
-            </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="IVA %" htmlFor="taxRate">
-                <Select id="taxRate" value={form.taxRate} onChange={e => setForm({ ...form, taxRate: e.target.value })}>
-                  {TAX_RATES.map(rate => <option key={rate} value={rate}>{rate}%</option>)}
-                </Select>
+
+            <div className="grid gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="IVA %" htmlFor="taxRate">
+                  <Select id="taxRate" value={form.taxRate} onChange={e => setForm({ ...form, taxRate: e.target.value })}>
+                    {TAX_RATES.map(rate => <option key={rate} value={rate}>{rate}%</option>)}
+                  </Select>
+                </Field>
+                <Field label="Impuestos internos %" htmlFor="internalTaxRate" hint="(opcional · bebidas alcohólicas, cigarrillos)">
+                  <Input id="internalTaxRate" min="0" step="0.01" type="number" value={form.internalTaxRate} onChange={e => setForm({ ...form, internalTaxRate: e.target.value })} />
+                </Field>
+              </div>
+              <p className="text-xs text-muted-foreground">El precio de costo y el de venta se cargan desde el módulo de Precios.</p>
+            </div>
+
+            <div className="grid gap-3">
+              <Field label="Stock mínimo" htmlFor="minStock" hint="(opcional · alerta de reposición cuando el stock total caiga por debajo)">
+                <Input id="minStock" min="0" step="0.001" type="number" value={form.minStock} onChange={e => setForm({ ...form, minStock: e.target.value })} />
               </Field>
-              <Field label="Impuestos internos %" htmlFor="internalTaxRate" hint="(opcional · bebidas alcohólicas, cigarrillos)">
-                <Input id="internalTaxRate" min="0" step="0.01" type="number" value={form.internalTaxRate} onChange={e => setForm({ ...form, internalTaxRate: e.target.value })} />
-              </Field>
+              <div className="flex items-center gap-2">
+                <Checkbox id="manejaVencimiento" checked={form.manejaVencimiento} onCheckedChange={checked => setForm({ ...form, manejaVencimiento: checked === true })} />
+                <Label htmlFor="manejaVencimiento" className="font-normal">
+                  Maneja vencimiento
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="isWeighed" checked={form.isWeighed} onCheckedChange={checked => setForm({ ...form, isWeighed: checked === true })} />
+                <Label htmlFor="isWeighed" className="font-normal">
+                  Pesable (se vende por peso, con balanza)
+                </Label>
+              </div>
             </div>
-            <p className="-mt-1 text-xs text-muted-foreground">El precio de costo y el de venta se cargan desde el módulo de Precios.</p>
-            <Field label="Stock mínimo" htmlFor="minStock" hint="(opcional · alerta de reposición cuando el stock total caiga por debajo)">
-              <Input id="minStock" min="0" step="0.001" type="number" value={form.minStock} onChange={e => setForm({ ...form, minStock: e.target.value })} />
-            </Field>
-            <div className="flex items-center gap-2">
-              <Checkbox id="manejaVencimiento" checked={form.manejaVencimiento} onCheckedChange={checked => setForm({ ...form, manejaVencimiento: checked === true })} />
-              <Label htmlFor="manejaVencimiento" className="font-normal">
-                Maneja vencimiento
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox id="isWeighed" checked={form.isWeighed} onCheckedChange={checked => setForm({ ...form, isWeighed: checked === true })} />
-              <Label htmlFor="isWeighed" className="font-normal">
-                Pesable (se vende por peso, con balanza)
-              </Label>
-            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
@@ -526,84 +563,6 @@ export function ProductsPage() {
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Filtros</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Categoría" htmlFor="filter-category">
-              <Select id="filter-category" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
-                <option value="">Todas</option>
-                <option value="none">Sin categoría</option>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Marca" htmlFor="filter-brand">
-              <Select id="filter-brand" value={brand} onChange={e => setBrand(e.target.value)}>
-                <option value="">Todas</option>
-                {brands.map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Estado" htmlFor="filter-status">
-              <Select id="filter-status" value={status} onChange={e => setStatus(e.target.value)}>
-                <option value="active">Activos</option>
-                <option value="inactive">Desactivados</option>
-                <option value="all">Todos</option>
-              </Select>
-            </Field>
-            <Field label="Precio de venta" htmlFor="filter-priced">
-              <Select id="filter-priced" value={priced} onChange={e => setPriced(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="yes">Con precio</option>
-                <option value="no">Sin precio</option>
-              </Select>
-            </Field>
-            <Field label="Stock" htmlFor="filter-stock">
-              <Select id="filter-stock" value={stock} onChange={e => setStock(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="low">Bajo mínimo</option>
-                <option value="out">Sin stock</option>
-              </Select>
-            </Field>
-            <Field label="Ordenar por" htmlFor="filter-sort">
-              <Select id="filter-sort" value={sort} onChange={e => setSort(e.target.value)}>
-                <option value="name">Nombre (A-Z)</option>
-                <option value="newest">Más nuevos</option>
-                <option value="updated">Actualizados recién</option>
-                <option value="price_desc">Mayor precio</option>
-                <option value="price_asc">Menor precio</option>
-              </Select>
-            </Field>
-
-            {/* Con más de una lista se puede mirar el catálogo con los precios
-                de cualquiera de ellas, incluidas las que se calculan solas. */}
-            {priceLists.length > 1 && (
-              <Field label="Ver precios de" htmlFor="filter-pricelist" className="sm:col-span-2">
-                <Select id="filter-pricelist" value={priceListId} onChange={e => setPriceListId(e.target.value)}>
-                  {priceLists.map(l => (
-                    <option key={l.id} value={l.isDefault ? '' : l.id}>
-                      {l.name}
-                      {l.derivesFromName ? ` (${l.derivesFromName} ${Number(l.markupPercent) >= 0 ? '+' : ''}${Number(l.markupPercent)}%)` : ''}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => activeFilters.forEach(f => f.clear())} disabled={activeFilters.length === 0}>
-              Limpiar todo
-            </Button>
-            <Button onClick={() => setFiltersOpen(false)}>Ver resultados</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -14,9 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { api, errorMessage, type Lot, type Product, type Warehouse } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
+// La transferencia sale por su propia pantalla (registra las dos puntas); acá
+// quedan sólo los egresos de una sola punta.
 const MOVEMENT_TYPES = [
   ['sale_out', 'Venta'],
-  ['transfer_out', 'Transferencia saliente'],
   ['adjustment_out', 'Ajuste negativo'],
 ] as const;
 

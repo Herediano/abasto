@@ -1,9 +1,11 @@
-import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Post, Put, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res, UnprocessableEntityException, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
+import { sendExport } from './export.util';
 
 const MAX_PROFUNDIDAD = 10;
 
@@ -57,6 +59,34 @@ export class PriceListsController {
       markupPercent: l.markupPercent,
       priceCount: l._count.prices,
     }));
+  }
+
+  @Get('export') @RequirePermission('precios.ver')
+  async export(@Req() request: AuthRequest, @Res() res: Response, @Query('format') format?: string) {
+    const listas = await this.prisma.priceList.findMany({
+      where: { tenantId: request.user.tenantId },
+      include: { derivesFrom: { select: { name: true } }, _count: { select: { prices: true } } },
+      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+    });
+    await sendExport(
+      res,
+      format,
+      'listas-de-precios',
+      [
+        { header: 'Lista', key: 'name', width: 26 },
+        { header: 'Cómo se calcula', key: 'calc', width: 32 },
+        { header: 'Precios propios', key: 'priceCount', width: 16, numFmt: '#,##0' },
+        { header: 'Estado', key: 'estado', width: 12 },
+      ],
+      listas.map(l => ({
+        name: l.isDefault ? `${l.name} (base)` : l.name,
+        calc: l.derivesFrom
+          ? `${l.derivesFrom.name} ${Number(l.markupPercent) >= 0 ? '+' : ''}${Number(l.markupPercent)}%`
+          : 'Precios propios',
+        priceCount: l._count.prices,
+        estado: l.isActive ? 'Activa' : 'Inactiva',
+      })),
+    );
   }
 
   @Post()

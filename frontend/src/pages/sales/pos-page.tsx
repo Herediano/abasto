@@ -17,7 +17,7 @@ import { Spinner, PageSpinner } from '@/components/spinner';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
   api, errorMessage, type CashRegister, type CashShift, type Customer, type CustomerAccount,
-  type PaymentMethod, type Product, type Promotion,
+  type PaymentAdjustment, type PaymentMethod, type Product, type Promotion,
 } from '@/lib/api';
 import { money } from '@/lib/format';
 import { parseWeighedBarcode } from '@/lib/pesable';
@@ -97,6 +97,7 @@ export function PosPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [customerAccount, setCustomerAccount] = useState<CustomerAccount | null>(null);
+  const [adjustments, setAdjustments] = useState<Record<string, number>>({});
   const [barcode, setBarcode] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
@@ -157,7 +158,9 @@ export function PosPage() {
 
   useEffect(() => {
     if (shift !== null || !session?.user.warehouseId) return;
-    api<CashRegister[]>(`/cash-registers?warehouseId=${session.user.warehouseId}`, {}, token).then(regs => {
+    // Sin `warehouseId`: el backend ya acota a las cajas de la sucursal activa
+    // (`X-Branch`). Pasarlo escondía las cajas de un segundo depósito de la sucursal.
+    api<CashRegister[]>('/cash-registers', {}, token).then(regs => {
       setRegisters(regs);
       if (regs.length === 1) setSelectedRegisterId(regs[0].id);
     }).catch(() => {});
@@ -201,6 +204,13 @@ export function PosPage() {
     if (!ofertasOpen) return;
     api<Promotion[]>('/promotions', {}, token).then(setPromos).catch(() => {});
   }, [ofertasOpen, token]);
+
+  // Recargo/descuento por medio de pago de la sucursal activa, para mostrarlo antes de confirmar.
+  useEffect(() => {
+    api<PaymentAdjustment[]>('/branches/payment-adjustments/current', {}, token)
+      .then(rows => setAdjustments(Object.fromEntries(rows.map(r => [r.method, r.percent]))))
+      .catch(() => {});
+  }, [token]);
 
   const agregar = useCallback(async (codigo: string) => {
     const limpio = codigo.trim();
@@ -314,6 +324,12 @@ export function PosPage() {
   const restante = Math.round(((quote?.total ?? 0) - sumaPagos) * 100) / 100;
   const usaCtaCte = pagos.some(p => p.method === 'account');
   const puedeConfirmar = Math.abs(restante) < 0.01 && (!usaCtaCte || !!customerId) && pagos.every(p => Number(p.amount) > 0);
+
+  // Recargo (+) o descuento (−) que suma cada medio sobre su parte del total.
+  const recargoDe = (method: PaymentMethod, base: number) =>
+    method === 'account' ? 0 : Math.round(base * (adjustments[method] ?? 0)) / 100;
+  const recargoTotal = Math.round(pagos.reduce((s, p) => s + recargoDe(p.method, Number(p.amount) || 0), 0) * 100) / 100;
+  const totalACobrar = Math.round(((quote?.total ?? 0) + recargoTotal) * 100) / 100;
 
   async function cobrar() {
     setCobrando(true);
@@ -759,39 +775,56 @@ export function PosPage() {
           <p className="text-sm text-muted-foreground">{clienteElegido?.name ?? 'Consumidor final'}</p>
 
           <div className="flex flex-col gap-2">
-            {pagos.map((p, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Select
-                  aria-label="Medio de pago"
-                  value={p.method}
-                  onChange={e => actualizarPago(i, { method: e.target.value as PaymentMethod })}
-                  className="w-40 shrink-0"
-                >
-                  {PAGOS.map(pg => <option key={pg.id} value={pg.id} disabled={pg.id === 'account' && !customerId}>{pg.label}</option>)}
-                </Select>
-                <Input
-                  type="number" min="0" step="0.01" aria-label="Monto"
-                  value={p.amount} onChange={e => actualizarPago(i, { amount: e.target.value })}
-                  className="tabular"
-                />
-                {p.method !== 'cash' && p.method !== 'account' && (
+            {pagos.map((p, i) => {
+              const rec = recargoDe(p.method, Number(p.amount) || 0);
+              return (
+              <div key={i} className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <Select
+                    aria-label="Medio de pago"
+                    value={p.method}
+                    onChange={e => actualizarPago(i, { method: e.target.value as PaymentMethod })}
+                    className="w-40 shrink-0"
+                  >
+                    {PAGOS.map(pg => <option key={pg.id} value={pg.id} disabled={pg.id === 'account' && !customerId}>{pg.label}</option>)}
+                  </Select>
                   <Input
-                    placeholder="Cupón / referencia" aria-label="Referencia"
-                    value={p.reference} onChange={e => actualizarPago(i, { reference: e.target.value })}
-                    className="w-36 shrink-0"
+                    type="number" min="0" step="0.01" aria-label="Monto"
+                    value={p.amount} onChange={e => actualizarPago(i, { amount: e.target.value })}
+                    className="tabular"
                   />
-                )}
-                {pagos.length > 1 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => quitarPago(i)} aria-label="Quitar este pago">
-                    <Trash className="size-4" />
-                  </Button>
+                  {p.method !== 'cash' && p.method !== 'account' && (
+                    <Input
+                      placeholder="Cupón / referencia" aria-label="Referencia"
+                      value={p.reference} onChange={e => actualizarPago(i, { reference: e.target.value })}
+                      className="w-36 shrink-0"
+                    />
+                  )}
+                  {pagos.length > 1 && (
+                    <Button type="button" variant="ghost" size="icon" onClick={() => quitarPago(i)} aria-label="Quitar este pago">
+                      <Trash className="size-4" />
+                    </Button>
+                  )}
+                </div>
+                {rec !== 0 && (
+                  <p className="pl-[10.5rem] text-xs text-muted-foreground">
+                    {rec > 0 ? 'Recargo' : 'Descuento'} {PAGOS.find(pg => pg.id === p.method)?.label.toLowerCase()} ({adjustments[p.method]}%): {rec > 0 ? '+' : '−'}{money(Math.abs(rec))} → cobra {money((Number(p.amount) || 0) + rec)}
+                  </p>
                 )}
               </div>
-            ))}
+              );
+            })}
             <Button type="button" variant="outline" size="sm" className="self-start" onClick={agregarPago} disabled={pagos.length >= PAGOS.length}>
               Agregar otro medio
             </Button>
           </div>
+
+          {recargoTotal !== 0 && (
+            <div className="flex items-center justify-between border-t border-border-soft pt-2 text-sm">
+              <span className="text-muted-foreground">Total a cobrar (con {recargoTotal > 0 ? 'recargo' : 'descuento'})</span>
+              <span className="font-display text-lg font-bold tabular">{money(totalACobrar)}</span>
+            </div>
+          )}
 
           {usaCtaCte && customerAccount?.available !== null && customerAccount && (
             <p className="text-xs text-placeholder">Disponible en la cuenta corriente: {money(customerAccount.available ?? 0)}</p>

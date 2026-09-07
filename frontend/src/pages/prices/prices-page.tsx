@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ExportMenu } from '@/components/export-menu';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
@@ -450,9 +451,12 @@ export function PricesPage() {
                 Una lista puede tener precios propios o calcularse desde otra con un recargo.
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => openListDialog(null)}>
-              <Plus /> Nueva lista
-            </Button>
+            <div className="flex gap-2">
+              <ExportMenu path="/price-lists" filename="listas-de-precios" />
+              <Button variant="outline" size="sm" onClick={() => openListDialog(null)}>
+                <Plus /> Nueva lista
+              </Button>
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-md border">
@@ -816,9 +820,12 @@ export function PricesPage() {
                 se descuenten al cobrar.
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setPromoOpen(true)}>
-              <Plus /> Nueva promoción
-            </Button>
+            <div className="flex gap-2">
+              <ExportMenu path="/promotions" filename="promociones" />
+              <Button variant="outline" size="sm" onClick={() => setPromoOpen(true)}>
+                <Plus /> Nueva promoción
+              </Button>
+            </div>
           </div>
 
           {promotions.length === 0 ? (
@@ -935,11 +942,10 @@ export function PricesPage() {
 
       <Dialog open={promoOpen} onOpenChange={setPromoOpen}>
         <DialogContent>
-          <form onSubmit={savePromo} className="flex flex-col gap-4">
-            <DialogHeader>
-              <DialogTitle>Nueva promoción</DialogTitle>
-            </DialogHeader>
-
+          <DialogHeader>
+            <DialogTitle>Nueva promoción</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={savePromo} className="grid gap-4">
             <Field label="Nombre" htmlFor="promo-name">
               <Input id="promo-name" required value={promoForm.name} onChange={e => setPromoForm({ ...promoForm, name: e.target.value })} placeholder="3x2 en gaseosas" />
             </Field>
@@ -1017,11 +1023,10 @@ export function PricesPage() {
 
       <Dialog open={listDialogOpen} onOpenChange={setListDialogOpen}>
         <DialogContent>
-          <form onSubmit={saveList} className="flex flex-col gap-4">
-            <DialogHeader>
-              <DialogTitle>{editingList ? 'Editar lista' : 'Nueva lista de precios'}</DialogTitle>
-            </DialogHeader>
-
+          <DialogHeader>
+            <DialogTitle>{editingList ? 'Editar lista' : 'Nueva lista de precios'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={saveList} className="grid gap-4">
             <Field label="Nombre" htmlFor="list-name">
               <Input id="list-name" required value={listForm.name} onChange={e => setListForm({ ...listForm, name: e.target.value })} placeholder="Minorista" />
             </Field>

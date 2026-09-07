@@ -47,7 +47,7 @@ export function LoginPage() {
         <Field label="Contraseña" htmlFor="password">
           <Input id="password" required type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
         </Field>
-        <Button disabled={saving} className="mt-1">
+        <Button disabled={saving}>
           {saving && <Spinner />} Ingresar
         </Button>
       </form>
@@ -92,7 +92,7 @@ export function AuthLayout({ title, description, children }: { title?: string; d
             {title && <h1 className="mt-4 text-lg font-semibold">{title}</h1>}
             <p className={title ? 'mt-1 text-sm text-muted-foreground' : 'mt-2 text-sm text-muted-foreground'}>{description}</p>
           </div>
-          <div className="grid gap-5">{children}</div>
+          <div className="grid gap-6">{children}</div>
         </div>
       </div>
     </div>

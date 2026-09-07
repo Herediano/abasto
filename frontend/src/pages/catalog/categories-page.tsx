@@ -158,7 +158,7 @@ export function CategoriesPage() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving && <Spinner />} {editing ? 'Guardar' : 'Crear categoría'}
+                {saving && <Spinner />} {editing ? 'Guardar cambios' : 'Crear categoría'}
               </Button>
             </DialogFooter>
           </form>

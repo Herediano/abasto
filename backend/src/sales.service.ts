@@ -8,9 +8,20 @@ const FORMAS_PAGO = ['cash', 'card', 'transfer', 'qr', 'account'] as const;
 const PUNTO_VENTA_DEFAULT = '0001';
 const TOLERANCIA = 0.01;
 
-type Usuario = { id: string; tenantId: string; permissions: Set<string>; warehouseId?: string | null; branchWarehouseIds?: string[] };
+type Usuario = { id: string; tenantId: string; permissions: Set<string>; warehouseId?: string | null; branchId?: string | null; branchWarehouseIds?: string[] };
 
-type PagoPedido = { method: (typeof FORMAS_PAGO)[number]; amount: number; reference: string | null };
+type PagoPedido = {
+  method: (typeof FORMAS_PAGO)[number];
+  /** Parte del total de la mercadería imputada a este medio. */
+  baseAmount: number;
+  /** Recargo (+) o descuento (−) que suma el medio de pago. */
+  surchargeAmount: number;
+  /** Lo que efectivamente cobra este medio: baseAmount + surchargeAmount. */
+  amount: number;
+  reference: string | null;
+};
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
 
 @Injectable()
 export class SalesService {
@@ -69,8 +80,25 @@ export class SalesService {
     };
   }
 
-  /** Uno o varios medios de pago que tienen que sumar exacto el total de la venta. */
-  private parsePagos(body: Record<string, unknown>, total: number, customerId: string | null): PagoPedido[] {
+  /** Recargo/descuento por medio de pago vigente en una sucursal (percent: + recarga, − descuenta). */
+  private async ajustesDePago(tenantId: string, branchId: string | null | undefined): Promise<Map<string, number>> {
+    if (!branchId) return new Map();
+    const filas = await this.prisma.paymentAdjustment.findMany({ where: { tenantId, branchId } });
+    return new Map(filas.map(f => [f.method, Number(f.percent)]));
+  }
+
+  /**
+   * Resuelve los pagos: cada `amount` que manda la pantalla es la parte del
+   * total de la mercadería imputada a ese medio (tiene que sumar `total`). Acá
+   * se le agrega el recargo/descuento del medio según la sucursal. El neto va a
+   * `Sale.surchargeTotal` y lo que cada `SalePayment` cobra es base + ajuste.
+   */
+  private parsePagos(
+    body: Record<string, unknown>,
+    total: number,
+    customerId: string | null,
+    ajustes: Map<string, number>,
+  ): { pagos: PagoPedido[]; surchargeTotal: number } {
     // Compatibilidad con lo que mandaba la pantalla antes del pago dividido:
     // un paymentMethod suelto vale como un único pago por el total.
     const raw = Array.isArray(body.payments)
@@ -83,15 +111,19 @@ export class SalesService {
       const pago = p as Record<string, unknown>;
       const method = typeof pago.method === 'string' ? pago.method : '';
       if (!FORMAS_PAGO.includes(method as PagoPedido['method'])) throw new UnprocessableEntityException(`La forma de pago debe ser una de: ${FORMAS_PAGO.join(', ')}`);
-      const amount = Number(pago.amount);
-      if (!Number.isFinite(amount) || amount <= 0) throw new UnprocessableEntityException('El monto de cada pago debe ser mayor a cero');
+      const baseAmount = r2(Number(pago.amount));
+      if (!Number.isFinite(baseAmount) || baseAmount <= 0) throw new UnprocessableEntityException('El monto de cada pago debe ser mayor a cero');
       const reference = typeof pago.reference === 'string' && pago.reference.trim() ? pago.reference.trim() : null;
-      return { method: method as PagoPedido['method'], amount: Math.round(amount * 100) / 100, reference };
+      // Cuenta corriente nunca lleva recargo: es fiado, no un medio con costo financiero.
+      const pct = method === 'account' ? 0 : (ajustes.get(method) ?? 0);
+      const surchargeAmount = r2((baseAmount * pct) / 100);
+      return { method: method as PagoPedido['method'], baseAmount, surchargeAmount, amount: r2(baseAmount + surchargeAmount), reference };
     });
     if (pagos.some(p => p.method === 'account') && !customerId) throw new UnprocessableEntityException('La venta a cuenta corriente necesita un cliente, no puede ser a consumidor final');
-    const suma = pagos.reduce((s, p) => s + p.amount, 0);
-    if (Math.abs(suma - total) > TOLERANCIA) throw new UnprocessableEntityException(`Los pagos suman ${suma.toFixed(2)} y la venta es ${total.toFixed(2)}`);
-    return pagos;
+    const sumaBase = pagos.reduce((s, p) => s + p.baseAmount, 0);
+    if (Math.abs(sumaBase - total) > TOLERANCIA) throw new UnprocessableEntityException(`Los pagos suman ${sumaBase.toFixed(2)} y la venta es ${total.toFixed(2)}`);
+    const surchargeTotal = r2(pagos.reduce((s, p) => s + p.surchargeAmount, 0));
+    return { pagos, surchargeTotal };
   }
 
   async create(user: Usuario, body: Record<string, unknown>) {
@@ -108,12 +140,13 @@ export class SalesService {
     const sinPrecio = cotizadas.filter(c => c.listPrice <= 0);
     if (sinPrecio.length) throw new UnprocessableEntityException('Hay productos sin precio cargado; no se pueden vender');
     const total = Math.round(cotizadas.reduce((s, c) => s + c.lineTotal, 0) * 100) / 100;
-    const pagos = this.parsePagos(body, total, customerId);
+    const ajustes = await this.ajustesDePago(tenantId, user.branchId);
+    const { pagos, surchargeTotal } = this.parsePagos(body, total, customerId, ajustes);
     const paymentMethod = pagos.length === 1 ? pagos[0].method : 'mixed';
 
     const productos = await this.prisma.product.findMany({
       where: { tenantId, id: { in: lineas.map(l => l.productId) } },
-      select: { id: true, name: true, barcode: true, manejaVencimiento: true },
+      select: { id: true, name: true, barcode: true, manejaVencimiento: true, costPrice: true },
     });
     const porId = new Map(productos.map(p => [p.id, p]));
 
@@ -151,17 +184,19 @@ export class SalesService {
           discountTotal: cotizadas.reduce((s, c) => s + c.discountAmount, 0),
           taxTotal: cotizadas.reduce((s, c) => s + c.lineTax, 0),
           total,
+          surchargeTotal,
           occurredAt: new Date(),
         },
       });
 
       await tx.salePayment.createMany({
-        data: pagos.map(p => ({ tenantId, saleId: venta.id, method: p.method, amount: p.amount, reference: p.reference })),
+        data: pagos.map(p => ({ tenantId, saleId: venta.id, method: p.method, amount: p.amount, surchargeAmount: p.surchargeAmount, reference: p.reference })),
       });
 
       const pagoCuenta = pagos.find(p => p.method === 'account');
       if (pagoCuenta) {
-        await registrarMovimientoCuenta(tx, tenantId, customerId!, pagoCuenta.amount, { type: 'sale', saleId: venta.id, userId: user.id });
+        // A la cuenta va la parte base (cuenta corriente no lleva recargo).
+        await registrarMovimientoCuenta(tx, tenantId, customerId!, pagoCuenta.baseAmount, { type: 'sale', saleId: venta.id, userId: user.id });
       }
 
       for (const c of cotizadas) {
@@ -181,6 +216,7 @@ export class SalesService {
             tenantId, saleId: venta.id, productId: c.productId, productLotId,
             barcode: producto.barcode, description: producto.name,
             quantity: c.quantity, listPrice: c.listPrice, unitPrice: c.unitPrice,
+            unitCost: producto.costPrice ?? null,
             discountAmount: c.discountAmount, promotionId: c.promotionId, promotionName: c.promotionName,
             taxRate: c.taxRate, lineSubtotal: c.lineSubtotal, lineTax: c.lineTax, lineTotal: c.lineTotal,
           },
@@ -260,6 +296,9 @@ export class SalesService {
     const tenantId = user.tenantId;
     const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
+    const search = query.search?.trim();
+    // El comprobante se busca por su número (con o sin ceros), o por el nombre del cliente.
+    const searchNumber = search ? Number.parseInt(search.replace(/^0+/, ''), 10) : NaN;
     const where: Prisma.SaleWhereInput = {
       tenantId,
       ...(user.branchWarehouseIds ? { warehouseId: { in: user.branchWarehouseIds } } : {}),
@@ -268,6 +307,14 @@ export class SalesService {
       ...(query.paymentMethod ? { paymentMethod: query.paymentMethod } : {}),
       ...(query.from || query.to
         ? { occurredAt: { gte: query.from ? new Date(`${query.from}T00:00:00`) : undefined, lte: query.to ? new Date(`${query.to}T23:59:59.999`) : undefined } }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              ...(Number.isFinite(searchNumber) ? [{ number: searchNumber }] : []),
+              { customer: { name: { contains: search, mode: 'insensitive' as const } } },
+            ],
+          }
         : {}),
     };
     const [items, total] = await this.prisma.$transaction([

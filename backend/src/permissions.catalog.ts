@@ -30,9 +30,11 @@ export const PERMISSIONS: PermissionDef[] = [
   // Ventas
   { key: 'ventas.ver', area: 'Ventas', label: 'Ver ventas (propias; todas con "ver todas las cajas")', dangerous: false },
   { key: 'ventas.anular', area: 'Ventas', label: 'Anular una venta ya confirmada', dangerous: true },
+  { key: 'ventas.devolver', area: 'Ventas', label: 'Registrar devoluciones y notas de crédito', dangerous: true },
   // Stock
   { key: 'stock.ver', area: 'Stock', label: 'Ver stock e historial de movimientos', dangerous: false },
   { key: 'stock.mover', area: 'Stock', label: 'Ingresos, egresos y ajustes de stock', dangerous: false },
+  { key: 'stock.transferir', area: 'Stock', label: 'Transferir stock entre depósitos y sucursales', dangerous: false },
   // Compras
   { key: 'compras.ver', area: 'Compras', label: 'Ver facturas de compra', dangerous: false },
   { key: 'compras.crear', area: 'Compras', label: 'Cargar y confirmar facturas de compra', dangerous: false },
@@ -91,25 +93,25 @@ const ALL = PERMISSIONS.map(p => p.key);
 export const DEFAULT_RANGOS: Record<string, PermissionKey[]> = {
   Cajero: ['caja.operar', 'stock.ver', 'productos.ver', 'clientes.ver', 'clientes.crear', 'clientes.cobrar', 'promociones.ver', 'ventas.ver'],
   Repositor: ['stock.ver', 'precios.ver', 'productos.ver', 'depositos.ver'],
-  'Recepción': ['stock.ver', 'stock.mover', 'compras.ver', 'compras.crear', 'compras.corregir', 'productos.ver', 'proveedores.ver', 'depositos.ver'],
+  'Recepción': ['stock.ver', 'stock.mover', 'stock.transferir', 'compras.ver', 'compras.crear', 'compras.corregir', 'productos.ver', 'proveedores.ver', 'depositos.ver'],
   Administrativo: [
-    'stock.ver', 'stock.mover', 'compras.ver', 'compras.crear', 'compras.corregir', 'precios.ver', 'precios.editar',
+    'stock.ver', 'stock.mover', 'stock.transferir', 'compras.ver', 'compras.crear', 'compras.corregir', 'precios.ver', 'precios.editar',
     'productos.ver', 'productos.crear', 'productos.editar', 'proveedores.ver', 'proveedores.crear', 'proveedores.editar',
     'clientes.ver', 'promociones.ver', 'depositos.ver', 'reportes.ver', 'ventas.ver',
   ],
   'Supervisor de caja': [
     'caja.operar', 'caja.ver_todas', 'caja.autorizar_anulacion', 'caja.administrar', 'stock.ver', 'productos.ver',
     'clientes.ver', 'clientes.crear', 'clientes.editar', 'clientes.cobrar', 'clientes.ajustar_cuenta',
-    'promociones.ver', 'depositos.ver', 'reportes.ver', 'ventas.ver', 'ventas.anular',
+    'promociones.ver', 'depositos.ver', 'reportes.ver', 'ventas.ver', 'ventas.anular', 'ventas.devolver',
   ],
   Encargado: [
-    'caja.ver_todas', 'caja.autorizar_anulacion', 'stock.ver', 'stock.mover', 'compras.ver', 'compras.crear', 'compras.corregir',
+    'caja.ver_todas', 'caja.autorizar_anulacion', 'stock.ver', 'stock.mover', 'stock.transferir', 'compras.ver', 'compras.crear', 'compras.corregir',
     'precios.ver', 'precios.editar', 'productos.ver', 'productos.crear', 'productos.editar',
     'proveedores.ver', 'proveedores.crear', 'proveedores.editar',
     'clientes.ver', 'clientes.crear', 'clientes.editar', 'clientes.cobrar', 'clientes.ajustar_cuenta',
     'promociones.ver', 'promociones.crear', 'promociones.editar', 'promociones.eliminar',
     'depositos.ver', 'depositos.crear', 'depositos.editar', 'reportes.ver', 'reportes.ver_plata',
-    'ventas.ver', 'ventas.anular',
+    'ventas.ver', 'ventas.anular', 'ventas.devolver',
   ],
   'Dueño': ALL,
 };

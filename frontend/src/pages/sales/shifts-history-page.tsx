@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
+import { ExportMenu } from '@/components/export-menu';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
+import { ListFilters } from '@/components/list-filters';
 import { PageHeader } from '@/components/page-header';
 import { PageSpinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type CashShift, type Pagination } from '@/lib/api';
+import { api, errorMessage, type CashRegister, type CashShift, type Pagination } from '@/lib/api';
 import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -30,37 +32,68 @@ export function ShiftsHistoryPage() {
   const [items, setItems] = useState<CashShift[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState('');
+  const [registers, setRegisters] = useState<CashRegister[]>([]);
+  const [filtros, setFiltros] = useState({ cashRegisterId: '', status: '', from: '', to: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [detalle, setDetalle] = useState<CashShift | null>(null);
 
   useEffect(() => {
+    api<CashRegister[]>('/cash-registers', {}, token).then(setRegisters).catch(() => {});
+  }, [token]);
+
+  useEffect(() => { setPage(1); }, [filtros]);
+
+  useEffect(() => {
     setLoading(true);
     const p = new URLSearchParams({ page: String(page), pageSize: '20' });
-    if (status) p.set('status', status);
+    for (const [k, v] of Object.entries(filtros)) if (v) p.set(k, v);
     api<{ items: CashShift[]; pagination: Pagination }>(`/cash-shifts?${p}`, {}, token)
       .then(r => { setItems(r.items); setPagination(r.pagination); })
       .catch(e => setError(errorMessage(e)))
       .finally(() => setLoading(false));
-  }, [token, page, status]);
+  }, [token, page, filtros]);
+
+  const set = (k: keyof typeof filtros) => (v: string) => setFiltros(f => ({ ...f, [k]: v }));
+  const activeFilters = [
+    filtros.cashRegisterId && { key: 'caja', label: registers.find(r => r.id === filtros.cashRegisterId)?.name ?? 'Caja', clear: () => set('cashRegisterId')('') },
+    filtros.status && { key: 'estado', label: filtros.status === 'open' ? 'Abiertos' : 'Cerrados', clear: () => set('status')('') },
+    filtros.from && { key: 'from', label: `Desde ${filtros.from}`, clear: () => set('from')('') },
+    filtros.to && { key: 'to', label: `Hasta ${filtros.to}`, clear: () => set('to')('') },
+  ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   return (
     <>
-      <PageHeader title="Turnos de caja" description="Apertura, cierre y arqueo de cada turno, en todas las cajas de la sucursal." />
+      <PageHeader
+        title="Turnos de caja"
+        description="Apertura, cierre y arqueo de cada turno, en todas las cajas de la sucursal."
+        actions={<ExportMenu path="/cash-shifts" params={filtros} filename="turnos-de-caja" />}
+      />
       {error && <Alert variant="destructive">{error}</Alert>}
 
-      <Card>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
-          <Field label="Estado" htmlFor="f-status">
-            <Select id="f-status" value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}>
-              <option value="">Todos</option>
-              <option value="open">Abiertos</option>
-              <option value="closed">Cerrados</option>
+      <ListFilters activeFilters={activeFilters}>
+        {registers.length > 1 && (
+          <Field label="Caja" htmlFor="f-caja">
+            <Select id="f-caja" value={filtros.cashRegisterId} onChange={e => set('cashRegisterId')(e.target.value)}>
+              <option value="">Todas las cajas</option>
+              {registers.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </Select>
           </Field>
-        </CardContent>
-      </Card>
+        )}
+        <Field label="Estado" htmlFor="f-status">
+          <Select id="f-status" value={filtros.status} onChange={e => set('status')(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="open">Abiertos</option>
+            <option value="closed">Cerrados</option>
+          </Select>
+        </Field>
+        <Field label="Desde" htmlFor="f-from">
+          <Input id="f-from" type="date" value={filtros.from} onChange={e => set('from')(e.target.value)} />
+        </Field>
+        <Field label="Hasta" htmlFor="f-to">
+          <Input id="f-to" type="date" value={filtros.to} onChange={e => set('to')(e.target.value)} />
+        </Field>
+      </ListFilters>
 
       <Card>
         <CardContent className="p-0">

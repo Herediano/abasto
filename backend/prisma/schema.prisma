@@ -118,6 +118,9 @@ model Tenant {
   rangos                   Rango[]
   rangoPermissions         RangoPermission[]
   branches                 Branch[]
+  paymentAdjustments       PaymentAdjustment[]
+  creditNotes              CreditNote[]
+  creditNoteLines          CreditNoteLine[]
 
   @@map("tenants")
 }
@@ -138,11 +141,32 @@ model Branch {
   tenant     Tenant      @relation(fields: [tenantId], references: [id])
   warehouses Warehouse[]
   users      User[]
+  paymentAdjustments PaymentAdjustment[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])
   @@index([tenantId])
   @@map("branches")
+}
+
+/**
+ * Recargo (+) o descuento (−) sobre el total según con qué se paga, por
+ * sucursal. Un mayorista cobra más con tarjeta y descuenta por efectivo o
+ * transferencia. `percent` se aplica sobre la parte del total imputada a ese
+ * medio; el neto va a `Sale.surchargeTotal` y a lo que cada `SalePayment` cobra.
+ */
+model PaymentAdjustment {
+  id       String            @id @default(uuid()) @db.Uuid
+  tenantId String            @map("tenant_id") @db.Uuid
+  branchId String            @map("branch_id") @db.Uuid
+  method   PaymentMethodType
+  percent  Decimal           @db.Decimal(6, 3)
+  tenant   Tenant            @relation(fields: [tenantId], references: [id])
+  branch   Branch            @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, branchId, method])
+  @@index([tenantId, branchId])
+  @@map("payment_adjustments")
 }
 
 // Un puesto físico de cobro dentro de una sucursal ("Caja 1", "Caja 2"). Cada
@@ -231,7 +255,10 @@ model SalePayment {
   tenantId  String            @map("tenant_id") @db.Uuid
   saleId    String            @map("sale_id") @db.Uuid
   method    PaymentMethodType
+  // Lo que efectivamente entra por este medio (base imputada + su recargo/descuento).
   amount    Decimal           @db.Decimal(14, 2)
+  // Parte de `amount` que es recargo (+) o descuento (−) por el medio de pago.
+  surchargeAmount Decimal      @default(0) @map("surcharge_amount") @db.Decimal(14, 2)
   reference String?
   tenant    Tenant            @relation(fields: [tenantId], references: [id])
   sale      Sale              @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
@@ -430,7 +457,10 @@ model Sale {
   subtotal         Decimal                   @db.Decimal(14, 2)
   discountTotal    Decimal                   @default(0) @map("discount_total") @db.Decimal(14, 2)
   taxTotal         Decimal                   @map("tax_total") @db.Decimal(14, 2)
+  // Total de la mercadería (subtotal + IVA). Lo que se cobra es
+  // total + surchargeTotal (recargo/descuento por medio de pago).
   total            Decimal                   @db.Decimal(14, 2)
+  surchargeTotal   Decimal                   @default(0) @map("surcharge_total") @db.Decimal(14, 2)
   paymentMethod    String                    @map("payment_method") // cash | card | transfer
   status           String                    @default("confirmed") // confirmed | cancelled
   cancelReason     String?                   @map("cancel_reason")
@@ -444,6 +474,7 @@ model Sale {
   lines            SaleLine[]
   payments         SalePayment[]
   accountMovements CustomerAccountMovement[]
+  creditNotes      CreditNote[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, docType, pointOfSale, number])
@@ -465,6 +496,10 @@ model SaleLine {
   // forma de mostrar despues cuanto se desconto, porque las promos cambian.
   listPrice      Decimal @map("list_price") @db.Decimal(14, 2)
   unitPrice      Decimal @map("unit_price") @db.Decimal(14, 2)
+  // Costo unitario del producto al momento de vender (`Product.costPrice`). Se
+  // congela acá para calcular el margen real de la venta aunque el costo cambie
+  // después. Nulo en ventas viejas y en productos sin costo cargado.
+  unitCost       Decimal? @map("unit_cost") @db.Decimal(14, 2)
   discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(14, 2)
   promotionId    String? @map("promotion_id") @db.Uuid
   promotionName  String? @map("promotion_name")
@@ -475,9 +510,69 @@ model SaleLine {
   tenant         Tenant  @relation(fields: [tenantId], references: [id])
   sale           Sale    @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
   product        Product @relation(fields: [productId, tenantId], references: [id, tenantId])
+  creditNoteLines CreditNoteLine[]
 
+  @@unique([id, tenantId])
   @@index([tenantId, saleId])
   @@map("sale_lines")
+}
+
+/**
+ * Nota de crédito por una devolución total o parcial de una venta: el stock
+ * reingresa (`adjustment_in` con `referenceType: 'credit_note'`) y la plata sale
+ * —efectivo del turno o crédito a la cuenta corriente—. La venta original no se
+ * toca (misma regla que las compras). Sin CAE todavía: numeración interna.
+ */
+model CreditNote {
+  id           String           @id @default(uuid()) @db.Uuid
+  tenantId     String           @map("tenant_id") @db.Uuid
+  saleId       String           @map("sale_id") @db.Uuid
+  warehouseId  String           @map("warehouse_id") @db.Uuid
+  customerId   String?          @map("customer_id") @db.Uuid
+  userId       String           @map("user_id") @db.Uuid
+  shiftId      String?          @map("shift_id") @db.Uuid
+  docType      String           @default("credit_note") @map("doc_type")
+  pointOfSale  String           @map("point_of_sale")
+  number       Int
+  reason       String
+  refundMethod String           @map("refund_method") // cash | account
+  subtotal     Decimal          @db.Decimal(14, 2)
+  taxTotal     Decimal          @map("tax_total") @db.Decimal(14, 2)
+  total        Decimal          @db.Decimal(14, 2)
+  occurredAt   DateTime         @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  sale         Sale             @relation(fields: [saleId, tenantId], references: [id, tenantId])
+  lines        CreditNoteLine[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, docType, pointOfSale, number])
+  @@index([tenantId, saleId])
+  @@index([tenantId, occurredAt])
+  @@map("credit_notes")
+}
+
+model CreditNoteLine {
+  id           String     @id @default(uuid()) @db.Uuid
+  tenantId     String     @map("tenant_id") @db.Uuid
+  creditNoteId String     @map("credit_note_id") @db.Uuid
+  saleLineId   String     @map("sale_line_id") @db.Uuid
+  productId    String     @map("product_id") @db.Uuid
+  productLotId String?    @map("product_lot_id") @db.Uuid
+  description  String
+  quantity     Decimal    @db.Decimal(14, 3)
+  unitPrice    Decimal    @map("unit_price") @db.Decimal(14, 2)
+  taxRate      Decimal    @map("tax_rate") @db.Decimal(5, 2)
+  lineSubtotal Decimal    @map("line_subtotal") @db.Decimal(14, 2)
+  lineTax      Decimal    @map("line_tax") @db.Decimal(14, 2)
+  lineTotal    Decimal    @map("line_total") @db.Decimal(14, 2)
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  creditNote   CreditNote @relation(fields: [creditNoteId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  saleLine     SaleLine   @relation(fields: [saleLineId, tenantId], references: [id, tenantId])
+
+  @@index([tenantId, creditNoteId])
+  @@index([tenantId, saleLineId])
+  @@map("credit_note_lines")
 }
 
 // Numeracion por (tipo, punto de venta): AFIP exige una serie propia sin huecos

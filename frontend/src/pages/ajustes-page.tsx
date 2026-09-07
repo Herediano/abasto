@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, Check, Moon, PencilSimple, Plus, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
+import { ArrowRight, Check, Moon, Percent, PencilSimple, Plus, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/page-header';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { AccountList } from '@/components/account-list';
-import { api, errorMessage, type Branch, type Session } from '@/lib/api';
+import { api, errorMessage, type Branch, type PaymentAdjustment, type PaymentMethod, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { fileToResizedDataUrl } from '@/lib/image';
 import { hueFor, moduleByKey, settingsModules } from '@/lib/modules';
@@ -353,6 +353,7 @@ function SucursalesSection({ token }: { token: string }) {
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Branch | null>(null);
+  const [ajustesDe, setAjustesDe] = useState<Branch | null>(null);
 
   const load = () =>
     api<Branch[]>('/branches?includeInactive=1', {}, token)
@@ -433,6 +434,9 @@ function SucursalesSection({ token }: { token: string }) {
                 </span>
               </span>
               <div className="flex shrink-0 items-center gap-1">
+                <Button variant="ghost" size="icon" onClick={() => setAjustesDe(b)} aria-label="Recargos por medio de pago" title="Recargos por medio de pago" disabled={busyId === b.id}>
+                  <Percent />
+                </Button>
                 <Button variant="ghost" size="icon" onClick={() => editar(b)} aria-label="Editar sucursal" disabled={busyId === b.id}>
                   <PencilSimple />
                 </Button>
@@ -499,6 +503,88 @@ function SucursalesSection({ token }: { token: string }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AjustesPagoDialog branch={ajustesDe} token={token} onClose={() => setAjustesDe(null)} />
     </Section>
+  );
+}
+
+const MEDIOS_PAGO: { id: PaymentMethod; label: string }[] = [
+  { id: 'cash', label: 'Efectivo' },
+  { id: 'card', label: 'Tarjeta' },
+  { id: 'transfer', label: 'Transferencia' },
+  { id: 'qr', label: 'QR' },
+];
+
+/** Recargo (+) o descuento (−) por medio de pago, por sucursal (Dueño). */
+function AjustesPagoDialog({ branch, token, onClose }: { branch: Branch | null; token: string; onClose: () => void }) {
+  const [rows, setRows] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!branch) return;
+    setLoading(true);
+    setError('');
+    api<PaymentAdjustment[]>(`/branches/${branch.id}/payment-adjustments`, {}, token)
+      .then(r => setRows(Object.fromEntries(r.map(x => [x.method, x.percent ? String(x.percent) : '']))))
+      .catch(e => setError(errorMessage(e)))
+      .finally(() => setLoading(false));
+  }, [branch, token]);
+
+  async function guardar() {
+    if (!branch) return;
+    setSaving(true);
+    setError('');
+    try {
+      const adjustments = MEDIOS_PAGO.map(m => ({ method: m.id, percent: Number(rows[m.id]) || 0 }));
+      await api(`/branches/${branch.id}/payment-adjustments`, { method: 'PUT', body: JSON.stringify({ adjustments }) }, token);
+      onClose();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!branch} onOpenChange={o => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Recargos por medio de pago{branch ? ` · ${branch.name}` : ''}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Positivo recarga, negativo descuenta. Se aplica sobre la parte del total que se paga con ese medio, al cobrar en esta sucursal. La cuenta corriente nunca lleva recargo.
+        </p>
+        {error && <Alert variant="destructive">{error}</Alert>}
+        {loading ? (
+          <Spinner />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {MEDIOS_PAGO.map(m => (
+              <Field key={m.id} label={m.label} htmlFor={`adj-${m.id}`}>
+                <div className="relative">
+                  <Input
+                    id={`adj-${m.id}`}
+                    type="number"
+                    step="0.1"
+                    placeholder="0"
+                    value={rows[m.id] ?? ''}
+                    onChange={e => setRows(r => ({ ...r, [m.id]: e.target.value }))}
+                    className="pr-7 tabular"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                </div>
+              </Field>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button type="button" onClick={guardar} disabled={saving || loading}>{saving && <Spinner />} Guardar cambios</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

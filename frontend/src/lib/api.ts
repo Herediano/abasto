@@ -206,7 +206,9 @@ export type CashShift = {
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'qr' | 'account';
 
-export type SalePayment = { method: PaymentMethod; amount: string; reference?: string | null };
+export type PaymentAdjustment = { method: PaymentMethod; percent: number };
+
+export type SalePayment = { method: PaymentMethod; amount: string; surchargeAmount?: string; reference?: string | null };
 
 export type CustomerAccountMovement = {
   id: string;
@@ -334,6 +336,8 @@ export type Sale = {
   discountTotal: string;
   taxTotal: string;
   total: string;
+  /** Recargo/descuento por medio de pago. Lo que se cobró es total + surchargeTotal. */
+  surchargeTotal?: string;
   occurredAt: string;
   lineCount?: number;
 };
@@ -351,6 +355,27 @@ export type SaleLine = {
 };
 
 export type SaleDetail = Sale & { lines: SaleLine[]; payments: SalePayment[]; warehouseName: string; cancelReason?: string | null };
+
+export type CreditNoteLine = {
+  id: string;
+  saleLineId: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  lineTotal: string;
+};
+export type CreditNote = {
+  id: string;
+  comprobante: string;
+  saleComprobante?: string;
+  reason: string;
+  refundMethod: 'cash' | 'account';
+  subtotal: string;
+  taxTotal: string;
+  total: string;
+  occurredAt: string;
+  lines: CreditNoteLine[];
+};
 
 export type Pagination = { page: number; pageSize: number; total: number; totalPages: number };
 

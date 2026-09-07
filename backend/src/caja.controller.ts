@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
@@ -27,6 +28,12 @@ export class CashShiftsController {
   /** Historial de turnos: sólo quien puede ver todas las cajas de la sucursal. */
   @Get() @RequirePermission('caja.ver_todas') list(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
     return this.caja.list(request.user.tenantId, query, request.user.branchWarehouseIds);
+  }
+
+  /** Historial de turnos a Excel/CSV, respetando los filtros de la pantalla. */
+  @Get('export') @RequirePermission('caja.ver_todas')
+  export(@Req() request: AuthRequest, @Res() res: Response, @Query() query: Record<string, string | undefined>) {
+    return this.caja.export(res, request.user.tenantId, query, request.user.branchWarehouseIds);
   }
 
   /** El turno abierto del usuario que consulta, o null. Lo primero que pregunta la pantalla de caja. */

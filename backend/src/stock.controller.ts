@@ -15,6 +15,7 @@ export class StockController {
 
   @Post('in') @RequirePermission('stock.mover') createIn(@Req() request: AuthRequest, @Body() body: MovementInput) { return this.stock.createIn(request.user.tenantId, body); }
   @Post('out') @RequirePermission('stock.mover') createOut(@Req() request: AuthRequest, @Body() body: MovementInput) { return this.stock.createOut(request.user.tenantId, body); }
+  @Post('transfer') @RequirePermission('stock.transferir') transfer(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) { return this.stock.transfer(request.user.tenantId, body); }
   @Get() @RequirePermission('stock.ver') all(@Req() request: AuthRequest) { return this.stock.currentAll(request.user.tenantId, request.user.branchWarehouseIds); }
 
   @Get('export')

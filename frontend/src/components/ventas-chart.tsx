@@ -9,12 +9,14 @@ type Serie = {
   labels: string[];
   fact: (number | null)[];
   tick: (number | null)[];
+  marg: (number | null)[];
   prevFact: (number | null)[];
   prevTick: (number | null)[];
+  prevMarg: (number | null)[];
 };
 
 type Period = 'hoy' | 'semana' | 'mes' | 'anio';
-type Metric = 'facturacion' | 'tickets' | 'ticketprom';
+type Metric = 'facturacion' | 'tickets' | 'ticketprom' | 'margen';
 
 const PERIODS: { key: Period; label: string }[] = [
   { key: 'hoy', label: 'Hoy' },
@@ -24,6 +26,7 @@ const PERIODS: { key: Period; label: string }[] = [
 ];
 const METRICS: { key: Metric; label: string }[] = [
   { key: 'facturacion', label: 'Facturación' },
+  { key: 'margen', label: 'Margen' },
   { key: 'tickets', label: 'Tickets' },
   { key: 'ticketprom', label: 'Ticket promedio' },
 ];
@@ -37,9 +40,10 @@ const COMPARA: Record<Period, string> = {
 const int = (n: number) => Math.round(n).toLocaleString('es-AR');
 const pct = (n: number) => n.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
 
-function valueOf(metric: Metric, fact: number | null, tick: number | null): number | null {
-  if (fact == null && tick == null) return null;
+function valueOf(metric: Metric, fact: number | null, tick: number | null, marg: number | null): number | null {
+  if (fact == null && tick == null && marg == null) return null;
   if (metric === 'facturacion') return fact ?? 0;
+  if (metric === 'margen') return marg ?? 0;
   if (metric === 'tickets') return tick ?? 0;
   return tick ? (fact ?? 0) / tick : 0;
 }
@@ -74,14 +78,15 @@ export function VentasChart() {
 
   const derived = useMemo(() => {
     if (!serie) return null;
-    const cur = serie.labels.map((_, i) => valueOf(metric, serie.fact[i], serie.tick[i]));
-    const prev = serie.labels.map((_, i) => valueOf(metric, serie.prevFact[i], serie.prevTick[i]));
-    const totalCur = totalOf(metric, serie.fact, serie.tick);
+    const cur = serie.labels.map((_, i) => valueOf(metric, serie.fact[i], serie.tick[i], serie.marg[i]));
+    const prev = serie.labels.map((_, i) => valueOf(metric, serie.prevFact[i], serie.prevTick[i], serie.prevMarg[i]));
+    const totalCur = totalOf(metric, serie.fact, serie.tick, serie.marg);
     const lastIdx = cur.reduce<number>((l, v, i) => (v != null ? i : l), -1);
     const totalPrev = totalOf(
       metric,
       serie.prevFact.map((v, i) => (i <= lastIdx ? v : null)),
       serie.prevTick.map((v, i) => (i <= lastIdx ? v : null)),
+      serie.prevMarg.map((v, i) => (i <= lastIdx ? v : null)),
     );
     const dp = totalPrev > 0 ? ((totalCur - totalPrev) / totalPrev) * 100 : null;
     const max = Math.max(1, ...cur.filter((v): v is number => v != null), ...prev.filter((v): v is number => v != null)) * 1.12;
@@ -260,14 +265,17 @@ export function VentasChart() {
   );
 }
 
-function totalOf(metric: Metric, fact: (number | null)[], tick: (number | null)[]): number {
+function totalOf(metric: Metric, fact: (number | null)[], tick: (number | null)[], marg: (number | null)[]): number {
   let sf = 0;
   let st = 0;
+  let sm = 0;
   for (let i = 0; i < fact.length; i++) {
     if (fact[i] != null) sf += fact[i] as number;
     if (tick[i] != null) st += tick[i] as number;
+    if (marg[i] != null) sm += marg[i] as number;
   }
   if (metric === 'facturacion') return sf;
+  if (metric === 'margen') return sm;
   if (metric === 'tickets') return st;
   return st ? sf / st : 0;
 }

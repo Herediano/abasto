@@ -1,5 +1,6 @@
-import { ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { MovementType, Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from './prisma/prisma.service';
 import { IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementInput } from './stock.types';
 
@@ -79,6 +80,50 @@ export class StockService {
         quantity: new Prisma.Decimal(input.quantity).negated(), movementType: input.movementType, operationId: input.operationId,
         occurredAt: input.occurredAt, referenceType: input.referenceType, referenceId: input.referenceId, notes: input.notes,
       } });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Mueve mercadería de un depósito a otro (típicamente entre sucursales) en una
+   * sola transacción: `transfer_out` en el origen (con lock y chequeo de
+   * disponible, como cualquier egreso) y `transfer_in` en el destino, ambos con
+   * el mismo `operationId` para poder aparearlos después. El libro sigue siendo
+   * append-only: la transferencia son dos asientos, no una edición.
+   */
+  async transfer(tenantId: string, body: Record<string, unknown>) {
+    const productId = typeof body.productId === 'string' ? body.productId : '';
+    const fromWarehouseId = typeof body.fromWarehouseId === 'string' ? body.fromWarehouseId : '';
+    const toWarehouseId = typeof body.toWarehouseId === 'string' ? body.toWarehouseId : '';
+    const productLotId = typeof body.productLotId === 'string' && body.productLotId ? body.productLotId : undefined;
+    const quantity = Number(body.quantity);
+    const notes = typeof body.notes === 'string' && body.notes.trim() ? body.notes.trim() : undefined;
+    if (!productId || !fromWarehouseId || !toWarehouseId) throw new UnprocessableEntityException('Indicá el producto, el depósito de origen y el de destino');
+    if (fromWarehouseId === toWarehouseId) throw new BadRequestException('El origen y el destino tienen que ser distintos');
+    if (!Number.isFinite(quantity) || quantity <= 0) throw new UnprocessableEntityException('La cantidad debe ser mayor a cero');
+
+    const operationId = randomUUID();
+    const qty = new Prisma.Decimal(quantity);
+
+    return this.prisma.$transaction(async tx => {
+      await this.validateScope(tx, { tenantId, productId, productLotId, warehouseId: fromWarehouseId });
+      const destino = await tx.warehouse.findFirst({ where: { id: toWarehouseId, tenantId } });
+      if (!destino) throw new NotFoundException('Depósito de destino no encontrado');
+
+      const lockKey = [tenantId, productId, productLotId ?? 'no-lot', fromWarehouseId].join(':');
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+      const current = await tx.stockMovement.aggregate({
+        where: { tenantId, productId, productLotId: productLotId ?? null, warehouseId: fromWarehouseId },
+        _sum: { quantity: true },
+      });
+      const available = Number(current._sum.quantity ?? 0);
+      if (available < quantity) {
+        throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: 'No hay stock suficiente en el depósito de origen', available: available.toFixed(3), requested: quantity.toFixed(3) });
+      }
+
+      const base = { tenantId, productId, productLotId: productLotId ?? null, operationId, referenceType: 'stock_transfer' as const, notes };
+      await tx.stockMovement.create({ data: { ...base, warehouseId: fromWarehouseId, quantity: qty.negated(), movementType: MovementType.transfer_out } });
+      await tx.stockMovement.create({ data: { ...base, warehouseId: toWarehouseId, quantity: qty, movementType: MovementType.transfer_in } });
+      return { operationId, quantity: qty.toFixed(3), fromWarehouseId, toWarehouseId };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 

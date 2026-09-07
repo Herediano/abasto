@@ -1,9 +1,11 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
+import { sendExport } from './export.util';
 
 @Controller('warehouses')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -17,6 +19,27 @@ export class WarehousesController {
       orderBy: { name: 'asc' },
       include: { branch: { select: { id: true, name: true } } },
     });
+  }
+
+  @Get('export') @RequirePermission('depositos.ver')
+  async export(@Req() request: AuthRequest, @Res() res: Response, @Query('format') format?: string) {
+    const rows = await this.prisma.warehouse.findMany({
+      where: { tenantId: request.user.tenantId, isActive: true },
+      orderBy: { name: 'asc' },
+      include: { branch: { select: { name: true } } },
+    });
+    await sendExport(
+      res,
+      format,
+      'depositos',
+      [
+        { header: 'Depósito', key: 'name', width: 28 },
+        { header: 'Código', key: 'code', width: 14 },
+        { header: 'Sucursal', key: 'branch', width: 24 },
+        { header: 'Dirección', key: 'address', width: 32 },
+      ],
+      rows.map(w => ({ name: w.name, code: w.code, branch: w.branch?.name ?? '', address: w.address ?? '' })),
+    );
   }
 
   @Post()

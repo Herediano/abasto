@@ -331,7 +331,7 @@ export function StockInPage() {
 
       <Card>
         <CardContent>
-          <form className="grid gap-5" onSubmit={submit}>
+          <form className="grid gap-6" onSubmit={submit}>
             <Field label="Proveedor" htmlFor="supplierId">
               <Select id="supplierId" required value={header.supplierId} onChange={e => setHeader({ ...header, supplierId: e.target.value })}>
                 {suppliers.map(s => (

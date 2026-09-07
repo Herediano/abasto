@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
+import { ExportMenu } from '@/components/export-menu';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
@@ -102,11 +103,14 @@ export function WarehousesPage() {
         title="Depósitos"
         description="Dónde se guarda el stock, por sucursal. Las sucursales se administran en Ajustes."
         actions={
-          can('depositos.crear') ? (
-            <Button onClick={openCreate}>
-              <Plus /> Nuevo depósito
-            </Button>
-          ) : undefined
+          <div className="flex gap-2">
+            <ExportMenu path="/warehouses" filename="depositos" />
+            {can('depositos.crear') && (
+              <Button onClick={openCreate}>
+                <Plus /> Nuevo depósito
+              </Button>
+            )}
+          </div>
         }
       />
       <Card>

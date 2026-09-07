@@ -6,6 +6,7 @@ const TABS: { to: string; label: string; end?: boolean; permission: string }[] =
   { to: '/stock', label: 'Actual', end: true, permission: 'stock.ver' },
   { to: '/stock/in', label: 'Ingreso', permission: 'stock.mover' },
   { to: '/stock/out', label: 'Egreso', permission: 'stock.mover' },
+  { to: '/stock/transfer', label: 'Transferir', permission: 'stock.transferir' },
   { to: '/stock/history', label: 'Historial', permission: 'stock.ver' },
   { to: '/stock/expirations', label: 'Vencimientos', permission: 'stock.ver' },
   { to: '/stock/restock', label: 'Reposición', permission: 'stock.ver' },

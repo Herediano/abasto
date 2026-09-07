@@ -1,10 +1,12 @@
-import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
+import { sendExport } from './export.util';
 
 /**
  * El modelo Customer existía desde el principio pero nunca tuvo pantalla. Se
@@ -61,6 +63,53 @@ export class CustomersController {
     const listas = await this.prisma.priceList.findMany({ where: { tenantId }, select: { id: true, name: true } });
     const porId = new Map(listas.map(l => [l.id, l.name]));
     return clientes.map(c => ({ ...c, priceListName: c.priceListId ? porId.get(c.priceListId) ?? null : null }));
+  }
+
+  @Get('export') @RequirePermission('clientes.ver')
+  async export(@Req() request: AuthRequest, @Res() res: Response, @Query() query: Record<string, string | undefined>) {
+    const tenantId = request.user.tenantId;
+    const search = query.search?.trim();
+    const where: Prisma.CustomerWhereInput = {
+      tenantId,
+      ...(query.status === 'inactive' ? { isActive: false } : query.status === 'all' ? {} : { isActive: true }),
+      ...(search
+        ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { taxId: { contains: search, mode: 'insensitive' } }] }
+        : {}),
+    };
+    const [clientes, listas] = await Promise.all([
+      this.prisma.customer.findMany({ where, orderBy: { name: 'asc' } }),
+      this.prisma.priceList.findMany({ where: { tenantId }, select: { id: true, name: true } }),
+    ]);
+    const porId = new Map(listas.map(l => [l.id, l.name]));
+    await sendExport(
+      res,
+      query.format,
+      'clientes',
+      [
+        { header: 'Cliente', key: 'name', width: 32 },
+        { header: 'Razón social', key: 'legalName', width: 32 },
+        { header: 'CUIT', key: 'taxId', width: 16 },
+        { header: 'Email', key: 'email', width: 26 },
+        { header: 'Teléfono', key: 'phone', width: 18 },
+        { header: 'Dirección', key: 'address', width: 32 },
+        { header: 'Lista de precios', key: 'priceList', width: 20 },
+        { header: 'Límite de crédito', key: 'creditLimit', width: 16, numFmt: '#,##0.00' },
+        { header: 'Saldo cta. cte.', key: 'balance', width: 16, numFmt: '#,##0.00' },
+        { header: 'Estado', key: 'estado', width: 12 },
+      ],
+      clientes.map(c => ({
+        name: c.name,
+        legalName: c.legalName ?? '',
+        taxId: c.taxId ?? '',
+        email: c.email ?? '',
+        phone: c.phone ?? '',
+        address: c.address ?? '',
+        priceList: c.priceListId ? porId.get(c.priceListId) ?? '' : 'Lista base',
+        creditLimit: c.creditLimit === null ? '' : Number(c.creditLimit),
+        balance: Number(c.accountBalance),
+        estado: c.isActive ? 'Activo' : 'Inactivo',
+      })),
+    );
   }
 
   @Post()

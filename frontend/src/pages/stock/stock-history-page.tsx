@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Eye, ClockCounterClockwise as HistoryIcon, MagnifyingGlass, X } from '@phosphor-icons/react';
+import { useSearchParams } from 'react-router-dom';
+import { Eye, ClockCounterClockwise as HistoryIcon } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
+import { ListFilters } from '@/components/list-filters';
 import { PageHeader } from '@/components/page-header';
 import { StockNav } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
@@ -32,6 +34,8 @@ const REFERENCE_LABEL: Record<string, string> = {
   purchase_invoice: 'Factura de compra',
   purchase_invoice_correction: 'Corrección de factura',
   purchase_invoice_cancellation: 'Anulación de factura',
+  stock_transfer: 'Transferencia entre depósitos',
+  sale: 'Venta',
 };
 
 function originLabel(referenceType?: string | null) {
@@ -44,11 +48,12 @@ export function StockHistoryPage() {
   const token = session!.accessToken;
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [searchParams] = useSearchParams();
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [supplierId, setSupplierId] = useState('');
   const [warehouseId, setWarehouseId] = useState('');
-  const [movementType, setMovementType] = useState('');
+  const [movementType, setMovementType] = useState(searchParams.get('movementType') ?? '');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [items, setItems] = useState<Movement[]>([]);
@@ -95,114 +100,58 @@ export function StockHistoryPage() {
 
   useEffect(() => { void load(); }, [token, search, supplierId, warehouseId, movementType, fromDate, toDate, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasActiveFilters = !!(searchInput || supplierId || warehouseId || movementType || fromDate || toDate);
-
-  function clearFilters() {
-    setSearchInput('');
-    setSearch('');
-    setSupplierId('');
-    setWarehouseId('');
-    setMovementType('');
-    setFromDate('');
-    setToDate('');
-    setPage(1);
-  }
+  const reset = (fn: () => void) => { fn(); setPage(1); };
+  const activeFilters = [
+    supplierId && { key: 'sup', label: suppliers.find(s => s.id === supplierId)?.name ?? 'Proveedor', clear: () => reset(() => setSupplierId('')) },
+    warehouseId && { key: 'wh', label: warehouses.find(w => w.id === warehouseId)?.name ?? 'Depósito', clear: () => reset(() => setWarehouseId('')) },
+    movementType && { key: 'type', label: MOVEMENT_LABEL[movementType] ?? movementType, clear: () => reset(() => setMovementType('')) },
+    fromDate && { key: 'from', label: `Desde ${fromDate}`, clear: () => reset(() => setFromDate('')) },
+    toDate && { key: 'to', label: `Hasta ${toDate}`, clear: () => reset(() => setToDate('')) },
+  ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   return (
     <>
       <PageHeader title="Historial de movimientos" description="Todos los movimientos de stock del tenant, del más reciente al más antiguo." />
       <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
-      <Card>
-        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Buscar" htmlFor="filter-search">
-            <div className="relative">
-              <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="filter-search" className="pl-8" placeholder="Producto o código de barras" value={searchInput} onChange={e => setSearchInput(e.target.value)} />
-            </div>
-          </Field>
-          <Field label="Proveedor" htmlFor="filter-supplier">
-            <Select
-              id="filter-supplier"
-              value={supplierId}
-              onChange={e => {
-                setSupplierId(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">Todos los proveedores</option>
-              {suppliers.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Depósito" htmlFor="filter-warehouse">
-            <Select
-              id="filter-warehouse"
-              value={warehouseId}
-              onChange={e => {
-                setWarehouseId(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">Todos los depósitos</option>
-              {warehouses.map(w => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Tipo" htmlFor="filter-type">
-            <Select
-              id="filter-type"
-              value={movementType}
-              onChange={e => {
-                setMovementType(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">Todos los tipos</option>
-              {MOVEMENT_TYPES.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Desde" htmlFor="filter-from">
-            <Input
-              id="filter-from"
-              type="date"
-              value={fromDate}
-              onChange={e => {
-                setFromDate(e.target.value);
-                setPage(1);
-              }}
-            />
-          </Field>
-          <Field label="Hasta" htmlFor="filter-to">
-            <Input
-              id="filter-to"
-              type="date"
-              value={toDate}
-              onChange={e => {
-                setToDate(e.target.value);
-                setPage(1);
-              }}
-            />
-          </Field>
-          {hasActiveFilters && (
-            <div className="flex items-end lg:col-span-2">
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X /> Limpiar filtros
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <ListFilters
+        search={searchInput}
+        onSearch={setSearchInput}
+        searchPlaceholder="Producto o código de barras"
+        searchLabel="Buscar movimientos"
+        activeFilters={activeFilters}
+      >
+        <Field label="Proveedor" htmlFor="filter-supplier">
+          <Select id="filter-supplier" value={supplierId} onChange={e => reset(() => setSupplierId(e.target.value))}>
+            <option value="">Todos los proveedores</option>
+            {suppliers.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Depósito" htmlFor="filter-warehouse">
+          <Select id="filter-warehouse" value={warehouseId} onChange={e => reset(() => setWarehouseId(e.target.value))}>
+            <option value="">Todos los depósitos</option>
+            {warehouses.map(w => (
+              <option key={w.id} value={w.id}>{w.name}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Tipo" htmlFor="filter-type">
+          <Select id="filter-type" value={movementType} onChange={e => reset(() => setMovementType(e.target.value))}>
+            <option value="">Todos los tipos</option>
+            {MOVEMENT_TYPES.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Desde" htmlFor="filter-from">
+          <Input id="filter-from" type="date" value={fromDate} onChange={e => reset(() => setFromDate(e.target.value))} />
+        </Field>
+        <Field label="Hasta" htmlFor="filter-to">
+          <Input id="filter-to" type="date" value={toDate} onChange={e => reset(() => setToDate(e.target.value))} />
+        </Field>
+      </ListFilters>
 
       <Card>
         <CardContent className="p-0">

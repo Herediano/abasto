@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import type { Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
+import { sendExport } from './export.util';
 
 type Usuario = { id: string; tenantId: string; permissions: Set<string>; warehouseId?: string | null };
 
@@ -190,5 +192,53 @@ export class CajaService {
       items: items.map(s => ({ ...s, cashRegisterName: s.cashRegister.name, openedByName: s.openedBy.name, closedByName: s.closedBy?.name ?? null, cashRegister: undefined, openedBy: undefined, closedBy: undefined })),
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     };
+  }
+
+  /** El mismo historial que list(), sin paginar, como Excel o CSV. */
+  async export(res: Response, tenantId: string, query: Record<string, string | undefined>, warehouseIds?: string[]) {
+    const where: Prisma.CashShiftWhereInput = {
+      tenantId,
+      ...(warehouseIds ? { cashRegister: { warehouseId: { in: warehouseIds } } } : {}),
+      ...(query.cashRegisterId ? { cashRegisterId: query.cashRegisterId } : {}),
+      ...(query.status ? { status: query.status as 'open' | 'closed' } : {}),
+      ...(query.from || query.to
+        ? { openedAt: { gte: query.from ? new Date(`${query.from}T00:00:00`) : undefined, lte: query.to ? new Date(`${query.to}T23:59:59.999`) : undefined } }
+        : {}),
+    };
+    const rows = await this.prisma.cashShift.findMany({
+      where,
+      orderBy: { openedAt: 'desc' },
+      take: 10000,
+      include: { cashRegister: { select: { name: true } }, openedBy: { select: { name: true } }, closedBy: { select: { name: true } } },
+    });
+    await sendExport(
+      res,
+      query.format,
+      'turnos-de-caja',
+      [
+        { header: 'Caja', key: 'caja', width: 20 },
+        { header: 'Apertura', key: 'apertura', width: 20 },
+        { header: 'Cierre', key: 'cierre', width: 20 },
+        { header: 'Abrió', key: 'abrio', width: 20 },
+        { header: 'Cerró', key: 'cerro', width: 20 },
+        { header: 'Fondo inicial', key: 'fondo', width: 14, numFmt: '#,##0.00' },
+        { header: 'Efectivo esperado', key: 'esperado', width: 16, numFmt: '#,##0.00' },
+        { header: 'Efectivo contado', key: 'contado', width: 16, numFmt: '#,##0.00' },
+        { header: 'Diferencia', key: 'diferencia', width: 14, numFmt: '#,##0.00' },
+        { header: 'Estado', key: 'estado', width: 12 },
+      ],
+      rows.map(s => ({
+        caja: s.cashRegister.name,
+        apertura: s.openedAt.toLocaleString('es-AR'),
+        cierre: s.closedAt ? s.closedAt.toLocaleString('es-AR') : '',
+        abrio: s.openedBy.name,
+        cerro: s.closedBy?.name ?? '',
+        fondo: Number(s.openingCash),
+        esperado: s.expectedCash === null ? '' : Number(s.expectedCash),
+        contado: s.countedCash === null ? '' : Number(s.countedCash),
+        diferencia: s.cashDifference === null ? '' : Number(s.cashDifference),
+        estado: s.status === 'open' ? 'Abierto' : 'Cerrado',
+      })),
+    );
   }
 }

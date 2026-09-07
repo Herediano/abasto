@@ -9,6 +9,7 @@ import { SignupPage } from '@/pages/auth/signup-page';
 import { StockPage } from '@/pages/stock/stock-page';
 import { StockInPage } from '@/pages/stock/stock-in-page';
 import { StockOutPage } from '@/pages/stock/stock-out-page';
+import { StockTransferPage } from '@/pages/stock/stock-transfer-page';
 import { StockHistoryPage } from '@/pages/stock/stock-history-page';
 import { ExpirationsPage } from '@/pages/stock/expirations-page';
 import { RestockPage } from '@/pages/stock/restock-page';
@@ -22,6 +23,7 @@ import { PosPage } from '@/pages/sales/pos-page';
 import { SalesHistoryPage } from '@/pages/sales/sales-history-page';
 import { ShiftsHistoryPage } from '@/pages/sales/shifts-history-page';
 import { PricesPage } from '@/pages/prices/prices-page';
+import { ReportesPage } from '@/pages/reportes-page';
 import { RangosPage } from '@/pages/admin/rangos-page';
 
 function App() {
@@ -40,6 +42,7 @@ function App() {
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/in" element={<StockInPage />} />
         <Route path="/stock/out" element={<StockOutPage />} />
+        <Route path="/stock/transfer" element={<StockTransferPage />} />
         <Route path="/stock/history" element={<StockHistoryPage />} />
         <Route path="/stock/expirations" element={<ExpirationsPage />} />
         <Route path="/stock/restock" element={<RestockPage />} />
@@ -52,6 +55,9 @@ function App() {
         <Route path="/ventas/historial" element={<SalesHistoryPage />} />
         <Route element={<PermissionRoute permission="precios.ver" />}>
           <Route path="/precios" element={<PricesPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="reportes.ver" />}>
+          <Route path="/reportes" element={<ReportesPage />} />
         </Route>
         <Route element={<PermissionRoute permission="usuarios.ver" />}>
           <Route path="/admin/users" element={<UsersPage />} />

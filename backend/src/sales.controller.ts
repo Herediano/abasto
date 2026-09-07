@@ -26,6 +26,8 @@ export class SalesController {
   @RequirePermission('ventas.ver')
   async export(@Req() request: AuthRequest, @Res() res: Response, @Query() query: Record<string, string | undefined>) {
     const tenantId = request.user.tenantId;
+    const search = query.search?.trim();
+    const searchNumber = search ? Number.parseInt(search.replace(/^0+/, ''), 10) : NaN;
     const rows = await this.prisma.sale.findMany({
       where: {
         tenantId,
@@ -34,6 +36,14 @@ export class SalesController {
         ...(query.paymentMethod ? { paymentMethod: query.paymentMethod } : {}),
         ...(query.from || query.to
           ? { occurredAt: { ...(query.from ? { gte: new Date(query.from) } : {}), ...(query.to ? { lte: new Date(`${query.to}T23:59:59`) } : {}) } }
+          : {}),
+        ...(search
+          ? {
+              OR: [
+                ...(Number.isFinite(searchNumber) ? [{ number: searchNumber }] : []),
+                { customer: { name: { contains: search, mode: 'insensitive' as const } } },
+              ],
+            }
           : {}),
       },
       include: { customer: { select: { name: true } }, user: { select: { name: true } } },

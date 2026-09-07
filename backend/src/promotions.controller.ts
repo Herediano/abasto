@@ -1,9 +1,11 @@
-import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Post, Put, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res, UnprocessableEntityException, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
+import { sendExport } from './export.util';
 
 const TIPOS = ['nxm', 'a_plus_b', 'percent', 'amount', 'special_price'] as const;
 const SCOPES = ['all', 'category', 'brand'];
@@ -55,6 +57,25 @@ function parseConfig(tipo: Tipo, raw: unknown): Record<string, number> {
   }
 }
 
+const TIPO_LABEL: Record<Tipo, string> = {
+  nxm: 'NxM',
+  a_plus_b: 'A+B',
+  percent: 'Descuento %',
+  amount: 'Descuento $',
+  special_price: 'Precio especial',
+};
+
+/** Texto legible de la promoción, el mismo criterio que la tabla del frontend. */
+function describirPromo(type: Tipo, config: Record<string, number>): string {
+  switch (type) {
+    case 'nxm': return `Llevá ${config.n}, pagá ${config.m}`;
+    case 'a_plus_b': return `Comprá ${config.buyQty}, llevás ${config.getQty} de regalo`;
+    case 'percent': return config.desdeUnidad > 1 ? `${config.percent}% off desde la unidad ${config.desdeUnidad}` : `${config.percent}% de descuento`;
+    case 'amount': return `$${config.amount} de descuento`;
+    case 'special_price': return `Precio especial $${config.price}`;
+  }
+}
+
 @Controller('promotions')
 @UseGuards(JwtAuthGuard, PermissionGuard)
 export class PromotionsController {
@@ -82,6 +103,44 @@ export class PromotionsController {
   @Get() @RequirePermission('promociones.ver')
   list(@Req() request: AuthRequest) {
     return this.prisma.promotion.findMany({ where: { tenantId: request.user.tenantId }, orderBy: [{ isActive: 'desc' }, { validFrom: 'desc' }] });
+  }
+
+  @Get('export') @RequirePermission('promociones.ver')
+  async export(@Req() request: AuthRequest, @Res() res: Response, @Query('format') format?: string) {
+    const tenantId = request.user.tenantId;
+    const [promos, categorias] = await Promise.all([
+      this.prisma.promotion.findMany({ where: { tenantId }, orderBy: [{ isActive: 'desc' }, { validFrom: 'desc' }] }),
+      this.prisma.category.findMany({ where: { tenantId }, select: { id: true, name: true } }),
+    ]);
+    const nombreCategoria = new Map(categorias.map(c => [c.id, c.name]));
+    const alcance = (scopeType: string, scopeValue: string | null) => {
+      if (scopeType === 'all' || !scopeValue) return 'Todos los productos';
+      if (scopeType === 'category') return `Categoría: ${nombreCategoria.get(scopeValue) ?? scopeValue}`;
+      return `Marca: ${scopeValue}`;
+    };
+    await sendExport(
+      res,
+      format,
+      'promociones',
+      [
+        { header: 'Promoción', key: 'name', width: 28 },
+        { header: 'Tipo', key: 'tipo', width: 16 },
+        { header: 'Qué hace', key: 'detalle', width: 34 },
+        { header: 'Alcance', key: 'alcance', width: 26 },
+        { header: 'Desde', key: 'desde', width: 14 },
+        { header: 'Hasta', key: 'hasta', width: 14 },
+        { header: 'Estado', key: 'estado', width: 12 },
+      ],
+      promos.map(p => ({
+        name: p.name,
+        tipo: TIPO_LABEL[p.type as Tipo] ?? p.type,
+        detalle: describirPromo(p.type as Tipo, p.config as Record<string, number>),
+        alcance: alcance(p.scopeType, p.scopeValue),
+        desde: p.validFrom.toLocaleDateString('es-AR'),
+        hasta: p.validTo ? p.validTo.toLocaleDateString('es-AR') : 'sin fin',
+        estado: p.isActive ? 'Activa' : 'Inactiva',
+      })),
+    );
   }
 
   @Post() @RequirePermission('promociones.crear')

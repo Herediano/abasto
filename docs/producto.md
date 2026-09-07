@@ -199,8 +199,10 @@ Ordenados por peso para un mayorista:
   + $20.000 transferencia). Cada medio puede pedir datos extra (tarjeta:
   cuotas/lote/cupón; transferencia: confirmación; QR: id de operación) para poder
   cuadrar el arqueo.
-- **Recargo / descuento por medio de pago.** Los mayoristas cobran más con
-  tarjeta o descuentan por efectivo/transferencia.
+- **Recargo / descuento por medio de pago.** ~~Los mayoristas cobran más con
+  tarjeta o descuentan por efectivo/transferencia.~~ Construido: `PaymentAdjustment`
+  guarda un % por medio y por sucursal; la caja lo muestra antes de confirmar y
+  el neto va a `Sale.surchargeTotal`. La cuenta corriente no lleva recargo.
 - **Productos por peso (pesables).** Fiambres, a granel. Balanza, códigos de
   barras con peso embebido (prefijo 20–29), cantidad decimal.
 - **Precios por tipo de cliente aplicados en caja.** Precio mostrador / mayorista
@@ -209,17 +211,23 @@ Ordenados por peso para un mayorista:
 
 ### Importantes
 
-- **Transferencias de stock entre sucursales.** Mover mercadería de una sucursal
-  a otra. Ya existen los tipos de movimiento; falta el flujo y el permiso.
-- **Devoluciones / notas de crédito.** Cliente devuelve o la venta estuvo mal →
-  nota de crédito fiscal, stock vuelve a entrar, plata sale o crédito a cuenta
-  corriente.
-- **Ofertas y tramos por cantidad en caja.** "Comprás 10+ y pagás menos" es core.
-  Existen los tramos y las promociones configuradas; falta que la caja las
-  aplique.
-- **Reportes del encargado / dueño.** Ventas por día / sucursal / cajero / medio
-  de pago; margen; más vendidos; sin rotación; stock valorizado; cuentas
-  corrientes; comparativa entre sucursales; arqueos con diferencias.
+- **Transferencias de stock entre sucursales.** Construido: `POST /stock/transfer`
+  (permiso `stock.transferir`, pantalla «Transferir» en Stock) mueve mercadería
+  entre depósitos en una transacción, con `transfer_out` + `transfer_in`
+  apareados por `operationId`.
+- **Devoluciones / notas de crédito.** Construido (sin CAE todavía): `CreditNote`
+  por devolución total o parcial de una venta confirmada; el stock reingresa y la
+  plata sale por efectivo del turno o crédito a cuenta corriente. Permiso
+  `ventas.devolver`.
+- **Ofertas y tramos por cantidad en caja.** Construido: `cotizar`
+  (`sale-pricing.util.ts`) aplica `PriceTier` (escala por cantidad) y `Promotion`
+  al cotizar y al confirmar; la caja muestra el descuento por línea, el total y
+  las ofertas vigentes (F6). Si aplican varias promos gana la que más descuenta.
+- **Reportes del encargado / dueño.** Construido el módulo Reportes
+  (`GET /reportes/panel`): por rango de fechas, ventas por medio de pago / cajero,
+  comparativa entre sucursales, más vendidos con margen, stock valorizado, arqueos
+  con diferencia y cuentas corrientes con saldo. Falta: productos sin rotación.
+  El margen y el stock valorizado quedan detrás de `reportes.ver_plata`.
 
 ### Convienen
 
@@ -249,13 +257,18 @@ Al momento de escribir esto (2026-09):
 - **Caja / turno / arqueo:** construido — `CashRegister`/`CashShift`/
   `CashMovement`. Apertura con fondo, movimientos durante el turno, cierre con
   arqueo (esperado/contado/diferencia) y desglose por medio de pago. Sin turno
-  abierto no se vende. Falta: varias cajas por sucursal se pueden crear pero la
-  UI de apertura no ofrece elegir cuál si hay más de una en pantallas fuera de
-  la caja (sólo la propia pantalla de apertura las lista).
+  abierto no se vende. Varias cajas por sucursal: la pantalla de apertura las
+  lista todas (selector cuando hay más de una) y el listado sale acotado a la
+  sucursal activa —abarca varios depósitos de la sucursal, no sólo el operativo
+  del usuario—. El backend valida la caja elegida al abrir el turno.
 - **Pago:** construido el pago dividido — `SalePayment`, varios medios por
-  venta (`cash | card | transfer | qr | account`) que tienen que sumar el
-  total. Falta el recargo/descuento por medio de pago: hoy el total no cambia
-  según cómo se pague.
+  venta (`cash | card | transfer | qr | account`) cuya parte base suma el total
+  de la mercadería. El recargo/descuento por medio de pago se aplica sobre esa
+  parte (`PaymentAdjustment` por sucursal) y suma a `Sale.surchargeTotal` /
+  `SalePayment.surchargeAmount`. Falta que cada medio pida sus datos extra
+  (cuotas/lote de tarjeta, id de QR) de forma estructurada.
+- **Margen:** construido — `SaleLine.unitCost` congela el costo al vender; el
+  gráfico de Ventas tiene la métrica «Margen».
 - **Cuenta corriente:** construida — límite de crédito por cliente, "account"
   como medio de pago, `CustomerAccountMovement` (venta/cobro/ajuste, saldo
   cacheado), estado de cuenta y cobro manual.
@@ -263,7 +276,11 @@ Al momento de escribir esto (2026-09):
   parseo del código de balanza (prefijo 20-29) en la caja. Falta integración
   real de balanza (esto asume que el código ya viene escaneado) y el mismo
   parseo en otras pantallas si hiciera falta (hoy sólo caja).
+- **Transferencias / devoluciones / reportes:** construidos —transferencia de
+  stock entre depósitos con doble asiento apareado; notas de crédito parciales o
+  totales; módulo Reportes por rango de fechas—.
 - **Base sólida que se conserva:** libro de stock append-only con lotes y
   vencimientos, multi-tenant por `tenant_id`, facturas de compra con corrección,
   listas de precios con derivación y vigencia, historial de precios, ventas que
-  no se editan (solo se anulan), catálogo de referencia global.
+  no se editan (solo se anulan o se devuelven con NC), catálogo de referencia
+  global.

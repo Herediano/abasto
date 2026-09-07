@@ -283,8 +283,14 @@ Tres franjas, de menos a más peso hacia abajo:
    según la hora (Buen día / Buenas tardes / Buenas noches) en h1, y los
    pendientes del día como **chips con el color de su módulo** (o «Hoy no hay
    nada urgente.»).
-3. **Pegado a la grilla.** El conteo de módulos, **Preguntar** (Ctrl + K) y
-   Configurar.
+3. **Pegado a la grilla.** Una fila de **tarjetas de acción**, con el mismo
+   molde que la caja —cascarón compacto, borde, superficie neutra y una franja
+   de color a la izquierda—: **Abrir Mostrador** (si el rango opera caja) a la
+   izquierda, **Configurar** y **Preguntar** (Ctrl + K) en el hueco de la
+   derecha. La franja es identidad, no estado: verde para Preguntar —es acción—,
+   pizarra para Configurar —es preferencia, no operación—. En pantalla angosta
+   la fila se apila. El ícono va suelto, sin pastilla, para que la fila quede
+   callada y no compita con las tarjetas de módulo.
 
 ### La tarjeta — un solo molde para las ~14
 
@@ -352,17 +358,19 @@ viaje con la cuenta) es más adelante.
 ### La caja no es una tarjeta
 
 La caja es un **modo de trabajo**, no un módulo que se navega: pantalla
-completa, el mundo del cajero. En el escritorio vive en un **botón ancho** que se
-diseña **como una tarjeta** —borde, lavado del fondo y **dos barras de color, una
-por cada costado** (en vez de la franja única a la izquierda de las tarjetas)—
-para que el ojo lo lea como la tarjeta principal. Se llama **«Abrir Mostrador»**
-y se apoya **abajo de la fila de Configurar / Preguntar, pegado al grid**, un
-poco más bajo que el resto de la barra (altura `10`): el cajero lo ve antes de
-mirar las tarjetas y no compite con los botones chicos. La **barra de estado se
-lee del color de las dos rieles** —verde sólido si el turno está abierto, rojo
-sólido si no—, no de las letras: el texto es siempre del tinte de lectura. Al
-abrir la app siempre se cae en el escritorio (no hay preferencia de "entrar
-directo a"); para un cajero, ese botón es lo primero que ve.
+completa, el mundo del cajero. En el escritorio vive en una **tarjeta de acción
+compacta** —el mismo molde que Configurar y Preguntar (borde, superficie neutra,
+dos renglones), pero con **dos barras de color, una por cada costado** en vez de
+la franja única a la izquierda— para que el ojo la lea como la tarjeta principal
+de esa fila. Se llama **«Abrir Mostrador»**, va **primera, a la izquierda de la
+fila**, arriba del grid: el cajero la ve antes de mirar las tarjetas. La **barra
+de estado se lee del color de las dos rieles** —verde sólido si el turno está
+abierto, rojo sólido si no—, no de las letras: el texto es siempre del tinte de
+lectura, y un punto verde parpadea en la etiqueta mientras hay turno abierto. El
+renglón de contexto lleva lo que el cajero quiere saber sin entrar: desde qué
+hora, cuántos tickets y cuánto efectivo hay. Al abrir la app siempre se cae en
+el escritorio (no hay preferencia de "entrar directo a"); para un cajero, esa
+tarjeta es lo primero que ve.
 
 ### El celular
 
@@ -450,8 +458,12 @@ datos a alguien de afuera.**
 ## Hecho
 
 - **Tokens** (`styles.css`) y fuentes (`index.html`). Toda la app en Yerba.
-- **Productos** — el molde de todo listado: filtros en panel detrás de «Filtros»,
-  lo activo vuelve como chips, tabla con las columnas justas.
+- **El molde de todo listado** en un componente (`components/list-filters.tsx`):
+  buscador siempre a mano, el resto de los filtros detrás de «Filtros», lo activo
+  vuelve como chips que se sacan de a uno, tabla con las columnas justas. Aplicado
+  a Productos, Stock, Vencimientos, Ventas, Historial de movimientos, Reposición y
+  Turnos de caja (los tres primeros filtran del lado del cliente sobre datos ya
+  cargados; el resto contra el backend).
 - **`PageHeader` pegajoso**: título y acciones siguen al scrollear.
 - **Componentes compartidos**: tabla con aire y cabecera sobre superficie
   levantada, tarjeta con una sola sombra, botón `outline` que se tiñe de verde.
@@ -519,9 +531,46 @@ datos a alguien de afuera.**
   son vistas de Stock (`components/stock-nav.tsx`), no tarjetas.
 - **Gráfico de Ventas** dentro del módulo (Hoy/Semana/Mes/Año, hover,
   comparación con el período anterior; `GET /api/reportes/ventas`).
-- **Exportar** unificado (Excel / CSV / copiar) en Productos, Stock, Ventas y
-  Proveedores (`components/export-menu.tsx` + `export.util.ts`).
+- **Exportar** unificado (Excel / CSV / copiar) en Productos, Stock, Ventas,
+  Proveedores, Clientes, Depósitos, Turnos de caja, Listas de precios y
+  Promociones (`components/export-menu.tsx` + `export.util.ts`).
 - **Ctrl+K**: buscador de módulos (la capa de IA, después).
+- **Formularios con aire y agrupación**: un solo molde de diálogo (cabecera
+  fuera del `<form>`, aviso de error debajo, `grid`), campos en grupos con 24 px
+  entre grupos y 12 px adentro (`gap-6` / `gap-3`), sin parches de margen
+  negativo ni pasos fuera de escala (`gap-5`). Botones en voz activa: «Guardar
+  cambios» al editar, «Crear <cosa>» al alta. El formulario de Productos pasó de
+  lista plana de ~13 campos a cuatro grupos (identificación · unidades ·
+  impuestos · reposición).
+- **Margen en el gráfico de Ventas**: `SaleLine.unitCost` congela el costo del
+  producto (`Product.costPrice`) al vender; el gráfico suma una métrica «Margen»
+  (subtotal neto de promos − costo, comparada con el período anterior). Las
+  ventas históricas se rellenaron con el costo actual; las líneas sin costo
+  cuentan como costo 0.
+- **Recargo / descuento por medio de pago, por sucursal** (`PaymentAdjustment`):
+  un % por medio de pago y sucursal (+ recarga, − descuenta), que se configura en
+  Ajustes → La empresa (botón de % por sucursal, sólo Dueño). La caja lo muestra
+  por medio antes de confirmar y el neto va a `Sale.surchargeTotal` y a lo que
+  cada `SalePayment` cobra. La cuenta corriente nunca lleva recargo.
+- **Promociones y escalas por cantidad en la caja**: ya estaban — `cotizar`
+  (`sale-pricing.util.ts`) aplica `PriceTier` y `Promotion` al cotizar y al
+  confirmar; la caja muestra el descuento por línea y el total. F6 lista las
+  ofertas vigentes.
+- **Transferencias de stock entre sucursales** (`stock.service.transfer`,
+  `POST /stock/transfer`, permiso `stock.transferir`): mueve mercadería de un
+  depósito a otro en una transacción, dos asientos apareados (`transfer_out` +
+  `transfer_in` con el mismo `operationId`). Pantalla propia en la nav de Stock
+  («Transferir»).
+- **Devoluciones / notas de crédito** (`CreditNote` + `CreditNoteLine`, permiso
+  `ventas.devolver`): devolución total o parcial de una venta confirmada desde su
+  detalle en Ventas. El stock reingresa (`adjustment_in`, ref `credit_note`) y la
+  plata sale —efectivo del turno (`CashMovement` `expense`) o crédito a la cuenta
+  corriente—. La venta original no se toca; numeración interna sin CAE.
+- **Reportes del encargado / dueño** (módulo Reportes, `GET /reportes/panel`):
+  para un rango de fechas —ventas por medio de pago, por cajero, comparativa entre
+  sucursales, más vendidos con margen, stock valorizado, arqueos con diferencia y
+  cuentas corrientes con saldo—. El margen y el stock valorizado sólo con
+  `reportes.ver_plata`.
 - **Seed de demo** (`npm run db:seed-demo -- "<empresa>"`) para ver todo con
   datos.
 
@@ -531,20 +580,13 @@ datos a alguien de afuera.**
 
 ### Producto
 
-1. **El molde de Productos al resto de los listados** (buscador + filtros en
-   panel + chips que se sacan de a uno + columnas justas). Faltan Stock,
-   Vencimientos, Ventas, ingresos/egresos/historial/reposición/turnos.
-2. **Margen en el gráfico de Ventas**: guardar el costo al momento de la venta
-   (`SaleLine.unitCost`) —falta migración y que la caja lo grabe.
-3. **Exportar en el resto de los listados** (falta clientes, precios,
-   promociones, turnos, depósitos).
-4. **La capa de IA en Ctrl+K**: hoy es solo buscador de módulos; falta que
+1. **La capa de IA en Ctrl+K**: hoy es solo buscador de módulos; falta que
    responda preguntas del negocio cruzando módulos.
-5. **Repasar los formularios** con la regla de aire y agrupación.
-6. **Recargo/descuento por medio de pago** (falta modelo y que la caja lo
-   muestre antes de confirmar).
-7. **Transferencias de stock entre sucursales** (mover mercadería de un depósito
-   a otro, con el ledger de las dos puntas).
+2. **Reportes que faltan**: productos sin rotación y etiquetas por lote.
+3. **Datos extra por medio de pago** en la caja (cuotas/lote de tarjeta, id de QR)
+   de forma estructurada, para cuadrar mejor el arqueo.
+4. **Onboarding de empresa nueva** (asistente guiado: sucursales, ARCA, importar
+   catálogo, listas de precios, rangos, invitar usuarios).
 
 ---
 

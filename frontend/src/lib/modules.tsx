@@ -1,5 +1,5 @@
 import {
-  ArrowsClockwise, Barcode, CashRegister, Gear, GearSix, Hourglass, Package, Receipt,
+  ArrowsClockwise, Barcode, CashRegister, ChartBar, Gear, GearSix, Hourglass, Package, Receipt,
   ShieldCheck, Tag, Truck, UsersThree, Vault, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
@@ -45,6 +45,11 @@ export const MODULES: ModuleDef[] = [
     key: 'turnos', label: 'Turnos de caja', path: '/ventas/turnos', permission: 'caja.ver_todas', Icon: Vault,
     blurb: 'Aperturas, cierres y arqueos con diferencia.', crumb: 'Escritorio /',
     motif: '<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2.5"/>',
+  },
+  {
+    key: 'reportes', label: 'Reportes', path: '/reportes', permission: 'reportes.ver', Icon: ChartBar,
+    blurb: 'Ventas, márgenes, más vendidos y arqueos.', crumb: 'Escritorio /',
+    motif: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   },
   {
     key: 'stock', label: 'Stock', path: '/stock', permission: 'stock.ver', Icon: Package,
@@ -130,6 +135,7 @@ const HUES: Record<string, string> = {
   proveedores: OP(195), // cian
   ventas: OP(240), // azul
   turnos: OP(285), // violeta
+  reportes: OP(305), // violeta-magenta
   clientes: OP(330), // magenta
   caja: OP(210), // cian-azul (no es tarjeta, pero conserva su matiz)
   depositos: 'oklch(0.55 0.03 255)', // pizarra: estructura, no operación

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { CalendarX, PencilSimple } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
+import { ListFilters } from '@/components/list-filters';
+import { Select } from '@/components/ui/select';
 import { PageHeader } from '@/components/page-header';
 import { StockNav } from '@/components/stock-nav';
 import { PageSpinner, Spinner } from '@/components/spinner';
@@ -43,6 +45,9 @@ export function ExpirationsPage() {
   const [editing, setEditing] = useState<StockItem | null>(null);
   const [editDate, setEditDate] = useState('');
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [urgency, setUrgency] = useState('');
+  const [warehouseId, setWarehouseId] = useState('');
 
   const load = () =>
     api<{ items: StockItem[] }>('/stock', {}, token)
@@ -82,17 +87,65 @@ export function ExpirationsPage() {
     }
   }
 
+  const warehouses = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const i of items) map.set(i.warehouseId, i.warehouseName);
+    return [...map].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [items]);
+
+  const q = search.trim().toLowerCase();
+  const visibles = items.filter(i => {
+    if (warehouseId && i.warehouseId !== warehouseId) return false;
+    if (q && !i.productName.toLowerCase().includes(q)) return false;
+    if (urgency) {
+      const days = daysRemaining(i.expirationDate!);
+      if (urgency === 'overdue' && days >= 0) return false;
+      if (urgency === 'soon' && (days < 0 || days > 30)) return false;
+    }
+    return true;
+  });
+
+  const activeFilters = [
+    urgency && { key: 'urg', label: urgency === 'overdue' ? 'Vencidos' : 'Vencen en ≤ 30 días', clear: () => setUrgency('') },
+    warehouseId && { key: 'wh', label: warehouses.find(w => w.id === warehouseId)?.name ?? 'Depósito', clear: () => setWarehouseId('') },
+  ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
+
   return (
     <>
       <PageHeader title="Vencimientos" description="Stock con fecha de vencimiento, ordenado del más próximo al más lejano." />
       <StockNav />
       {error && !editing && <Alert variant="destructive">{error}</Alert>}
+      <ListFilters
+        search={search}
+        onSearch={setSearch}
+        searchPlaceholder="Producto"
+        searchLabel="Buscar en vencimientos"
+        activeFilters={activeFilters}
+      >
+        <Field label="Urgencia" htmlFor="f-urg">
+          <Select id="f-urg" value={urgency} onChange={e => setUrgency(e.target.value)}>
+            <option value="">Todos</option>
+            <option value="overdue">Vencidos</option>
+            <option value="soon">Vencen en ≤ 30 días</option>
+          </Select>
+        </Field>
+        {warehouses.length > 1 && (
+          <Field label="Depósito" htmlFor="f-wh">
+            <Select id="f-wh" value={warehouseId} onChange={e => setWarehouseId(e.target.value)}>
+              <option value="">Todos los depósitos</option>
+              {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </Select>
+          </Field>
+        )}
+      </ListFilters>
       <Card>
         <CardContent className="p-0">
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
             <EmptyState icon={CalendarX} title="Sin vencimientos próximos" description="No hay stock con fecha de vencimiento registrada." />
+          ) : visibles.length === 0 ? (
+            <EmptyState icon={CalendarX} title="Sin resultados" description="Ningún lote coincide con la búsqueda." />
           ) : (
             <Table>
               <TableHeader>
@@ -107,7 +160,7 @@ export function ExpirationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map(i => {
+                {visibles.map(i => {
                   const days = daysRemaining(i.expirationDate!);
                   const urgency = urgencyBadge(days);
                   return (
@@ -152,7 +205,7 @@ export function ExpirationsPage() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving && <Spinner />} Guardar
+                {saving && <Spinner />} Guardar cambios
               </Button>
             </DialogFooter>
           </form>
