@@ -14,6 +14,9 @@
 *.log
 .DS_Store
 
+# Acceso remoto local (túnel, PIDs, cloudflared) — máquina-específico
+_remote/
+
 # graphify machine-local sidecars (regenerated automatically)
 graphify-out/.graphify_python
 graphify-out/.graphify_root
