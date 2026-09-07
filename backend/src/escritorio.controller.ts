@@ -31,25 +31,44 @@ export class EscritorioController {
     // semana pasada. Se resuelve en SQL contra la zona horaria de la base
     // (las columnas son `timestamp without time zone`, mezclar con Date desfasa). ----
     if (can('ventas.ver')) {
-      const [row] = await this.prisma.$queryRawUnsafe<
-        { hoy: number; tickets: number; ayer: number; semana_pasada: number }[]
-      >(
-        `SELECT
-           COALESCE(SUM(total) FILTER (WHERE occurred_at >= date_trunc('day', now())), 0)::float8 AS hoy,
-           COUNT(*) FILTER (WHERE occurred_at >= date_trunc('day', now()))::int AS tickets,
-           COALESCE(SUM(total) FILTER (WHERE occurred_at >= date_trunc('day', now()) - interval '1 day'
-             AND occurred_at < date_trunc('day', now())), 0)::float8 AS ayer,
-           COALESCE(SUM(total) FILTER (WHERE occurred_at >= date_trunc('day', now()) - interval '7 days'
-             AND occurred_at < date_trunc('day', now()) - interval '6 days'), 0)::float8 AS semana_pasada
-         FROM sales WHERE tenant_id = $1::uuid AND status = 'confirmed' AND warehouse_id = ANY($2::uuid[])`,
-        tenantId,
-        whIds,
-      );
+      const [row, serie] = await Promise.all([
+        this.prisma.$queryRawUnsafe<
+          { hoy: number; tickets: number; ayer: number; semana_pasada: number }[]
+        >(
+          `SELECT
+             COALESCE(SUM(total) FILTER (WHERE occurred_at >= date_trunc('day', now())), 0)::float8 AS hoy,
+             COUNT(*) FILTER (WHERE occurred_at >= date_trunc('day', now()))::int AS tickets,
+             COALESCE(SUM(total) FILTER (WHERE occurred_at >= date_trunc('day', now()) - interval '1 day'
+               AND occurred_at < date_trunc('day', now())), 0)::float8 AS ayer,
+             COALESCE(SUM(total) FILTER (WHERE occurred_at >= date_trunc('day', now()) - interval '7 days'
+               AND occurred_at < date_trunc('day', now()) - interval '6 days'), 0)::float8 AS semana_pasada
+           FROM sales WHERE tenant_id = $1::uuid AND status = 'confirmed' AND warehouse_id = ANY($2::uuid[])`,
+          tenantId,
+          whIds,
+        ),
+        // Los últimos 7 días inclusive, para la minimapa de la tarjeta de
+        // Ventas. Acá la columna es un día real (con zona) para que cada barra
+        // sea un día corrido, no un instante UTC.
+        this.prisma.$queryRawUnsafe<
+          { dia: Date; total: number; tickets: number }[]
+        >(
+          `SELECT date_trunc('day', occurred_at)::date AS dia,
+                  COALESCE(SUM(total), 0)::float8 AS total,
+                  COUNT(*)::int AS tickets
+           FROM sales
+           WHERE tenant_id = $1::uuid AND status = 'confirmed' AND warehouse_id = ANY($2::uuid[])
+             AND occurred_at >= date_trunc('day', now()) - interval '6 days'
+           GROUP BY 1 ORDER BY 1`,
+          tenantId,
+          whIds,
+        ),
+      ]);
       out.ventas = {
         hoy: Number(row?.hoy ?? 0),
         tickets: Number(row?.tickets ?? 0),
         ayer: Number(row?.ayer ?? 0),
         semanaPasada: Number(row?.semana_pasada ?? 0),
+        serie: serie.map(s => ({ dia: s.dia.toISOString(), total: Number(s.total ?? 0), tickets: Number(s.tickets ?? 0) })),
       };
     }
 
@@ -164,12 +183,20 @@ export class EscritorioController {
     if (can('clientes.ver')) {
       const conSaldo = await this.prisma.customer.findMany({
         where: { tenantId, isActive: true, accountBalance: { gt: 0 } },
-        select: { accountBalance: true, creditLimit: true },
+        select: { name: true, accountBalance: true, creditLimit: true },
+        orderBy: { accountBalance: 'desc' },
       });
       const enLaCalle = conSaldo.reduce((s, c) => s + Number(c.accountBalance), 0);
-      const vencidos = conSaldo.filter(c => c.creditLimit != null && Number(c.accountBalance) > Number(c.creditLimit)).length;
+      const vencido = (c: { creditLimit: number | null; accountBalance: number }) =>
+        c.creditLimit != null && c.accountBalance > c.creditLimit;
+      const vencidos = conSaldo.filter(vencido).length;
       out.clientes = { total: await this.prisma.customer.count({ where: { tenantId, isActive: true } }) };
-      out.cuentacorriente = { enLaCalle, vencidos };
+      out.cuentacorriente = {
+        enLaCalle,
+        vencidos,
+        // Quién debe — los tres que más arrastran, para la tarjeta grande.
+        ejemplos: conSaldo.slice(0, 3).map(c => ({ nombre: c.name, saldo: Number(c.accountBalance), vencido: vencido(c) })),
+      };
     }
 
     return out;

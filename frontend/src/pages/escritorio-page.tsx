@@ -9,13 +9,20 @@ import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules'
 import { Kbd } from '@/components/ui/kbd';
 import { api } from '@/lib/api';
 import { hora as fmtHora } from '@/lib/format';
-import { statFor, type EscritorioSummary } from '@/lib/escritorio';
+import { compact, statFor, type EscritorioSummary, type TileBar } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
-import { useTiles } from '@/lib/prefs';
+import { useTiles, type TileSize } from '@/lib/prefs';
 import { setActiveBranch } from '@/lib/branch';
 import { cn } from '@/lib/utils';
 
 const CONFIG_KEY = 'abasto-escritorio';
+
+/** Las tarjetas protagonistas: más altas y con detalle — el dato que alcanza
+ *  para decidir sin entrar al módulo. Sales de la casa (ventas, con su minimapa
+ *  de 7 días), lo que hay en la calle (clientes/cuenta corriente) y lo que hay
+ *  que reponer (stock y compras por cargar — los dos con la lista de quiénes).
+ *  Todas las tarjetas calzan en una celda del tablero, sin romper su grilla. */
+const PROTAGONISTAS = new Set(['ventas', 'clientes', 'stock', 'compras']);
 
 /** Mayúscula inicial y nada más: el renglón de contexto ya viene en minúscula. */
 const cap = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es-AR') + s.slice(1) : s);
@@ -26,6 +33,31 @@ function saludo(): string {
   if (h >= 5 && h < 12) return 'Buen día';
   if (h < 20) return 'Buenas tardes';
   return 'Buenas noches';
+}
+
+/** Minimapa de tendencia de la tarjeta protagonista de Ventas: los últimos 7
+ *  días en barras. Hoy a pleno, el resto apagado; sin ejes ni etiquetas — el
+ *  número grande ya cuenta el cuánto, esto solo la forma. */
+function MiniBars({ bars, hue }: { bars: TileBar[]; hue: string }) {
+  const max = Math.max(...bars.map(b => b.value), 1);
+  return (
+    <div role="img" aria-label="Ventas de los últimos siete días" className="mt-2 flex items-end gap-1">
+      {bars.map((b, i) => (
+        <div key={i} className="flex flex-1 flex-col items-center gap-1">
+          <div
+            className="w-full rounded-t-[3px]"
+            style={{
+              height: b.value > 0 ? `${Math.max(12, (b.value / max) * 48)}px` : '4px',
+              background: hue,
+              opacity: b.hoy ? 1 : 0.45,
+            }}
+            title={b.value > 0 ? compact(b.value) : undefined}
+          />
+          <span className="text-micro leading-none text-placeholder">{b.label}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -134,19 +166,45 @@ function AccionTile({
   );
 }
 
-type Config = { hidden: string[]; order: string[] };
+/**
+ * El escritorio es un tablero fijo: una grilla de celdas de igual tamaño donde
+ * vive cada tarjeta (los huecos —de tarjetas ocultas o por mudanza— quedan como
+ * celdas vacías visibles). La última columna es el flanco reservado de vacíos:
+ * siempre parejo, para dejar tarjetas afuera del circuito. Se mueve todo
+ * arrastrando dentro del modo Configurar; el tablero queda guardado en
+ * localStorage.
+ */
+type Config = { hidden: string[]; board: (string | null)[] };
+
+/** Columnas fijas del tablero según el preset de tamaño (la última es el
+ * flanco): chica 6, mediana 5, grande 4 — cada preset hace tarjetas más anchas
+ * con menos columnas, como antes. */
+const TOTAL_COLS: Record<TileSize, number> = { chica: 6, mediana: 5, grande: 4 };
 
 function readConfig(): Config {
   try {
     const raw = localStorage.getItem(CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Config>;
-      return { hidden: parsed.hidden ?? [], order: parsed.order ?? [] };
+      if (Array.isArray(parsed.board)) return { hidden: parsed.hidden ?? [], board: parsed.board };
+      // Compat con el formato viejo (order + hidden): se vuelca el orden al
+      // tablero fijo en mediana, tarjetas por fila y el flanco vacío.
+      const viejo = parsed as Partial<{ order: string[]; hidden: string[] }>;
+      const order = viejo.order ?? [];
+      const hidden = viejo.hidden ?? [];
+      const keys = order.filter(k => !hidden.includes(k));
+      const contenido = TOTAL_COLS.mediana - 1;
+      const rows = Math.max(1, Math.ceil(keys.length / contenido));
+      const board: (string | null)[] = Array(rows * TOTAL_COLS.mediana).fill(null);
+      keys.forEach((k, i) => {
+        board[Math.floor(i / contenido) * TOTAL_COLS.mediana + (i % contenido)] = k;
+      });
+      return { hidden, board };
     }
   } catch {
     // Sin persistencia: el escritorio arranca en su orden de fábrica.
   }
-  return { hidden: [], order: [] };
+  return { hidden: [], board: [] };
 }
 
 function writeConfig(config: Config) {
@@ -155,12 +213,6 @@ function writeConfig(config: Config) {
   } catch {
     // Modo privado: la configuración vale para esta sesión y nada más.
   }
-}
-
-/** Ordena los módulos visibles según la configuración del usuario (los que no están en `order` van al final, en su orden de fábrica). */
-function applyOrder(mods: ModuleDef[], order: string[]): ModuleDef[] {
-  const rank = new Map(order.map((key, i) => [key, i]));
-  return [...mods].sort((a, b) => (rank.get(a.key) ?? 999) - (rank.get(b.key) ?? 999));
 }
 
 export function EscritorioPage() {
@@ -186,9 +238,17 @@ export function EscritorioPage() {
   }, [token]);
 
   const canCaja = can('caja.operar');
-  const mods = useMemo(() => applyOrder(gridModules(can), config.order), [can, config.order]);
-  const visible = mods.filter(m => !config.hidden.includes(m.key));
-  const hidden = mods.filter(m => config.hidden.includes(m.key));
+  // Mapa módulo → definición (la grilla se arma desde las celdas, no al revés).
+  const byKey = useMemo(() => new Map(gridModules(can).map(m => [m.key, m])), [can]);
+  const cols = TOTAL_COLS[tiles];
+  // Tablero normalizado: filas completas (la última columna es el flanco de
+  // vacíos). Las celdas nulas son huecos visibles. Se autocompone si el tamaño
+  // guardado quedó corto (cambio de preset o config vieja).
+  const cells = useMemo(() => {
+    const rows = Math.max(1, Math.ceil(config.board.length / cols));
+    return Array.from({ length: rows * cols }, (_, i) => config.board[i] ?? null);
+  }, [config.board, cols]);
+  const hidden = config.hidden.map(k => byKey.get(k)).filter((m): m is ModuleDef => !!m);
 
   const nombre = session?.user.name.split(' ')[0] ?? '';
   const hoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -197,22 +257,43 @@ export function EscritorioPage() {
     setConfig(next);
     writeConfig(next);
   }
-  const toggleHidden = (key: string) =>
-    update(
-      config.hidden.includes(key)
-        ? { ...config, hidden: config.hidden.filter(k => k !== key) }
-        : { ...config, hidden: [...config.hidden, key] },
-    );
-  // Arrastrar para reordenar (modo Configurar). Al pasar por encima de otra
-  // tarjeta se reordena en vivo; el orden queda guardado en localStorage.
-  const dropOn = (targetKey: string) => {
-    if (!dragKey || dragKey === targetKey) return;
-    const keys = visible.map(m => m.key);
-    const from = keys.indexOf(dragKey);
-    const to = keys.indexOf(targetKey);
-    if (from < 0 || to < 0) return;
-    keys.splice(to, 0, keys.splice(from, 1)[0]);
-    update({ ...config, order: [...keys, ...hidden.map(m => m.key)] });
+  // Ocultar deja el hueco visible en el tablero.
+  const ocultar = (key: string) => {
+    if (config.hidden.includes(key)) return;
+    const c = cells.slice();
+    const i = c.indexOf(key);
+    if (i >= 0) c[i] = null;
+    update({ ...config, board: c, hidden: [...config.hidden, key] });
+  };
+  // Mostrar va a la primera celda vacía; si el tablero está lleno, crece una fila.
+  const mostrar = (key: string) => {
+    const c = cells.slice();
+    let i = c.indexOf(null);
+    if (i < 0) {
+      const inicio = c.length;
+      for (let k = 0; k < cols; k++) c.push(null);
+      i = inicio;
+    }
+    c[i] = key;
+    update({ ...config, board: c, hidden: config.hidden.filter(k => k !== key) });
+  };
+  // Arrastrar (modo Configurar). Soltar sobre una celda ocupada es intercambio;
+  // sobre una vacía es mudanza — el hueco queda donde estaba. El tablero se
+  // reordena en vivo y se guarda en localStorage.
+  const dropCell = (j: number) => {
+    if (!dragKey) return;
+    const c = cells.slice();
+    const i = c.indexOf(dragKey);
+    if (i < 0 || i === j) return;
+    c[i] = c[j];
+    c[j] = dragKey;
+    update({ ...config, board: c });
+  };
+  const dropOver = (e: { preventDefault: () => void }, j: number) => {
+    if (configuring && dragKey) {
+      e.preventDefault();
+      dropCell(j);
+    }
   };
 
   // La tarjeta se despliega al módulo: se le pone el nombre de transición justo
@@ -284,7 +365,7 @@ export function EscritorioPage() {
             fill={configuring}
             franja={hueFor('ajustes')}
             titulo={configuring ? 'Listo' : 'Configurar'}
-            contexto={configuring ? 'Arrastrá para ordenar, tocá el ojo para ocultar' : 'Ocultá, ordená y cambiá el tamaño'}
+            contexto={configuring ? 'Arrastrá para mover o intercambiar, tocá el ojo para ocultar' : 'Tablero fijo: ordená, ocultá y cambiá el tamaño'}
             activa={configuring}
             onClick={() => setConfiguring(v => !v)}
           />
@@ -331,9 +412,29 @@ export function EscritorioPage() {
         </div>
       </div>
 
-      <div className={cn('escritorio-grid grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3', tiles === 'chica' ? 'tiles-chica' : tiles === 'grande' ? 'tiles-grande' : '')}>
-        {visible.map(m => {
+      <div
+        className={cn('escritorio-grid grid gap-3', tiles === 'chica' ? 'tiles-chica' : tiles === 'grande' ? 'tiles-grande' : '')}
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+      >
+        {cells.map((key, i) => {
+          const m = key ? byKey.get(key) : undefined;
+          if (!m) {
+            return (
+              <div
+                aria-hidden={!configuring}
+                aria-label={configuring ? 'Casilla vacía: soltá una tarjeta acá' : undefined}
+                onDragOver={e => dropOver(e, i)}
+                className={cn(
+                  'escritorio-slot flex min-h-[168px] items-center justify-center rounded-lg border border-dashed transition-colors',
+                  configuring ? 'border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10' : 'border-border/40',
+                )}
+              >
+                {configuring && <Plus className="size-4 text-placeholder" aria-hidden="true" />}
+              </div>
+            );
+          }
           const stat = summary ? statFor(m.key, summary) : null;
+          const protagonista = PROTAGONISTAS.has(m.key);
           return (
           <Link
             key={m.key}
@@ -343,14 +444,10 @@ export function EscritorioPage() {
             draggable={configuring}
             onDragStart={() => setDragKey(m.key)}
             onDragEnd={() => setDragKey(null)}
-            onDragOver={e => {
-              if (configuring && dragKey) {
-                e.preventDefault();
-                dropOn(m.key);
-              }
-            }}
+            onDragOver={e => dropOver(e, i)}
             className={cn(
               'module-tile group relative flex min-h-[168px] flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
+              protagonista && 'module-tile--featured',
               configuring && 'cursor-grab active:cursor-grabbing',
               dragKey === m.key && 'opacity-40',
             )}
@@ -376,18 +473,51 @@ export function EscritorioPage() {
                 {m.label}
               </h2>
             </div>
-            {/* El dato clave arriba; la descripción abajo es SOLO lo que el dato
-                no cuenta (ejemplos, tendencia, plazos) — una línea, lo útil.
-                Monocromo: el dato no se tiñe; si algo está mal, lo dice el puntito. */}
+            {/* El dato clave arriba; abajo SOLO lo que el dato no cuenta. Las
+                protagonistas agregan su detalle (quién/cuánto, tendencia) en
+                vez de repetirlo en el texto gris. Monocromo: si algo está mal,
+                lo dice el puntito. */}
             <div className="mt-auto flex flex-col justify-end">
               {stat && (
                 <p className="tabular truncate font-display text-h2 font-semibold leading-tight tracking-tight">
                   {stat.value}
                 </p>
               )}
-              <p className="mt-0.5 truncate text-micro leading-snug text-muted-foreground">
-                {cap(stat?.hint ?? m.blurb)}
-              </p>
+              {protagonista && stat ? (
+                <>
+                  {stat.rows && stat.rows.length > 0 ? (
+                    <div className="mt-2">
+                      <p className="truncate text-micro leading-snug text-muted-foreground">
+                        {cap(stat.caption ?? stat.hint)}
+                      </p>
+                      <ul className="mt-1 divide-y divide-border/60 border-t border-border-soft">
+                        {stat.rows.map((r, i) => (
+                          <li key={i} className="flex items-baseline gap-2 py-1">
+                            <span className="min-w-0 flex-1 truncate text-chico text-foreground">{r.label}</span>
+                            {r.value && (
+                              <span
+                                className={cn(
+                                  'shrink-0 text-chico tabular',
+                                  r.tone === 'hot' ? 'font-semibold text-destructive' : 'text-muted-foreground',
+                                )}
+                              >
+                                {r.value}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mt-0.5 truncate text-micro leading-snug text-muted-foreground">{cap(stat.hint)}</p>
+                      {stat.bars && <MiniBars bars={stat.bars} hue={hueFor(m.key)} />}
+                    </>
+                  )}
+                </>
+              ) : (
+                <p className="mt-0.5 truncate text-micro leading-snug text-muted-foreground">{cap(stat?.hint ?? m.blurb)}</p>
+              )}
             </div>
 
             {configuring && (
@@ -398,7 +528,7 @@ export function EscritorioPage() {
                   aria-label="Ocultar"
                   onClick={e => {
                     e.preventDefault();
-                    toggleHidden(m.key);
+                    ocultar(m.key);
                   }}
                   className="absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground shadow-float hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
                 >
@@ -418,7 +548,7 @@ export function EscritorioPage() {
             <button
               key={m.key}
               type="button"
-              onClick={() => toggleHidden(m.key)}
+              onClick={() => mostrar(m.key)}
               className="flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1 text-xs text-muted-foreground hover:border-solid hover:text-foreground"
             >
               <Plus className="size-3" />

@@ -393,3 +393,32 @@
 .escritorio-grid.tiles-grande .module-tile {
   min-height: 196px;
 }
+
+/* Tarjetas protagonistas (bento: ventas, clientes, cuenta corriente, stock y
+   compras): ocupan una celda más de ancho y algo más de alto, con su bloque de
+   detalle abajo (minimapa de 7 días o la lista de quiénes). Escalan con los
+   presets de tamaño igual que las chicas/mediana/grande. */
+.escritorio-grid .module-tile--featured {
+  min-height: 218px;
+}
+.escritorio-grid.tiles-chica .module-tile--featured {
+  min-height: 196px;
+}
+.escritorio-grid.tiles-grande .module-tile--featured {
+  min-height: 248px;
+}
+
+/* Celdas vacías del tablero (huecos de tarjetas ocultas y el flanco reservado):
+   el cascarón de la tarjeta sin contenido, disimulado. En Configurar se tiñen
+   de cian para leerse como destino de un arrastre. La altura mínima acompaña a
+   los presets; en filas compartidas la celda estira al alto de la fila igual
+   que una tarjeta. */
+.escritorio-grid .escritorio-slot {
+  min-height: 168px;
+}
+.escritorio-grid.tiles-chica .escritorio-slot {
+  min-height: 152px;
+}
+.escritorio-grid.tiles-grande .escritorio-slot {
+  min-height: 196px;
+}
