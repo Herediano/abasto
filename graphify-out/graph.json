@@ -71663,7 +71663,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "frontend/src/components/layout/escritorio-shell.tsx",
-      "source_location": "L38",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -74146,5 +74146,5 @@
       "source_file": "docs/investigacion-compras-recepcion-stock.md"
     }
   ],
-  "built_at_commit": "da3d21c9cbf8496f145369a5d1c68f9b7b8785e4"
+  "built_at_commit": "cd42e5c883482bae4714cb1ca3f1fb41d71eee5d"
 }

@@ -1,7 +1,7 @@
 # Graph Report - abasto  (2026-09-06)
 
 ## Corpus Check
-- 232 files · ~145,312 words
+- 232 files · ~145,358 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `da3d21c9`
+- Built from commit: `cd42e5c8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -137,8 +137,8 @@
 5. `cn()` - 82 edges
 6. `useAuth()` - 72 edges
 7. `PrismaService` - 62 edges
-8. `"tenants"` - 31 edges
-9. `JwtAuthGuard` - 31 edges
+8. `JwtAuthGuard` - 31 edges
+9. `"tenants"` - 31 edges
 10. `ProductsController` - 28 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -561,7 +561,7 @@ Cohesion: 0.33
 Nodes (4): HealthController, Controller, Get, Inject
 
 ## Knowledge Gaps
-- **387 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `name`, `private`, `start:dev` (+382 more)
+- **387 isolated node(s):** `PaletteContext`, `BulkResult`, `OperationType`, `Rounding`, `ScopeType` (+382 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 641 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -569,12 +569,12 @@ Nodes (4): HealthController, Controller, Get, Inject
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AuthService` connect `AuthService` to `app.module.ts`, `PurchasesService`, `AuthRequest`, `api`, `.update`?**
-  _High betweenness centrality (0.245) - this node is a cross-community bridge._
+  _High betweenness centrality (0.228) - this node is a cross-community bridge._
 - **Why does `AuthRequest` connect `AuthRequest` to `app.module.ts`, `AuthService`, `ProductsController`, `StockService`, `promotions.controller.ts`, `.update`, `PriceListsController`, `PriceRulesController`, `CustomersController`, `CuentasCorrientesService`, `Tenants Controller`, `BranchesController`, `PricesController`, `CategoriesController`, `ReportesController`, `EscritorioController`, `SuppliersController`, `RequirePermission`, `RangosService`, `WarehousesController`, `CreditNotesController`, `SalesController`?**
-  _High betweenness centrality (0.113) - this node is a cross-community bridge._
+  _High betweenness centrality (0.090) - this node is a cross-community bridge._
 - **Why does `api` connect `api` to `prices-page.tsx`, `UsersPage`, `escritorio-page.tsx`, `money`, `StockInPage`, `ventas-chart.tsx`, `SalesHistoryPage`, `errorMessage`, `SuppliersPage`, `RangosPage`, `cn`, `user-menu.tsx`, `useAuth`, `products-page.tsx`, `api.ts`, `pos-page.tsx`, `sales-history-page.tsx`, `EmpresaSection`, `ajustes-page.tsx`, `ExpirationsPage`, `WarehousesPage`?**
-  _High betweenness centrality (0.081) - this node is a cross-community bridge._
-- **What connects `$schema`, `.opencode/plugins/graphify.js`, `name` to the rest of the system?**
+  _High betweenness centrality (0.084) - this node is a cross-community bridge._
+- **What connects `PaletteContext`, `BulkResult`, `OperationType` to the rest of the system?**
   _387 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `prices-page.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.1286549707602339 - nodes in this community are weakly interconnected._
