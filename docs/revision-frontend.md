@@ -6,6 +6,42 @@
 
 ---
 
+## Estado (rama `fix/revision-deudas`)
+
+**Hecho:**
+
+- **Fechas**: `lib/format.ts` con `fecha` / `fechaHora` / `hora` / `inputDate`.
+  Reemplazados ~30 usos de `.slice(0,10)` y `toLocaleString()` sueltos. Bugs #3 y #4.
+- **401**: `api.ts` + `auth-context` cierran la cuenta activa al vencer el token
+  (→ `/login`). Bug #2. La copia de tablas ahora manda `X-Branch`. Bug #1.
+- **Foco de teclado**: regla global en `styles.css` para todo interactivo. Bug #8.
+  `prefers-reduced-motion` corta animaciones. Bug #9.
+- **Menús**: `ui/menu.tsx` sobre Radix DropdownMenu — reemplaza los 3 menús a
+  mano (export, cuenta, sucursal), accesibles de verdad. §4.
+- **Ctrl+K**: navegación con flechas + Enter + ítem activo. §4.
+- **Escala tipográfica**: fuera `text-lg/xl/2xl/3xl`; `<h2>` de módulo a `text-h2`;
+  `<Section>` compartido (Ajustes + Reportes + listo para Precios). §3.1
+- **Guardas de ruta**: todas las rutas de módulo detrás de `<PermissionRoute>`. §5.4
+- **Tema**: sigue al sistema hasta la primera elección. Bug #5.
+- **Primitivos**: sin sombra en inputs; Dialog a `shadow-float`; `Kbd` unificado
+  (4 tratamientos → 1); avatares circulares; píldoras documentadas. §3.4, §3.5, §3.6
+- **Color**: `text-emerald-600` → token; verde sólido de "otra sucursal" → aviso
+  ámbar. Bug #10, §3.3
+- **Copy**: "tenant" fuera de la UI.
+- **Deps pineadas** (`react`, `typescript`, `vite`, …). §5.3
+
+**Pendiente** (razón en cada caso — ver "Deudas conocidas" de `diseno.md`):
+
+- **Precios en pestañas** (§3.7) — decisión de diseño, se hace sobre `<Section>`.
+- **Capa de datos / `useResource`** (§5.1) — refactor grande de ~17 páginas, sin
+  forma de testear cada flujo acá; el 401 (lo urgente) ya está.
+- **ESLint** (§5.2) — `typescript-eslint` no soporta TypeScript 7 todavía.
+- **`setActiveBranch` sin `reload()`** (§5.6) — depende de la capa de datos.
+- **`dangerouslySetInnerHTML` en `ModuleMotif`** (§5.7) — dato constante, sin
+  riesgo real; convertir 14 motivos a JSX es trabajo sin beneficio para el usuario.
+
+---
+
 ## 1. Veredicto
 
 El **concepto de diseño es fuerte y está bien pensado**: `docs/diseno.md` es un
