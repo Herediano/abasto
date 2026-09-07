@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
+import { Section } from '@/components/section';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { AccountList } from '@/components/account-list';
@@ -16,7 +17,7 @@ import { fileToResizedDataUrl } from '@/lib/image';
 import { hueFor, moduleByKey, settingsModules } from '@/lib/modules';
 import { AVATAR_COLORS } from '@/lib/prefs';
 import { useTheme } from '@/lib/theme';
-import { cn } from '@/lib/utils';
+import { cn, initials } from '@/lib/utils';
 
 const OWNER_RANGO = 'Dueño';
 
@@ -33,20 +34,6 @@ const TIMEZONES: { value: string; label: string }[] = [
   { value: 'America/La_Paz', label: 'Bolivia — La Paz' },
   { value: 'America/Sao_Paulo', label: 'Brasil — San Pablo' },
 ];
-
-const iniciales = (name: string) =>
-  name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
-
-/** Bloque de una sección: título, bajada y contenido, todos con el mismo molde. */
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-lg border border-border bg-card p-5">
-      <h2 className="font-display text-grande font-semibold">{title}</h2>
-      {description && <p className="mt-0.5 text-chico text-muted-foreground">{description}</p>}
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
 
 function Divider({ label }: { label: string }) {
   return (
@@ -145,8 +132,8 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <div className="flex items-center gap-4">
-          <span className="grid size-14 shrink-0 place-items-center rounded-full font-display text-lg font-bold text-white" style={{ background: color }}>
-            {iniciales(form.name || user.name)}
+          <span className="grid size-14 shrink-0 place-items-center rounded-full font-display text-h3 font-bold text-white" style={{ background: color }}>
+            {initials(form.name || user.name)}
           </span>
           <div className="flex flex-wrap gap-2">
             {AVATAR_COLORS.map(c => (
@@ -306,7 +293,7 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
           <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-background">
             {logo
               ? <img src={logo} alt="Logo" className="size-full object-contain" />
-              : <span className="font-display text-lg font-bold text-primary">{name.slice(0, 1).toUpperCase() || 'A'}</span>}
+              : <span className="font-display text-h3 font-bold text-primary">{name.slice(0, 1).toUpperCase() || 'A'}</span>}
           </div>
           <div className="flex flex-wrap gap-2">
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => void pickLogo(e.target.files?.[0])} />

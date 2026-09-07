@@ -2,10 +2,7 @@ import { Plus, SignOut } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
 import { AVATAR_COLORS } from '@/lib/prefs';
-import { cn } from '@/lib/utils';
-
-const iniciales = (name: string) =>
-  name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
+import { cn, initials } from '@/lib/utils';
 
 /**
  * Cuentas con sesión abierta en este dispositivo.
@@ -38,8 +35,8 @@ export function AccountList({ variant = 'full', onNavigate }: { variant?: 'full'
               className="flex min-w-0 flex-1 items-center gap-3 text-left"
               disabled={activa}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-full font-display text-xs font-bold text-white" style={{ background: color }}>
-                {iniciales(a.user.name)}
+              <span className="grid size-8 shrink-0 place-items-center rounded-full font-display text-micro font-bold text-white" style={{ background: color }}>
+                {initials(a.user.name)}
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-chico font-semibold">{a.user.name}</span>

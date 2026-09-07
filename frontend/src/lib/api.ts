@@ -48,6 +48,17 @@ export async function uploadFile<T>(path: string, token: string, file: File, fie
   return data as T;
 }
 
+/** El cuerpo crudo de un endpoint de exportación (CSV), con el header de la
+ *  sucursal activa igual que `downloadFile` — para copiar la tabla al portapapeles. */
+export async function exportText(path: string, token: string): Promise<string> {
+  const response = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}`, ...branchHeaders() } });
+  if (!response.ok) {
+    if (response.status === 401) onUnauthorized();
+    throw new ApiError(response.status, await response.json().catch(() => ({})));
+  }
+  return response.text();
+}
+
 export async function downloadFile(path: string, token: string, filename: string) {
   const response = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}`, ...branchHeaders() } });
   if (!response.ok) {
