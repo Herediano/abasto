@@ -1339,26 +1339,26 @@
   },
   "backend/prisma/migrations/20260906071501_ajustes_logo_tz_prefs/migration.sql": {
     "mtime": 1788700312.3152194,
-    "seen": 1788713751.2408383,
-    "ast_hash": "",
+    "seen": 1788743047.1488955,
+    "ast_hash": "13f5dbba1510d3cf20cce46e3cdbb70c",
     "semantic_hash": ""
   },
   "backend/prisma/migrations/20260906073516_timestamptz/migration.sql": {
     "mtime": 1788700312.322054,
-    "seen": 1788713751.2408383,
-    "ast_hash": "",
+    "seen": 1788743047.1488955,
+    "ast_hash": "5b8bd4d99239ca28189af9fa3ed00d43",
     "semantic_hash": ""
   },
   "backend/prisma/migrations/20260906075537_sucursales/migration.sql": {
     "mtime": 1788700312.322054,
-    "seen": 1788713751.2408383,
-    "ast_hash": "",
+    "seen": 1788743047.1488955,
+    "ast_hash": "1350095e0c633394d60513ff81e27e2a",
     "semantic_hash": ""
   },
   "backend/prisma/migrations/20260906085228_user_branch/migration.sql": {
     "mtime": 1788700312.322054,
-    "seen": 1788713751.2408383,
-    "ast_hash": "",
+    "seen": 1788743047.1488955,
+    "ast_hash": "679e51042df2c5ed0c8a2bba867b4ebb",
     "semantic_hash": ""
   },
   "frontend/src/components/list-filters.tsx": {
@@ -1395,6 +1395,24 @@
     "mtime": 1788718824.1860273,
     "seen": 1788719713.2506835,
     "ast_hash": "fda64090f48f94e8867db624e4ce31af",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260906180249_payment_adjustments/migration.sql": {
+    "mtime": 1788717769.9057567,
+    "seen": 1788743049.7173316,
+    "ast_hash": "a859115647be6a28781a9fd043247d0b",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260906181243_saleline_unit_cost/migration.sql": {
+    "mtime": 1788718363.0682094,
+    "seen": 1788743049.7173316,
+    "ast_hash": "8264c0ea6ed9aef9bd290f02fdded1ad",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260906183000_credit_notes/migration.sql": {
+    "mtime": 1788719125.386308,
+    "seen": 1788743049.7173316,
+    "ast_hash": "1d6e1210b2fccf67d14419e06557e61c",
     "semantic_hash": ""
   }
 }
