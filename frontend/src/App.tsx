@@ -35,24 +35,49 @@ function App() {
       <Route element={<FullScreenRoute />}>
         <Route path="/ventas" element={<PosPage />} />
       </Route>
+      {/* Toda ruta de módulo se arma por permiso, igual que las tarjetas del
+          escritorio: sin la clave, ni ve la tarjeta ni entra por URL (redirige
+          al escritorio). El backend igual valida; esto evita la cáscara + error. */}
       <Route element={<ProtectedRoute />}>
         {/* El escritorio es el índice y la única navegación (ver docs/diseno.md). */}
         <Route path="/" element={<EscritorioPage />} />
         <Route path="/ajustes" element={<AjustesPage />} />
-        <Route path="/stock" element={<StockPage />} />
-        <Route path="/stock/in" element={<StockInPage />} />
-        <Route path="/stock/out" element={<StockOutPage />} />
-        <Route path="/stock/transfer" element={<StockTransferPage />} />
-        <Route path="/stock/history" element={<StockHistoryPage />} />
-        <Route path="/stock/expirations" element={<ExpirationsPage />} />
-        <Route path="/stock/restock" element={<RestockPage />} />
-        <Route path="/catalog/products" element={<ProductsPage />} />
-        <Route path="/catalog/products/:id" element={<ProductDetailPage />} />
-        <Route path="/catalog/categories" element={<CategoriesPage />} />
-        <Route path="/catalog/warehouses" element={<WarehousesPage />} />
-        <Route path="/catalog/suppliers" element={<SuppliersPage />} />
-        <Route path="/catalog/customers" element={<CustomersPage />} />
-        <Route path="/ventas/historial" element={<SalesHistoryPage />} />
+
+        <Route element={<PermissionRoute permission="stock.ver" />}>
+          <Route path="/stock" element={<StockPage />} />
+          <Route path="/stock/history" element={<StockHistoryPage />} />
+          <Route path="/stock/expirations" element={<ExpirationsPage />} />
+          <Route path="/stock/restock" element={<RestockPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="stock.mover" />}>
+          <Route path="/stock/in" element={<StockInPage />} />
+          <Route path="/stock/out" element={<StockOutPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="stock.transferir" />}>
+          <Route path="/stock/transfer" element={<StockTransferPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="productos.ver" />}>
+          <Route path="/catalog/products" element={<ProductsPage />} />
+          <Route path="/catalog/products/:id" element={<ProductDetailPage />} />
+          <Route path="/catalog/categories" element={<CategoriesPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="depositos.ver" />}>
+          <Route path="/catalog/warehouses" element={<WarehousesPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="proveedores.ver" />}>
+          <Route path="/catalog/suppliers" element={<SuppliersPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="clientes.ver" />}>
+          <Route path="/catalog/customers" element={<CustomersPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="ventas.ver" />}>
+          <Route path="/ventas/historial" element={<SalesHistoryPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="caja.ver_todas" />}>
+          <Route path="/ventas/turnos" element={<ShiftsHistoryPage />} />
+        </Route>
         <Route element={<PermissionRoute permission="precios.ver" />}>
           <Route path="/precios" element={<PricesPage />} />
         </Route>
@@ -64,9 +89,6 @@ function App() {
         </Route>
         <Route element={<PermissionRoute permission="rangos.ver" />}>
           <Route path="/admin/rangos" element={<RangosPage />} />
-        </Route>
-        <Route element={<PermissionRoute permission="caja.ver_todas" />}>
-          <Route path="/ventas/turnos" element={<ShiftsHistoryPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
