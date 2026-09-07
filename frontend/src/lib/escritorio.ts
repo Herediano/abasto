@@ -3,7 +3,7 @@ import { money } from './format';
 /** Respuesta de GET /api/escritorio — cada bloque puede faltar (el rango no lo ve). */
 export type EscritorioSummary = {
   ventas?: { hoy: number; tickets: number; ayer: number; semanaPasada: number };
-  caja?: { abierta: boolean; efectivo: number | null; desde: string | null; cajero: string | null; registro: string | null };
+  caja?: { abierta: boolean; efectivo: number | null; tickets: number | null; desde: string | null; cajero: string | null; registro: string | null };
   turnos?: { abiertos: number };
   stock?: { bajoMinimo: number; ejemplos: string[] };
   reposicion?: { productos: number };

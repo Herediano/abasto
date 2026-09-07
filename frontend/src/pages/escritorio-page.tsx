@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { CashRegister, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle } from '@phosphor-icons/react';
+import { CashRegister, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle, type Icon } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BranchSwitcher } from '@/components/branch-switcher';
 import { UserMenu } from '@/components/user-menu';
@@ -58,35 +58,108 @@ function ResumenDelDia({ summary }: { summary: EscritorioSummary | null }) {
 
 /**
  * La caja no es una tarjeta: es un modo de trabajo (pantalla completa, el mundo
- * del cajero). Vive abajo, pegado a las tarjetas, y se diseña como ellas —borde,
- * lavado y DOS barras de color (una por lado)— para que el ojo lo lea como una
- * tarjeta más, ancha. El estado se lee de las BARRAS —verde si el turno está
- * abierto, rojo si no—, no de las letras: el texto es siempre del tinte de
- * lectura. El detalle del turno vive adentro de la caja.
+ * del cajero). Es un botón compacto, alineado a la izquierda arriba del grid,
+ * con borde y superficie neutra y DOS barras de color (una por lado). El cuerpo
+ * queda neutro para que el texto contraste; el color es solo estado: las BARRAS
+ * —verde si el turno está
+ * abierto, rojo si no— y un PUNTO VERDE parpadea en la etiqueta mientras un
+ * turno está abierto. Lleva lo que el cajero quiere saber sin entrar: desde qué
+ * hora, cuántos tickets y cuánto efectivo hay.
  */
 function AbrirMostrador({ summary }: { summary: EscritorioSummary | null }) {
   const navigate = useNavigate();
-  const abierta = summary?.caja?.abierta ?? false;
+  const caja = summary?.caja;
+  const abierta = caja?.abierta ?? false;
+  const hora = caja?.desde ? new Date(caja.desde).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
+  const tickets = caja?.tickets ?? 0;
+  const efectivo = caja?.efectivo != null ? ` · ${caja.efectivo.toLocaleString('es-AR', { maximumFractionDigits: 0 })} en efectivo` : '';
   return (
     <button
       type="button"
       onClick={() => navigate('/ventas')}
-      style={{ ['--ab-tile-hue' as string]: abierta ? 'var(--color-success)' : 'var(--color-destructive)' }}
-      className="module-tile relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-lg border pl-5 pr-6 text-sm font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
+      style={{ ['--ab-edge' as string]: abierta ? 'var(--color-success)' : 'var(--color-destructive)' }}
+      className="group relative flex flex-col items-start gap-1 overflow-hidden rounded-lg border border-border bg-card px-6 py-2.5 text-left transition-colors hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
     >
       <span
         className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
-        style={{ background: 'var(--ab-tile-hue)' }}
+        style={{ background: 'var(--ab-edge)' }}
         aria-hidden="true"
       />
       <span
         className="pointer-events-none absolute inset-y-0 right-0 w-1.5"
-        style={{ background: 'var(--ab-tile-hue)' }}
+        style={{ background: 'var(--ab-edge)' }}
         aria-hidden="true"
       />
-      <CashRegister weight="fill" className="size-4" />
-      Abrir Mostrador
-      <span className="font-semibold opacity-70">· {abierta ? 'Abierta' : 'Cerrada'}</span>
+      <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+        <CashRegister weight="fill" className="size-4" />
+        Abrir Mostrador
+        {abierta && (
+          <span className="relative ml-1 flex size-2" aria-label="Caja abierta">
+            <span className="absolute inline-flex size-2 animate-ping rounded-full bg-success opacity-75" />
+            <span className="relative inline-flex size-2 rounded-full bg-success" />
+          </span>
+        )}
+      </span>
+      <span className="text-micro leading-snug text-muted-foreground">
+        {abierta ? `Abierta ${hora} · ${tickets} ${tickets === 1 ? 'ticket' : 'tickets'}${efectivo}` : 'Sin turno abierto'}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * Configurar y Preguntar comparten el molde de la caja: cascarón de tarjeta
+ * compacto —borde, superficie neutra, franja de color a la izquierda— con dos
+ * renglones (título y una línea de contexto), para que la fila arriba del grid
+ * se lea como tres tarjetas hermanas. La FRANJA es identidad, no estado (ver
+ * docs/diseno.md, "La estructura es información"): verde acción para Preguntar
+ * —se toca—, pizarra para Configurar —es preferencia, no operación, como los
+ * módulos que viven en Ajustes. El ícono va suelto, sin pastilla: la fila queda
+ * callada y no compite con las tarjetas de módulo.
+ */
+function AccionTile({
+  icon: TileIcon,
+  fill = false,
+  franja,
+  titulo,
+  contexto,
+  atajo,
+  activa = false,
+  onClick,
+}: {
+  icon: Icon;
+  fill?: boolean;
+  franja: string;
+  titulo: string;
+  contexto: string;
+  atajo?: string;
+  activa?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={activa}
+      style={{ ['--ab-edge' as string]: franja }}
+      className={cn(
+        'group relative flex flex-col items-start gap-1 overflow-hidden rounded-lg border px-6 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
+        activa ? 'border-accent-border bg-accent' : 'border-border bg-card hover:bg-subtle',
+      )}
+    >
+      <span
+        className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
+        style={{ background: 'var(--ab-edge)' }}
+        aria-hidden="true"
+      />
+      <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+        <TileIcon weight={fill ? 'fill' : 'regular'} className="size-4" />
+        {titulo}
+        {atajo && (
+          <kbd className="rounded-sm bg-muted px-1 font-mono text-micro font-normal text-muted-foreground">{atajo}</kbd>
+        )}
+      </span>
+      <span className="text-micro leading-snug text-muted-foreground">{contexto}</span>
     </button>
   );
 }
@@ -142,6 +215,7 @@ export function EscritorioPage() {
     };
   }, [token]);
 
+  const canCaja = can('caja.operar');
   const mods = useMemo(() => applyOrder(gridModules(can), config.order), [can, config.order]);
   const visible = mods.filter(m => !config.hidden.includes(m.key));
   const hidden = mods.filter(m => config.hidden.includes(m.key));
@@ -230,61 +304,62 @@ export function EscritorioPage() {
         )}
       </div>
 
-      <div className="mb-3 mt-5 flex flex-wrap items-center justify-end gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
+      {/* Una sola fila: la caja (compacta, a la izquierda) y las acciones del
+          escritorio (Configurar / Preguntar) en el hueco que queda a su derecha. */}
+      <div className={cn('mb-3 mt-5 flex flex-wrap items-start gap-3', canCaja ? 'justify-between' : 'justify-end')}>
+        {canCaja && <AbrirMostrador summary={summary} />}
+        <div className="flex flex-wrap items-center gap-3">
+          <AccionTile
+            icon={GearSix}
+            fill={configuring}
+            franja={hueFor('ajustes')}
+            titulo={configuring ? 'Listo' : 'Configurar'}
+            contexto={configuring ? 'Arrastrá para ordenar, tocá el ojo para ocultar' : 'Ocultá, ordená y cambiá el tamaño'}
+            activa={configuring}
             onClick={() => setConfiguring(v => !v)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
-              configuring
-                ? 'border-accent-border bg-accent text-accent-foreground'
-                : 'border-border text-muted-foreground hover:bg-card hover:text-foreground',
-            )}
-          >
-            <GearSix weight={configuring ? 'fill' : 'regular'} className="size-3.5" />
-            {configuring ? 'Listo' : 'Configurar'}
-          </button>
+          />
           {configuring && (
             <div
-              role="group"
-              aria-label="Tamaño de las tarjetas"
-              className="flex items-center overflow-hidden rounded-md border border-border"
+              style={{ ['--ab-edge' as string]: hueFor('ajustes') }}
+              className="relative flex flex-col justify-center gap-1.5 overflow-hidden rounded-lg border border-border bg-card px-6 py-2.5"
             >
-              {(['chica', 'mediana', 'grande'] as const).map(t => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTiles(t)}
-                  aria-pressed={tiles === t}
-                  className={cn(
-                    'px-2.5 py-1.5 text-xs font-semibold transition-colors first-letter:uppercase',
-                    tiles === t ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-card hover:text-foreground',
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
+              <span
+                className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
+                style={{ background: 'var(--ab-edge)' }}
+                aria-hidden="true"
+              />
+              <span className="text-micro font-medium text-muted-foreground">Tamaño de las tarjetas</span>
+              <div role="group" aria-label="Tamaño de las tarjetas" className="flex items-center gap-1">
+                {(['chica', 'mediana', 'grande'] as const).map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTiles(t)}
+                    aria-pressed={tiles === t}
+                    className={cn(
+                      'rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors first-letter:uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
+                      tiles === t
+                        ? 'border-accent-border bg-accent text-accent-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
-          <button
-            type="button"
+          <AccionTile
+            icon={Sparkle}
+            fill
+            franja="var(--color-primary)"
+            titulo="Preguntar"
+            contexto="Buscá o pedí lo que sea"
+            atajo="Ctrl K"
             onClick={openPalette}
-            className="group flex items-center gap-2 rounded-md border border-accent-border bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-          >
-            <Sparkle weight="fill" className="size-3.5" />
-            Preguntar
-            <kbd className="rounded bg-primary/10 px-1 font-mono text-micro font-normal group-hover:bg-primary-foreground/15">Ctrl K</kbd>
-          </button>
+          />
         </div>
       </div>
-
-      {/* La caja, abajo de Configurar/Preguntar y pegada al grid. */}
-      {can('caja.operar') && (
-        <div className="mb-3">
-          <AbrirMostrador summary={summary} />
-        </div>
-      )}
 
       <div className={cn('escritorio-grid grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3', tiles === 'chica' ? 'tiles-chica' : tiles === 'grande' ? 'tiles-grande' : '')}>
         {visible.map(m => {

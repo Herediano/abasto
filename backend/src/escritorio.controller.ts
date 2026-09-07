@@ -61,12 +61,13 @@ export class EscritorioController {
         include: { openedBy: { select: { name: true } }, cashRegister: { select: { name: true } } },
       });
       if (shift) {
-        const [ventasEfectivo, movs] = await Promise.all([
+        const [ventasEfectivo, movs, tickets] = await Promise.all([
           this.prisma.salePayment.aggregate({
             where: { tenantId, method: 'cash', sale: { shiftId: shift.id, status: 'confirmed' } },
             _sum: { amount: true },
           }),
           this.prisma.cashMovement.groupBy({ by: ['type'], where: { tenantId, shiftId: shift.id }, _sum: { amount: true } }),
+          this.prisma.sale.count({ where: { tenantId, shiftId: shift.id, status: 'confirmed' } }),
         ]);
         const mov = (t: string) => Number(movs.find(m => m.type === t)?._sum.amount ?? 0);
         const efectivo =
@@ -74,12 +75,13 @@ export class EscritorioController {
         out.caja = {
           abierta: true,
           efectivo,
+          tickets,
           desde: shift.openedAt.toISOString(),
           cajero: shift.openedBy.name,
           registro: shift.cashRegister.name,
         };
       } else {
-        out.caja = { abierta: false, efectivo: null, desde: null, cajero: null, registro: null };
+        out.caja = { abierta: false, efectivo: null, desde: null, cajero: null, registro: null, tickets: null };
       }
     }
 
