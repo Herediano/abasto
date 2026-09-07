@@ -12,7 +12,7 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
-import { money, quantity } from '@/lib/format';
+import { fecha, money, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PRICE_SOURCES: Record<string, string> = {
@@ -144,7 +144,7 @@ export function ProductDetailPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
+          <h1 className="text-h2 font-semibold tracking-tight">{product.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {product.barcode}
             {product.internalCode ? ` · Código interno ${product.internalCode}` : ''}
@@ -160,26 +160,26 @@ export function ProductDetailPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Stock total</p>
-            <p className="text-xl font-semibold">{totalStock.toFixed(3)}</p>
+            <p className="text-micro font-semibold text-placeholder">Stock total</p>
+            <p className="mt-1 font-display text-h3 font-semibold tabular">{totalStock.toFixed(3)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Costo</p>
-            <p className="text-xl font-semibold">{product.costPrice ? money(Number(product.costPrice)) : '—'}</p>
+            <p className="text-micro font-semibold text-placeholder">Costo</p>
+            <p className="mt-1 font-display text-h3 font-semibold tabular">{product.costPrice ? money(Number(product.costPrice)) : '—'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Precio de venta</p>
-            <p className="text-xl font-semibold">{product.salePrice ? money(Number(product.salePrice)) : '—'}</p>
+            <p className="text-micro font-semibold text-placeholder">Precio de venta</p>
+            <p className="mt-1 font-display text-h3 font-semibold tabular">{product.salePrice ? money(Number(product.salePrice)) : '—'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Margen</p>
-            <p className="text-xl font-semibold">{m === null ? '—' : `${m.toFixed(0)}%`}</p>
+            <p className="text-micro font-semibold text-placeholder">Margen</p>
+            <p className="mt-1 font-display text-h3 font-semibold tabular">{m === null ? '—' : `${m.toFixed(0)}%`}</p>
           </CardContent>
         </Card>
       </div>
@@ -207,7 +207,7 @@ export function ProductDetailPage() {
                   <TableRow key={`${s.warehouseId}-${s.productLotId}`}>
                     <TableCell>{s.warehouseName}</TableCell>
                     <TableCell>{s.lotNumber ?? '—'}</TableCell>
-                    <TableCell>{s.expirationDate ? s.expirationDate.slice(0, 10) : '—'}</TableCell>
+                    <TableCell>{fecha(s.expirationDate)}</TableCell>
                     <TableCell>{s.supplierName ?? '—'}</TableCell>
                     <TableCell className="text-right font-medium tabular">{quantity(s.quantity)}</TableCell>
                   </TableRow>
@@ -283,9 +283,7 @@ export function ProductDetailPage() {
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.supplierName}</TableCell>
                     <TableCell className="text-right">{s.lastCost ? money(Number(s.lastCost)) : '—'}</TableCell>
-                    {/* slice en vez de toLocaleDateString: la fecha viene como
-                        medianoche UTC y convertirla a hora local la corre un día. */}
-                    <TableCell>{s.lastPurchaseAt ? s.lastPurchaseAt.slice(0, 10) : '—'}</TableCell>
+                    <TableCell>{fecha(s.lastPurchaseAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -367,7 +365,7 @@ export function ProductDetailPage() {
               <TableBody>
                 {(product.priceHistory ?? []).map(h => (
                   <TableRow key={h.id}>
-                    <TableCell className="whitespace-nowrap">{h.createdAt.slice(0, 10)}</TableCell>
+                    <TableCell className="whitespace-nowrap">{fecha(h.createdAt)}</TableCell>
                     <TableCell>{h.field === 'cost' ? 'Costo' : 'Venta'}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{h.oldValue ? money(Number(h.oldValue)) : '—'}</TableCell>
                     <TableCell className="text-right font-medium">{money(Number(h.newValue))}</TableCell>

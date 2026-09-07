@@ -30,8 +30,14 @@ export function EscritorioShell() {
         return;
       }
       if (e.key === 'Escape' && !enEscritorio) {
-        // Que no pise el Esc de un diálogo abierto (Radix marca data-state="open").
-        if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+        // El Esc primero cierra lo que esté abierto: un diálogo, un menú de
+        // Radix, el Ctrl+K. Recién sin nada abierto, el Esc vuelve al
+        // escritorio. Radix deja el contenedor del popper montado aun cerrado,
+        // así que se mira el `data-state="open"` de la capa, no el contenedor.
+        if (e.defaultPrevented) return;
+        if (document.querySelector(
+          '[data-state="open"][role="dialog"], [data-state="open"][role="menu"], [data-state="open"][role="listbox"], [data-radix-popper-content-wrapper] [data-state="open"]',
+        )) return;
         navigate('/', { viewTransition: true });
       }
     }

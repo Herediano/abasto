@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ArrowLeft, Rows, Storefront } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { moduleForPath } from '@/lib/modules';
+import { Kbd } from '@/components/ui/kbd';
 import { useAuth } from '@/lib/auth-context';
 import { useDensity } from '@/lib/prefs';
 
@@ -29,11 +30,11 @@ export function PageHeader({ title, description, actions }: { title: string; des
       <button
         type="button"
         onClick={() => navigate('/', { viewTransition: true })}
-        className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+        className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-chico font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
         Escritorio
-        <kbd className="ml-0.5 rounded border border-border px-1 font-mono text-micro font-normal text-placeholder">Esc</kbd>
+        <Kbd className="ml-0.5">Esc</Kbd>
       </button>
 
       <div className="flex items-center gap-2.5" style={{ viewTransitionName: 'module-hero' }}>
@@ -44,14 +45,14 @@ export function PageHeader({ title, description, actions }: { title: string; des
         )}
         <div className="leading-tight">
           {mod && <p className="text-micro font-medium text-placeholder">{mod.crumb}</p>}
-          <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+          <h1 className="text-h2 font-semibold tracking-tight">{title}</h1>
           {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
         </div>
       </div>
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {otraSucursal && (
-          <span className="flex items-center gap-1 rounded-md border border-primary bg-primary px-2 py-1 text-micro font-semibold text-primary-foreground">
+          <span className="flex items-center gap-1 rounded-full border border-transparent bg-warning/10 px-2 py-0.5 text-micro font-semibold text-warning">
             <Storefront weight="fill" className="size-3" /> {otraSucursal}
           </span>
         )}

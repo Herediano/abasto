@@ -13,7 +13,7 @@ import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { api, errorMessage, type Product, type Warehouse } from '@/lib/api';
-import { quantity as fmtQty } from '@/lib/format';
+import { fecha, quantity as fmtQty } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 type StockRow = { warehouseId: string; warehouseName: string; productLotId: string | null; lotNumber: string | null; expirationDate: string | null; quantity: string };
@@ -128,7 +128,7 @@ export function StockTransferPage() {
                   <option value="">Elegí un lote</option>
                   {lotesEnOrigen.map(s => (
                     <option key={s.productLotId} value={s.productLotId!}>
-                      {s.lotNumber ?? 'Lote'} {s.expirationDate ? `· vence ${s.expirationDate.slice(0, 10)}` : ''} · {fmtQty(s.quantity)} en origen
+                      {s.lotNumber ?? 'Lote'} {s.expirationDate ? `· vence ${fecha(s.expirationDate)}` : ''} · {fmtQty(s.quantity)} en origen
                     </option>
                   ))}
                 </Select>

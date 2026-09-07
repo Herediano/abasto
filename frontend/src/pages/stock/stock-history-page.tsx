@@ -16,7 +16,7 @@ import { PageSpinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Movement, type Pagination, type Supplier, type Warehouse } from '@/lib/api';
-import { quantity } from '@/lib/format';
+import { fecha, fechaHora, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const MOVEMENT_TYPES = [
@@ -111,7 +111,7 @@ export function StockHistoryPage() {
 
   return (
     <>
-      <PageHeader title="Historial de movimientos" description="Todos los movimientos de stock del tenant, del más reciente al más antiguo." />
+      <PageHeader title="Historial de movimientos" description="Todos los movimientos de stock, del más reciente al más antiguo." />
       <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
@@ -175,7 +175,7 @@ export function StockHistoryPage() {
                 <TableBody>
                   {items.map(m => (
                     <TableRow key={m.id}>
-                      <TableCell className="whitespace-nowrap">{new Date(m.occurredAt).toLocaleString()}</TableCell>
+                      <TableCell className="whitespace-nowrap">{fechaHora(m.occurredAt)}</TableCell>
                       <TableCell className="font-medium">{m.productName}</TableCell>
                       <TableCell>
                         <Badge variant={m.quantity.startsWith('-') ? 'destructive' : 'success'}>{MOVEMENT_LABEL[m.movementType] ?? m.movementType}</Badge>
@@ -218,7 +218,7 @@ export function StockHistoryPage() {
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
               <div>
                 <dt className="text-muted-foreground">Fecha</dt>
-                <dd className="font-medium">{new Date(viewing.occurredAt).toLocaleString()}</dd>
+                <dd className="font-medium">{fechaHora(viewing.occurredAt)}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Tipo</dt>
@@ -240,7 +240,7 @@ export function StockHistoryPage() {
               </div>
               <div>
                 <dt className="text-muted-foreground">Vencimiento</dt>
-                <dd>{viewing.expirationDate ? viewing.expirationDate.slice(0, 10) : '—'}</dd>
+                <dd>{fecha(viewing.expirationDate)}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Cantidad</dt>

@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
+import { Kbd } from '@/components/ui/kbd';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
 import { StockNav } from '@/components/stock-nav';
@@ -18,7 +19,7 @@ import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { api, errorMessage, type Lot, type Product, type PurchaseInvoice, type Supplier } from '@/lib/api';
-import { money } from '@/lib/format';
+import { fecha, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'success' | 'destructive' }> = {
@@ -32,7 +33,7 @@ const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'succ
 // con el que se confirmó, no el actual del producto (que pudo cambiar).
 type Line = { barcode: string; productName: string; productLotId: string; quantity: string; unitCost: string; taxRate: string; byPackage: boolean; packSize: string; unitFactor?: string };
 const EMPTY_LINE: Line = { barcode: '', productName: '', productLotId: '', quantity: '', unitCost: '', taxRate: '21', byPackage: false, packSize: '' };
-const EMPTY_HEADER = { supplierId: '', invoiceType: 'A', pointOfSale: '', invoiceNumber: '', issueDate: new Date().toISOString().slice(0, 10), notes: '' };
+const EMPTY_HEADER = { supplierId: '', invoiceType: 'A', pointOfSale: '', invoiceNumber: '', issueDate: inputDate(), notes: '' };
 
 type OtherTax = { label: string; amount: string };
 
@@ -274,7 +275,7 @@ export function StockInPage() {
     setEditingInvoice(invoice);
     setCorrectionReason('');
     setError('');
-    setHeader({ supplierId: invoice.supplierId, invoiceType: invoice.invoiceType, pointOfSale: invoice.pointOfSale, invoiceNumber: invoice.invoiceNumber, issueDate: invoice.issueDate.slice(0, 10), notes: invoice.notes ?? '' });
+    setHeader({ supplierId: invoice.supplierId, invoiceType: invoice.invoiceType, pointOfSale: invoice.pointOfSale, invoiceNumber: invoice.invoiceNumber, issueDate: inputDate(invoice.issueDate), notes: invoice.notes ?? '' });
     setLines(invoice.lines.map(l => ({
       barcode: l.barcode,
       productName: l.description ?? l.barcode,
@@ -376,7 +377,7 @@ export function StockInPage() {
                           nombre. Mismo buscador que la caja. */}
                       <Button type="button" variant="outline" className="shrink-0" onClick={() => setBuscarOpen(true)} title="Buscar producto (F3)">
                         <MagnifyingGlass />
-                        <kbd className="font-mono text-micro text-placeholder">F3</kbd>
+                        <Kbd>F3</Kbd>
                       </Button>
                     </div>
                   </Field>
@@ -577,7 +578,7 @@ export function StockInPage() {
             <TableBody>
               {invoices.map(i => (
                 <TableRow key={i.id}>
-                  <TableCell>{i.issueDate.slice(0, 10)}</TableCell>
+                  <TableCell>{fecha(i.issueDate)}</TableCell>
                   <TableCell>{i.supplier?.name ?? '—'}</TableCell>
                   <TableCell>
                     {i.invoiceType} {i.pointOfSale}-{i.invoiceNumber}

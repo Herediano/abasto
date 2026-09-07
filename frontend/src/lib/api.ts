@@ -17,19 +17,54 @@ function branchHeaders(): Record<string, string> {
   }
 }
 
+/**
+ * El backend rechazó el token (401): venció (dura 8 h) o dejó de valer. El
+ * auth-context registra acá qué hacer —cerrar la cuenta activa—; se llama una
+ * sola vez aunque varios pedidos vuelvan 401 a la vez. Vive como callback y no
+ * como import para no armar un ciclo con auth-context.
+ */
+let unauthorizedHandler: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  unauthorizedHandler = fn;
+}
+let lastUnauthorizedAt = 0;
+function onUnauthorized() {
+  const now = Date.now();
+  if (now - lastUnauthorizedAt < 3000) return;
+  lastUnauthorizedAt = now;
+  unauthorizedHandler?.();
+}
+
 export async function uploadFile<T>(path: string, token: string, file: File, fields: Record<string, string> = {}): Promise<T> {
   const formData = new FormData();
   formData.append('file', file);
   for (const [key, value] of Object.entries(fields)) formData.append(key, value);
   const response = await fetch(`${API}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, ...branchHeaders() }, body: formData });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError(response.status, data);
+  if (!response.ok) {
+    if (response.status === 401) onUnauthorized();
+    throw new ApiError(response.status, data);
+  }
   return data as T;
+}
+
+/** El cuerpo crudo de un endpoint de exportación (CSV), con el header de la
+ *  sucursal activa igual que `downloadFile` — para copiar la tabla al portapapeles. */
+export async function exportText(path: string, token: string): Promise<string> {
+  const response = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}`, ...branchHeaders() } });
+  if (!response.ok) {
+    if (response.status === 401) onUnauthorized();
+    throw new ApiError(response.status, await response.json().catch(() => ({})));
+  }
+  return response.text();
 }
 
 export async function downloadFile(path: string, token: string, filename: string) {
   const response = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}`, ...branchHeaders() } });
-  if (!response.ok) throw new ApiError(response.status, await response.json().catch(() => ({})));
+  if (!response.ok) {
+    if (response.status === 401) onUnauthorized();
+    throw new ApiError(response.status, await response.json().catch(() => ({})));
+  }
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -407,6 +442,7 @@ export async function api<T>(path: string, options: RequestInit = {}, token = ''
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
+    if (response.status === 401) onUnauthorized();
     throw new ApiError(response.status, data);
   }
   if (response.status === 204) return undefined as T;

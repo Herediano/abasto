@@ -12,6 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { api, errorMessage, type Lot, type Product, type Warehouse } from '@/lib/api';
+import { fecha } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 // La transferencia sale por su propia pantalla (registra las dos puntas); acá
@@ -103,7 +104,7 @@ export function StockOutPage() {
                 <option value="">{product?.manejaVencimiento ? 'Seleccionar lote...' : 'Sin lote'}</option>
                 {lots.map(l => (
                   <option key={l.id} value={l.id}>
-                    {l.expirationDate ? `Vence ${l.expirationDate.slice(0, 10)}` : 'Sin vencimiento'}
+                    {l.expirationDate ? `Vence ${fecha(l.expirationDate)}` : 'Sin vencimiento'}
                   </option>
                 ))}
               </Select>

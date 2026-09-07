@@ -16,14 +16,11 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type CreditNote, type Pagination, type Sale, type SaleDetail } from '@/lib/api';
-import { money } from '@/lib/format';
+import { fechaHora, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente', mixed: 'Varios medios' };
 const comprobante = (s: { pointOfSale: string; number: number }) => `${s.pointOfSale}-${String(s.number).padStart(8, '0')}`;
-// occurredAt es un timestamp, no una fecha pura: hay que pasarlo a hora local o
-// una venta de la noche aparece con la fecha del día siguiente.
-const fechaHora = (iso: string) => new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
 
 const REFUND_LABEL: Record<string, string> = { cash: 'Efectivo del turno', account: 'Crédito a cuenta corriente' };
 
@@ -264,7 +261,7 @@ export function SalesHistoryPage() {
                 </Table>
               </div>
               <div className="flex flex-wrap justify-end gap-x-4 gap-y-1">
-                {Number(detalle.discountTotal) > 0 && <span className="text-emerald-600">Descuentos: −{money(detalle.discountTotal)}</span>}
+                {Number(detalle.discountTotal) > 0 && <span className="text-muted-foreground">Descuentos: −{money(detalle.discountTotal)}</span>}
                 <span>IVA: {money(detalle.taxTotal)}</span>
                 <span className={Number(detalle.surchargeTotal ?? 0) !== 0 ? '' : 'font-semibold'}>Total mercadería: {money(detalle.total)}</span>
                 {Number(detalle.surchargeTotal ?? 0) !== 0 && (

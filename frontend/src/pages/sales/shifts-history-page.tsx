@@ -15,11 +15,10 @@ import { PageSpinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type CashRegister, type CashShift, type Pagination } from '@/lib/api';
-import { money } from '@/lib/format';
+import { fechaHora, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
-const fechaHora = (iso: string) => new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
 
 /**
  * Todas las cajas de la sucursal, para el supervisor: quién abrió y cerró

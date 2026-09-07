@@ -260,7 +260,7 @@ export function ProductsPage() {
     <>
       <PageHeader
         title="Productos"
-        description="Catálogo de productos del tenant."
+        description="El catálogo de la empresa."
         actions={
           <>
             {puedeEditar && (

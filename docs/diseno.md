@@ -142,7 +142,10 @@ los motivos de línea de los módulos. Acompaña, no compite. Reglas:
 - **Radio**: exactamente tres pasos —`lg` 12 px (tarjetas, paneles), `md` 9 px
   (botones, chips, inputs), `sm` 6 px (`kbd`, marcas chicas). No se usan valores
   sueltos (`rounded-[10px]` y compañía): si algo no entra en los tres pasos, el
-  problema es el elemento, no el radio.
+  problema es el elemento, no el radio. **Dos formas totalmente redondas** salen
+  de la escala a propósito: la **píldora** (`badge`, chip de filtro, contador —
+  un token de conteo o de estado, no una superficie) y el **avatar** (siempre
+  circular, de la persona o de la empresa).
 - **Elevación**: dos sombras y significan algo. `card` (1 px, apenas despega) para
   una superficie de contenido; `float` (1 px + halo suave) para algo que se
   levantó por encima —un menú, un diálogo, el botón de caja. Todo lo demás está
@@ -239,10 +242,19 @@ está para reconocer, no para decorar: si no ayuda a identificar algo, no va.
 
 - Responsive hasta una columna en el teléfono.
 - Foco de teclado visible en **todo** elemento interactivo (anillo de 2 px del
-  primario, `offset` 2 px).
-- `prefers-reduced-motion` respetado.
+  primario, `offset` 2 px). Hay una **regla global** en `styles.css`
+  (`:where(a[href], button, input, …):focus-visible`) con especificidad 0: los
+  componentes que ya definen su anillo lo pisan, el resto lo hereda.
+- `prefers-reduced-motion` respetado — regla global que corta las animaciones
+  (spinners, pulsos); las transiciones de color en hover no son movimiento.
 - Contraste AA: 4.5:1 en texto, 3:1 en elementos de interfaz.
-- Paleta armónica en claro y en oscuro —se revisa en los dos.
+- Paleta armónica en claro y en oscuro —se revisa en los dos. El tema **sigue al
+  sistema** (y reacciona a sus cambios) hasta la primera vez que el usuario toca
+  el botón; ahí queda fijo. Solo la elección explícita se guarda.
+- **Fechas y montos, en un solo lugar** (`lib/format.ts`): `money` / `quantity` /
+  `fecha` / `fechaHora` / `hora` / `inputDate`. Una fecha escrita distinto en dos
+  pantallas hace dudar del dato. `fecha` trata la fecha sola sin corrimiento de
+  zona; `fechaHora` pasa el timestamp a hora local.
 
 ### Tells a evitar
 
@@ -619,6 +631,15 @@ por módulo, personalización profunda del escritorio.
 - **Categorías salió del riel** (feature sin definir) pero `/catalog/categories`
   sigue existiendo y el filtro por categoría sigue en Productos. Queda así hasta
   que se decida qué hacer con categorías.
-- **El código todavía no sigue este documento.** La tipografía, los matices, los
-  radios, el movimiento y las versalitas de arriba son el objetivo, no el estado
-  actual —ver «Lo que sigue → Refactor del sistema visual».
+- **El código se acercó bastante al documento** (ver `docs/revision-frontend.md`
+  para el detalle de lo hecho y lo que falta). Quedan pendientes de peso:
+  - **Precios en pestañas**: hoy son 8 secciones apiladas en un scroll. El
+    `<Section>` compartido ya está; falta agruparlas (Listas / Actualizar /
+    Promociones / Historial).
+  - **Capa de datos**: cada listado repite `loading`/`error`/`items` a mano. Un
+    `useResource` (o TanStack Query) los unificaría y sería el lugar para
+    dedup/caché/refetch. El 401 ya se maneja global.
+  - **ESLint**: `typescript-eslint` todavía no soporta TypeScript 7; queda para
+    cuando el ecosistema alcance.
+  - **`setActiveBranch` recarga la página entera** — se resuelve con la capa de
+    datos (invalidar queries en vez de `location.reload()`).

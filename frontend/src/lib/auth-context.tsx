@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, type Session } from './api';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { api, setUnauthorizedHandler, type Session } from './api';
 
 // Varias cuentas con la sesión iniciada en el mismo dispositivo: se guarda la
 // lista y cuál está activa. `abasto-session` (una sola sesión) es el formato
@@ -75,6 +75,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persist(accounts, session?.user.id ?? null);
   }, [accounts, session]);
 
+  // El id de la cuenta activa, siempre al día, para usarlo desde callbacks que no
+  // se re-crean (el handler de 401).
+  const activeUserIdRef = useRef<string | null>(null);
+  activeUserIdRef.current = session?.user.id ?? null;
+
+  /** Cierra la cuenta activa y pasa a la siguiente, o a ninguna (→ `/login`). */
+  const dropActive = useCallback(() => {
+    setAccounts(prev => {
+      const rest = prev.filter(a => a.user.id !== activeUserIdRef.current);
+      setActiveId(rest[0]?.user.id ?? null);
+      return rest;
+    });
+  }, []);
+
+  // El backend rechazó el token (401): venció o dejó de valer. Se cierra la
+  // cuenta activa; si no quedan otras, `ProtectedRoute` manda a `/login`. Antes
+  // esto no se manejaba y la app quedaba con una sesión muerta dando error en
+  // cada pantalla.
+  useEffect(() => {
+    setUnauthorizedHandler(dropActive);
+    return () => setUnauthorizedHandler(null);
+  }, [dropActive]);
+
   const refresh = useMemo(
     () => async () => {
       const current = readAccounts().find(a => a.user.id === (localStorage.getItem(ACTIVE_KEY) ?? '')) ?? readAccounts()[0];
@@ -89,8 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // La sesión no vence: si un supervisor te cambió el rango hace un rato, te
-  // enterás al abrir la app de nuevo, sin tener que desloguearte a mano.
+  // Al abrir la app se revalida la cuenta activa contra /auth/me: si un
+  // supervisor te cambió el rango, te enterás sin desloguearte a mano; si el
+  // token venció, el 401 dispara `dropActive` y caés en login.
   useEffect(() => {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,19 +129,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccounts(prev => [...prev.filter(a => a.user.id !== next.user.id), next]);
         setActiveId(next.user.id);
       },
-      logout: () => {
-        setAccounts(prev => {
-          const rest = prev.filter(a => a.user.id !== session?.user.id);
-          setActiveId(rest[0]?.user.id ?? null);
-          return rest;
-        });
-      },
+      logout: dropActive,
       switchAccount: userId => {
         if (accounts.some(a => a.user.id === userId)) setActiveId(userId);
       },
       refresh,
     }),
-    [session, accounts, refresh],
+    [session, accounts, refresh, dropActive],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

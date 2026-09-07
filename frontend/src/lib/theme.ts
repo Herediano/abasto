@@ -4,46 +4,80 @@ export type Theme = 'light' | 'dark';
 
 const KEY = 'abasto-theme';
 
-function prefiereOscuro(): boolean {
+const media = () => {
   try {
-    return matchMedia('(prefers-color-scheme: dark)').matches;
+    return matchMedia('(prefers-color-scheme: dark)');
   } catch {
-    return false;
+    return null;
   }
-}
+};
 
-function leer(): Theme {
+const sistema = (): Theme => (media()?.matches ? 'dark' : 'light');
+
+/** La preferencia explícita del usuario, o `null` si sigue al sistema. */
+function elegido(): Theme | null {
   try {
     const v = localStorage.getItem(KEY);
-    if (v === 'light' || v === 'dark') return v;
+    return v === 'light' || v === 'dark' ? v : null;
   } catch {
-    // Modo privado o almacenamiento bloqueado: se sigue al sistema sólo una vez, al arrancar.
+    return null;
   }
-  return prefiereOscuro() ? 'dark' : 'light';
 }
 
-function aplicar(t: Theme) {
-  document.documentElement.setAttribute('data-theme', t);
+/**
+ * Aplica el tema. Si el usuario eligió, se marca `data-theme` (gana sobre el
+ * sistema, en los dos sentidos). Si sigue al sistema, se saca el atributo y
+ * manda el `@media (prefers-color-scheme)` de styles.css.
+ */
+function aplicar(t: Theme | null) {
+  const el = document.documentElement;
+  if (t) el.setAttribute('data-theme', t);
+  else el.removeAttribute('data-theme');
 }
 
-// Se aplica antes de que React monte para que no haya un parpadeo de tema.
-aplicar(leer());
+// Antes de que React monte, para que no haya un parpadeo de tema.
+aplicar(elegido());
 
-/** Sólo claro/oscuro: un tercer estado "automático" en un botón de dos íconos no se entiende. */
+/**
+ * Claro / oscuro. Arranca siguiendo al sistema —y sigue reaccionando a los
+ * cambios del sistema— hasta que el usuario toca el botón; ahí queda fijo.
+ * Un tercer estado "automático" no entra en un botón de dos íconos, pero
+ * seguir al sistema hasta la primera elección sí.
+ */
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(leer);
+  const [choice, setChoice] = useState<Theme | null>(elegido);
+  const theme: Theme = choice ?? sistema();
 
   useEffect(() => {
-    aplicar(theme);
+    aplicar(choice);
+    if (choice) return;
+    // Sin elección: se escucha al sistema y se repinta.
+    const m = media();
+    if (!m) return;
+    const onChange = () => aplicar(null);
+    m.addEventListener('change', onChange);
+    return () => m.removeEventListener('change', onChange);
+  }, [choice]);
+
+  const setTheme = useCallback((next: Theme) => {
     try {
-      localStorage.setItem(KEY, theme);
+      localStorage.setItem(KEY, next);
     } catch {
       // Sin persistencia: el tema vale para esta sesión y nada más.
     }
-  }, [theme]);
+    setChoice(next);
+  }, []);
 
   const ciclar = useCallback(() => {
-    setTheme(t => (t === 'dark' ? 'light' : 'dark'));
+    setChoice(prev => {
+      const next: Theme = (prev ?? sistema()) === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem(KEY, next);
+      } catch {
+        // Sin persistencia.
+      }
+      return next;
+    });
   }, []);
 
   return { theme, setTheme, ciclar };
