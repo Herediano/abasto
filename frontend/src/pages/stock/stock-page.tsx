@@ -12,7 +12,7 @@ import { StockNav } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type StockItem } from '@/lib/api';
-import { quantity } from '@/lib/format';
+import { fecha, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 export function StockPage() {
@@ -99,7 +99,7 @@ export function StockPage() {
                     <TableCell className="font-medium">{i.productName}</TableCell>
                     <TableCell>{i.warehouseName}</TableCell>
                     <TableCell>{i.lotNumber ?? '—'}</TableCell>
-                    <TableCell>{i.expirationDate ? i.expirationDate.slice(0, 10) : '—'}</TableCell>
+                    <TableCell>{fecha(i.expirationDate)}</TableCell>
                     <TableCell className="text-right font-semibold tabular">{quantity(i.quantity)}</TableCell>
                   </TableRow>
                 ))}

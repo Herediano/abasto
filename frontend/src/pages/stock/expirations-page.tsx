@@ -15,7 +15,7 @@ import { StockNav } from '@/components/stock-nav';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type StockItem } from '@/lib/api';
-import { quantity } from '@/lib/format';
+import { fecha, inputDate, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -67,7 +67,7 @@ export function ExpirationsPage() {
 
   function openEdit(item: StockItem) {
     setEditing(item);
-    setEditDate(item.expirationDate!.slice(0, 10));
+    setEditDate(inputDate(item.expirationDate));
     setError('');
   }
 
@@ -168,7 +168,7 @@ export function ExpirationsPage() {
                       <TableCell className="font-medium">{i.productName}</TableCell>
                       <TableCell>{i.warehouseName}</TableCell>
                       <TableCell>{i.supplierName ?? '—'}</TableCell>
-                      <TableCell>{i.expirationDate!.slice(0, 10)}</TableCell>
+                      <TableCell>{fecha(i.expirationDate)}</TableCell>
                       <TableCell>
                         <Badge variant={urgency.variant}>{urgency.label}</Badge>
                       </TableCell>

@@ -246,6 +246,33 @@
   [aria-disabled="true"] {
     cursor: not-allowed;
   }
+  /*
+   * Foco de teclado visible en TODO elemento interactivo (docs/diseno.md, "Piso
+   * de calidad"): anillo de 2 px del primario, offset 2 px. Va con :where() para
+   * tener especificidad 0 — un componente que ya define su propio anillo (Button,
+   * Input, las tarjetas del escritorio) lo pisa sin pelear. `:focus-visible` es
+   * solo teclado, no click. El outline sigue el `border-radius` del elemento.
+   */
+  :where(a[href], button, input, select, textarea, summary,
+    [role="button"], [role="menuitem"], [role="menuitemradio"], [role="tab"],
+    [role="option"], [role="switch"], [role="checkbox"], [role="radio"],
+    [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+  /*
+   * `prefers-reduced-motion: reduce` corta toda animación (docs/diseno.md,
+   * "Movimiento"): spinners, pulsos y pings quedan quietos. Las transiciones de
+   * color en hover no son movimiento y se dejan.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
 }
 
 /*

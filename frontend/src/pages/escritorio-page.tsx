@@ -5,7 +5,9 @@ import { BranchSwitcher } from '@/components/branch-switcher';
 import { UserMenu } from '@/components/user-menu';
 import { usePalette } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
+import { Kbd } from '@/components/ui/kbd';
 import { api } from '@/lib/api';
+import { hora as fmtHora } from '@/lib/format';
 import { pendientes, statFor, type EscritorioSummary } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
 import { useTiles } from '@/lib/prefs';
@@ -70,7 +72,7 @@ function AbrirMostrador({ summary }: { summary: EscritorioSummary | null }) {
   const navigate = useNavigate();
   const caja = summary?.caja;
   const abierta = caja?.abierta ?? false;
-  const hora = caja?.desde ? new Date(caja.desde).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
+  const hora = caja?.desde ? fmtHora(caja.desde) : '';
   const tickets = caja?.tickets ?? 0;
   const efectivo = caja?.efectivo != null ? ` · ${caja.efectivo.toLocaleString('es-AR', { maximumFractionDigits: 0 })} en efectivo` : '';
   return (
@@ -155,9 +157,7 @@ function AccionTile({
       <span className="flex items-center gap-2 text-sm font-bold text-foreground">
         <TileIcon weight={fill ? 'fill' : 'regular'} className="size-4" />
         {titulo}
-        {atajo && (
-          <kbd className="rounded-sm bg-muted px-1 font-mono text-micro font-normal text-muted-foreground">{atajo}</kbd>
-        )}
+        {atajo && <Kbd className="ml-0.5">{atajo}</Kbd>}
       </span>
       <span className="text-micro leading-snug text-muted-foreground">{contexto}</span>
     </button>

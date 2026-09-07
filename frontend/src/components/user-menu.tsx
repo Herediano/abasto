@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CaretDown, GearSix, Moon, SignOut, Storefront, Sun } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { AccountList } from '@/components/account-list';
+import { fechaHora } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 import { AVATAR_COLORS } from '@/lib/prefs';
 import { useTheme } from '@/lib/theme';
@@ -99,7 +100,7 @@ export function UserMenu() {
               k="Sucursal"
               v={sucursal ? <><Storefront weight="fill" className="size-3 text-primary" /> {sucursal}</> : <span className="text-warning">sin asignar</span>}
             />
-            {inicio && <Fila k="Sesión" v={haceCuanto(inicio)} title={inicio.toLocaleString('es-AR')} />}
+            {inicio && <Fila k="Sesión" v={haceCuanto(inicio)} title={fechaHora(inicio)} />}
             <div className="flex items-center justify-between gap-3">
               <dt className="text-muted-foreground">Tema</dt>
               <dd>

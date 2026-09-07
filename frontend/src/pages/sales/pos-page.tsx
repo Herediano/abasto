@@ -12,6 +12,7 @@ import { Field } from '@/components/field';
 import { ProductSearchDialog } from '@/components/product-search-dialog';
 import { SupervisorAuthDialog } from '@/components/supervisor-auth-dialog';
 import { Input } from '@/components/ui/input';
+import { Kbd } from '@/components/ui/kbd';
 import { Select } from '@/components/ui/select';
 import { Spinner, PageSpinner } from '@/components/spinner';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -19,7 +20,7 @@ import {
   api, errorMessage, type CashRegister, type CashShift, type Customer, type CustomerAccount,
   type PaymentAdjustment, type PaymentMethod, type Product, type Promotion,
 } from '@/lib/api';
-import { money } from '@/lib/format';
+import { fecha, hora as fmtHora, money } from '@/lib/format';
 import { parseWeighedBarcode } from '@/lib/pesable';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
@@ -83,10 +84,6 @@ function vigente(p: Promotion) {
   if (new Date(p.validFrom).getTime() > hoy) return false;
   if (p.validTo && new Date(p.validTo).getTime() < hoy) return false;
   return true;
-}
-
-function fmtHora(iso: string) {
-  return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
 export function PosPage() {
@@ -618,7 +615,7 @@ export function PosPage() {
                 onClick={a.go}
                 className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-1.5 font-medium transition-colors hover:border-accent-border hover:bg-subtle"
               >
-                <kbd className="rounded border border-border px-1 font-mono text-xs text-placeholder">{a.k}</kbd>
+                <Kbd>{a.k}</Kbd>
                 {a.l}
               </button>
             ))}
@@ -751,7 +748,7 @@ export function PosPage() {
                     <p className="text-sm text-muted-foreground">{describirPromo(p)}</p>
                     <p className="mt-0.5 text-xs text-placeholder">
                       {p.scopeType === 'all' ? 'Todos los productos' : p.scopeType === 'brand' ? `Marca ${p.scopeValue}` : 'Una categoría'}
-                      {p.validTo ? ` · hasta el ${p.validTo.slice(0, 10)}` : ' · sin fecha de fin'}
+                      {p.validTo ? ` · hasta el ${fecha(p.validTo)}` : ' · sin fecha de fin'}
                     </p>
                   </div>
                 </div>

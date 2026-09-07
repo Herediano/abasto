@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage } from '@/lib/api';
-import { money } from '@/lib/format';
+import { fecha, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
@@ -49,8 +49,8 @@ function Bloque({ title, children }: { title: string; children: React.ReactNode 
 export function ReportesPage() {
   const { session } = useAuth();
   const token = session!.accessToken;
-  const hoy = new Date().toISOString().slice(0, 10);
-  const hace30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const hoy = inputDate();
+  const hace30 = inputDate(Date.now() - 30 * 864e5);
   const [from, setFrom] = useState(hace30);
   const [to, setTo] = useState(hoy);
   const [data, setData] = useState<Panel | null>(null);
@@ -198,7 +198,7 @@ export function ReportesPage() {
                     <TableRow key={a.id}>
                       <TableCell>{a.cashRegister}</TableCell>
                       <TableCell>{a.closedBy}</TableCell>
-                      <TableCell>{a.closedAt ? a.closedAt.slice(0, 10) : '—'}</TableCell>
+                      <TableCell>{fecha(a.closedAt)}</TableCell>
                       <TableCell className={`text-right tabular font-medium ${a.difference < 0 ? 'text-destructive' : 'text-warning'}`}>
                         {a.difference > 0 ? '+' : ''}{money(a.difference)}
                       </TableCell>

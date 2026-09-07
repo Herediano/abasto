@@ -14,7 +14,7 @@ import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList, type PriceRule, type RoundingRule, type ScheduledChange, type Promotion, type PriceAuditRow } from '@/lib/api';
-import { money } from '@/lib/format';
+import { fecha, fechaHora, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 type ScopeType = 'all' | 'category' | 'brand';
@@ -91,7 +91,7 @@ export function PricesPage() {
     name: '', type: 'nxm' as Promotion['type'],
     n: '3', m: '2', buyQty: '2', getQty: '1', percent: '50', desdeUnidad: '2', amount: '500', price: '',
     scopeType: 'all' as ScopeType, scopeValue: '',
-    validFrom: new Date().toISOString().slice(0, 10), validTo: '',
+    validFrom: inputDate(), validTo: '',
   });
 
   // auditoría
@@ -421,7 +421,7 @@ export function PricesPage() {
       const result = await api<BulkResult>('/prices/bulk', { method: 'POST', body: buildBody(false) }, token);
       setToolsMessage(
         result.scheduled
-          ? `Programado: ${result.affected} precios van a entrar en vigencia el ${result.validFrom.slice(0, 10)}.`
+          ? `Programado: ${result.affected} precios van a entrar en vigencia el ${fecha(result.validFrom)}.`
           : `Listo: ${result.affected} precios actualizados.${result.skipped ? ` ${result.skipped} salteados.` : ''}`,
       );
       setPreview(null);
@@ -532,7 +532,7 @@ export function PricesPage() {
             </Field>
 
             <Field label="Aplicar desde" htmlFor="validFrom" hint="(vacío = ahora)">
-              <Input id="validFrom" type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} min={new Date().toISOString().slice(0, 10)} />
+              <Input id="validFrom" type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} min={inputDate()} />
             </Field>
 
             <Field label="Aplicar a" htmlFor="scope">
@@ -697,7 +697,7 @@ export function PricesPage() {
                 <TableBody>
                   {scheduled.map(c => (
                     <TableRow key={`${c.priceListId}-${c.validFrom}`}>
-                      <TableCell className="font-medium">{c.validFrom.slice(0, 10)}</TableCell>
+                      <TableCell className="font-medium">{fecha(c.validFrom)}</TableCell>
                       <TableCell>{c.priceListName}</TableCell>
                       <TableCell className="text-right">{c.products}</TableCell>
                       <TableCell className="text-right">
@@ -748,7 +748,7 @@ export function PricesPage() {
                           : `redondeo ${MODOS_REDONDEO[r.rounding ?? ''] ?? r.rounding}`}
                         {r.scopeType !== 'all' && ` · sólo ${r.scopeType === 'brand' ? r.scopeValue : categories.find(c => c.id === r.scopeValue)?.name ?? 'una categoría'}`}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{r.lastRunAt ? r.lastRunAt.slice(0, 10) : 'nunca'}</TableCell>
+                      <TableCell className="text-muted-foreground">{r.lastRunAt ? fecha(r.lastRunAt) : 'nunca'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button variant="outline" size="sm" onClick={() => runRule(r)} disabled={runningRule === r.id}>
@@ -850,7 +850,7 @@ export function PricesPage() {
                         {p.scopeType !== 'all' && ` · sólo ${p.scopeType === 'brand' ? p.scopeValue : categories.find(c => c.id === p.scopeValue)?.name ?? 'una categoría'}`}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {p.validFrom.slice(0, 10)} {p.validTo ? `→ ${p.validTo.slice(0, 10)}` : '→ sin fin'}
+                        {fecha(p.validFrom)} {p.validTo ? `→ ${fecha(p.validTo)}` : '→ sin fin'}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => deletePromo(p.id)} aria-label={`Borrar ${p.name}`}>
@@ -921,7 +921,7 @@ export function PricesPage() {
                 <TableBody>
                   {audit.map(a => (
                     <TableRow key={`${a.field}-${a.id}`}>
-                      <TableCell className="whitespace-nowrap">{a.at.slice(0, 10)}</TableCell>
+                      <TableCell className="whitespace-nowrap">{fechaHora(a.at)}</TableCell>
                       <TableCell className="font-medium">{a.productName}</TableCell>
                       <TableCell>
                         {a.field === 'cost' ? 'Costo' : 'Venta'}

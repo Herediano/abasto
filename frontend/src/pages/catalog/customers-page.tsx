@@ -14,7 +14,7 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Customer, type CustomerAccount, type PriceList } from '@/lib/api';
-import { money } from '@/lib/format';
+import { fechaHora, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -322,7 +322,7 @@ export function CustomersPage() {
                             {m.type === 'sale' ? 'Venta a cuenta corriente' : m.type === 'payment' ? 'Cobro' : 'Ajuste'}
                             {m.notes ? ` · ${m.notes}` : ''}
                           </p>
-                          <p className="text-xs text-placeholder">{new Date(m.occurredAt).toLocaleString('es-AR')} · {m.userName}</p>
+                          <p className="text-xs text-placeholder">{fechaHora(m.occurredAt)} · {m.userName}</p>
                         </div>
                         <span className={cn('shrink-0 font-medium tabular', Number(m.amount) > 0 ? 'text-warning' : 'text-success')}>
                           {Number(m.amount) > 0 ? '+' : ''}{money(Number(m.amount))}

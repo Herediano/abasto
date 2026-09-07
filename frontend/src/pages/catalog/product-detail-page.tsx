@@ -12,7 +12,7 @@ import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
-import { money, quantity } from '@/lib/format';
+import { fecha, money, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PRICE_SOURCES: Record<string, string> = {
@@ -207,7 +207,7 @@ export function ProductDetailPage() {
                   <TableRow key={`${s.warehouseId}-${s.productLotId}`}>
                     <TableCell>{s.warehouseName}</TableCell>
                     <TableCell>{s.lotNumber ?? '—'}</TableCell>
-                    <TableCell>{s.expirationDate ? s.expirationDate.slice(0, 10) : '—'}</TableCell>
+                    <TableCell>{fecha(s.expirationDate)}</TableCell>
                     <TableCell>{s.supplierName ?? '—'}</TableCell>
                     <TableCell className="text-right font-medium tabular">{quantity(s.quantity)}</TableCell>
                   </TableRow>
@@ -283,9 +283,7 @@ export function ProductDetailPage() {
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.supplierName}</TableCell>
                     <TableCell className="text-right">{s.lastCost ? money(Number(s.lastCost)) : '—'}</TableCell>
-                    {/* slice en vez de toLocaleDateString: la fecha viene como
-                        medianoche UTC y convertirla a hora local la corre un día. */}
-                    <TableCell>{s.lastPurchaseAt ? s.lastPurchaseAt.slice(0, 10) : '—'}</TableCell>
+                    <TableCell>{fecha(s.lastPurchaseAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -367,7 +365,7 @@ export function ProductDetailPage() {
               <TableBody>
                 {(product.priceHistory ?? []).map(h => (
                   <TableRow key={h.id}>
-                    <TableCell className="whitespace-nowrap">{h.createdAt.slice(0, 10)}</TableCell>
+                    <TableCell className="whitespace-nowrap">{fecha(h.createdAt)}</TableCell>
                     <TableCell>{h.field === 'cost' ? 'Costo' : 'Venta'}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{h.oldValue ? money(Number(h.oldValue)) : '—'}</TableCell>
                     <TableCell className="text-right font-medium">{money(Number(h.newValue))}</TableCell>
