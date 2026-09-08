@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { PaletteContext } from '@/components/layout/escritorio-shell';
 import { SidebarItem } from './SidebarItem';
 import { RailToggle } from './rail-toggle';
+import { useSidebarToggle } from './useSidebarToggle';
 
 /**
  * La interfaz clásica: barra lateral fija. Es un complemento, no el centro:
@@ -48,11 +49,15 @@ export function ClassicShell() {
   if (!session || !can) return null;
 
   const mods = gridModules(can).filter(m => !['vencimientos', 'reposicion'].includes(m.key));
+  const { collapsed } = useSidebarToggle();
 
   return (
     <PaletteContext.Provider value={() => setPalette(true)}>
       <div className="flex min-h-screen">
-        <aside className="pointer-events-none fixed left-4 top-4 z-20">
+        <aside className={cn(
+          'pointer-events-none fixed left-4 top-4 z-20',
+          collapsed && 'hidden'
+        )}>
           <div className="pointer-events-auto flex w-11 flex-col gap-1 overflow-visible rounded-[5px] border border-[rgba(0,0,255,0.2)] bg-card p-1 shadow-lg shadow-black/15 rail-in">
             <RailToggle />
             <SidebarItem to="/" icon={House} hue="var(--color-primary)" label="Escritorio" />
@@ -68,7 +73,10 @@ export function ClassicShell() {
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className={cn(
+          'flex min-w-0 flex-1 flex-col',
+          !collapsed && 'ml-16'
+        )}>
           <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-6">
             <Outlet />
           </main>
