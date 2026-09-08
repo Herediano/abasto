@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { CashRegister, House, MagnifyingGlass, type Icon } from '@phosphor-icons/react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { House, type Icon } from '@phosphor-icons/react';
 import { CommandPalette } from '@/components/command-palette';
-import { Kbd } from '@/components/ui/kbd';
 import { useAuth } from '@/lib/auth-context';
-import { gridModules, settingsModules, hueFor, MODULES } from '@/lib/modules';
+import { gridModules, hueFor } from '@/lib/modules';
 import { cn } from '@/lib/utils';
 import { PaletteContext } from '@/components/layout/escritorio-shell';
+import { SidebarItem } from './SidebarItem';
 
 /**
  * La interfaz clásica: barra lateral fija. Es un complemento, no el centro:
@@ -46,58 +46,24 @@ export function ClassicShell() {
 
   if (!session || !can) return null;
 
-  const mods = gridModules(can);
-  const sistema = settingsModules(can);
-  const ajustes = MODULES.find(m => m.key === 'ajustes')!;
-  const canCaja = can('caja.operar');
+  const mods = gridModules(can).filter(m => !['vencimientos', 'reposicion'].includes(m.key));
 
   return (
     <PaletteContext.Provider value={() => setPalette(true)}>
       <div className="flex min-h-screen">
-        <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-          {/* Complemento: buscar y el mostrador, y después la navegación. Sin
-              marca ni cuenta/sucursal — eso vive en el escritorio. */}
-          <nav className="flex-1 overflow-y-auto px-3 py-3">
-            <div className="grid gap-1.5">
-              <button
-                onClick={() => setPalette(true)}
-                className="flex h-9 items-center gap-2.5 rounded-lg border border-sidebar-border bg-sidebar px-3 text-chico font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground"
-              >
-                <MagnifyingGlass className="size-4" /> Buscar
-                <Kbd className="ml-auto">K</Kbd>
-              </button>
-              {canCaja && (
-                <NavLink
-                  to="/ventas"
-                  end
-                  className="flex h-9 items-center gap-2.5 rounded-lg bg-primary px-3 text-chico font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  <CashRegister weight="fill" className="size-4" /> Mostrador
-                </NavLink>
-              )}
-              <Item to="/" icon={House} hue="var(--color-primary)" label="Escritorio" />
-            </div>
-
-            <div role="presentation" className="my-3 h-px bg-sidebar-border" />
-
-            <div className="grid gap-0.5">
-              {mods.map(m => (
-                <Item key={m.key} to={m.path} icon={m.Icon} hue={hueFor(m.key)} label={m.label} />
-              ))}
-            </div>
-
-            {sistema.length > 0 && (
-              <>
-                <div role="presentation" className="my-3 h-px bg-sidebar-border" />
-                <div className="grid gap-0.5">
-                  <Item to={ajustes.path} icon={ajustes.Icon} hue={hueFor(ajustes.key)} label={ajustes.label} />
-                  {sistema.map(m => (
-                    <Item key={m.key} to={m.path} icon={m.Icon} hue={hueFor(m.key)} label={m.label} />
-                  ))}
-                </div>
-              </>
-            )}
-          </nav>
+        <aside className="pointer-events-none">
+          <div className="pointer-events-auto sticky top-4 mt-4 flex w-16 flex-col overflow-visible rounded-2xl border border-sidebar-border bg-card shadow-lg shadow-black/15 transition-all duration-500 ease-in-out ml-4">
+            <SidebarItem to="/" icon={House} hue="var(--color-primary)" label="Escritorio" />
+            {mods.map(m => (
+              <SidebarItem
+                key={m.key}
+                to={m.path}
+                icon={m.Icon}
+                hue={hueFor(m.key)}
+                label={m.label}
+              />
+            ))}
+          </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -115,31 +81,5 @@ export function ClassicShell() {
         <CommandPalette open={palette} onOpenChange={setPalette} />
       </div>
     </PaletteContext.Provider>
-  );
-}
-
-/** Ítem de navegación: monocromo hasta que está activo, y entonces la pastilla
- *  suave de cian, la barrita y el ícono del matiz del módulo. */
-function Item({ to, end, icon: Icon, hue, label }: { to: string; end?: boolean; icon: Icon; hue: string; label: string }) {
-  const { pathname } = useLocation();
-  const activo = end ? pathname === to : pathname === to || pathname.startsWith(to + '/');
-  return (
-    <NavLink
-      to={to}
-      end={end}
-      aria-current={activo ? 'page' : undefined}
-      className={cn(
-        'relative flex h-9 items-center gap-2.5 rounded-lg px-3 text-chico font-medium transition-colors',
-        activo ? 'bg-sidebar-active text-sidebar-active-foreground' : 'text-sidebar-foreground hover:bg-sidebar-hover hover:text-foreground',
-      )}
-    >
-      <span
-        aria-hidden
-        className={cn('absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full transition-opacity', activo ? 'opacity-100' : 'opacity-0')}
-        style={{ background: hue }}
-      />
-      <Icon className="size-4 shrink-0" weight={activo ? 'fill' : 'regular'} style={activo ? { color: hue } : undefined} />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-    </NavLink>
   );
 }

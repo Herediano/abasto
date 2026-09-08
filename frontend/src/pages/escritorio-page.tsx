@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { CashRegister, DotsSixVertical, EyeSlash, GearSix, Plus, Sparkle, type Icon } from '@phosphor-icons/react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { CashRegister, DotsSixVertical, EyeSlash, Plus, Sparkle, type Icon } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BranchSwitcher } from '@/components/branch-switcher';
 import { NotificationBell } from '@/components/notification-bell';
@@ -11,18 +11,25 @@ import { api } from '@/lib/api';
 import { hora as fmtHora } from '@/lib/format';
 import { compact, statFor, type EscritorioSummary, type TileBar } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
-import { useTiles, type TileSize } from '@/lib/prefs';
 import { setActiveBranch } from '@/lib/branch';
 import { cn } from '@/lib/utils';
 
 const CONFIG_KEY = 'abasto-escritorio';
 
-/** Las tarjetas protagonistas: más altas y con detalle — el dato que alcanza
- *  para decidir sin entrar al módulo. Sales de la casa (ventas, con su minimapa
- *  de 7 días), lo que hay en la calle (clientes/cuenta corriente) y lo que hay
- *  que reponer (stock y compras por cargar — los dos con la lista de quiénes).
- *  Todas las tarjetas calzan en una celda del tablero, sin romper su grilla. */
-const PROTAGONISTAS = new Set(['ventas', 'clientes', 'stock', 'compras']);
+/** Grilla fija de columnas; sin presets de tamaño. Cada tarjeta se agranda o
+ *  achica estirando sus bordes (span de columnas y filas) y el tablero fluye
+ *  denso para no dejar agujeros. */
+const GRID_COLS = 5;
+const GAP = 12; // gap-3
+const ROW_H = 168; // gridAutoRows
+const MAX_ROWS = 4;
+
+type TileSpan = { w: number; h: number };
+
+/** Una tarjeta del tablero: posición explícita (col, row en 0..) y tamaño en
+ *  celdas. Nada de flujo automático: cada tarjeta sabe dónde vive, así mover,
+ *  estirar y reacomodar es aritmética pura y determinista. */
+type TilePos = { key: string; col: number; row: number; w: number; h: number };
 
 /** Mayúscula inicial y nada más: el renglón de contexto ya viene en minúscula. */
 const cap = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es-AR') + s.slice(1) : s);
@@ -35,7 +42,7 @@ function saludo(): string {
   return 'Buenas noches';
 }
 
-/** Minimapa de tendencia de la tarjeta protagonista de Ventas: los últimos 7
+/** Minimapa de tendencia de la tarjeta de Ventas: los últimos 7
  *  días en barras. Hoy a pleno, el resto apagado; sin ejes ni etiquetas — el
  *  número grande ya cuenta el cuánto, esto solo la forma. */
 function MiniBars({ bars, hue }: { bars: TileBar[]; hue: string }) {
@@ -56,6 +63,46 @@ function MiniBars({ bars, hue }: { bars: TileBar[]; hue: string }) {
           <span className="text-micro leading-none text-placeholder">{b.label}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** El gráfico de facturación de la tarjeta de Ventas estirada (2+ de ancho):
+ *  los mismos 7 días de la minimapa, pero con la serie real — barras con el
+ *  monto de cada día, etiquetas de día de la semana y el valor grande al pasar
+ *  el mouse. Sin leyendas ni ejes: la tarjeta ya dice el cuánto total. */
+function FacturacionChart({ bars, hue }: { bars: TileBar[]; hue: string }) {
+  const max = Math.max(...bars.map(b => b.value), 1);
+  const hoy = bars.findIndex(b => b.hoy);
+  return (
+    <div role="img" aria-label="Facturación de los últimos siete días" className="mt-2 flex items-end gap-2">
+      {bars.map((b, i) => {
+        const pct = (b.value / max) * 100;
+        return (
+          <div key={i} className="group/bar flex min-w-0 flex-1 flex-col items-center gap-1">
+            <div className="flex h-[72px] w-full items-end">
+              <div
+                className="w-full rounded-t-[3px] transition-[height] duration-200"
+                style={{
+                  height: b.value > 0 ? `${Math.max(6, pct)}%` : '4px',
+                  background: hue,
+                  opacity: b.hoy ? 1 : 0.45,
+                }}
+                title={b.value > 0 ? `${b.label}: ${compact(b.value)}` : undefined}
+              />
+            </div>
+            <span className="text-micro leading-none text-placeholder">{b.label}</span>
+            <span
+              className={cn(
+                'text-micro leading-none tabular',
+                i === hoy ? 'font-semibold text-foreground' : 'text-muted-foreground',
+              )}
+            >
+              {b.value > 0 ? compact(b.value).replace('$ ', '') : '—'}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -171,40 +218,123 @@ function AccionTile({
  * vive cada tarjeta (los huecos —de tarjetas ocultas o por mudanza— quedan como
  * celdas vacías visibles). La última columna es el flanco reservado de vacíos:
  * siempre parejo, para dejar tarjetas afuera del circuito. Se mueve todo
- * arrastrando dentro del modo Configurar; el tablero queda guardado en
- * localStorage.
+ * arrastrando en cualquier momento, cada tarjeta se estira desde sus bordes y
+ * el tablero queda guardado en localStorage.
  */
-type Config = { hidden: string[]; board: (string | null)[] };
+type Config = { hidden: string[]; tiles: TilePos[] };
 
-/** Columnas fijas del tablero según el preset de tamaño (la última es el
- * flanco): chica 6, mediana 5, grande 4 — cada preset hace tarjetas más anchas
- * con menos columnas, como antes. */
-const TOTAL_COLS: Record<TileSize, number> = { chica: 6, mediana: 5, grande: 4 };
+/** Reacomoda las tarjetas en la grilla: primero la fijada (si hay), después el
+ *  resto en el orden dado, cada una en el primer hueco donde entra completa
+ *  (primera cabida, fila por fila). Si no hay lugar, crece una fila.
+ *  Determinista: mismo entrada, mismo tablero — por eso el arrastre no baila. */
+function computeLayout(
+  sizes: { key: string; w: number; h: number }[],
+  maxCol: number,
+  pinned?: { key: string; col: number; row: number },
+): TilePos[] {
+  const occ = new Set<string>();
+  const out: TilePos[] = [];
+  const mark = (p: TilePos) => {
+    for (let dr = 0; dr < p.h; dr++) for (let dw = 0; dw < p.w; dw++) occ.add(`${p.row + dr}:${p.col + dw}`);
+  };
+  const cabe = (row: number, col: number, w: number, h: number) => {
+    if (col + w > maxCol) return false;
+    for (let dr = 0; dr < h; dr++) for (let dw = 0; dw < w; dw++) if (occ.has(`${row + dr}:${col + dw}`)) return false;
+    return true;
+  };
+  const place = (key: string, w: number, h: number, pin?: { col: number; row: number }) => {
+    const ww = Math.min(Math.max(1, w), maxCol);
+    let row = pin ? Math.max(0, pin.row) : 0;
+    let col = pin ? Math.min(Math.max(0, pin.col), maxCol - ww) : 0;
+    while (!cabe(row, col, ww, h)) {
+      col++;
+      if (col + ww > maxCol) {
+        col = 0;
+        row++;
+      }
+    }
+    const p = { key, col, row, w: ww, h };
+    mark(p);
+    out.push(p);
+  };
+  if (pinned) {
+    const t = sizes.find(s => s.key === pinned.key);
+    if (t) place(t.key, t.w, t.h, pinned);
+  }
+  for (const t of sizes) {
+    if (pinned && t.key === pinned.key) continue;
+    place(t.key, t.w, t.h);
+  }
+  return out;
+}
 
-function readConfig(): Config {
+/** Orden visual (fila, luego columna): el orden en que se reacomodan. */
+const porVisual = (a: TilePos, b: TilePos) => a.row - b.row || a.col - b.col;
+const aSize = ({ key, w, h }: TilePos) => ({ key, w, h });
+
+/** Tablero de fábrica: los módulos en su orden, fila por fila, dejando la
+ *  última columna como flanco de vacíos. Es el punto de partida de toda
+ *  cuenta nueva (y de toda config guardada que no traiga tarjetas). */
+function tableroFabrica(keys: string[]): TilePos[] {
+  return computeLayout(
+    keys.map(key => ({ key, w: 1, h: 1 })),
+    GRID_COLS - 1,
+  );
+}
+
+function readConfig(keys: string[]): Config {
+  const puede = new Set(keys);
+  const sembrar = (hidden: string[]): Config => ({ hidden, tiles: tableroFabrica(keys.filter(k => !hidden.includes(k))) });
   try {
     const raw = localStorage.getItem(CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Config>;
-      if (Array.isArray(parsed.board)) return { hidden: parsed.hidden ?? [], board: parsed.board };
-      // Compat con el formato viejo (order + hidden): se vuelca el orden al
-      // tablero fijo en mediana, tarjetas por fila y el flanco vacío.
+      // Formato actual: posiciones explícitas por tarjeta.
+      if (Array.isArray(parsed.tiles)) {
+        const hidden = (parsed.hidden ?? []).filter(k => puede.has(k));
+        const tiles = parsed.tiles
+          .filter(t => puede.has(t.key))
+          .map(t => ({
+            key: t.key,
+            col: Math.max(0, Math.min(GRID_COLS - 1, Math.floor(t.col) || 0)),
+            row: Math.max(0, Math.floor(t.row) || 0),
+            w: Math.min(GRID_COLS, Math.max(1, Math.floor(t.w) || 1)),
+            h: Math.max(1, Math.floor(t.h) || 1),
+          }));
+        if (tiles.length > 0) return { hidden, tiles: computeLayout([...tiles].sort(porVisual).map(aSize), GRID_COLS) };
+        return sembrar(hidden);
+      }
+      // Formato intermedio (board + spans): anclas del tablero viejo, reacomodadas.
+      const boardViejo = (parsed as { board?: unknown }).board;
+      if (Array.isArray(boardViejo)) {
+        const hidden = (parsed.hidden ?? []).filter(k => puede.has(k));
+        const spans = ((parsed as { spans?: Record<string, { w?: number; h?: number }> }).spans ?? {}) as Record<string, { w?: number; h?: number }>;
+        const viejas: TilePos[] = [];
+        (boardViejo as (string | null)[]).forEach((k: string | null, i: number) => {
+          if (!k || !puede.has(k)) return;
+          const col = i % GRID_COLS;
+          viejas.push({
+            key: k,
+            col,
+            row: Math.floor(i / GRID_COLS),
+            w: Math.min(spans[k]?.w ?? 1, GRID_COLS - col),
+            h: spans[k]?.h ?? 1,
+          });
+        });
+        if (viejas.length > 0) return { hidden, tiles: computeLayout(viejas.sort(porVisual).map(aSize), GRID_COLS) };
+        return sembrar(hidden);
+      }
+      // Compat con el formato viejo (order + hidden).
       const viejo = parsed as Partial<{ order: string[]; hidden: string[] }>;
-      const order = viejo.order ?? [];
-      const hidden = viejo.hidden ?? [];
-      const keys = order.filter(k => !hidden.includes(k));
-      const contenido = TOTAL_COLS.mediana - 1;
-      const rows = Math.max(1, Math.ceil(keys.length / contenido));
-      const board: (string | null)[] = Array(rows * TOTAL_COLS.mediana).fill(null);
-      keys.forEach((k, i) => {
-        board[Math.floor(i / contenido) * TOTAL_COLS.mediana + (i % contenido)] = k;
-      });
-      return { hidden, board };
+      const hidden = (viejo.hidden ?? []).filter(k => puede.has(k));
+      const order = (viejo.order ?? []).filter(k => puede.has(k) && !hidden.includes(k));
+      if (order.length > 0) return { hidden, tiles: tableroFabrica(order) };
+      return sembrar(hidden);
     }
   } catch {
-    // Sin persistencia: el escritorio arranca en su orden de fábrica.
+    // Sin persistencia (o config rota): el escritorio arranca de fábrica.
   }
-  return { hidden: [], board: [] };
+  return sembrar([]);
 }
 
 function writeConfig(config: Config) {
@@ -219,11 +349,68 @@ export function EscritorioPage() {
   const { session, can } = useAuth();
   const navigate = useNavigate();
   const openPalette = usePalette();
-  const { tiles, setTiles } = useTiles();
-  const [config, setConfig] = useState<Config>(readConfig);
-  const [configuring, setConfiguring] = useState(false);
+  const [config, setConfig] = useState<Config>(() => readConfig(gridModules(can).map(m => m.key)));
   const [summary, setSummary] = useState<EscritorioSummary | null>(null);
+  // Arrastre: la tarjeta agarrada, el índice de celda objetivo (solo VISUAL —
+  // nada se reacomoda durante el dragover; el commit es único, en el drop) y
+  // la última celda realmente ocupada por la tarjeta en el tablero (para
+  // commit anclado y para devolverla si el drop es inválido).
   const [dragKey, setDragKey] = useState<string | null>(null);
+  const [hoverCell, setHoverCell] = useState<number | null>(null);
+  const [invalid, setInvalid] = useState(false);
+  const hoverRef = useRef<number | null>(null);
+  const dragKeyRef = useRef<string | null>(null);
+  // Tarjeta en estirado (y desde dónde): mientras dura, bloquea drag y click.
+  const [resizing, setResizing] = useState<{ key: string; dir: 'e' | 's' | 'se' } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const resizingRef = useRef(false);
+  const lastResizeEnd = useRef(0);
+  // Foto del layout anterior (FLIP): cuando el tablero se rearma —mudanza,
+  // estirado, ocultar— cada tarjeta vuela de su lugar previo al nuevo y su
+  // tamaño escala en vez de saltar. En pleno estirado la animación es corta
+  // (se reinicia a cada paso del arrastre: efecto de seguimiento suave);
+  // fuera de él, algo más larga. Al redimensionar la ventana solo se actualiza
+  // la foto, sin animar deltas viejos.
+  const rectsRef = useRef<Map<string, DOMRect>>(new Map());
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const prev = rectsRef.current;
+    const next = new Map<string, DOMRect>();
+    for (const el of Array.from(grid.querySelectorAll<HTMLElement>('[data-tile]'))) {
+      const key = el.dataset.tile ?? '';
+      const now = el.getBoundingClientRect();
+      next.set(key, now);
+      const antes = prev.get(key);
+      if (!antes) continue;
+      const dx = antes.left - now.left;
+      const dy = antes.top - now.top;
+      const sx = antes.width / now.width;
+      const sy = antes.height / now.height;
+      if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(sx - 1) < 0.03 && Math.abs(sy - 1) < 0.03) continue;
+      el.animate(
+        [
+          { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, transformOrigin: 'top left' },
+          { transform: 'translate(0, 0) scale(1, 1)' },
+        ],
+        { duration: resizingRef.current ? 200 : 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      );
+    }
+    rectsRef.current = next;
+  }, [config]);
+  useEffect(() => {
+    const refresh = () => {
+      const grid = gridRef.current;
+      if (!grid) return;
+      const next = new Map<string, DOMRect>();
+      for (const el of Array.from(grid.querySelectorAll<HTMLElement>('[data-tile]'))) {
+        next.set(el.dataset.tile ?? '', el.getBoundingClientRect());
+      }
+      rectsRef.current = next;
+    };
+    window.addEventListener('resize', refresh);
+    return () => window.removeEventListener('resize', refresh);
+  }, []);
 
   const token = session?.accessToken;
   useEffect(() => {
@@ -240,14 +427,9 @@ export function EscritorioPage() {
   const canCaja = can('caja.operar');
   // Mapa módulo → definición (la grilla se arma desde las celdas, no al revés).
   const byKey = useMemo(() => new Map(gridModules(can).map(m => [m.key, m])), [can]);
-  const cols = TOTAL_COLS[tiles];
-  // Tablero normalizado: filas completas (la última columna es el flanco de
-  // vacíos). Las celdas nulas son huecos visibles. Se autocompone si el tamaño
-  // guardado quedó corto (cambio de preset o config vieja).
-  const cells = useMemo(() => {
-    const rows = Math.max(1, Math.ceil(config.board.length / cols));
-    return Array.from({ length: rows * cols }, (_, i) => config.board[i] ?? null);
-  }, [config.board, cols]);
+  const cols = GRID_COLS;
+  const tiles = config.tiles;
+  const rows = useMemo(() => Math.max(2, ...tiles.map(t => t.row + t.h)), [tiles]);
   const hidden = config.hidden.map(k => byKey.get(k)).filter((m): m is ModuleDef => !!m);
 
   const nombre = session?.user.name.split(' ')[0] ?? '';
@@ -257,50 +439,127 @@ export function EscritorioPage() {
     setConfig(next);
     writeConfig(next);
   }
-  // Ocultar deja el hueco visible en el tablero.
+  // Ocultar: la tarjeta sale del tablero (las demás no se mueven — su posición
+  // es explícita).
   const ocultar = (key: string) => {
     if (config.hidden.includes(key)) return;
-    const c = cells.slice();
-    const i = c.indexOf(key);
-    if (i >= 0) c[i] = null;
-    update({ ...config, board: c, hidden: [...config.hidden, key] });
+    update({ hidden: [...config.hidden, key], tiles: tiles.filter(t => t.key !== key) });
   };
-  // Mostrar va a la primera celda vacía; si el tablero está lleno, crece una fila.
   const mostrar = (key: string) => {
-    const c = cells.slice();
-    let i = c.indexOf(null);
-    if (i < 0) {
-      const inicio = c.length;
-      for (let k = 0; k < cols; k++) c.push(null);
-      i = inicio;
-    }
-    c[i] = key;
-    update({ ...config, board: c, hidden: config.hidden.filter(k => k !== key) });
+    const puestas = computeLayout(tiles.filter(t => t.key !== key).sort(porVisual).map(aSize), GRID_COLS);
+    // Mostrar: entra de fábrica al primer hueco donde entra completa.
+    update({ hidden: config.hidden.filter(k => k !== key), tiles: computeLayout([{ key, w: 1, h: 1 }, ...puestas], GRID_COLS) });
   };
-  // Arrastrar (modo Configurar). Soltar sobre una celda ocupada es intercambio;
-  // sobre una vacía es mudanza — el hueco queda donde estaba. El tablero se
-  // reordena en vivo y se guarda en localStorage.
-  const dropCell = (j: number) => {
-    if (!dragKey) return;
-    const c = cells.slice();
-    const i = c.indexOf(dragKey);
-    if (i < 0 || i === j) return;
-    c[i] = c[j];
-    c[j] = dragKey;
-    update({ ...config, board: c });
+  // Estirar una tarjeta desde sus bordes: el tamaño (en celdas de la grilla)
+  // se ve en vivo durante el arrastre y queda persistido al soltar. La tarjeta
+  // queda anclada donde está y el resto se reacomoda con el mismo packing
+  // determinista del arrastre — nadie baila.
+  const spanOf = (key: string): TileSpan => {
+    const t = tiles.find(x => x.key === key);
+    return t ? { w: t.w, h: t.h } : { w: 1, h: 1 };
   };
-  const dropOver = (e: { preventDefault: () => void }, j: number) => {
-    if (configuring && dragKey) {
-      e.preventDefault();
-      dropCell(j);
+  const setSpan = (key: string, w: number, h: number) => {
+    setConfig(prev => {
+      const cur = prev.tiles.find(x => x.key === key);
+      if (!cur || (cur.w === w && cur.h === h)) return prev;
+      const resto = prev.tiles.filter(t => t.key !== key).sort(porVisual).map(aSize);
+      const next = { ...prev, tiles: computeLayout([{ key, w, h }, ...resto], GRID_COLS, { key, col: cur.col, row: cur.row }) };
+      writeConfig(next);
+      return next;
+    });
+  };
+  const startResize = (key: string, dir: 'e' | 's' | 'se') => (e: ReactPointerEvent<HTMLSpanElement>) => {
+    e.preventDefault();
+    const grid = gridRef.current;
+    const card = grid?.querySelector<HTMLElement>(`[data-tile="${key}"]`);
+    if (!grid || !card) return;
+    const rect = card.getBoundingClientRect();
+    const cellW = (grid.clientWidth - (GRID_COLS - 1) * GAP) / GRID_COLS;
+    const init = spanOf(key);
+    resizingRef.current = true;
+    setResizing({ key, dir });
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Sin captura (puntero sintético): los listeners de window alcanzan.
     }
+    const move = (ev: globalThis.PointerEvent) => {
+      const w = dir === 's' ? init.w : Math.min(GRID_COLS, Math.max(1, Math.round((ev.clientX - rect.left) / (cellW + GAP))));
+      const h = dir === 'e' ? init.h : Math.min(MAX_ROWS, Math.max(1, Math.round((ev.clientY - rect.top) / (ROW_H + GAP))));
+      setSpan(key, w, h);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      resizingRef.current = false;
+      lastResizeEnd.current = Date.now();
+      setResizing(null);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  // Arrastre: dragover SOLO anota la celda objetivo (y habilita el drop); el
+  // reacomodo es único, en el drop — por eso las demás tarjetas no bailan
+  // mientras arrastrás. Soltar fuera del tablero o en su propio lugar no
+  // cambia nada. La celda objetivo es el ancla de la esquina sup-izq de la
+  // tarjeta; si no entra completa ahí, se marca inválida y no se mueve.
+  const cellFromEvent = (e: { clientX: number; clientY: number }) => {
+    const grid = gridRef.current;
+    if (!grid) return null;
+    const rect = grid.getBoundingClientRect();
+    const col = Math.floor(((e.clientX - rect.left) / grid.clientWidth) * GRID_COLS);
+    const row = Math.floor((e.clientY - rect.top) / (ROW_H + GAP));
+    if (col < 0 || col >= GRID_COLS || row < 0) return null;
+    return { col, row };
+  };
+  const onTileDragStart = (key: string) => {
+    dragKeyRef.current = key;
+    setDragKey(key);
+    const t = tiles.find(x => x.key === key);
+    if (t) {
+      const idx = t.row * GRID_COLS + t.col;
+      hoverRef.current = idx;
+      setHoverCell(idx);
+    }
+  };
+  const onTileDragEnd = () => {
+    dragKeyRef.current = null;
+    hoverRef.current = null;
+    setDragKey(null);
+    setHoverCell(null);
+    setInvalid(false);
+  };
+  const onGridDragOver = (e: ReactDragEvent) => {
+    if (!dragKeyRef.current) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const c = cellFromEvent(e);
+    if (!c) return;
+    const idx = c.row * GRID_COLS + c.col;
+    if (hoverRef.current === idx) return;
+    hoverRef.current = idx;
+    setHoverCell(idx);
+    const t = tiles.find(x => x.key === dragKeyRef.current);
+    setInvalid(!!t && c.col + t.w > GRID_COLS);
+  };
+  const onGridDrop = (e: ReactDragEvent) => {
+    e.preventDefault();
+    const key = dragKeyRef.current;
+    const c = cellFromEvent(e);
+    onTileDragEnd();
+    if (!key || !c) return;
+    const t = tiles.find(x => x.key === key);
+    if (!t || (c.col === t.col && c.row === t.row) || c.col + t.w > GRID_COLS) return;
+    const resto = tiles.filter(x => x.key !== key).sort(porVisual).map(aSize);
+    update({ ...config, tiles: computeLayout([{ key, w: t.w, h: t.h }, ...resto], GRID_COLS, { key, col: c.col, row: Math.min(c.row, rows - 1) }) });
   };
 
   // La tarjeta se despliega al módulo: se le pone el nombre de transición justo
   // antes de navegar, así el navegador morfea la tarjeta en la cabecera del
   // módulo (ver docs/diseno.md, "Navegación y continuidad").
   function open(e: MouseEvent<HTMLAnchorElement>, m: ModuleDef) {
-    if (configuring) {
+    // Un click que viene de soltar un estirado no navega.
+    if (resizingRef.current || Date.now() - lastResizeEnd.current < 250) {
       e.preventDefault();
       return;
     }
@@ -361,46 +620,6 @@ export function EscritorioPage() {
         {canCaja && <AbrirMostrador summary={summary} />}
         <div className="flex flex-wrap items-center gap-3">
           <AccionTile
-            icon={GearSix}
-            fill={configuring}
-            franja={hueFor('ajustes')}
-            titulo={configuring ? 'Listo' : 'Configurar'}
-            contexto={configuring ? 'Arrastrá para mover o intercambiar, tocá el ojo para ocultar' : 'Tablero fijo: ordená, ocultá y cambiá el tamaño'}
-            activa={configuring}
-            onClick={() => setConfiguring(v => !v)}
-          />
-          {configuring && (
-            <div
-              style={{ ['--ab-edge' as string]: hueFor('ajustes') }}
-              className="relative flex flex-col justify-center gap-1.5 overflow-hidden rounded-lg border border-border bg-card px-6 py-2.5"
-            >
-              <span
-                className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
-                style={{ background: 'var(--ab-edge)' }}
-                aria-hidden="true"
-              />
-              <span className="text-micro font-medium text-muted-foreground">Tamaño de las tarjetas</span>
-              <div role="group" aria-label="Tamaño de las tarjetas" className="flex items-center gap-1">
-                {(['chica', 'mediana', 'grande'] as const).map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTiles(t)}
-                    aria-pressed={tiles === t}
-                    className={cn(
-                      'rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors first-letter:uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
-                      tiles === t
-                        ? 'border-accent-border bg-accent text-accent-foreground'
-                        : 'border-transparent text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <AccionTile
             icon={Sparkle}
             fill
             franja="var(--color-primary)"
@@ -413,51 +632,86 @@ export function EscritorioPage() {
       </div>
 
       <div
-        className={cn('escritorio-grid grid gap-3', tiles === 'chica' ? 'tiles-chica' : tiles === 'grande' ? 'tiles-grande' : '')}
-        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+        ref={gridRef}
+        onDragOver={onGridDragOver}
+        onDrop={onGridDrop}
+        className="escritorio-grid grid gap-3"
+        style={{
+          gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${rows}, ${ROW_H}px)`,
+        }}
       >
-        {cells.map((key, i) => {
-          const m = key ? byKey.get(key) : undefined;
-          if (!m) {
+        {/* Fantasma del destino: marca dónde caería la tarjeta (y si no entra,
+            se pinta en rojo). Solo visual: el tablero real no cambia hasta el
+            drop — por eso las demás tarjetas quedan quietas durante el arrastre. */}
+        {dragKey &&
+          hoverCell != null &&
+          (() => {
+            const t = tiles.find(x => x.key === dragKey);
+            if (!t) return null;
+            const col = hoverCell % GRID_COLS;
+            const row = Math.min(Math.floor(hoverCell / GRID_COLS), rows - 1);
+            const mal = invalid || col + t.w > GRID_COLS;
             return (
               <div
-                aria-hidden={!configuring}
-                aria-label={configuring ? 'Casilla vacía: soltá una tarjeta acá' : undefined}
-                onDragOver={e => dropOver(e, i)}
+                aria-hidden="true"
                 className={cn(
-                  'escritorio-slot flex min-h-[168px] items-center justify-center rounded-lg border border-dashed transition-colors',
-                  configuring ? 'border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10' : 'border-border/40',
+                  'pointer-events-none z-10 rounded-lg border-2 border-dashed',
+                  mal ? 'border-destructive/60 bg-destructive/5' : 'border-primary/60 bg-primary/10',
                 )}
-              >
-                {configuring && <Plus className="size-4 text-placeholder" aria-hidden="true" />}
-              </div>
+                style={{ gridColumn: `${col + 1} / span ${t.w}`, gridRow: `${row + 1} / span ${t.h}` }}
+              />
             );
-          }
+          })()}
+        {tiles.map(t => {
+          const m = byKey.get(t.key);
+          if (!m) return null;
           const stat = summary ? statFor(m.key, summary) : null;
-          const protagonista = PROTAGONISTAS.has(m.key);
+          // Ventas estirada (2+ de ancho): el gráfico de facturación real
+          // reemplaza a la minimapa — la tarjeta grande muestra la serie, no
+          // solo la forma.
+          const grafico = m.key === 'ventas' && t.w >= 2 && stat?.bars;
+          // Vista previa: qué tarjetas se reacomodarían al soltar acá (anillo
+          // ámbar = se mueve; el tablero real no cambia hasta el drop).
+          let tocada = false;
+          if (dragKey && hoverCell != null && dragKey !== t.key) {
+            const agarrada = tiles.find(x => x.key === dragKey);
+            if (agarrada) {
+              const destino = computeLayout(
+                [{ key: dragKey, w: agarrada.w, h: agarrada.h }, ...tiles.filter(x => x.key !== dragKey).sort(porVisual).map(aSize)],
+                GRID_COLS,
+                { key: dragKey, col: hoverCell % GRID_COLS, row: Math.min(Math.floor(hoverCell / GRID_COLS), rows - 1) },
+              );
+              const dp = destino.find(p => p.key === t.key);
+              tocada = !!dp && (dp.col !== t.col || dp.row !== t.row);
+            }
+          }
           return (
           <Link
             key={m.key}
             to={m.path}
             onClick={e => open(e, m)}
-            style={{ ['--ab-tile-hue' as string]: hueFor(m.key) }}
-            draggable={configuring}
-            onDragStart={() => setDragKey(m.key)}
-            onDragEnd={() => setDragKey(null)}
-            onDragOver={e => dropOver(e, i)}
+            data-tile={m.key}
+            style={{
+              gridColumn: `${t.col + 1} / span ${t.w}`,
+              gridRow: `${t.row + 1} / span ${t.h}`,
+              ['--ab-tile-hue' as string]: hueFor(m.key),
+            }}
+            draggable={resizing?.key !== m.key}
+            onDragStart={() => onTileDragStart(m.key)}
+            onDragEnd={onTileDragEnd}
             className={cn(
-              'module-tile group relative flex min-h-[168px] flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
-              protagonista && 'module-tile--featured',
-              configuring && 'cursor-grab active:cursor-grabbing',
+              'module-tile group relative flex flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
               dragKey === m.key && 'opacity-40',
+              tocada && 'ring-2 ring-warning/60',
+              resizing?.key === m.key && 'select-none ring-2 ring-primary/40',
             )}
           >
-            <span className="module-tile__spine pointer-events-none absolute inset-y-0 left-0 w-1.5" aria-hidden="true" />
             <ModuleMotif
               motif={m.motif}
               className="module-tile__motif pointer-events-none absolute -bottom-4 -right-4 size-[104px] transition-opacity"
             />
-            {stat?.flag && !configuring && (
+            {stat?.flag && (
               <span
                 className={cn(
                   'absolute right-3.5 top-3.5 size-2 rounded-full',
@@ -483,65 +737,85 @@ export function EscritorioPage() {
                   {stat.value}
                 </p>
               )}
-              {protagonista && stat ? (
-                <>
-                  {stat.rows && stat.rows.length > 0 ? (
-                    <div className="mt-2">
-                      <p className="truncate text-micro leading-snug text-muted-foreground">
-                        {cap(stat.caption ?? stat.hint)}
-                      </p>
-                      <ul className="mt-1 divide-y divide-border/60 border-t border-border-soft">
-                        {stat.rows.map((r, i) => (
-                          <li key={i} className="flex items-baseline gap-2 py-1">
-                            <span className="min-w-0 flex-1 truncate text-chico text-foreground">{r.label}</span>
-                            {r.value && (
-                              <span
-                                className={cn(
-                                  'shrink-0 text-chico tabular',
-                                  r.tone === 'hot' ? 'font-semibold text-destructive' : 'text-muted-foreground',
-                                )}
-                              >
-                                {r.value}
-                              </span>
+              {stat?.rows && stat.rows.length > 0 ? (
+                <div className="mt-2">
+                  <p className="truncate text-micro leading-snug text-muted-foreground">
+                    {cap(stat.caption ?? stat.hint)}
+                  </p>
+                  <ul className="mt-1 divide-y divide-border/60 border-t border-border-soft">
+                    {stat.rows.map((r, i) => (
+                      <li key={i} className="flex items-baseline gap-2 py-1">
+                        <span className="min-w-0 flex-1 truncate text-chico text-foreground">{r.label}</span>
+                        {r.value && (
+                          <span
+                            className={cn(
+                              'shrink-0 text-chico tabular',
+                              r.tone === 'hot' ? 'font-semibold text-destructive' : 'text-muted-foreground',
                             )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                          >
+                            {r.value}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <>
+                  {!grafico && (
+                    <p className="mt-0.5 truncate text-micro leading-snug text-muted-foreground">{cap(stat?.hint ?? m.blurb)}</p>
+                  )}
+                  {grafico ? (
+                    <FacturacionChart bars={stat!.bars!} hue={hueFor(m.key)} />
                   ) : (
-                    <>
-                      <p className="mt-0.5 truncate text-micro leading-snug text-muted-foreground">{cap(stat.hint)}</p>
-                      {stat.bars && <MiniBars bars={stat.bars} hue={hueFor(m.key)} />}
-                    </>
+                    stat?.bars && <MiniBars bars={stat.bars} hue={hueFor(m.key)} />
                   )}
                 </>
-              ) : (
-                <p className="mt-0.5 truncate text-micro leading-snug text-muted-foreground">{cap(stat?.hint ?? m.blurb)}</p>
               )}
             </div>
 
-            {configuring && (
-              <>
-                <DotsSixVertical className="absolute left-1/2 top-2 size-4 -translate-x-1/2 text-placeholder" />
-                <button
-                  type="button"
-                  aria-label="Ocultar"
-                  onClick={e => {
-                    e.preventDefault();
-                    ocultar(m.key);
-                  }}
-                  className="absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground shadow-float hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
-                >
-                  <EyeSlash className="size-3.5" />
-                </button>
-              </>
-            )}
+            <DotsSixVertical
+              className="pointer-events-none absolute left-1/2 top-2 size-4 -translate-x-1/2 text-placeholder opacity-0 transition-opacity group-hover:opacity-100"
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              aria-label="Ocultar"
+              onClick={e => {
+                e.preventDefault();
+                ocultar(m.key);
+              }}
+              className="absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 shadow-float transition-opacity hover:bg-background hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2 group-hover:opacity-100"
+            >
+              <EyeSlash className="size-3.5" />
+            </button>
+            {/* Bordes de estirado: lateral derecho (ancho), inferior (alto) y
+                esquina (ambos). preventDefault en mousedown evita que el
+                navegador lo tome como drag del link. */}
+            <span
+              aria-hidden="true"
+              onPointerDown={startResize(m.key, 'e')}
+              onMouseDown={e => e.preventDefault()}
+              className="tile-resize tile-resize--e"
+            />
+            <span
+              aria-hidden="true"
+              onPointerDown={startResize(m.key, 's')}
+              onMouseDown={e => e.preventDefault()}
+              className="tile-resize tile-resize--s"
+            />
+            <span
+              aria-hidden="true"
+              onPointerDown={startResize(m.key, 'se')}
+              onMouseDown={e => e.preventDefault()}
+              className="tile-resize tile-resize--se"
+            />
           </Link>
           );
         })}
       </div>
 
-      {configuring && hidden.length > 0 && (
+      {hidden.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-chico text-placeholder">Ocultos</span>
           {hidden.map(m => (

@@ -310,25 +310,27 @@
 }
 
 /*
- * Color por módulo en el escritorio: cada tarjeta lleva su matiz propio
- * (--ab-tile-hue, ver lib/modules.tsx) en cuatro lugares a la vez —la pastilla
- * del ícono, una franja al costado, el borde y un lavado del fondo— para
- * reconocer el módulo por color de un vistazo, sin leer. Es identidad, no
- * estado: no compite con el cian acción ni con el puntito de aviso. Ver
- * docs/diseno.md.
+ * Color por módulo en el escritorio: el matiz propio de cada tarjeta
+ * (--ab-tile-hue, ver lib/modules.tsx) vive en la pastilla del ícono y en el
+ * motivo de fondo — identidad de un vistazo, sin leer. La cáscara es neutra:
+ * borde fino y sombra dura desplazada (estilo Uiverse) que voltea al otro lado
+ * en hover — el mueble es de todos, el color es del módulo.
  */
 .module-tile {
-  border-color: color-mix(in srgb, var(--ab-tile-hue) 50%, var(--color-border));
-  background: color-mix(in srgb, var(--ab-tile-hue) 9%, var(--color-card));
+  cursor: pointer;
+  background: rgb(255, 255, 255);
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 255, 0.2);
+  /* Hundida en reposo: sombra corta, siempre al mismo lado (abajo-derecha) —
+     al pasar el mouse la tarjeta se levanta y la sombra crece, sin mudarse
+     de lado (el volteo solapaba la sombra de la tarjeta vecina). */
+  box-shadow: 3px 3px 2px 1px rgba(0, 0, 255, 0.2);
+  transform: translateY(1px);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-/* En hover se intensifican el borde y el motivo, y nada más: la tarjeta no se
-   levanta ni proyecta sombra. Ver docs/diseno.md, "Movimiento". */
 .module-tile:hover {
-  border-color: color-mix(in srgb, var(--ab-tile-hue) 78%, var(--color-border));
-  background: color-mix(in srgb, var(--ab-tile-hue) 14%, var(--color-card));
-}
-.module-tile__spine {
-  background: var(--ab-tile-hue);
+  box-shadow: 8px 8px 2px 1px rgba(0, 0, 255, 0.2);
+  transform: translateY(-2px);
 }
 .module-tile__chip {
   background: var(--ab-tile-hue);
@@ -339,13 +341,14 @@
   opacity: 0.16;
 }
 .module-tile:hover .module-tile__motif { opacity: 0.26; }
+/* En oscuro la superficie blanca desentona: misma cáscara con tinta local. */
 :root:not([data-theme='light']) .module-tile {
-  background: color-mix(in srgb, var(--ab-tile-hue) 14%, var(--color-card));
-  border-color: color-mix(in srgb, var(--ab-tile-hue) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--ab-tile-hue) 12%, var(--color-card));
+  border-color: rgba(0, 0, 255, 0.25);
+  box-shadow: 3px 3px 2px 1px rgba(0, 0, 0, 0.35);
 }
 :root:not([data-theme='light']) .module-tile:hover {
-  border-color: color-mix(in srgb, var(--ab-tile-hue) 66%, var(--color-border));
-  background: color-mix(in srgb, var(--ab-tile-hue) 20%, var(--color-card));
+  box-shadow: 8px 8px 2px 1px rgba(0, 0, 0, 0.35);
 }
 :root:not([data-theme='light']) .module-tile__motif { opacity: 0.2; }
 :root:not([data-theme='light']) .module-tile:hover .module-tile__motif { opacity: 0.32; }
@@ -379,46 +382,81 @@
   line-height: 1.35;
 }
 
-/* Tamaño de las tarjetas del escritorio (se cambia desde el modo Configurar,
-   lib/prefs.ts). "Mediana" (default) es la grilla de 190px / 168px. */
-.escritorio-grid.tiles-chica {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-}
-.escritorio-grid.tiles-chica .module-tile {
-  min-height: 152px;
-}
-.escritorio-grid.tiles-grande {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-}
-.escritorio-grid.tiles-grande .module-tile {
-  min-height: 196px;
-}
-
-/* Tarjetas protagonistas (bento: ventas, clientes, cuenta corriente, stock y
-   compras): ocupan una celda más de ancho y algo más de alto, con su bloque de
-   detalle abajo (minimapa de 7 días o la lista de quiénes). Escalan con los
-   presets de tamaño igual que las chicas/mediana/grande. */
-.escritorio-grid .module-tile--featured {
-  min-height: 218px;
-}
-.escritorio-grid.tiles-chica .module-tile--featured {
-  min-height: 196px;
-}
-.escritorio-grid.tiles-grande .module-tile--featured {
-  min-height: 248px;
-}
-
-/* Celdas vacías del tablero (huecos de tarjetas ocultas y el flanco reservado):
-   el cascarón de la tarjeta sin contenido, disimulado. En Configurar se tiñen
-   de cian para leerse como destino de un arrastre. La altura mínima acompaña a
-   los presets; en filas compartidas la celda estira al alto de la fila igual
-   que una tarjeta. */
+/* El tamaño de cada tarjeta lo decide el usuario estirando sus bordes (spans
+   de la grilla, ver escritorio-page.tsx): no hay presets ni bento. Las celdas
+   vacías siguen la altura fija de fila del tablero. */
 .escritorio-grid .escritorio-slot {
   min-height: 168px;
 }
-.escritorio-grid.tiles-chica .escritorio-slot {
-  min-height: 152px;
+
+/* Bordes de estirado: zonas calientes sobre el borde derecho, el inferior y la
+   esquina de cada tarjeta. Sin visual en reposo; al pasar el mouse aparece una
+   barrita cian (o la manija de esquina). La zona lateral arranca bajo la
+   cabecera para no robarle clicks al botón de ocultar. */
+.tile-resize {
+  position: absolute;
+  z-index: 20;
+  touch-action: none;
 }
-.escritorio-grid.tiles-grande .escritorio-slot {
-  min-height: 196px;
+.tile-resize--e {
+  top: 44px;
+  right: 0;
+  width: 10px;
+  height: calc(100% - 44px);
+  cursor: ew-resize;
+}
+.tile-resize--s {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  cursor: ns-resize;
+}
+.tile-resize--se {
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+}
+.tile-resize--e::after,
+.tile-resize--s::after {
+  content: '';
+  position: absolute;
+  border-radius: 999px;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tile-resize--e::after {
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 32px;
+}
+.tile-resize--s::after {
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+}
+.tile-resize--se::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--color-muted-foreground);
+  border-bottom: 2px solid var(--color-muted-foreground);
+  border-bottom-right-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tile-resize--e:hover::after,
+.tile-resize--s:hover::after,
+.tile-resize--se:hover::after {
+  opacity: 0.65;
 }
