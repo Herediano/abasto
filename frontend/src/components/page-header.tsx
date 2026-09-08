@@ -1,10 +1,9 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, Rows, Storefront } from '@phosphor-icons/react';
+import { ArrowLeft, Storefront } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { moduleForPath } from '@/lib/modules';
 import { Kbd } from '@/components/ui/kbd';
 import { useAuth } from '@/lib/auth-context';
-import { useDensity } from '@/lib/prefs';
 
 /**
  * Cabecera de un módulo. Se pega arriba: título y acciones siguen a la vista al
@@ -20,17 +19,15 @@ export function PageHeader({ title, description, actions }: { title: string; des
   const navigate = useNavigate();
   const { session } = useAuth();
   const mod = moduleForPath(pathname);
-  const { density, setDensity } = useDensity();
   const b = session?.user;
   const otraSucursal = b?.branch && b?.homeBranch && b.branch.id !== b.homeBranch.id ? b.branch.name : null;
-  const compacto = density === 'compacto';
 
   return (
     <div className="sticky top-0 z-20 -mx-6 mb-1 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-background/85 px-6 py-3 backdrop-blur">
       <button
         type="button"
         onClick={() => navigate('/', { viewTransition: true })}
-        className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-chico font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+        className="uiverse-ctl flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-chico font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
         Escritorio
@@ -52,20 +49,11 @@ export function PageHeader({ title, description, actions }: { title: string; des
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {otraSucursal && (
-          <span className="flex items-center gap-1 rounded-full border border-transparent bg-warning/10 px-2 py-0.5 text-micro font-semibold text-warning">
+          <span className="flex items-center gap-1 rounded-md border border-transparent bg-warning/10 px-2 py-0.5 text-micro font-semibold text-warning">
             <Storefront weight="fill" className="size-3" /> {otraSucursal}
           </span>
         )}
         {actions}
-        <button
-          type="button"
-          onClick={() => setDensity(compacto ? 'espacioso' : 'compacto')}
-          aria-label={compacto ? 'Filas más espaciadas' : 'Filas más compactas'}
-          title={compacto ? 'Filas más espaciadas' : 'Filas más compactas'}
-          className="grid size-8 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-        >
-          <Rows weight={compacto ? 'fill' : 'regular'} className="size-4" />
-        </button>
       </div>
     </div>
   );

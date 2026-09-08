@@ -132,7 +132,7 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <div className="flex items-center gap-4">
-          <span className="grid size-14 shrink-0 place-items-center rounded-full font-display text-h3 font-bold text-white" style={{ background: color }}>
+          <span className="grid size-14 shrink-0 place-items-center rounded-full font-display text-h3 font-bold text-white" style={{ background: color, borderRadius: '5px' }}>
             {initials(form.name || user.name)}
           </span>
           <div className="flex flex-wrap gap-2">
@@ -293,7 +293,7 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <div className="flex items-center gap-4">
-          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-background">
+          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-background" style={{ borderRadius: '5px' }}>
             {logo
               ? <img src={logo} alt="Logo" className="size-full object-contain" />
               : <span className="font-display text-h3 font-bold text-primary">{name.slice(0, 1).toUpperCase() || 'A'}</span>}
@@ -416,7 +416,7 @@ function SucursalesSection({ token }: { token: string }) {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2 text-chico font-semibold">
                   {b.name}
-                  {!b.isActive && <span className="rounded bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground">Inactiva</span>}
+                  {!b.isActive && <span className="rounded-md bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground">Inactiva</span>}
                 </span>
                 <span className="block text-micro text-muted-foreground">
                   {b.code}{b.address ? ` · ${b.address}` : ''} · {b._count?.warehouses ?? 0} {b._count?.warehouses === 1 ? 'depósito' : 'depósitos'}

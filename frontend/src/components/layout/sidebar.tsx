@@ -58,13 +58,13 @@ export function Sidebar() {
         aria-label={label}
         title={label}
         className={cn(
-          'grid size-11 place-items-center rounded-md border border-sidebar-border shadow-card transition-colors',
+          'sidebar-btn grid size-14 place-items-center transition-colors',
           open
             ? 'bg-accent text-accent-foreground'
             : 'bg-sidebar text-sidebar-foreground hover:text-foreground',
         )}
       >
-        {open ? <X className="size-5" /> : <List className="size-5" />}
+        {open ? <X className="size-7" /> : <List className="size-7" />}
       </button>
 
       <div
@@ -75,7 +75,7 @@ export function Sidebar() {
         <div className={cn('min-h-0', settled ? 'overflow-visible' : 'overflow-hidden')}>
           <nav
             inert={!open}
-            className="flex w-11 flex-col items-start gap-1 rounded-md border border-sidebar-border bg-sidebar p-1 shadow-float"
+            className="sidebar-nav flex w-14 flex-col gap-1.5 p-1.5"
           >
             <SidebarItem to="/" icon={House} label="Escritorio" hue="var(--color-primary)" index={0} />
             {mods.map((m, i) => (

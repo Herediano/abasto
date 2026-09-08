@@ -1,12 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { CashRegister, DotsSixVertical, EyeSlash, Plus, Sparkle, type Icon } from '@phosphor-icons/react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { CashRegister, DotsSixVertical, EyeSlash, Plus, Sparkle } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BranchSwitcher } from '@/components/branch-switcher';
+import { createPortal } from 'react-dom';
 import { NotificationBell } from '@/components/notification-bell';
 import { UserMenu } from '@/components/user-menu';
 import { usePalette } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
-import { Kbd } from '@/components/ui/kbd';
 import { api } from '@/lib/api';
 import { hora as fmtHora } from '@/lib/format';
 import { compact, statFor, type EscritorioSummary, type TileBar } from '@/lib/escritorio';
@@ -52,7 +51,7 @@ function MiniBars({ bars, hue }: { bars: TileBar[]; hue: string }) {
       {bars.map((b, i) => (
         <div key={i} className="flex flex-1 flex-col items-center gap-1">
           <div
-            className="w-full rounded-t-[3px]"
+            className="w-full rounded-t-[5px]"
             style={{
               height: b.value > 0 ? `${Math.max(12, (b.value / max) * 48)}px` : '4px',
               background: hue,
@@ -82,7 +81,7 @@ function FacturacionChart({ bars, hue }: { bars: TileBar[]; hue: string }) {
           <div key={i} className="group/bar flex min-w-0 flex-1 flex-col items-center gap-1">
             <div className="flex h-[72px] w-full items-end">
               <div
-                className="w-full rounded-t-[3px] transition-[height] duration-200"
+                className="w-full rounded-t-[5px] transition-[height] duration-200"
                 style={{
                   height: b.value > 0 ? `${Math.max(6, pct)}%` : '4px',
                   background: hue,
@@ -117,6 +116,209 @@ function FacturacionChart({ bars, hue }: { bars: TileBar[]; hue: string }) {
  * turno está abierto. Lleva lo que el cajero quiere saber sin entrar: desde qué
  * hora, cuántos tickets y cuánto efectivo hay.
  */
+/**
+ * Puntito que parpadea: el estado se alterna en React (no CSS), forzando el
+ * re-render cada 500ms — el estilo inline cambia de opacidad, así ninguna
+ * regla de animación del sistema lo puede frenar.
+ */
+function BlinkDot() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const t = setInterval(() => setOn(v => !v), 500);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span
+      className="inline-flex size-2 shrink-0 self-center rounded-full bg-white"
+      style={{ opacity: on ? 1 : 0.15, transition: 'opacity 0.45s ease' }}
+      aria-label="Caja abierta"
+    />
+  );
+}
+
+/**
+ * Texto que corre de derecha a izquierda (marquee), arrancando visible y
+ * alineado a la izquierda (sin sangría). Cada copia lleva su propio espacio al
+ * final (padding, no margin), así el bloque duplicado mide EXACTAMENTE 2x una
+ * copia: al trasladarlo -50% la segunda copia queda clavada donde arrancó la
+ * primera. Al no medir el ancho del texto, el empalme cierra perfecto aunque
+ * la fuente tarde en cargar (que era lo que causaba el "flick"). Usa
+ * element.animate() (Web Animations API): todo en JS, no CSS.
+ */
+
+function Marquee({ text, className }: { text: string; className?: string }) {
+  const stripRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    // Mitad del bloque duplicado = una copia exacta (letra + gap), que es
+    // justo el desplazamiento que cierra el bucle sin salto. -50% no depende
+    // de medir nada: siempre alinea, con la fuente ya cargada o no.
+    const anim = strip.animate(
+      [
+        { transform: 'translateX(0)' },
+        { transform: 'translateX(-50%)' },
+      ],
+      { duration: 9000, iterations: Infinity, easing: 'linear' },
+    );
+    return () => anim.cancel();
+  }, [text]);
+
+  return (
+    <span className={cn('block w-full overflow-hidden whitespace-nowrap', className)}>
+      <span ref={stripRef} className="inline-block" style={{ willChange: 'transform' }}>
+        <span className="inline-block pr-6">{text}</span>
+        <span aria-hidden="true" className="inline-block pr-6">{text}</span>
+      </span>
+    </span>
+  );
+}
+
+const PREGUNTAR_REPOSO_KEY = 'abasto-preguntar-reposo';
+const PREGUNTAR_DIM = 48; // size-12
+/** La posición se guarda como % del viewport (estable ante resize/zoom) y se
+ *  aplica como px absolutos (inmune a reflows: menús, scrollbar, lo que sea).
+ *  Al achicar/agrandar la ventana se recalcula de la proporción guardada. */
+function pctDePx(px: number, dim: number) {
+  return (px / dim) * 100;
+}
+function pxDePct(pct: number, dim: number) {
+  return (pct / 100) * dim;
+}
+const reposoInicial = (): { x: number; y: number } => {
+  try {
+    const raw = localStorage.getItem(PREGUNTAR_REPOSO_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (
+        typeof p.x === 'number' &&
+        typeof p.y === 'number' &&
+        p.x >= 0 && p.x <= 100 && p.y >= 0 && p.y <= 100
+      ) return p;
+    }
+  } catch {
+    // localStorage roto o modo privado: posición por defecto.
+  }
+  return { x: 49, y: 1 };
+};
+
+/**
+ * El Preguntar del escritorio, flotando: una chispa que arranca arriba en el
+ * centro y se puede arrastrar a cualquier lugar sosteniendo el click — la
+ * posición queda guardada en localStorage como porcentaje del viewport. En
+ * reposo se asoma apenas —el ícono solo, sin botón— y al acercar el mouse se
+ * despliega (sombra dura estilo uiverse), listo para abrir el buscador de
+ * Ctrl+K. Sin texto a propósito: no compite con el tablero, es solo una puerta
+ * suspendida que el dueño mueve donde le sirva.
+ */
+function PreguntarFlotante({ onClick }: { onClick: () => void }) {
+  // Guardamos % (para no perder la proporción al redimensionar) pero el estado
+  // vivo son px absolutos: solo cambian en drag y en resize/zoom. Así, ningún
+  // reflow del layout (menús desplegados, scrollbar, añadir nodos al body)
+  // re-ancla el botón contra un ancho disponible que se movió.
+  const [reposo, setReposo] = useState(() => {
+    const pct = reposoInicial();
+    return {
+      x: Math.min(Math.max(pxDePct(pct.x, window.innerWidth), 0), window.innerWidth - PREGUNTAR_DIM),
+      y: Math.min(Math.max(pxDePct(pct.y, window.innerHeight), 0), window.innerHeight - PREGUNTAR_DIM),
+    };
+  });
+  const prevVp = useRef({ w: window.innerWidth, h: window.innerHeight });
+  // Arrastre con el puntero: la diferencia entre el click y el topleft del
+  // botón se guarda al bajar, y de ahí en más la posición sigue al mouse.
+  const dragRef = useRef<{ id: number; dx: number; dy: number } | null>(null);
+  const movedRef = useRef(false);
+
+  useEffect(() => {
+    const onResize = () => {
+      const prev = prevVp.current;
+      const next = { w: window.innerWidth, h: window.innerHeight };
+      prevVp.current = next;
+      if (!prev.w || !prev.h) return;
+      setReposo(r => ({
+        x: Math.min(Math.max((r.x / prev.w) * next.w, 0), next.w - PREGUNTAR_DIM),
+        y: Math.min(Math.max((r.y / prev.h) * next.h, 0), next.h - PREGUNTAR_DIM),
+      }));
+    };
+    const onVp = () => onResize();
+    window.addEventListener('resize', onResize);
+    window.visualViewport?.addEventListener('resize', onVp);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.visualViewport?.removeEventListener('resize', onVp);
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        PREGUNTAR_REPOSO_KEY,
+        JSON.stringify({
+          x: pctDePx(reposo.x, window.innerWidth),
+          y: pctDePx(reposo.y, window.innerHeight),
+        }),
+      );
+    } catch {
+      // Modo privado: la posición vale para esta sesión y nada más.
+    }
+  }, [reposo]);
+
+  const style: CSSProperties = {
+    left: reposo.x,
+    top: reposo.y,
+  };
+
+  return createPortal(
+    <button
+      type="button"
+      onClick={e => {
+        // Click real (sin arrastre) → abre el buscador.
+        if (movedRef.current) {
+          movedRef.current = false;
+          return;
+        }
+        onClick();
+      }}
+      onPointerDown={e => {
+        if (e.button !== 0) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        dragRef.current = { id: e.pointerId, dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={e => {
+        const d = dragRef.current;
+        if (!d || d.id !== e.pointerId) return;
+        if (Math.abs(e.movementX) + Math.abs(e.movementY) > 2) movedRef.current = true;
+        // El botón nunca sale de la ventana: se clampa al rango que lo deja
+        // adentro (no puede ir más allá de 100% - su propio ancho).
+        const pxX = Math.min(Math.max(e.clientX - d.dx, 0), window.innerWidth - PREGUNTAR_DIM);
+        const pxY = Math.min(Math.max(e.clientY - d.dy, 0), window.innerHeight - PREGUNTAR_DIM);
+        setReposo({ x: pxX, y: pxY });
+      }}
+      onPointerUp={() => {
+        dragRef.current = null;
+      }}
+      onPointerCancel={() => {
+        dragRef.current = null;
+      }}
+      aria-label="Preguntar (Ctrl K)"
+      title="Preguntar (Ctrl K)"
+      style={style}
+      className={cn(
+        'group fixed z-40 flex size-12 cursor-grab items-center justify-center active:cursor-grabbing',
+        'transition-[box-shadow,background-color,border-color] duration-300 ease-out',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
+        'rounded-[5px] border border-transparent bg-transparent text-muted-foreground',
+        'hover:border-uiverse hover:bg-card hover:text-primary hover:shadow-uiverse',
+      )}
+    >
+      <Sparkle weight="fill" className="size-5 transition-colors duration-300 group-hover:text-primary" />
+    </button>,
+    document.body,
+  );
+}
+
 function AbrirMostrador({ summary }: { summary: EscritorioSummary | null }) {
   const navigate = useNavigate();
   const caja = summary?.caja;
@@ -128,87 +330,20 @@ function AbrirMostrador({ summary }: { summary: EscritorioSummary | null }) {
     <button
       type="button"
       onClick={() => navigate('/ventas')}
-      style={{ ['--ab-edge' as string]: abierta ? 'var(--color-success)' : 'var(--color-destructive)' }}
-      className="group relative flex flex-col items-start gap-1 overflow-hidden rounded-lg border border-border bg-card px-6 py-2.5 text-left transition-colors hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
-    >
-      <span
-        className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
-        style={{ background: 'var(--ab-edge)' }}
-        aria-hidden="true"
-      />
-      <span
-        className="pointer-events-none absolute inset-y-0 right-0 w-1.5"
-        style={{ background: 'var(--ab-edge)' }}
-        aria-hidden="true"
-      />
-      <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-        <CashRegister weight="fill" className="size-4" />
-        Abrir Mostrador
-        {abierta && (
-          <span className="relative ml-1 flex size-2" aria-label="Caja abierta">
-            <span className="absolute inline-flex size-2 animate-ping rounded-full bg-success opacity-75" />
-            <span className="relative inline-flex size-2 rounded-full bg-success" />
-          </span>
-        )}
-      </span>
-      <span className="text-micro leading-snug text-muted-foreground">
-        {abierta ? `Abierta ${hora} · ${tickets} ${tickets === 1 ? 'ticket' : 'tickets'}${efectivo}` : 'Sin turno abierto'}
-      </span>
-    </button>
-  );
-}
-
-/**
- * Configurar y Preguntar comparten el molde de la caja: cascarón de tarjeta
- * compacto —borde, superficie neutra, franja de color a la izquierda— con dos
- * renglones (título y una línea de contexto), para que la fila arriba del grid
- * se lea como tres tarjetas hermanas. La FRANJA es identidad, no estado (ver
- * docs/diseno.md, "La estructura es información"): verde acción para Preguntar
- * —se toca—, pizarra para Configurar —es preferencia, no operación, como los
- * módulos que viven en Ajustes. El ícono va suelto, sin pastilla: la fila queda
- * callada y no compite con las tarjetas de módulo.
- */
-function AccionTile({
-  icon: TileIcon,
-  fill = false,
-  franja,
-  titulo,
-  contexto,
-  atajo,
-  activa = false,
-  onClick,
-}: {
-  icon: Icon;
-  fill?: boolean;
-  franja: string;
-  titulo: string;
-  contexto: string;
-  atajo?: string;
-  activa?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={activa}
-      style={{ ['--ab-edge' as string]: franja }}
       className={cn(
-        'group relative flex flex-col items-start gap-1 overflow-hidden rounded-lg border px-6 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
-        activa ? 'border-accent-border bg-accent' : 'border-border bg-card hover:bg-subtle',
+        'group relative flex max-w-[240px] flex-col items-start gap-0.5 overflow-hidden rounded-lg px-4 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2 uiverse-ctl',
+        abierta ? 'mostrador-open' : 'mostrador-closed',
       )}
     >
-      <span
-        className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
-        style={{ background: 'var(--ab-edge)' }}
-        aria-hidden="true"
-      />
-      <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-        <TileIcon weight={fill ? 'fill' : 'regular'} className="size-4" />
-        {titulo}
-        {atajo && <Kbd className="ml-0.5">{atajo}</Kbd>}
+      <span className="flex items-center gap-2 text-sm font-bold">
+        <CashRegister weight="fill" className="size-4" />
+        Mostrador
+        {abierta && <BlinkDot />}
       </span>
-      <span className="text-micro leading-snug text-muted-foreground">{contexto}</span>
+      <Marquee
+        className="text-micro leading-snug opacity-80"
+        text={abierta ? `Abierta ${hora} · ${tickets} ${tickets === 1 ? 'ticket' : 'tickets'}${efectivo}` : 'Sin turno abierto'}
+      />
     </button>
   );
 }
@@ -289,7 +424,10 @@ function readConfig(keys: string[]): Config {
     const raw = localStorage.getItem(CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Config>;
-      // Formato actual: posiciones explícitas por tarjeta.
+      // Formato actual: posiciones explícitas por tarjeta. Se respetan tal
+      // cual (solo se les clampan los bordes); reempacar sería tirar por la
+      // borda lo que el usuario guardó. El reempacado queda de fallback para
+      // configs viejas/rotas que vengan con superposiciones o fuera de la grilla.
       if (Array.isArray(parsed.tiles)) {
         const hidden = (parsed.hidden ?? []).filter(k => puede.has(k));
         const tiles = parsed.tiles
@@ -301,8 +439,29 @@ function readConfig(keys: string[]): Config {
             w: Math.min(GRID_COLS, Math.max(1, Math.floor(t.w) || 1)),
             h: Math.max(1, Math.floor(t.h) || 1),
           }));
-        if (tiles.length > 0) return { hidden, tiles: computeLayout([...tiles].sort(porVisual).map(aSize), GRID_COLS) };
-        return sembrar(hidden);
+        // Dos tarjetas con la misma clave no tienen sentido: queda la primera.
+        const unicas: TilePos[] = [];
+        const vistas = new Set<string>();
+        for (const t of tiles) {
+          if (vistas.has(t.key)) continue;
+          vistas.add(t.key);
+          unicas.push(t);
+        }
+        if (unicas.length === 0) return sembrar(hidden);
+        const occ = new Set<string>();
+        let collide = false;
+        for (const t of unicas) {
+          if (t.col + t.w > GRID_COLS) collide = true;
+          for (let dr = 0; dr < t.h; dr++) {
+            for (let dw = 0; dw < t.w; dw++) {
+              const cell = `${t.row + dr}:${t.col + dw}`;
+              if (occ.has(cell)) collide = true;
+              occ.add(cell);
+            }
+          }
+        }
+        if (collide) return { hidden, tiles: computeLayout(unicas.sort(porVisual).map(aSize), GRID_COLS) };
+        return { hidden, tiles: unicas };
       }
       // Formato intermedio (board + spans): anclas del tablero viejo, reacomodadas.
       const boardViejo = (parsed as { board?: unknown }).board;
@@ -360,11 +519,20 @@ export function EscritorioPage() {
   const [invalid, setInvalid] = useState(false);
   const hoverRef = useRef<number | null>(null);
   const dragKeyRef = useRef<string | null>(null);
+  // Dónde arrancó el mousedown: el drag nativo dispara el dragstart con target
+  // = el <a> draggable (la fuente), no el asa que agarraste — por eso el origen
+  // se rastrea en el mousedown y no en el dragstart.
+  const dragFromHandle = useRef(false);
   // Tarjeta en estirado (y desde dónde): mientras dura, bloquea drag y click.
   const [resizing, setResizing] = useState<{ key: string; dir: 'e' | 's' | 'se' } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
   const lastResizeEnd = useRef(0);
+  // El tamaño final del estirado se anota acá y se persiste una única vez, al
+  // soltar — nada de escribir a localStorage en cada pointermove.
+  const resizeSpanRef = useRef<{ key: string; w: number; h: number } | null>(null);
+  const [ultimoOculto, setUltimoOculto] = useState<{ key: string; label: string } | null>(null);
+  const undoTimeout = useRef<number | null>(null);
   // Foto del layout anterior (FLIP): cuando el tablero se rearma —mudanza,
   // estirado, ocultar— cada tarjeta vuela de su lugar previo al nuevo y su
   // tamaño escala en vez de saltar. En pleno estirado la animación es corta
@@ -443,7 +611,21 @@ export function EscritorioPage() {
   // es explícita).
   const ocultar = (key: string) => {
     if (config.hidden.includes(key)) return;
+    const label = byKey.get(key)?.label ?? key;
     update({ hidden: [...config.hidden, key], tiles: tiles.filter(t => t.key !== key) });
+    // Ocultar es destructivo (la tarjeta sale del tablero): se ofrece un
+    // deshacer por unos segundos en vez de dejarlo sin vuelta atrás.
+    setUltimoOculto({ key, label });
+    if (undoTimeout.current) window.clearTimeout(undoTimeout.current);
+    undoTimeout.current = window.setTimeout(() => setUltimoOculto(null), 7000);
+  };
+  const deshacerOculto = () => {
+    if (undoTimeout.current) {
+      window.clearTimeout(undoTimeout.current);
+      undoTimeout.current = null;
+    }
+    if (ultimoOculto) mostrar(ultimoOculto.key);
+    setUltimoOculto(null);
   };
   const mostrar = (key: string) => {
     const puestas = computeLayout(tiles.filter(t => t.key !== key).sort(porVisual).map(aSize), GRID_COLS);
@@ -458,13 +640,18 @@ export function EscritorioPage() {
     const t = tiles.find(x => x.key === key);
     return t ? { w: t.w, h: t.h } : { w: 1, h: 1 };
   };
-  const setSpan = (key: string, w: number, h: number) => {
+  const setSpan = (key: string, w: number, h: number, persist = false) => {
     setConfig(prev => {
       const cur = prev.tiles.find(x => x.key === key);
-      if (!cur || (cur.w === w && cur.h === h)) return prev;
+      // Si el tamaño ya es el pedido, igual hay que persistir cuando se pidió:
+      // el último pointermove ya lo aplicó en estado y el commit llega igual.
+      if (!cur || (cur.w === w && cur.h === h)) {
+        if (persist) writeConfig(prev);
+        return prev;
+      }
       const resto = prev.tiles.filter(t => t.key !== key).sort(porVisual).map(aSize);
       const next = { ...prev, tiles: computeLayout([{ key, w, h }, ...resto], GRID_COLS, { key, col: cur.col, row: cur.row }) };
-      writeConfig(next);
+      if (persist) writeConfig(next);
       return next;
     });
   };
@@ -486,6 +673,7 @@ export function EscritorioPage() {
     const move = (ev: globalThis.PointerEvent) => {
       const w = dir === 's' ? init.w : Math.min(GRID_COLS, Math.max(1, Math.round((ev.clientX - rect.left) / (cellW + GAP))));
       const h = dir === 'e' ? init.h : Math.min(MAX_ROWS, Math.max(1, Math.round((ev.clientY - rect.top) / (ROW_H + GAP))));
+      resizeSpanRef.current = { key, w, h };
       setSpan(key, w, h);
     };
     const up = () => {
@@ -494,6 +682,10 @@ export function EscritorioPage() {
       resizingRef.current = false;
       lastResizeEnd.current = Date.now();
       setResizing(null);
+      // Persistir una sola vez, con el tamaño de la última pasada del puntero.
+      const fin = resizeSpanRef.current;
+      resizeSpanRef.current = null;
+      if (fin) setSpan(fin.key, fin.w, fin.h, true);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -512,9 +704,18 @@ export function EscritorioPage() {
     if (col < 0 || col >= GRID_COLS || row < 0) return null;
     return { col, row };
   };
-  const onTileDragStart = (key: string) => {
+  const onTileDragStart = (key: string, e: ReactDragEvent) => {
+    // Solo el asa dedica arrastra: si el mousedown no arrancó en ella, el drag
+    // se cancela y el resto del módulo sigue siendo clickeable.
+    if (!dragFromHandle.current) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', key);
     dragKeyRef.current = key;
     setDragKey(key);
+    dragFromHandle.current = false;
     const t = tiles.find(x => x.key === key);
     if (t) {
       const idx = t.row * GRID_COLS + t.col;
@@ -525,6 +726,7 @@ export function EscritorioPage() {
   const onTileDragEnd = () => {
     dragKeyRef.current = null;
     hoverRef.current = null;
+    dragFromHandle.current = false;
     setDragKey(null);
     setHoverCell(null);
     setInvalid(false);
@@ -570,6 +772,10 @@ export function EscritorioPage() {
 
   return (
     <div className="pt-4">
+      {/* El Preguntar flota en el centro exacto; con `outline-none` sobre el
+          overlay y el botón interno con eventos, no pisa nada del tablero. */}
+      <PreguntarFlotante onClick={openPalette} />
+
       {/* Barra: logo y nombre de la empresa a la izquierda; sucursal y cuenta a la
           derecha. El brand "abasto.ai" vive en el footer. */}
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-soft pb-4">
@@ -578,17 +784,16 @@ export function EscritorioPage() {
             <img
               src={session.tenant.logo}
               alt={session.tenant.name}
-              className="size-11 shrink-0 rounded-md border border-border bg-card object-contain p-1"
+              className="uiverse-ctl uiverse-ctl--flat size-11 shrink-0 rounded-md border border-border bg-card object-contain p-1"
             />
           ) : (
-            <span className="type-display grid size-11 shrink-0 place-items-center rounded-md bg-primary text-h3 text-primary-foreground">
+            <span className="uiverse-ctl uiverse-ctl--flat type-display grid size-11 shrink-0 place-items-center rounded-md bg-primary text-h3 text-primary-foreground">
               {session?.tenant.name.slice(0, 1).toUpperCase()}
             </span>
           )}
           <p className="font-display text-grande font-semibold">{session?.tenant.name}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <BranchSwitcher />
           <NotificationBell summary={summary} />
           <UserMenu />
         </div>
@@ -614,22 +819,11 @@ export function EscritorioPage() {
         )}
       </div>
 
-      {/* Una sola fila: la caja (compacta, a la izquierda) y las acciones del
-          escritorio (Configurar / Preguntar) en el hueco que queda a su derecha. */}
-      <div className={cn('mb-3 mt-5 flex flex-wrap items-start gap-3', canCaja ? 'justify-between' : 'justify-end')}>
-        {canCaja && <AbrirMostrador summary={summary} />}
-        <div className="flex flex-wrap items-center gap-3">
-          <AccionTile
-            icon={Sparkle}
-            fill
-            franja="var(--color-primary)"
-            titulo="Preguntar"
-            contexto="Buscá o pedí lo que sea"
-            atajo="Ctrl K"
-            onClick={openPalette}
-          />
+      {canCaja && (
+        <div className="mb-3 mt-5">
+          <AbrirMostrador summary={summary} />
         </div>
-      </div>
+      )}
 
       <div
         ref={gridRef}
@@ -698,7 +892,10 @@ export function EscritorioPage() {
               ['--ab-tile-hue' as string]: hueFor(m.key),
             }}
             draggable={resizing?.key !== m.key}
-            onDragStart={() => onTileDragStart(m.key)}
+            onMouseDown={e => {
+              dragFromHandle.current = !!(e.target as HTMLElement).closest('[data-drag-handle]');
+            }}
+            onDragStart={e => onTileDragStart(m.key, e)}
             onDragEnd={onTileDragEnd}
             className={cn(
               'module-tile group relative flex flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
@@ -774,15 +971,20 @@ export function EscritorioPage() {
               )}
             </div>
 
-            <DotsSixVertical
-              className="pointer-events-none absolute left-1/2 top-2 size-4 -translate-x-1/2 text-placeholder opacity-0 transition-opacity group-hover:opacity-100"
-              aria-hidden="true"
-            />
+            <span
+              data-drag-handle
+              title="Mover"
+              onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+              className="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 cursor-grab items-center gap-0.5 rounded-full border border-border bg-card px-2 py-1 text-placeholder opacity-0 shadow-float transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+            >
+              <DotsSixVertical className="size-3.5" aria-hidden="true" />
+            </span>
             <button
               type="button"
               aria-label="Ocultar"
               onClick={e => {
                 e.preventDefault();
+                e.stopPropagation();
                 ocultar(m.key);
               }}
               className="absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 shadow-float transition-opacity hover:bg-background hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2 group-hover:opacity-100"
@@ -823,12 +1025,29 @@ export function EscritorioPage() {
               key={m.key}
               type="button"
               onClick={() => mostrar(m.key)}
-              className="flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1 text-xs text-muted-foreground hover:border-solid hover:text-foreground"
+              className="flex items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-1 text-xs text-muted-foreground hover:border-solid hover:text-foreground"
             >
               <Plus className="size-3" />
               {m.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {ultimoOculto && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-4 left-1/2 z-50 flex max-w-[90vw] -translate-x-1/2 items-center gap-3 rounded-md border border-border bg-card px-4 py-2.5 text-chico shadow-float"
+        >
+          <span>Ocultaste <strong>{ultimoOculto.label}</strong>.</span>
+          <button
+            type="button"
+            onClick={deshacerOculto}
+            className="rounded-md px-2 py-1 font-semibold text-primary hover:bg-background hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
+          >
+            Deshacer
+          </button>
         </div>
       )}
     </div>

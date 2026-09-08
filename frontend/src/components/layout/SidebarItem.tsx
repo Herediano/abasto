@@ -35,11 +35,11 @@ export function SidebarItem({ to, icon: Icon, label, hue, index = 0 }: SidebarIt
       aria-current={active ? 'page' : undefined}
       style={style}
       className={cn(
-        'sidebar-item group/item relative z-0 flex h-9 max-w-9 items-center gap-2 overflow-hidden rounded-md px-2',
-        'hover:z-10 hover:max-w-56 hover:shadow-float focus-visible:z-10 focus-visible:max-w-56 focus-visible:shadow-float',
+        'sidebar-item group/item relative flex h-12 w-full items-center justify-center rounded-md',
+        'hover:bg-sidebar-hover focus-visible:bg-sidebar-hover',
         active
           ? 'text-foreground'
-          : 'text-sidebar-foreground hover:bg-sidebar-hover hover:text-foreground focus-visible:bg-sidebar-hover focus-visible:text-foreground',
+          : 'text-sidebar-foreground hover:text-foreground focus-visible:text-foreground',
       )}
     >
       {active && (
@@ -49,8 +49,8 @@ export function SidebarItem({ to, icon: Icon, label, hue, index = 0 }: SidebarIt
           style={{ background: hue }}
         />
       )}
-      <Icon className="size-5 shrink-0" weight={active ? 'fill' : 'regular'} style={{ color: hue }} />
-      <span className="whitespace-nowrap text-chico opacity-0 transition-opacity duration-150 group-hover/item:opacity-100 group-focus-visible/item:opacity-100">
+      <Icon className="size-7 shrink-0" weight={active ? 'fill' : 'regular'} style={{ color: hue }} />
+      <span className="pointer-events-none absolute left-[calc(100%+0.5rem)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2.5 py-1 text-chico text-foreground shadow-float opacity-0 transition-opacity duration-150 group-hover/item:opacity-100 group-focus-visible/item:opacity-100">
         {label}
       </span>
     </NavLink>

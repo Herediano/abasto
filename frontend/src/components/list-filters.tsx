@@ -56,7 +56,7 @@ export function ListFilters({
           <Button variant="outline" onClick={() => setOpen(true)}>
             <SlidersHorizontal /> Filtros
             {activeFilters.length > 0 && (
-              <span className="ml-0.5 rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-foreground">
+              <span className="ml-0.5 rounded-md bg-accent px-1.5 text-xs font-semibold text-accent-foreground">
                 {activeFilters.length}
               </span>
             )}
@@ -67,7 +67,7 @@ export function ListFilters({
             key={f.key}
             type="button"
             onClick={f.clear}
-            className="inline-flex items-center gap-1.5 rounded-full border border-accent-border bg-accent py-1 pl-3 pr-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-80"
+            className="inline-flex items-center gap-1.5 rounded-md border border-accent-border bg-accent py-1 pl-3 pr-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-80"
           >
             {f.label}
             <X className="size-3.5 opacity-70" />

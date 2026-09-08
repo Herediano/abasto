@@ -17,11 +17,11 @@ export function NotificationBell({ summary }: { summary: EscritorioSummary | nul
     <Menu>
       <MenuTrigger
         aria-label="Notificaciones"
-        className="group relative flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-background hover:text-foreground data-[state=open]:border-accent-border data-[state=open]:bg-accent data-[state=open]:text-primary"
+        className="uiverse-ctl group relative flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-background hover:text-foreground data-[state=open]:border-accent-border data-[state=open]:bg-accent data-[state=open]:text-primary"
       >
         <Bell className="size-[18px]" />
         {items.length > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-warning px-1 text-[10px] font-bold leading-4 text-warning-foreground">
+          <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-md bg-warning px-1 text-[10px] font-bold leading-4 text-warning-foreground">
             {items.length}
           </span>
         )}

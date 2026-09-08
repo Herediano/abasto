@@ -35,7 +35,7 @@ export function AccountList({ variant = 'full', onNavigate }: { variant?: 'full'
               className="flex min-w-0 flex-1 items-center gap-3 text-left"
               disabled={activa}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-full font-display text-micro font-bold text-white" style={{ background: color }}>
+              <span className="grid size-8 shrink-0 place-items-center rounded-full font-display text-micro font-bold text-white" style={{ background: color, borderRadius: '5px' }}>
                 {initials(a.user.name)}
               </span>
               <span className="min-w-0">

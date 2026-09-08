@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 // superficie. El color de fondo tenue está permitido acá —es una etiqueta
 // chica, no un bloque— pero el estado real de una fila lo sigue diciendo el
 // texto; el badge sólo lo repite en compacto.
-const badgeVariants = cva('inline-flex items-center rounded-full border px-2.5 py-0.5 text-micro font-medium transition-colors', {
+const badgeVariants = cva('inline-flex items-center rounded-md border px-2.5 py-0.5 text-micro font-medium transition-colors', {
   variants: {
     variant: {
       default: 'border-transparent bg-primary/10 text-primary',

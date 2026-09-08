@@ -128,7 +128,7 @@ export function VentasChart() {
           <p className="pb-1 text-xs text-muted-foreground">
             <span
               className={cn(
-                'rounded-full px-1.5 py-0.5 font-mono font-semibold',
+                'rounded-md px-1.5 py-0.5 font-mono font-semibold',
                 derived.dp >= 0.5 ? 'bg-success/15 text-success' : derived.dp <= -0.5 ? 'bg-destructive-soft text-destructive' : 'bg-muted text-muted-foreground',
               )}
             >
@@ -148,7 +148,7 @@ export function VentasChart() {
             onClick={() => setMetric(m.key)}
             aria-pressed={metric === m.key}
             className={cn(
-              'rounded-full border px-2.5 py-1 text-micro font-semibold transition-colors',
+              'rounded-md border px-2.5 py-1 text-micro font-semibold transition-colors',
               metric === m.key ? 'border-accent-border bg-accent text-accent-foreground' : 'border-border text-muted-foreground hover:text-foreground',
             )}
           >
