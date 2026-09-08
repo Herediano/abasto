@@ -2,19 +2,19 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { CommandPalette } from '@/components/command-palette';
 import { useAuth } from '@/lib/auth-context';
-import { RailToggle } from './rail-toggle';
+import { Sidebar } from './sidebar';
 
 /** Abre el buscador de Ctrl+K desde cualquier pantalla (botón "Preguntar" del escritorio, etc.). */
 export const PaletteContext = createContext<() => void>(() => {});
 export const usePalette = () => useContext(PaletteContext);
 
 /**
- * El marco de la app: sin riel. El escritorio (`/`) es la navegación; cada
- * módulo se abre desde ahí y trae su propia cabecera con "← Escritorio".
- * Ver docs/diseno.md.
+ * El marco de la app. El escritorio (`/`) es la navegación; cada módulo se abre
+ * desde ahí y trae su propia cabecera con "← Escritorio". Ver docs/diseno.md.
  *
- * Acá viven las dos cosas globales que quedan: `Esc` para volver al escritorio
- * y `Ctrl/Cmd + K` para el buscador.
+ * El único agregado es el riel lateral (`Sidebar`), un complemento opcional que
+ * se despliega con el botón de la cabecera. Acá viven además las dos cosas
+ * globales: `Esc` para volver al escritorio y `Ctrl/Cmd + K` para el buscador.
  */
 export function EscritorioShell() {
   const { session } = useAuth();
@@ -51,9 +51,7 @@ export function EscritorioShell() {
   return (
     <PaletteContext.Provider value={() => setPalette(true)}>
       <div className="min-h-screen">
-        <div className="fixed left-4 top-4 z-20 w-[34px] rail-in">
-          <RailToggle />
-        </div>
+        <Sidebar />
         <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 pb-16">
           <Outlet />
         </div>

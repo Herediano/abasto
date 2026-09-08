@@ -1,3 +1,4 @@
+import { type CSSProperties } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { type Icon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
@@ -6,47 +7,50 @@ interface SidebarItemProps {
   to: string;
   icon: Icon;
   label: string;
-  hue?: string;
+  /** El matiz del módulo (el mismo que su tarjeta en el escritorio). */
+  hue: string;
+  /** Posición en la lista, para la cascada de entrada. */
+  index?: number;
 }
 
-export function SidebarItem({ to, icon: Icon, label, hue = 'var(--color-primary)' }: SidebarItemProps) {
-  const location = useLocation();
-  const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
+/**
+ * Un salto del riel. En reposo es solo el ícono, teñido con el matiz de su
+ * módulo —el mismo color que su tarjeta en el escritorio, para reconocerlo sin
+ * leer (contorno inactivo, relleno activo)—: el ítem está recortado a `max-w-9`
+ * y el nombre queda afuera. Al pasar el mouse —o al enfocar con teclado— el
+ * ítem se expande a la derecha (`max-width` hasta 14rem), se levanta con
+ * `z-index` y desborda el riel sin empujar a los otros. El activo suma un
+ * lavado del matiz y una franja al costado, igual que en el escritorio.
+ */
+export function SidebarItem({ to, icon: Icon, label, hue, index = 0 }: SidebarItemProps) {
+  const { pathname } = useLocation();
+  const active = pathname === to || pathname.startsWith(to + '/');
+
+  const style = { '--i': index } as CSSProperties;
+  if (active) style.background = `color-mix(in srgb, ${hue} 14%, transparent)`;
 
   return (
     <NavLink
       to={to}
-      aria-current={isActive ? 'page' : undefined}
-      title={label}
+      aria-current={active ? 'page' : undefined}
+      style={style}
       className={cn(
-        'relative h-10 flex items-center justify-center gap-0 rounded-[5px] border border-[rgba(0,0,255,0.2)] group overflow-hidden hover:justify-start hover:gap-2 hover:pl-3',
-        'transition-all duration-200 ease-in-out',
-        isActive
-          ? 'bg-subtle text-foreground border-[rgba(0,0,255,0.2)] shadow-md'
-          : 'bg-card/80 text-muted-foreground hover:bg-white hover:text-black hover:shadow-md',
+        'sidebar-item group/item relative z-0 flex h-9 max-w-9 items-center gap-2 overflow-hidden rounded-md px-2',
+        'hover:z-10 hover:max-w-56 hover:shadow-float focus-visible:z-10 focus-visible:max-w-56 focus-visible:shadow-float',
+        active
+          ? 'text-foreground'
+          : 'text-sidebar-foreground hover:bg-sidebar-hover hover:text-foreground focus-visible:bg-sidebar-hover focus-visible:text-foreground',
       )}
-      style={{ width: '100%' }}
-      onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.width = '180px';
-        el.style.zIndex = '100';
-      }}
-      onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.width = '100%';
-        el.style.zIndex = '';
-      }}
     >
-      <Icon
-        className={cn(
-          'size-5 shrink-0 transition-all duration-200 ease-in-out',
-          isActive ? 'scale-125' : '',
-          'group-hover:scale-125',
-        )}
-        weight={isActive ? 'fill' : 'regular'}
-        style={isActive ? { color: hue } : undefined}
-      />
-      <span className="pointer-events-none absolute left-11 whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+      {active && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-1 left-0 w-0.5 rounded-full"
+          style={{ background: hue }}
+        />
+      )}
+      <Icon className="size-5 shrink-0" weight={active ? 'fill' : 'regular'} style={{ color: hue }} />
+      <span className="whitespace-nowrap text-chico opacity-0 transition-opacity duration-150 group-hover/item:opacity-100 group-focus-visible/item:opacity-100">
         {label}
       </span>
     </NavLink>

@@ -24,29 +24,27 @@ tamaño, la respuesta sale de acá y no de una decisión suelta.
 
 | | |
 |---|---|
-| Nombre | **Abasto**. En pantalla el logotipo es `abasto.ai`, con el `.ai` en verde primario. |
+| Nombre | **Abasto**. En pantalla el logotipo es `abasto.ai`, con el `.ai` en cian primario. |
 | Tono | Una herramienta de trabajo tranquila. No estrésa, no vende, no adorna. Confianza antes que personalidad. |
 | Se gana el `.ai` | La IA **sugiere, nunca decide**. Cada función con IA lleva su etiqueta `IA` y se puede descartar. |
 
 ### Tipografía — una sola familia
 
-**Archivo** (Omnibus-Type, Buenos Aires) para todo: marca, títulos, cuerpo,
-interfaz y los números de los datos. Es una grotesque con carácter de ingeniería
-—terminaciones diagonales, aperturas amplias— que se calla a tamaño de texto y
-se planta en los tamaños grandes. La jerarquía sale del **peso y el ancho** de la
-misma familia, no de meter una segunda cara.
+**Geist** (Vercel) para todo: marca, títulos, cuerpo, interfaz y los números de
+los datos. Es una grotesca neutra y fina, con buen ritmo a tamaño de texto y
+suficiente presencia en los tamaños grandes. La jerarquía sale del **peso y el
+tracking** de la misma familia, no de meter una segunda cara.
 
-- Elegir una fundición de Buenos Aires para un producto hecho en Argentina para
-  mayoristas argentinos es una decisión anclada en el tema, no un default.
-- Es variable: un archivo, ejes `wght` (400–700) y `wdth`. La marca y el número
-  hero usan el ancho **Expanded** y peso alto; todo lo demás, ancho normal.
-- Trae **figuras tabulares** y **cero barrado**. Toda columna de precio o
-  cantidad alinea por dígito en la misma cara que el resto —sin bloque monoespacio
-  que corte la tabla.
+- Una sola familia: `--font-sans` y `--font-display` apuntan a Geist; la marca y
+  el número hero usan `.type-display` (peso 800, tracking más cerrado), el resto
+  ancho y peso normales.
+- **Figuras tabulares** (`.tabular` → `font-variant-numeric: tabular-nums`). Toda
+  columna de precio o cantidad alinea por dígito en la misma cara que el resto
+  —sin bloque monoespacio que corte la tabla.
 
 **Monoespacio: solo para identificadores de máquina.** SKU, código de barras,
 lote, CUIT, token. Nunca para etiquetas chiquitas ni para columnas de datos
-(esas van con `tabular-nums` de Archivo). La cara mono se decide en la
+(esas van con `tabular-nums` de Geist). La cara mono se decide en la
 implementación; su uso es la excepción, no la regla.
 
 #### Escala
@@ -68,14 +66,15 @@ Base **14 px** (`0.875rem`). Pasos fijos —no se inventan tamaños entre medio:
 - **Medida**: menos de 80 caracteres por línea; ~66 es el ideal para texto
   corrido.
 - **Pesos**: 400 cuerpo · 500 etiquetas y navegación · 600 títulos y datos clave
-  · 700 reservado a la marca y al número hero.
+  · 800 reservado a la marca y al número hero (`.type-display`).
 - El `letter-spacing` negativo (`-0.02em`) solo en h1/h2/h3. El cuerpo, nunca.
 
 ### Color
 
-La paleta **Yerba**: verde pino sobre neutros arena cálidos. Claro y oscuro
+La paleta **Yerba**: cian vibrante sobre neutros arena cálidos. Claro y oscuro
 siempre, con los mismos tokens (`--ab-*` en `frontend/src/styles.css`,
 referenciados por `@theme inline`), así el tema cambia en tiempo de ejecución.
+El primario es `--ab-primary` (`#0b748c` en claro, `#3fc7e2` en oscuro).
 
 #### Base y semántica
 
@@ -84,11 +83,11 @@ referenciados por `@theme inline`), así el tema cambia en tiempo de ejecución.
 | Fondo / superficie / superficie levantada | Neutros arena. Tres niveles, nada más. |
 | Tinta / tinta suave / tinta tenue | Texto. Tres niveles. Nunca un negro teñido a mano. |
 | Línea / línea suave | Bordes. Dos pesos. |
-| **Verde primario** | **La única acción sólida.** Si aparece verde lleno, se toca. |
+| **Cian primario** | **La única acción sólida.** Si aparece cian lleno, se toca. |
 | Ámbar | **Aviso.** Sin precio, por vencer, bajo mínimo. |
 | Rojo ladrillo | **Problema.** Vencido, faltante, diferencia de arqueo. |
 
-Regla: **el color de acción es uno solo**. El ámbar y el rojo no son decorativos
+Regla: **el color de acción es uno solo** (el cian). El ámbar y el rojo no son decorativos
 —aparecen cuando hay algo que avisar o algo que está mal, y en dosis mínimas (un
 puntito), nunca como fondo de un bloque. El dato clave de las tarjetas es
 siempre monocromo: la alerta la lleva el puntito, sola.
@@ -98,7 +97,7 @@ siempre monocromo: la alerta la lleva el puntito, sola.
 En el escritorio, cada tarjeta lleva un **matiz propio** en la pastilla del
 ícono, una franja al costado, el borde y un lavado tenue del fondo. Sirve para
 **encontrar el módulo por color sin leer**. Adentro del módulo el matiz
-desaparece: manda el verde acción.
+desaparece: manda el cian acción.
 
 Los matices se generan con una receta, no a ojo:
 
@@ -108,9 +107,9 @@ Los matices se generan con una receta, no a ojo:
   violeta, magenta.
 - **Distancia mínima** de matiz entre dos módulos cualesquiera ≥ ~30° —varios
   pares quedan a 40-50°. La separación se ve de un vistazo.
-- **No se esquiva verde ni ámbar** (decisión del dueño del producto): los
-  colores de identidad pueden rozar los de semáforo porque la alerta la lleva
-  el puntito, no el color de la tarjeta.
+- **No se esquiva cian ni ámbar** (decisión del dueño del producto): los
+  colores de identidad pueden rozar los de semáforo y el primario porque la
+  alerta la lleva el puntito, no el color de la tarjeta.
 - Máximo ~10 matices. Los módulos que viven adentro de Ajustes (Usuarios,
   Rangos) comparten un **pizarra de croma bajo** —son sistema, no operación.
 - En oscuro se ajusta la luz del matiz, no el croma, contra la superficie
@@ -121,21 +120,17 @@ Los valores concretos viven en `frontend/src/lib/modules.tsx`; acá va la receta
 ### Fondo
 
 El fondo es la base del sistema (arena en claro, forestal en oscuro) con un
-**lavado tenue de verde pino** por dos esquinas —arriba a la izquierda y abajo
-a la derecha— y una **fina grilla de puntos** de 1 px cada 24 px que pega con
-los motivos de línea de los módulos. Acompaña, no compite. Reglas:
+**lavado tenue de cian** (`--ab-primary`) por dos esquinas —arriba a la
+izquierda y abajo a la derecha—. Acompaña, no compite. Reglas:
 
-- **Cero costo de runtime**: gradientes radiales CSS (lavados) + un
-  `radial-gradient` repetido para la grilla de puntos. Pintura única, sin
-  animar, sin imágenes, sin JS, sin `transition`. No compite con los motivos
-  de los módulos ni con las tarjetas (que llevan sus propios lavados).
-- **Sutil siempre**: los lavados van entre 12 % y 15 % de alfa, los puntos en
-  15 % (oscuro) / 26 % (claro) del `--ab-primary`. Si se nota como un "diseño
-  de fondo" cargado, pasó de largo.
+- **Cero costo de runtime**: dos `radial-gradient` CSS (los lavados de esquina).
+  Pintura única, sin animar, sin imágenes, sin JS, sin `transition`. No compite
+  con los motivos de los módulos ni con las tarjetas (que llevan sus propios
+  lavados).
+- **Sutil siempre**: los lavados van entre 12 % y 15 % de alfa del
+  `--ab-primary`. Si se nota como un "diseño de fondo" cargado, pasó de largo.
 - **`background-attachment: fixed`** en puntero fino (pintura única); en
   táctiles se vuelve a `scroll` para no repintar en cada scroll.
-- El color de la grilla vive en `--ab-pattern` (una por paleta); el `body`
-  compone la base, los lavados y la grilla en `background-image`.
 
 ### Forma
 
@@ -213,7 +208,7 @@ está para reconocer, no para decorar: si no ayuda a identificar algo, no va.
   + motivo por módulo**. Todo lo que rodea eso queda callado —superficies
   neutras, un peso de borde, tipografía tranquila. Antes de sumar un detalle, se
   saca otro.
-- **El verde es la única acción sólida.** Si aparece verde lleno, se puede tocar.
+- **El cian es la única acción sólida.** Si aparece cian lleno, se puede tocar.
   El ámbar es aviso, el rojo es problema.
 - **El estado lo dice el dato, no un marco.** «3 lotes», «4 vencidos», «+17,8 %
   vs ayer»: el texto lleva la noticia, y **la cifra clave se tiñe** —con el matiz
@@ -299,7 +294,7 @@ Tres franjas, de menos a más peso hacia abajo:
    molde que la caja —cascarón compacto, borde, superficie neutra y una franja
    de color a la izquierda—: **Abrir Mostrador** (si el rango opera caja) a la
    izquierda, **Configurar** y **Preguntar** (Ctrl + K) en el hueco de la
-   derecha. La franja es identidad, no estado: verde para Preguntar —es acción—,
+   derecha. La franja es identidad, no estado: cian para Preguntar —es acción—,
    pizarra para Configurar —es preferencia, no operación—. En pantalla angosta
    la fila se apila. El ícono va suelto, sin pastilla, para que la fila quede
    callada y no compita con las tarjetas de módulo.
@@ -376,9 +371,9 @@ dos renglones), pero con **dos barras de color, una por cada costado** en vez de
 la franja única a la izquierda— para que el ojo la lea como la tarjeta principal
 de esa fila. Se llama **«Abrir Mostrador»**, va **primera, a la izquierda de la
 fila**, arriba del grid: el cajero la ve antes de mirar las tarjetas. La **barra
-de estado se lee del color de las dos rieles** —verde sólido si el turno está
+de estado se lee del color de las dos rieles** —cian sólido si el turno está
 abierto, rojo sólido si no—, no de las letras: el texto es siempre del tinte de
-lectura, y un punto verde parpadea en la etiqueta mientras hay turno abierto. El
+lectura, y un punto cian parpadea en la etiqueta mientras hay turno abierto. El
 renglón de contexto lleva lo que el cajero quiere saber sin entrar: desde qué
 hora, cuántos tickets y cuánto efectivo hay. Al abrir la app siempre se cae en
 el escritorio (no hay preferencia de "entrar directo a"); para un cajero, esa
@@ -405,7 +400,7 @@ otro no.
   se sacan de a uno (el molde que estrenó Productos).
 - **Cuerpo**: una tabla con las columnas justas, o el contenido propio del módulo
   (el gráfico en Ventas, la lista en Reportes). Tablas con aire, cabecera sobre
-  superficie levantada, números por dígito en `tabular-nums` de Archivo. El
+  superficie levantada, números por dígito en `tabular-nums` de Geist. El
   encabezado de columna va en capitalización normal —sin versalita.
 
 ---
@@ -478,9 +473,9 @@ datos a alguien de afuera.**
   cargados; el resto contra el backend).
 - **`PageHeader` pegajoso**: título y acciones siguen al scrollear.
 - **Componentes compartidos**: tabla con aire y cabecera sobre superficie
-  levantada, tarjeta con una sola sombra, botón `outline` que se tiñe de verde.
+  levantada, tarjeta con una sola sombra, botón `outline` que se tiñe de cian.
 - **Caja fuera de todo**: `FullScreenRoute` con su franja de estado del turno.
-  Caja por dentro: lector con anillo verde, carrito, panel de cobro, total
+  Caja por dentro: lector con anillo cian, carrito, panel de cobro, total
   grande, medios como botones. Atajos `F2`/`F3`/`F4`/`F6`/`F7`/`F8`.
 - **Selector de tema** (claro / oscuro, `lib/theme.ts`).
 - **Íconos Phosphor** en toda la app (Lucide ya no se usa).
@@ -496,8 +491,8 @@ datos a alguien de afuera.**
   (ocultar / reordenar arrastrando, se guarda en `localStorage`). Botón
   **Preguntar** junto a la grilla.
 - **Color por módulo** en las tarjetas (`HUES` en `lib/modules.tsx`): matiz
-  propio por módulo en OKLCH (luz y croma fijos, solo rota el matiz; arco fuera
-  del verde y el ámbar), repartido por toda la rueda para que ningún par sea
+  propio por módulo en OKLCH (luz y croma fijos, solo rota el matiz; toda la
+  rueda, sin esquivar el cian ni el ámbar), repartido para que ningún par sea
   confundible. Se aplica en grande —pastilla del ícono + franja + borde + lavado
   del fondo— para reconocer el módulo por color. Renglón de contexto con espacio
   fijo y tipografía pareja, en capitalización normal.
@@ -509,7 +504,7 @@ datos a alguien de afuera.**
   de las tarjetas (`tiles-chica` / `tiles-grande` en `styles.css`).
 - **Refactor visual completo**: escala tipográfica en tokens `text-*` (sin
   `text-[Npx]` arbitrarios) y radios limitados a `lg` / `md` / `sm`.
-- **Tipografía Archivo** (una familia; escala en tokens `--text-*`; `.type-display`
+- **Tipografía Geist** (una familia; escala en tokens `--text-*`; `.type-display`
   para la marca y el número hero). El monoespacio solo para identificadores.
 - **Menú de la cuenta**: varias cuentas con sesión abierta en el mismo
   dispositivo, alternar sin re-login, "Agregar otra cuenta" y "Salir" (cierra

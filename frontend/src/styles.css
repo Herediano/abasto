@@ -365,6 +365,60 @@
   .rail-in { animation: none; }
 }
 
+/*
+ * El riel y cada uno de sus módulos se despliegan con el mismo gesto y la misma
+ * curva del sistema: el riel crece hacia abajo desde el botón (rejilla de 0fr a
+ * 1fr, hasta su alto real); cada módulo crece hacia la derecha desde su ícono
+ * (`max-width` de 2.25rem a 14rem, hasta donde llega el texto). Ver
+ * `sidebar.tsx` y `SidebarItem.tsx`.
+ */
+.sidebar-reveal {
+  transition: grid-template-rows 280ms cubic-bezier(0.2, 0, 0, 1), opacity 120ms linear;
+}
+.sidebar-item {
+  transition:
+    max-width 220ms cubic-bezier(0.2, 0, 0, 1),
+    background-color 200ms ease,
+    color 200ms ease,
+    box-shadow 200ms ease;
+}
+/* Al abrir el riel, cada módulo entra en cascada desde la izquierda; el último
+ * llega junto con el riel (~280 ms) para que se lea como un solo gesto. Solo
+ * al abrir con el botón, nunca al cargar la página. */
+@keyframes sidebar-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+.sidebar-reveal[data-cascade='true'] .sidebar-item {
+  animation: sidebar-item-in 240ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation-delay: calc(var(--i, 0) * 22ms);
+}
+/*
+ * Abrir el riel y expandir un módulo son "respuesta a una acción" —la categoría
+ * que docs/diseno.md sí deja animar—, así que siguen corriendo con "reducir
+ * movimiento" activado. La regla global que apaga TODA animación vive en
+ * `@layer base` con `!important`; para ganarle, este override tiene que estar
+ * en la MISMA capa (un `!important` sin capa pierde contra uno con capa) y con
+ * más especificidad. El gesto queda igual de corto y sin rebote.
+ */
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar-reveal[data-cascade='true'] .sidebar-item {
+      animation-duration: 240ms !important;
+      animation-iteration-count: 1 !important;
+    }
+    /* Los menús desplegables (sucursal, notificaciones, cuenta, filtros…) abren
+     * y cierran con un fundido + zoom corto desde su disparador: es respuesta a
+     * una acción, no decoración, así que sigue con "reducir movimiento". */
+    .menu-content[data-state] {
+      animation-duration: 150ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}
+
 /* (Los pendientes del escritorio viven hoy en la campana de notificaciones —
    ver frontend/src/components/notification-bell.tsx.) */
 

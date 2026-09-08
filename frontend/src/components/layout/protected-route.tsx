@@ -1,14 +1,12 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
 import { EscritorioShell } from './escritorio-shell';
-import { ClassicShell } from './classic-shell';
 
 /** Rutas de la aplicación: exigen sesión y viven adentro del escritorio. */
 export function ProtectedRoute() {
   const { session } = useAuth();
   if (!session) return <Navigate to="/login" replace />;
-  // "Interfaz" en Ajustes: de tarjetas (blocks) o con barra lateral (classic).
-  return session.user.preferences?.uiMode === 'classic' ? <ClassicShell /> : <EscritorioShell />;
+  return <EscritorioShell />;
 }
 
 /**

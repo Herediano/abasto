@@ -79,8 +79,6 @@ export async function downloadFile(path: string, token: string, filename: string
 export type UserPreferences = {
   /** Color del avatar (uno de los presets de Ajustes). */
   avatarColor?: string;
-  /** Interfaz: "blocks" (escritorio por tarjetas) o "classic" (barra lateral). */
-  uiMode?: 'blocks' | 'classic';
 };
 
 export type Session = {
