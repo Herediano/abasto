@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { CashRegister, DotsSixVertical, EyeSlash, Plus, Sparkle } from '@phosphor-icons/react';
+import { CashRegister, EyeSlash, Plus, Sparkle } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { NotificationBell } from '@/components/notification-bell';
@@ -519,14 +519,14 @@ export function EscritorioPage() {
   const [invalid, setInvalid] = useState(false);
   const hoverRef = useRef<number | null>(null);
   const dragKeyRef = useRef<string | null>(null);
-  // Dónde arrancó el mousedown: el drag nativo dispara el dragstart con target
-  // = el <a> draggable (la fuente), no el asa que agarraste — por eso el origen
-  // se rastrea en el mousedown y no en el dragstart.
-  const dragFromHandle = useRef(false);
   // Tarjeta en estirado (y desde dónde): mientras dura, bloquea drag y click.
   const [resizing, setResizing] = useState<{ key: string; dir: 'e' | 's' | 'se' } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
+  // Mientras dura un arrastre, el reacomodo en vivo salta directo (sin FLIP):
+  // la vista previa se lee al instante, la animación queda solo para el estado
+  // final (drop o resize).
+  const arrastrandoRef = useRef(false);
   const lastResizeEnd = useRef(0);
   // El tamaño final del estirado se anota acá y se persiste una única vez, al
   // soltar — nada de escribir a localStorage en cada pointermove.
@@ -545,10 +545,15 @@ export function EscritorioPage() {
     if (!grid) return;
     const prev = rectsRef.current;
     const next = new Map<string, DOMRect>();
+    const arrastrando = arrastrandoRef.current;
     for (const el of Array.from(grid.querySelectorAll<HTMLElement>('[data-tile]'))) {
       const key = el.dataset.tile ?? '';
       const now = el.getBoundingClientRect();
       next.set(key, now);
+      // Durante el arrastre la vista previa salta INMEDIATA (sin animación) y
+      // además la foto no avanza: así el FLIP del drop final siempre parte de
+      // cómo estaba el tablero antes de agarrar la tarjeta.
+      if (arrastrando) continue;
       const antes = prev.get(key);
       if (!antes) continue;
       const dx = antes.left - now.left;
@@ -564,7 +569,7 @@ export function EscritorioPage() {
         { duration: resizingRef.current ? 200 : 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
       );
     }
-    rectsRef.current = next;
+    if (!arrastrando) rectsRef.current = next;
   }, [config]);
   useEffect(() => {
     const refresh = () => {
@@ -597,8 +602,45 @@ export function EscritorioPage() {
   const byKey = useMemo(() => new Map(gridModules(can).map(m => [m.key, m])), [can]);
   const cols = GRID_COLS;
   const tiles = config.tiles;
-  const rows = useMemo(() => Math.max(2, ...tiles.map(t => t.row + t.h)), [tiles]);
+  // La vista previa del drop se calcula una sola vez por hover (layout destino
+  // completo) y el tablero real NO se mueve hasta soltar — pero el usuario ya
+  // vio exactamente dónde caería cada tarjeta, así el reacomodo no es sorpresa.
+  const baseRows = useMemo(() => Math.max(2, ...tiles.map(t => t.row + t.h)), [tiles]);
+  const previewDestino = useMemo(() => {
+    if (dragKey == null || hoverCell == null) return null;
+    const agarrada = tiles.find(x => x.key === dragKey);
+    if (!agarrada) return null;
+    const col = hoverCell % GRID_COLS;
+    const row = Math.min(Math.floor(hoverCell / GRID_COLS), baseRows - 1);
+    if (col + agarrada.w > GRID_COLS) return null;
+    return computeLayout(
+      [{ key: dragKey, w: agarrada.w, h: agarrada.h }, ...tiles.filter(x => x.key !== dragKey).sort(porVisual).map(aSize)],
+      GRID_COLS,
+      { key: dragKey, col, row },
+    );
+  }, [dragKey, hoverCell, tiles, baseRows]);
+  // Las filas se calculan del tablero real; si el drop agregaría filas (caer en
+  // el fondo), el tablero crece en vivo para mostrar hacia dónde va la tarjeta.
+  const rows = useMemo(() => {
+    if (previewDestino) return Math.max(baseRows, ...previewDestino.map(p => p.row + p.h));
+    return baseRows;
+  }, [baseRows, previewDestino]);
   const hidden = config.hidden.map(k => byKey.get(k)).filter((m): m is ModuleDef => !!m);
+  // Aplicar la vista previa EN VIVO: mientras se arrastra, el tablero se rearma
+  // en tiempo real al layout destino (con la animación FLIP), así se ve el
+  // resultado antes de soltar. El drop después solo confirma lo ya visible;
+  // cancelar (soltar afuera) restaura el layout de partida.
+  useEffect(() => {
+    if (!previewDestino || invalid || dragKey == null) return;
+    const yaAplicado =
+      tiles.length === previewDestino.length &&
+      tiles.every((t, i) => {
+        const p = previewDestino[i];
+        return t.key === p.key && t.col === p.col && t.row === p.row && t.w === p.w && t.h === p.h;
+      });
+    if (yaAplicado) return;
+    setConfig(prev => ({ ...prev, tiles: previewDestino }));
+  }, [previewDestino, invalid, dragKey]);
 
   const nombre = session?.user.name.split(' ')[0] ?? '';
   const hoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -704,18 +746,16 @@ export function EscritorioPage() {
     if (col < 0 || col >= GRID_COLS || row < 0) return null;
     return { col, row };
   };
+  // El layout con el que arrancó el drag: si se cancela (soltar afuera), se
+  // restaura tal cual estaba.
+  const preDragRef = useRef<Config | null>(null);
   const onTileDragStart = (key: string, e: ReactDragEvent) => {
-    // Solo el asa dedica arrastra: si el mousedown no arrancó en ella, el drag
-    // se cancela y el resto del módulo sigue siendo clickeable.
-    if (!dragFromHandle.current) {
-      e.preventDefault();
-      return;
-    }
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', key);
     dragKeyRef.current = key;
+    preDragRef.current = config;
+    arrastrandoRef.current = true;
     setDragKey(key);
-    dragFromHandle.current = false;
     const t = tiles.find(x => x.key === key);
     if (t) {
       const idx = t.row * GRID_COLS + t.col;
@@ -723,10 +763,14 @@ export function EscritorioPage() {
       setHoverCell(idx);
     }
   };
-  const onTileDragEnd = () => {
+  const onTileDragEnd = (withDrop: boolean) => {
+    // Sin drop: se deshace lo que el drag haya movido en vivo (vuelve todo a
+    // como estaba antes de agarrar la tarjeta).
+    if (!withDrop && preDragRef.current) setConfig(preDragRef.current);
+    preDragRef.current = null;
+    arrastrandoRef.current = false;
     dragKeyRef.current = null;
     hoverRef.current = null;
-    dragFromHandle.current = false;
     setDragKey(null);
     setHoverCell(null);
     setInvalid(false);
@@ -738,22 +782,22 @@ export function EscritorioPage() {
     const c = cellFromEvent(e);
     if (!c) return;
     const idx = c.row * GRID_COLS + c.col;
+    const t = tiles.find(x => x.key === dragKeyRef.current);
+    const mal = !!t && c.col + t.w > GRID_COLS;
+    setInvalid(mal);
     if (hoverRef.current === idx) return;
     hoverRef.current = idx;
     setHoverCell(idx);
-    const t = tiles.find(x => x.key === dragKeyRef.current);
-    setInvalid(!!t && c.col + t.w > GRID_COLS);
   };
   const onGridDrop = (e: ReactDragEvent) => {
     e.preventDefault();
     const key = dragKeyRef.current;
     const c = cellFromEvent(e);
-    onTileDragEnd();
-    if (!key || !c) return;
-    const t = tiles.find(x => x.key === key);
-    if (!t || (c.col === t.col && c.row === t.row) || c.col + t.w > GRID_COLS) return;
-    const resto = tiles.filter(x => x.key !== key).sort(porVisual).map(aSize);
-    update({ ...config, tiles: computeLayout([{ key, w: t.w, h: t.h }, ...resto], GRID_COLS, { key, col: c.col, row: Math.min(c.row, rows - 1) }) });
+    // El drop confirma el layout que ya se está viendo (la vista previa en vivo
+    // ya lo aplicó): solo se persiste, sin saltos.
+    const ok = !!key && !!c && !!previewDestino && !invalid;
+    if (ok) update({ ...config, tiles: previewDestino });
+    onTileDragEnd(ok);
   };
 
   // La tarjeta se despliega al módulo: se le pone el nombre de transición justo
@@ -835,24 +879,20 @@ export function EscritorioPage() {
           gridTemplateRows: `repeat(${rows}, ${ROW_H}px)`,
         }}
       >
-        {/* Fantasma del destino: marca dónde caería la tarjeta (y si no entra,
-            se pinta en rojo). Solo visual: el tablero real no cambia hasta el
-            drop — por eso las demás tarjetas quedan quietas durante el arrastre. */}
+        {/* Destino inválido: solo cuando la tarjeta no entra completa en la
+            celda se marca en rojo (el layout en vivo hace el resto del feedback). */}
         {dragKey &&
           hoverCell != null &&
+          invalid &&
           (() => {
             const t = tiles.find(x => x.key === dragKey);
             if (!t) return null;
             const col = hoverCell % GRID_COLS;
-            const row = Math.min(Math.floor(hoverCell / GRID_COLS), rows - 1);
-            const mal = invalid || col + t.w > GRID_COLS;
+            const row = Math.min(Math.floor(hoverCell / GRID_COLS), baseRows - 1);
             return (
               <div
                 aria-hidden="true"
-                className={cn(
-                  'pointer-events-none z-10 rounded-lg border-2 border-dashed',
-                  mal ? 'border-destructive/60 bg-destructive/5' : 'border-primary/60 bg-primary/10',
-                )}
+                className="pointer-events-none z-10 rounded-lg border-2 border-dashed border-destructive/60 bg-destructive/5"
                 style={{ gridColumn: `${col + 1} / span ${t.w}`, gridRow: `${row + 1} / span ${t.h}` }}
               />
             );
@@ -865,21 +905,10 @@ export function EscritorioPage() {
           // reemplaza a la minimapa — la tarjeta grande muestra la serie, no
           // solo la forma.
           const grafico = m.key === 'ventas' && t.w >= 2 && stat?.bars;
-          // Vista previa: qué tarjetas se reacomodarían al soltar acá (anillo
-          // ámbar = se mueve; el tablero real no cambia hasta el drop).
-          let tocada = false;
-          if (dragKey && hoverCell != null && dragKey !== t.key) {
-            const agarrada = tiles.find(x => x.key === dragKey);
-            if (agarrada) {
-              const destino = computeLayout(
-                [{ key: dragKey, w: agarrada.w, h: agarrada.h }, ...tiles.filter(x => x.key !== dragKey).sort(porVisual).map(aSize)],
-                GRID_COLS,
-                { key: dragKey, col: hoverCell % GRID_COLS, row: Math.min(Math.floor(hoverCell / GRID_COLS), rows - 1) },
-              );
-              const dp = destino.find(p => p.key === t.key);
-              tocada = !!dp && (dp.col !== t.col || dp.row !== t.row);
-            }
-          }
+          // Anillo ámbar en las tarjetas que se moverían al soltar acá — el
+          // reacomodo real (con FLIP) es el del drop, la vista previa ya lo avisó.
+          const dp = previewDestino?.find(p => p.key === t.key);
+          const tocada = !!dp && (dp.col !== t.col || dp.row !== t.row);
           return (
           <Link
             key={m.key}
@@ -892,11 +921,8 @@ export function EscritorioPage() {
               ['--ab-tile-hue' as string]: hueFor(m.key),
             }}
             draggable={resizing?.key !== m.key}
-            onMouseDown={e => {
-              dragFromHandle.current = !!(e.target as HTMLElement).closest('[data-drag-handle]');
-            }}
             onDragStart={e => onTileDragStart(m.key, e)}
-            onDragEnd={onTileDragEnd}
+            onDragEnd={() => onTileDragEnd(false)}
             className={cn(
               'module-tile group relative flex flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
               dragKey === m.key && 'opacity-40',
@@ -971,14 +997,6 @@ export function EscritorioPage() {
               )}
             </div>
 
-            <span
-              data-drag-handle
-              title="Mover"
-              onClick={e => { e.preventDefault(); e.stopPropagation(); }}
-              className="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 cursor-grab items-center gap-0.5 rounded-full border border-border bg-card px-2 py-1 text-placeholder opacity-0 shadow-float transition-opacity group-hover:opacity-100 active:cursor-grabbing"
-            >
-              <DotsSixVertical className="size-3.5" aria-hidden="true" />
-            </span>
             <button
               type="button"
               aria-label="Ocultar"

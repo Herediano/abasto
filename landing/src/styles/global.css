@@ -33,9 +33,9 @@
   --color-danger: var(--ab-danger);
   --color-danger-soft: var(--ab-danger-soft);
 
-  --radius-lg: 0.75rem;
-  --radius-md: 0.5625rem;
-  --radius-sm: 0.375rem;
+  --radius-lg: 5px;
+  --radius-md: 5px;
+  --radius-sm: 5px;
 
   --shadow-card: var(--ab-shadow-1);
   --shadow-float: var(--ab-shadow-2);
@@ -83,6 +83,14 @@
     letter-spacing: -0.02em;
     line-height: 1.06;
     text-wrap: balance;
+  }
+
+  /* El único display del sistema: abasto.ai y el número hero. Peso 800 con
+     tracking cerrado — la jerarquía sale del peso, no de una segunda cara. */
+  .type-display {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.03em;
   }
 
   ::selection {

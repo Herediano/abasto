@@ -74,7 +74,8 @@ Base **14 px** (`0.875rem`). Pasos fijos —no se inventan tamaños entre medio:
 La paleta **Yerba**: cian vibrante sobre neutros arena cálidos. Claro y oscuro
 siempre, con los mismos tokens (`--ab-*` en `frontend/src/styles.css`,
 referenciados por `@theme inline`), así el tema cambia en tiempo de ejecución.
-El primario es `--ab-primary` (`#0b748c` en claro, `#3fc7e2` en oscuro).
+El primario es `--ab-primary` (`#0b748c` en claro, `#37b4cc` en oscuro; el
+oscuro baja de luces para que el cian no hiera sobre fondo oscuro).
 
 #### Base y semántica
 

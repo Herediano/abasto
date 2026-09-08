@@ -46,70 +46,75 @@
   color-scheme: light;
 }
 
-/* Oscuro del sistema — no se aplica si el usuario eligió claro a mano. */
+/* Oscuro del sistema — no se aplica si el usuario eligió claro a mano.
+   "Noche Yerba": el fondo es una forestal deja de ser negro puro para que la
+   sombra sticker (offset dura, estilo Uiverse) se lea de verdad — hoy negro el
+   fondo era casi tan oscuro como la propia sombra. Bordes plata neutra (sin
+   azul), sombra sticker negra neutra en TODOS los elementos que la llevan.
+   Ver docs/diseno.md. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ab-ground: #101512;
-    --ab-surface: #191e1a;
-    --ab-surface-2: #1d231f;
-    --ab-ink: #e8ebe6;
-    --ab-soft: #949d97;
-    --ab-faint: #6e7872;
-    --ab-line: #262c27;
-    --ab-line-soft: #212722;
+    --ab-ground: #161a17;
+    --ab-surface: #1f2421;
+    --ab-surface-2: #252a27;
+    --ab-ink: #e3e7e2;
+    --ab-soft: #9aa29c;
+    --ab-faint: #7a837e;
+    --ab-line: #2c332e;
+    --ab-line-soft: #232924;
 
-    --ab-primary: #3fc7e2;
-    --ab-primary-soft: #0f2a33;
-    --ab-primary-line: #265663;
-    --ab-on-solid: #04232c;
+    --ab-primary: #37b4cc;
+    --ab-primary-soft: #0e282f;
+    --ab-primary-line: #204751;
+    --ab-on-solid: #05222a;
 
-    --ab-warn: #d08a3c;
+    --ab-warn: #cb8b40;
     --ab-warn-soft: #2a2118;
-    --ab-ok: #45c9e3;
-    --ab-danger: #e0776a;
+    --ab-ok: #3db9cd;
+    --ab-danger: #d97266;
     --ab-danger-soft: #2b1b19;
 
-    --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
-    --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
+    --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35), 0 1px 0 rgb(255 255 255 / 0.03);
+    --ab-shadow-2: 0 2px 5px rgb(0 0 0 / 0.35), 0 12px 30px -10px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.04);
 
-color-scheme: dark;
+    color-scheme: dark;
 
-  --border-uiverse: rgba(0, 0, 255, 0.25);
-  --shadow-uiverse: 3px 3px 2px 1px rgba(0, 0, 0, 0.35);
-  --shadow-uiverse-hover: 8px 8px 2px 1px rgba(0, 0, 0, 0.35);
-}
+    --border-uiverse: rgb(222 230 225 / 0.18);
+    --shadow-uiverse: 3px 3px 2px 1px rgb(0 0 0 / 0.5);
+    --shadow-uiverse-hover: 6px 6px 2px 1px rgb(0 0 0 / 0.55);
+  }
 }
 
 /* Oscuro elegido a mano — gana sobre el sistema en claro. */
 :root[data-theme="dark"] {
-  --ab-ground: #101512;
-  --ab-surface: #191e1a;
-  --ab-surface-2: #1d231f;
-  --ab-ink: #e8ebe6;
-  --ab-soft: #949d97;
-  --ab-faint: #6e7872;
-  --ab-line: #262c27;
-  --ab-line-soft: #212722;
+  --ab-ground: #161a17;
+  --ab-surface: #1f2421;
+  --ab-surface-2: #252a27;
+  --ab-ink: #e3e7e2;
+  --ab-soft: #9aa29c;
+  --ab-faint: #7a837e;
+  --ab-line: #2c332e;
+  --ab-line-soft: #232924;
 
-  --ab-primary: #3fc7e2;
-  --ab-primary-soft: #0f2a33;
-  --ab-primary-line: #265663;
-  --ab-on-solid: #04232c;
+  --ab-primary: #37b4cc;
+  --ab-primary-soft: #0e282f;
+  --ab-primary-line: #204751;
+  --ab-on-solid: #05222a;
 
-  --ab-warn: #d08a3c;
+  --ab-warn: #cb8b40;
   --ab-warn-soft: #2a2118;
-  --ab-ok: #45c9e3;
-  --ab-danger: #e0776a;
+  --ab-ok: #3db9cd;
+  --ab-danger: #d97266;
   --ab-danger-soft: #2b1b19;
 
-  --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35);
-  --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
+  --ab-shadow-1: 0 1px 2px rgb(0 0 0 / 0.35), 0 1px 0 rgb(255 255 255 / 0.03);
+  --ab-shadow-2: 0 2px 5px rgb(0 0 0 / 0.35), 0 12px 30px -10px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.04);
 
   color-scheme: dark;
 
-  --border-uiverse: rgba(0, 0, 255, 0.25);
-  --shadow-uiverse: 3px 3px 2px 1px rgba(0, 0, 0, 0.35);
-  --shadow-uiverse-hover: 8px 8px 2px 1px rgba(0, 0, 0, 0.35);
+  --border-uiverse: rgb(222 230 225 / 0.18);
+  --shadow-uiverse: 3px 3px 2px 1px rgb(0 0 0 / 0.5);
+  --shadow-uiverse-hover: 6px 6px 2px 1px rgb(0 0 0 / 0.55);
 }
 
 @theme inline {
@@ -190,8 +195,9 @@ color-scheme: dark;
   --shadow-card: var(--ab-shadow-1);
   --shadow-float: var(--ab-shadow-2);
 
-  /* Bordes y sombras estilo Uiverse (tarjetas de módulos): cian 20% en claro,
-     cian 25% en oscuro; sombra desplazada abajo-derecha. */
+  /* Bordes y sombras estilo Uiverse (tarjetas de módulos, sidebar, controles):
+     en claro, cian 20% con sombra desplazada; en oscuro se redefinen a plata
+     neutra y elevación suave (ver los bloques :root de arriba). */
   --border-uiverse: rgba(0, 0, 255, 0.2);
   --shadow-uiverse: 3px 3px 2px 1px rgba(0, 0, 255, 0.2);
   --shadow-uiverse-hover: 8px 8px 2px 1px rgba(0, 0, 255, 0.2);
