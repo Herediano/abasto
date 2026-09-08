@@ -7,6 +7,7 @@ import { gridModules, hueFor } from '@/lib/modules';
 import { cn } from '@/lib/utils';
 import { PaletteContext } from '@/components/layout/escritorio-shell';
 import { SidebarItem } from './SidebarItem';
+import { RailToggle } from './rail-toggle';
 
 /**
  * La interfaz clásica: barra lateral fija. Es un complemento, no el centro:
@@ -51,8 +52,9 @@ export function ClassicShell() {
   return (
     <PaletteContext.Provider value={() => setPalette(true)}>
       <div className="flex min-h-screen">
-        <aside className="pointer-events-none">
-          <div className="pointer-events-auto sticky top-4 mt-4 flex w-16 flex-col overflow-visible rounded-2xl border border-sidebar-border bg-card shadow-lg shadow-black/15 transition-all duration-500 ease-in-out ml-4">
+        <aside className="pointer-events-none fixed left-4 top-4 z-20">
+          <div className="pointer-events-auto flex w-11 flex-col gap-1 overflow-visible rounded-[5px] border border-[rgba(0,0,255,0.2)] bg-card p-1 shadow-lg shadow-black/15 rail-in">
+            <RailToggle />
             <SidebarItem to="/" icon={House} hue="var(--color-primary)" label="Escritorio" />
             {mods.map(m => (
               <SidebarItem

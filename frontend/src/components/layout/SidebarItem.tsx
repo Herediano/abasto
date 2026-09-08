@@ -19,26 +19,34 @@ export function SidebarItem({ to, icon: Icon, label, hue = 'var(--color-primary)
       aria-current={isActive ? 'page' : undefined}
       title={label}
       className={cn(
-        'relative h-16 flex items-center justify-start gap-3 pl-5 rounded-xl border border-transparent group overflow-hidden',
-        'transition-all duration-300 ease-in-out',
+        'relative h-10 flex items-center justify-center gap-0 rounded-[5px] border border-[rgba(0,0,255,0.2)] group overflow-hidden hover:justify-start hover:gap-2 hover:pl-3',
+        'transition-all duration-200 ease-in-out',
         isActive
-          ? 'bg-foreground text-card shadow-lg border-primary/50'
-          : 'text-muted-foreground hover:bg-foreground hover:text-card hover:border hover:shadow-lg',
+          ? 'bg-subtle text-foreground border-[rgba(0,0,255,0.2)] shadow-md'
+          : 'bg-card/80 text-muted-foreground hover:bg-white hover:text-black hover:shadow-md',
       )}
-      style={{ width: '64px' }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.width = '240px'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.width = '64px'; }}
+      style={{ width: '100%' }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.width = '180px';
+        el.style.zIndex = '100';
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.width = '100%';
+        el.style.zIndex = '';
+      }}
     >
       <Icon
         className={cn(
-          'size-6 shrink-0 transition-all duration-300 ease-in-out',
+          'size-5 shrink-0 transition-all duration-200 ease-in-out',
           isActive ? 'scale-125' : '',
           'group-hover:scale-125',
         )}
         weight={isActive ? 'fill' : 'regular'}
         style={isActive ? { color: hue } : undefined}
       />
-      <span className="whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+      <span className="pointer-events-none absolute left-11 whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
         {label}
       </span>
     </NavLink>

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { CommandPalette } from '@/components/command-palette';
 import { useAuth } from '@/lib/auth-context';
+import { RailToggle } from './rail-toggle';
 
 /** Abre el buscador de Ctrl+K desde cualquier pantalla (botón "Preguntar" del escritorio, etc.). */
 export const PaletteContext = createContext<() => void>(() => {});
@@ -50,6 +51,9 @@ export function EscritorioShell() {
   return (
     <PaletteContext.Provider value={() => setPalette(true)}>
       <div className="min-h-screen">
+        <div className="fixed left-4 top-4 z-20 w-[34px] rail-in">
+          <RailToggle />
+        </div>
         <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 pb-16">
           <Outlet />
         </div>

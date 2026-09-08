@@ -353,6 +353,18 @@
 :root:not([data-theme='light']) .module-tile__motif { opacity: 0.2; }
 :root:not([data-theme='light']) .module-tile:hover .module-tile__motif { opacity: 0.32; }
 
+/*
+ * Entrada del riel lateral: fade + desliz corto desde la izquierda. CSS plano
+ * a propósito, sin pasar por el plugin de animaciones.
+ */
+@keyframes rail-in {
+  from { opacity: 0; transform: translateX(-12px); }
+}
+.rail-in { animation: rail-in 0.25s cubic-bezier(0.2, 0, 0, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .rail-in { animation: none; }
+}
+
 /* (Los pendientes del escritorio viven hoy en la campana de notificaciones —
    ver frontend/src/components/notification-bell.tsx.) */
 
