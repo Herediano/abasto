@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { NotificationBell } from '@/components/notification-bell';
 import { UserMenu } from '@/components/user-menu';
+import { ChecklistToggle } from '@/components/checklist';
 import { usePalette } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
 import { api } from '@/lib/api';
@@ -838,6 +839,7 @@ export function EscritorioPage() {
           <p className="font-display text-grande font-semibold">{session?.tenant.name}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <ChecklistToggle />
           <NotificationBell summary={summary} />
           <UserMenu />
         </div>

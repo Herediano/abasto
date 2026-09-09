@@ -37,11 +37,12 @@ import { EscritorioController } from './escritorio.controller';
 import { ReportesController } from './reportes.controller';
 import { CreditNotesController } from './credit-notes.controller';
 import { CreditNotesService } from './credit-notes.service';
+import { TasksController } from './tasks.controller';
 import { BootstrapService } from './bootstrap.service';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController, EscritorioController, ReportesController, CreditNotesController],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController, EscritorioController, ReportesController, CreditNotesController, TasksController],
   providers: [
     StockService, AuthService, JwtAuthGuard, PermissionGuard, PurchasesService, PriceActivationService, PricesService, SalesService,
     CajaService, CuentasCorrientesService, RangosService, BootstrapService, CreditNotesService,

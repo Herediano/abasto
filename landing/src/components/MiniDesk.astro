@@ -126,44 +126,45 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   ? 'El escritorio de Abasto: la marca, el saludo, el mostrador con la caja abierta y una tarjeta por módulo con su número'
   : "Abasto's desk: the brand, the greeting, the open register and one card per module with its number"}>
 
-  <!-- Riel lateral: el botón despliega la columna de saltos; es solo la maqueta,
-       no navega (igual que la sidebar real, pero sin funciones). -->
-  <div class="desk__side">
-    <button
-      type="button"
-      class="desk__rail"
-      data-desk-rail
-      aria-expanded="false"
-      aria-controls="desk-side-nav"
-      aria-label={L.sideClosed}
-      title={L.sideClosed}
-    >
-      <svg class="desk__rail-icon" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-      <svg class="desk__rail-x" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
+  <header class="desk__bar">
+    <!-- Riel lateral: el botón vive en la barra, alineado con los demás
+         controles. Despliega la columna de saltos; es solo la maqueta, no
+         navega (igual que la sidebar real, pero sin funciones). -->
+    <div class="desk__side">
+      <button
+        type="button"
+        class="desk__rail"
+        data-desk-rail
+        aria-expanded="false"
+        aria-controls="desk-side-nav"
+        aria-label={L.sideClosed}
+        title={L.sideClosed}
+      >
+        <svg class="desk__rail-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="desk__rail-x" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
 
-    <div class="desk__sidereveal">
-      <div class="desk__sideclip">
-        <nav id="desk-side-nav" class="desk__sidenav" aria-label={lang === 'es' ? 'Módulos' : 'Modules'}>
-          {
-            sideItems.map((it, i) => (
-              <span
-                class:list={['desk__sitem', it.active && 'is-active']}
-                style={`--i:${i}; --hue:${it.hue}`}
-                title={it.name[lang]}
-              >
-                <span class="desk__sitem-bar" aria-hidden="true"></span>
-                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={it.icon} />
-                <span class="desk__sitem-label">{it.name[lang]}</span>
-              </span>
-            ))
-          }
-        </nav>
+      <div class="desk__sidereveal">
+        <div class="desk__sideclip">
+          <nav id="desk-side-nav" class="desk__sidenav" aria-label={lang === 'es' ? 'Módulos' : 'Modules'}>
+            {
+              sideItems.map((it, i) => (
+                <span
+                  class:list={['desk__sitem', it.active && 'is-active']}
+                  style={`--i:${i}; --hue:${it.hue}`}
+                  title={it.name[lang]}
+                >
+                  <span class="desk__sitem-bar" aria-hidden="true"></span>
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={it.icon} />
+                  <span class="desk__sitem-label">{it.name[lang]}</span>
+                </span>
+              ))
+            }
+          </nav>
+        </div>
       </div>
     </div>
-  </div>
 
-  <header class="desk__bar">
     <div class="desk__brand">
       <span class="desk__logo" aria-hidden="true">{L.coin}</span>
       <div>
@@ -172,6 +173,9 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
       </div>
     </div>
     <div class="desk__controls" aria-hidden="true">
+      <span class="desk__ctl desk__pencil">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+      </span>
       <span class="desk__ctl desk__bell">
         <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       </span>
@@ -231,13 +235,25 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   if (desk) {
     const rail = desk.querySelector('[data-desk-rail]');
     let cascade = false;
+    let settledTimeout = 0;
     rail?.addEventListener('click', () => {
       const open = desk.hasAttribute('data-side-open');
+      clearTimeout(settledTimeout);
       if (open) {
         desk.removeAttribute('data-side-open');
+        desk.removeAttribute('data-side-settled');
       } else {
         if (!cascade) { cascade = true; desk.setAttribute('data-cascade', ''); }
+        // Re-trigger de la cascada en cada apertura: se quita la clase y se
+        // fuerza un reflow para que la animación vuelva a correr desde cero.
+        desk.classList.remove('is-cascading');
+        void desk.offsetWidth;
+        desk.classList.add('is-cascading');
         desk.setAttribute('data-side-open', '');
+        // Terminada la animación de despliegue, el recorte se suelta para que
+        // el tooltip del nombre pueda salir por la derecha (igual que la
+        // sidebar real con su estado "settled").
+        settledTimeout = window.setTimeout(() => desk.setAttribute('data-side-settled', ''), 320);
       }
       rail.setAttribute('aria-expanded', String(!open));
       rail.setAttribute(
@@ -259,36 +275,43 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     background: var(--color-background);
     border: 1px solid var(--color-border);
     box-shadow: var(--shadow-hero);
-    padding: clamp(1.4rem, 1.1rem + 1.5vw, 2.4rem);
+    padding: clamp(1.6rem, 1.2rem + 1.8vw, 3rem);
     container-type: inline-size;
   }
 
   /* ===== Riel lateral =====
-     Réplica de la sidebar real (fixed left-4 top-4): el botón es la cabeza del
-     riel, el rail crece hacia abajo en cascada con grid-template-rows 0fr→1fr.
-     Flota sobre el contenido —no lo empuja—. El estado vive en data-side-open. */
-  .desk__side {
-    position: absolute;
-    left: clamp(0.6rem, 0.4rem + 0.6vw, 1rem);
-    top: clamp(0.6rem, 0.4rem + 0.6vw, 1rem);
-    z-index: 4;
+     Réplica de la sidebar real: vive en la cabecera, alineado con los otros
+     controles, y despliega su columna de saltos con grid-template-rows 0fr→1fr
+     hacia abajo desde el botón. La columna flota sobre el contenido —no lo
+     empuja—. El estado vive en data-side-open. */
+  .desk__bar {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--color-border-soft);
+    padding: 0 0 1.1rem;
+  }
+
+  .desk__side {
+    position: relative;
+    flex-shrink: 0;
+    z-index: 4;
   }
 
   .desk__rail {
     display: grid;
     place-items: center;
-    width: 3.25rem;
-    height: 3.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: var(--radius-md);
     background: var(--color-card);
     border: 1px solid var(--border-uiverse);
     box-shadow: var(--shadow-uiverse);
     transform: translateY(1px);
     color: var(--color-muted-foreground);
-    transition: box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease, background 0.2s ease;
     cursor: pointer;
   }
   .desk__rail:hover {
@@ -306,7 +329,9 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   .desk[data-side-open] .desk__rail-x { display: block; }
 
   .desk__sidereveal {
-    margin-top: 0.5rem;
+    position: absolute;
+    left: 0;
+    top: calc(100% + 0.5rem);
     display: grid;
     grid-template-rows: 0fr;
     opacity: 0;
@@ -320,12 +345,17 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     min-height: 0;
     overflow: hidden;
   }
+  /* Terminado el despliegue, el recorte se suelta y el tooltip del nombre
+     puede salir por la derecha (mismo gesto "settled" de la sidebar real). */
+  .desk[data-side-settled] .desk__sideclip {
+    overflow: visible;
+  }
   .desk__sidenav {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    width: 3.25rem;
-    padding: 0.4rem;
+    gap: 0.55rem;
+    width: 3.9rem;
+    padding: 0.6rem;
     border-radius: var(--radius-md);
     background: var(--color-card);
     border: 1px solid var(--border-uiverse);
@@ -335,12 +365,13 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     position: relative;
     display: grid;
     place-items: center;
-    height: 2.9rem;
+    height: 3.4rem;
     border-radius: var(--radius-md);
     color: var(--color-muted-foreground);
     transform: translateY(1px);
     box-shadow: none;
     transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    cursor: pointer;
   }
   .desk__sitem:hover {
     box-shadow: var(--shadow-uiverse-hover);
@@ -376,16 +407,17 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
      el sistema: el ítem se "expande" sin empujar a los demás). */
   .desk__sitem-label {
     position: absolute;
-    left: calc(100% + 0.5rem);
+    left: calc(100% + 0.6rem);
     top: 50%;
     transform: translateY(-50%);
     white-space: nowrap;
+    z-index: 6;
     border-radius: var(--radius-md);
     border: 1px solid var(--color-border);
     background: var(--color-card);
     box-shadow: var(--shadow-float);
-    padding: 0.3rem 0.6rem;
-    font-size: 0.72rem;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
     font-weight: 500;
     color: var(--color-foreground);
     opacity: 0;
@@ -394,9 +426,9 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   }
   .desk__sitem:hover .desk__sitem-label { opacity: 1; }
 
-  /* Entrada en cascada al abrir el riel — solo al abrir con el clic (data-cascade
-     se setea por JS al primer despliegue), nunca al cargar la página. */
-  .desk[data-cascade] .desk__sitem {
+  /* Entrada en cascada al abrir el riel — solo al abrir con el clic (la clase
+     is-cascading la setea el JS en cada despliegue), nunca al cargar la página. */
+  .desk.is-cascading .desk__sitem {
     animation: desk-side-in 240ms cubic-bezier(0.2, 0, 0, 1) both;
     animation-delay: calc(var(--i) * 22ms);
   }
@@ -405,20 +437,12 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   }
 
   /* ===== Cabecera ===== */
-  .desk__bar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 1.2rem;
-    flex-wrap: wrap;
-    border-bottom: 1px solid var(--color-border-soft);
-    padding: 0 0 1.1rem 4.5rem;
-  }
   .desk__brand {
     display: flex;
     gap: 0.7rem;
     align-items: center;
     margin-right: auto;
+    cursor: pointer;
   }
   .desk__logo {
     display: grid;
@@ -453,6 +477,7 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   .desk__ctl {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.45rem;
     height: 2.75rem;
     border-radius: var(--radius-md);
@@ -462,29 +487,66 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     transform: translateY(1px);
     color: var(--color-muted-foreground);
     transition: box-shadow 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
   }
   .desk__ctl:hover {
     box-shadow: var(--shadow-uiverse-hover);
     transform: translateY(-2px);
   }
-  .desk__bell { width: 2.75rem; justify-content: center; position: relative; }
-  .desk__bell::after {
-    content: '';
+  /* Campana, lápiz y perfil comparten exactamente la misma altura y el botón
+     cuadrado iguala el alto del pill del usuario: son el mismo rango de
+     controles del header del sistema (h-10 en checklist, notification-bell y
+     user-menu). El lápiz del sistema es ChecklistToggle con el badge de
+     pendientes. */
+  .desk__pencil, .desk__bell {
+    width: 2.75rem;
+    justify-content: center;
+    position: relative;
+  }
+  .desk__pencil::after {
+    content: '2';
     position: absolute;
     top: -0.3rem;
     right: -0.3rem;
-    width: 0.95rem;
+    min-width: 0.95rem;
     height: 0.95rem;
+    padding-inline: 0.15rem;
+    display: grid;
+    place-items: center;
     border-radius: var(--radius-sm);
     background: var(--ab-warn);
     border: 2px solid var(--ab-warn);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    font-weight: 700;
+    line-height: 1;
   }
-  .desk__user { padding: 0 0.7rem 0 0.35rem; }
+  .desk__bell::after {
+    content: '3';
+    position: absolute;
+    top: -0.3rem;
+    right: -0.3rem;
+    min-width: 0.95rem;
+    height: 0.95rem;
+    padding-inline: 0.15rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    background: var(--ab-warn);
+    border: 2px solid var(--ab-warn);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .desk__user { height: 2.75rem; padding: 0 0.75rem 0 0.4rem; }
   .desk__avatar {
     display: grid;
     place-items: center;
-    width: 1.85rem;
-    height: 1.85rem;
+    width: 1.75rem;
+    height: 1.75rem;
     border-radius: var(--radius-sm);
     background: var(--ab-primary);
     color: #fff;
@@ -497,6 +559,7 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     font-weight: 600;
     color: var(--color-foreground);
     white-space: nowrap;
+    line-height: 1;
   }
 
   /* ===== Saludo ===== */
@@ -533,6 +596,13 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     transform: translateY(1px);
     background: #3f7d5a;
     color: #fff;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+  }
+  .desk__mostrador:hover {
+    box-shadow: var(--shadow-uiverse-hover);
+    transform: translateY(-2px);
+    background: #376d4f;
   }
   .desk__mostrador-top {
     display: flex;
@@ -561,17 +631,21 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     background: #6fae8c;
     color: #04232c;
   }
+  :global(:root:not([data-theme='light'])) .desk__mostrador:hover {
+    background: #5f9b7a;
+  }
 
-  /* ===== Grilla: pareja y aireada — 2/3/4/5 columnas según el ancho. ===== */
+  /* ===== Grilla: pareja y aireada — 2/3/4/5/6 columnas según el ancho. ===== */
   .desk__grid {
     display: grid;
-    gap: 0.9rem;
+    gap: 1.1rem;
     grid-template-columns: repeat(2, 1fr);
     margin-top: 1.6rem;
   }
   @container (min-width: 30rem) { .desk__grid { grid-template-columns: repeat(3, 1fr); } }
   @container (min-width: 42rem) { .desk__grid { grid-template-columns: repeat(4, 1fr); } }
   @container (min-width: 55rem) { .desk__grid { grid-template-columns: repeat(5, 1fr); } }
+  @container (min-width: 68rem) { .desk__grid { grid-template-columns: repeat(6, 1fr); } }
 
   /* Tarjeta de módulo: estética Uiverse — cáscara neutra (borde cian + sombra
      dura desplazada que voltea al otro lado en hover) y el matiz del módulo
@@ -591,6 +665,7 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     box-shadow: var(--shadow-uiverse);
     transform: translateY(1px);
     transition: box-shadow 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
   }
   .desk__tile:hover {
     box-shadow: var(--shadow-uiverse-hover);
@@ -669,12 +744,15 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   :global(:root:not([data-theme='light'])) .desk__motif { opacity: 0.2; }
   :global(:root:not([data-theme='light'])) .desk__tile:hover .desk__motif { opacity: 0.32; }
 
-  /* El Preguntar flotante: se asoma arriba al centro. */
+  /* El Preguntar flotante: el botón de la chispa (Ctrl K) se asoma arriba al
+     centro, alineado verticalmente con la fila de controles del header —misma
+     altura que los botones de la cabecera—, y levanta en hover como cualquier
+     control Uiverse. */
   .desk__ask {
     position: absolute;
-    top: 0.9rem;
+    top: clamp(1.6rem, 1.2rem + 1.8vw, 3rem);
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(1px);
     z-index: 3;
     display: grid;
     place-items: center;
@@ -685,10 +763,16 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     border: 1px solid var(--border-uiverse);
     box-shadow: var(--shadow-uiverse);
     color: var(--ab-primary);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+  }
+  .desk__ask:hover {
+    box-shadow: var(--shadow-uiverse-hover);
+    transform: translateX(-50%) translateY(-2px);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .desk__sidereveal, .desk__rail, .desk__sitem, .desk__sitem-label, .desk__sitem-bar, .desk__ctl, .desk__tile, .desk__motif { transition: none; }
+    .desk__sidereveal, .desk__rail, .desk__sitem, .desk__sitem-label, .desk__sitem-bar, .desk__ctl, .desk__ask, .desk__tile, .desk__motif { transition: none; }
     .desk[data-cascade] .desk__sitem { animation-duration: 240ms; animation-iteration-count: 1; }
   }
 </style>

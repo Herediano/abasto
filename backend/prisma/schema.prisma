@@ -95,6 +95,7 @@ model Tenant {
   lots                     ProductLot[]
   stockMovements           StockMovement[]
   users                    User[]
+  tasks                    Task[]
   purchaseInvoices         PurchaseInvoice[]
   purchaseInvoiceLines     PurchaseInvoiceLine[]
   purchaseInvoiceRevisions PurchaseInvoiceRevision[]
@@ -617,11 +618,34 @@ model User {
   shiftsClosed             CashShift[]               @relation("ShiftClosedBy")
   cashMovements            CashMovement[]
   customerAccountMovements CustomerAccountMovement[]
+  tasks                    Task[]
 
   @@index([tenantId])
   @@index([tenantId, rangoId])
   @@index([tenantId, branchId])
   @@map("users")
+}
+
+// Tarea personal del usuario en el escritorio (checklist). Pertenece a un
+// usuario y a su tenant; `sort` es la posición en la lista del dueño.
+// `recurrence` ('daily' | 'weekly' | 'monthly'): al tildarla, en vez de quedar
+// lista, se programa la próxima ocurrencia (dueAt avanza) y vuelve sin tildar.
+model Task {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  text      String
+  done      Boolean  @default(false)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id])
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([userId, sort])
+  @@index([userId, done, sort])
+  @@index([tenantId])
+  @@map("tasks")
 }
 
 // Rango: rol configurable por empresa (RBAC). Los "de fábrica" (isSystem) vienen

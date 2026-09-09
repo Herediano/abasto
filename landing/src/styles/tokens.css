@@ -75,9 +75,9 @@
     --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
     --ab-shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 28px 72px -24px rgb(0 0 0 / 0.7);
 
-    --border-uiverse: rgba(0, 0, 255, 0.25);
-    --shadow-uiverse: 3px 3px 2px 1px rgba(0, 0, 0, 0.35);
-    --shadow-uiverse-hover: 8px 8px 2px 1px rgba(0, 0, 0, 0.35);
+    --border-uiverse: rgb(222 230 225 / 0.18);
+    --shadow-uiverse: 3px 3px 2px 1px rgb(0 0 0 / 0.5);
+    --shadow-uiverse-hover: 6px 6px 2px 1px rgb(0 0 0 / 0.55);
 
     color-scheme: dark;
   }
@@ -109,9 +109,9 @@
   --ab-shadow-2: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 30px -14px rgb(0 0 0 / 0.6);
   --ab-shadow-3: 0 2px 4px rgb(0 0 0 / 0.4), 0 28px 72px -24px rgb(0 0 0 / 0.7);
 
-  --border-uiverse: rgba(0, 0, 255, 0.25);
-  --shadow-uiverse: 3px 3px 2px 1px rgba(0, 0, 0, 0.35);
-  --shadow-uiverse-hover: 8px 8px 2px 1px rgba(0, 0, 0, 0.35);
+  --border-uiverse: rgb(222 230 225 / 0.18);
+  --shadow-uiverse: 3px 3px 2px 1px rgb(0 0 0 / 0.5);
+  --shadow-uiverse-hover: 6px 6px 2px 1px rgb(0 0 0 / 0.55);
 
   color-scheme: dark;
 }

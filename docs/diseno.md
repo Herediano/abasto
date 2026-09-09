@@ -135,17 +135,22 @@ izquierda y abajo a la derecha—. Acompaña, no compite. Reglas:
 
 ### Forma
 
-- **Radio**: exactamente tres pasos —`lg` 12 px (tarjetas, paneles), `md` 9 px
-  (botones, chips, inputs), `sm` 6 px (`kbd`, marcas chicas). No se usan valores
-  sueltos (`rounded-[10px]` y compañía): si algo no entra en los tres pasos, el
-  problema es el elemento, no el radio. **Dos formas totalmente redondas** salen
-  de la escala a propósito: la **píldora** (`badge`, chip de filtro, contador —
-  un token de conteo o de estado, no una superficie) y el **avatar** (siempre
-  circular, de la persona o de la empresa).
-- **Elevación**: dos sombras y significan algo. `card` (1 px, apenas despega) para
-  una superficie de contenido; `float` (1 px + halo suave) para algo que se
-  levantó por encima —un menú, un diálogo, el botón de caja. Todo lo demás está
-  al ras. La elevación no decora: marca jerarquía.
+- **Radio**: cuatro pasos —`lg` 12 px (paneles), `md` 9 px (botones, chips,
+  inputs), `sm` 6 px (`kbd`, marcas chicas) y **`xs` 5 px, reservado a las
+  tarjetas del escritorio**: la cáscara sticker (radio mínimo + sombra
+  desplazada) se lee mejor con el radio chico, y es el único lugar del sistema
+  que lo usa. No se usan valores sueltos (`rounded-[10px]` y compañía): si algo
+  no entra en los pasos, el problema es el elemento, no el radio. **Dos formas
+  totalmente redondas** salen de la escala a propósito: la **píldora** (`badge`,
+  chip de filtro, contador — un token de conteo o de estado, no una superficie)
+  y el **avatar** (siempre circular, de la persona o de la empresa).
+- **Elevación**: una tercera sombra, la **sticker**, está reservada a las
+  tarjetas del escritorio (en oscuro, offset duro negro; en claro, el mismo
+  offset neutro): apoya la tarjeta en el tablero y define su "despegue" en
+  hover. Las otras dos significan algo: `card` (1 px, apenas despega) para una
+  superficie de contenido; `float` (1 px + halo suave) para algo que se levantó
+  por encima —un menú, un diálogo, el botón de caja. Todo lo demás está al ras.
+  La elevación no decora: marca jerarquía.
 - **Borde**: un peso para separar superficies (`line`), uno más tenue para
   divisiones internas (`line-soft`). El color del borde puede teñirse con el
   matiz del módulo en el escritorio —ahí es identidad.
@@ -168,10 +173,14 @@ Base de **4 px**. Pasos: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64.
   transición es *la* animación del sistema —todo lo demás es secundario.
 - **Respuesta a una acción**: abrir, expandir, confirmar pueden animar para
   mostrar **qué cambió** (≤ 150 ms).
-- **Prohibido**: animaciones de entrada al cargar; que cada tarjeta se levante
-  (`translateY`) en hover; fade-and-slide-up por sección; la flechita que se
-  corre. El hover de una tarjeta solo **intensifica el borde y el motivo** —sin
-  transform.
+- **El hover de las tarjetas del escritorio**: la tarjeta vive *apoyada*
+  (`translateY(1px)`) y al pasar el mouse **se despega** 3 px mientras la sombra
+  sticker se desplaza hacia atrás —un levante, pero con la física del sticker,
+  no la flotación blanda de la tarjeta SaaS. En el mismo gesto se intensifican
+  el borde y el motivo. El resto del sistema no levanta nada en hover.
+- **Prohibido**: animaciones de entrada al cargar; fade-and-slide-up por
+  sección; la flechita que se corre; levantar tarjetas con sombra suave
+  genérica (`rgba(0,0,0,.1)`) que no pertenece al sistema.
 - `prefers-reduced-motion: reduce` corta toda animación; la transición degrada a
   corte instantáneo.
 
@@ -216,9 +225,10 @@ está para reconocer, no para decorar: si no ayuda a identificar algo, no va.
   del módulo para lo que le es propio (nombres, montos), ámbar cuando es un aviso
   (plazos, conteos pendientes), rojo cuando está mal. Nunca el bloque entero, una
   cifra en dosis mínimas. Un puntito ámbar o rojo arriba a la derecha basta para
-  marcar «acá hay algo». Los pendientes del día bajo el saludo son **chips**, uno
-  por cosa, cada uno con el color del módulo al que enlaza —una versión mínima de
-  su tarjeta, no un recuadro de alerta.
+  marcar «acá hay algo». Los pendientes del día viven en la **campana** del
+  encabezado: el conteo arriba a la derecha del ícono y, al abrirla, un item por
+  cosa con el **puntito del color del módulo** al que enlaza —una versión mínima
+  de su tarjeta, no un recuadro de alerta.
 - **Si se puede tocar, el cursor lo dice.** Todo botón, toggle y fila
   interactiva lleva la manito en hover (regla global en `styles.css`); lo
   deshabilitado, `not-allowed`.
@@ -286,19 +296,19 @@ Tres franjas, de menos a más peso hacia abajo:
 
 1. **Identidad, compacta.** El logo de la empresa a tamaño chico, el nombre, y
    `abasto.ai` —los dos legibles, ninguno como membrete. A la derecha, las
-   herramientas a la misma altura: sucursal, tema, cuenta.
+   herramientas a la misma altura: sucursal, **campana** (los pendientes del
+   día), **tareas** (checklist personal) y **cuenta** (con el tema adentro).
 2. **El héroe de la pantalla.** La fecha en capitalización normal, el saludo
-   según la hora (Buen día / Buenas tardes / Buenas noches) en h1, y los
-   pendientes del día como **chips con el color de su módulo** (o «Hoy no hay
-   nada urgente.»).
-3. **Pegado a la grilla.** Una fila de **tarjetas de acción**, con el mismo
-   molde que la caja —cascarón compacto, borde, superficie neutra y una franja
-   de color a la izquierda—: **Abrir Mostrador** (si el rango opera caja) a la
-   izquierda, **Configurar** y **Preguntar** (Ctrl + K) en el hueco de la
-   derecha. La franja es identidad, no estado: cian para Preguntar —es acción—,
-   pizarra para Configurar —es preferencia, no operación—. En pantalla angosta
-   la fila se apila. El ícono va suelto, sin pastilla, para que la fila quede
-   callada y no compita con las tarjetas de módulo.
+   según la hora (Buen día / Buenas tardes / Buenas noches) en h1 y, si estás
+   parado en una sucursal que no es la tuya, la indicación para volver. Los
+   pendientes del día no compiten acá: viven en la campana de la franja 1.
+3. **Pegado a la grilla.**
+   **Abrir Mostrador** (si el rango opera caja) a la izquierda, arriba del grid,
+   con el molde de tarjeta de acción —cascarón compacto, borde, superficie
+   neutra y la franja de color solo para él—. El **Preguntar** (Ctrl + K) fue el
+   reemplazo de Configurar: no hay modo de edición, la personalización vive en
+   la tarjeta misma, y la chispa flota por la pantalla (adosada en reposo), se
+   arrastra y recuerda su posición por dispositivo.
 
 ### La tarjeta — un solo molde para las ~14
 
@@ -336,8 +346,10 @@ La identidad se refuerza con el **color del módulo** (punto 1, más el borde y 
 lavado del fondo) y con un **motivo de línea** propio —grande y tenue, saliéndose
 por una esquina, teñido con ese color: Ventas unas barras que suben, Caja una
 registradora, Vencimientos un calendario, Precios una etiqueta. Es carácter que
-significa algo. Al pasar el mouse, **el borde y el motivo se intensifican y nada
-más** —la tarjeta no se levanta.
+significa algo. Al pasar el mouse, la tarjeta **se despega del tablero**: la
+sombra sticker se desplaza y el borde y el motivo se intensifican —un levante
+físico, el del sticker, no la flotación blanda de una tarjeta SaaS (ver
+"Movimiento", más arriba).
 
 ### Se arma por permiso
 
@@ -349,15 +361,17 @@ uno ve su recorte.
 ### Estado tranquilo
 
 Si no hay nada pendiente, el escritorio no queda vacío: queda **tranquilo**. Cada
-tarjeta muestra su versión en calma (`Al día`, `0 lotes`) y el renglón bajo el
-saludo pasa a «Hoy no hay nada urgente.». Un escritorio en calma es la señal de
-que está todo bien.
+tarjeta muestra su versión en calma (`Al día`, `0 lotes`) y la campana no tiene
+nada que atender («Hoy no hay nada urgente.»). Un escritorio en calma es la señal
+de que está todo bien.
 
 ### Configurable
 
-Un modo «Configurar»: ocultar tarjetas, mostrarlas de nuevo, reordenarlas
-arrastrando y elegir el **tamaño de las tarjetas** (chica / mediana / grande).
-La densidad de las tablas es otra cosa: vive sola en la cabecera de cada módulo
+La personalización está **directo sobre la tarjeta**, sin modo intermedio:
+ocultar desde el botón del ángulo (aparece en hover, con "Deshacer" navegable),
+mostrar de nuevo desde la fila **Ocultos**, **reordenar arrastrando** y **dar
+tamaño** estirando los bordes (o la esquina) de la misma tarjeta. La densidad de
+las tablas es otra cosa: vive sola en la cabecera de cada módulo
 (espacioso / compacto), donde el cambio se ve sobre la tabla real. Todo se
 guarda por dispositivo en `localStorage`. Con control — jerarquía clara, no un
 caos de widgets. Personalización más profunda (fijar, destacar, y que el orden
@@ -367,9 +381,9 @@ viaje con la cuenta) es más adelante.
 
 La caja es un **modo de trabajo**, no un módulo que se navega: pantalla
 completa, el mundo del cajero. En el escritorio vive en una **tarjeta de acción
-compacta** —el mismo molde que Configurar y Preguntar (borde, superficie neutra,
-dos renglones), pero con **dos barras de color, una por cada costado** en vez de
-la franja única a la izquierda— para que el ojo la lea como la tarjeta principal
+compacta** —cascarón del mismo aire que las tarjetas, superficie neutra y dos
+renglones, pero con **dos barras de color, una por cada costado** en vez de la
+franja única a la izquierda— para que el ojo la lea como la tarjeta principal
 de esa fila. Se llama **«Abrir Mostrador»**, va **primera, a la izquierda de la
 fila**, arriba del grid: el cajero la ve antes de mirar las tarjetas. La **barra
 de estado se lee del color de las dos rieles** —cian sólido si el turno está

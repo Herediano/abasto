@@ -1,6 +1,5 @@
 ---
 import MiniDesk from '../components/MiniDesk.astro';
-import Sparkbars from '../components/Sparkbars.astro';
 import { getLangFromUrl, useTranslations } from '../i18n/utils';
 const t = useTranslations(getLangFromUrl(Astro.url));
 
@@ -11,8 +10,8 @@ const feats = [
 ];
 ---
 
-<section class="u-section" id="escritorio">
-  <div class="u-container">
+<section class="u-section esc__section" id="escritorio">
+  <div class="esc__container">
     <div class="u-head" data-reveal>
       <p class="u-kicker">{t('escritorio.kicker')}</p>
       <h2>{t('escritorio.title')}</h2>
@@ -21,14 +20,6 @@ const feats = [
 
     <div class="esc__stage" data-reveal>
       <MiniDesk />
-
-      <aside class="esc__ia">
-        <span class="esc__ia-tag">✦ {t('escritorio.ia.tag')}</span>
-        <p class="esc__ia-title">{t('escritorio.ia.title')}</p>
-        <p class="esc__ia-body">{t('escritorio.ia.body')}</p>
-        <p class="esc__ia-chart-t">{t('escritorio.ia.chart')}</p>
-        <Sparkbars values={[1, 4, 2, 1]} labels={['S1', 'S2', 'S3', 'S4']} highlight={1} color="var(--ab-warn)" height={44} />
-      </aside>
     </div>
 
     <ul class="esc__feats">
@@ -48,65 +39,19 @@ const feats = [
 </section>
 
 <style>
+  /* La sección del escritorio respira más que el resto de la página: contenedor
+     propio más ancho (hasta ~108rem) para que el mock del escritorio —con su
+     riel a la izquierda y las tarjetas— tenga espacio real, no el ancho de
+     lectura del copy. */
+  .esc__container {
+    width: 100%;
+    max-width: 108rem;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 0.5rem + 3vw, 2.5rem);
+  }
+
   .esc__stage {
-    position: relative;
     margin-bottom: clamp(2.5rem, 1.5rem + 4vw, 4.5rem);
-  }
-
-  .esc__ia {
-    margin-top: 1rem;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--ab-primary-line);
-    background:
-      radial-gradient(120% 130% at 10% 0%, color-mix(in oklab, var(--ab-primary-soft) 80%, transparent), transparent 62%),
-      var(--color-card);
-    box-shadow: var(--shadow-float);
-    padding: 1.1rem 1.2rem;
-  }
-  @media (min-width: 60rem) {
-    .esc__ia {
-      position: absolute;
-      right: clamp(-1rem, -2vw, 0rem);
-      bottom: -2.5rem;
-      width: 20rem;
-      margin-top: 0;
-    }
-  }
-
-  .esc__ia-tag {
-    display: inline-block;
-    font-family: var(--font-mono);
-    font-size: 0.64rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ab-primary);
-    padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-    background: var(--ab-primary-soft);
-    border: 1px solid var(--ab-primary-line);
-  }
-  .esc__ia-title {
-    margin-top: 0.7rem;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1rem;
-    letter-spacing: -0.01em;
-  }
-  .esc__ia-body {
-    margin-top: 0.35rem;
-    font-size: 0.85rem;
-    line-height: 1.45;
-    color: var(--color-muted-foreground);
-  }
-  .esc__ia-chart-t {
-    margin-top: 0.9rem;
-    margin-bottom: 0.4rem;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-faint);
   }
 
   .esc__feats {

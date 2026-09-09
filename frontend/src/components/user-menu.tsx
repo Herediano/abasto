@@ -11,6 +11,7 @@ import {
   Menu, MenuBlock, MenuContent, MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger,
 } from '@/components/ui/menu';
 import { cn, initials } from '@/lib/utils';
+import { cerrarOtrosDesplegables, registrarDesplegable } from '@/lib/desplegables';
 
 /** Cuándo se abrió la sesión — sale del `iat` del token, sin pedir nada nuevo. */
 function inicioDeSesion(token: string): Date | null {
@@ -64,6 +65,8 @@ export function UserMenu({ className }: { className?: string }) {
     api<Branch[]>('/branches', {}, session.accessToken).then(setBranches).catch(() => {});
   }, [open, session]);
 
+  useEffect(() => registrarDesplegable('user', () => setOpen(false)), []);
+
   if (!user || !session) return null;
 
   const pickBranch = (id: string) => {
@@ -71,7 +74,14 @@ export function UserMenu({ className }: { className?: string }) {
   };
 
   return (
-    <Menu open={open} onOpenChange={setOpen}>
+    <Menu
+      open={open}
+      onOpenChange={v => {
+        if (v) cerrarOtrosDesplegables('user');
+        setOpen(v);
+      }}
+      modal={false}
+    >
       <MenuTrigger
         aria-label="Menú de la cuenta"
         className={cn(

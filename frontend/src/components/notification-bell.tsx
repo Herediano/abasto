@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { Bell } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, MenuBlock, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { pendientes, type EscritorioSummary } from '@/lib/escritorio';
 import { hueFor } from '@/lib/modules';
+import { cerrarOtrosDesplegables, registrarDesplegable } from '@/lib/desplegables';
 
 /**
  * El botón de notificaciones del escritorio: "Para mirar hoy" hoy vive acá, no
@@ -12,9 +14,19 @@ import { hueFor } from '@/lib/modules';
 export function NotificationBell({ summary }: { summary: EscritorioSummary | null }) {
   const navigate = useNavigate();
   const items = summary ? pendientes(summary) : [];
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => registrarDesplegable('bell', () => setOpen(false)), []);
 
   return (
-    <Menu>
+    <Menu
+      open={open}
+      onOpenChange={v => {
+        if (v) cerrarOtrosDesplegables('bell');
+        setOpen(v);
+      }}
+      modal={false}
+    >
       <MenuTrigger
         aria-label="Notificaciones"
         className="uiverse-ctl group relative flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-background hover:text-foreground data-[state=open]:border-accent-border data-[state=open]:bg-accent data-[state=open]:text-primary"
