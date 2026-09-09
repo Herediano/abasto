@@ -140,8 +140,8 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
         aria-label={L.sideClosed}
         title={L.sideClosed}
       >
-        <svg class="desk__rail-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-        <svg class="desk__rail-x" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        <svg class="desk__rail-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="desk__rail-x" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
 
       <div class="desk__sidereveal">
@@ -155,7 +155,7 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
                   title={it.name[lang]}
                 >
                   <span class="desk__sitem-bar" aria-hidden="true"></span>
-                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={it.icon} />
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={it.icon} />
                   <span class="desk__sitem-label">{it.name[lang]}</span>
                 </span>
               ))
@@ -196,7 +196,10 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
       {L.mostrador}
       <span class="desk__blink" />
     </span>
-    <span class="desk__mostrador-line">{L.cajaLinea}</span>
+    <span class="desk__mostrador-line">
+      <span class="desk__mostrador-track">{L.cajaLinea}</span>
+      <span class="desk__mostrador-track" aria-hidden="true">{L.cajaLinea}</span>
+    </span>
   </div>
 
   <div class="desk__grid">
@@ -303,8 +306,8 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   .desk__rail {
     display: grid;
     place-items: center;
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 3.5rem;
+    height: 3.5rem;
     border-radius: var(--radius-md);
     background: var(--color-card);
     border: 1px solid var(--border-uiverse);
@@ -353,9 +356,9 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   .desk__sidenav {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
-    width: 3.9rem;
-    padding: 0.6rem;
+    gap: 0.375rem;
+    width: 3.5rem;
+    padding: 0.375rem;
     border-radius: var(--radius-md);
     background: var(--color-card);
     border: 1px solid var(--border-uiverse);
@@ -365,10 +368,9 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     position: relative;
     display: grid;
     place-items: center;
-    height: 3.4rem;
+    height: 3rem;
     border-radius: var(--radius-md);
     color: var(--color-muted-foreground);
-    transform: translateY(1px);
     box-shadow: none;
     transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
     cursor: pointer;
@@ -407,17 +409,17 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
      el sistema: el ítem se "expande" sin empujar a los demás). */
   .desk__sitem-label {
     position: absolute;
-    left: calc(100% + 0.6rem);
+    left: calc(100% + 0.5rem);
     top: 50%;
     transform: translateY(-50%);
     white-space: nowrap;
-    z-index: 6;
+    z-index: 20;
     border-radius: var(--radius-md);
     border: 1px solid var(--color-border);
     background: var(--color-card);
     box-shadow: var(--shadow-float);
-    padding: 0.35rem 0.7rem;
-    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.8rem;
     font-weight: 500;
     color: var(--color-foreground);
     opacity: 0;
@@ -427,13 +429,17 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
   .desk__sitem:hover .desk__sitem-label { opacity: 1; }
 
   /* Entrada en cascada al abrir el riel — solo al abrir con el clic (la clase
-     is-cascading la setea el JS en cada despliegue), nunca al cargar la página. */
+     is-cascading la setea el JS en cada despliegue), nunca al cargar la página.
+     El relleno es backwards: durante la espera (delay) cada ítem sostiene su
+     estado inicial, y al terminar la animación vuelve al transform natural
+     (si no, el fill "both" dejaba el transform clavado y el hover saltaba). */
   .desk.is-cascading .desk__sitem {
-    animation: desk-side-in 240ms cubic-bezier(0.2, 0, 0, 1) both;
+    animation: desk-side-in 240ms cubic-bezier(0.2, 0, 0, 1) backwards;
     animation-delay: calc(var(--i) * 22ms);
   }
   @keyframes desk-side-in {
     from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: none; }
   }
 
   /* ===== Cabecera ===== */
@@ -617,15 +623,38 @@ const ventasBars = [58, 61, 44, 66, 72, 96, 70];
     height: 0.45rem;
     border-radius: 50%;
     background: #fff;
+    /* Misma titilación que el real: parpadeo de encendido/apagado (no un
+       rebote), forzado con !important para que ni "reducir movimiento" lo
+       corte: es el semáforo de la caja, la info de que está abierta. */
+    animation: desk-mostrador-blink 1s ease-in-out infinite !important;
+  }
+  @keyframes desk-mostrador-blink {
+    0%, 40%, 100% { opacity: 1; }
+    55%, 75% { opacity: 0; }
+  }
+  :global(:root:not([data-theme='light'])) .desk__blink {
+    animation-duration: 1.6s !important;
   }
   .desk__mostrador-line {
+    display: flex;
+    width: 100%;
     font-size: 0.74rem;
     line-height: 1.25;
     opacity: 0.88;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+  }
+  /* Mismo marquee que el real: la descripción corre de derecha a izquierda en
+     bucle cerrado (dos copias, desplazamiento -50% sin saltos). */
+  .desk__mostrador-track {
+    display: inline-block;
+    padding-right: 2.5rem;
+    animation: desk-mostrador-marquee 9s linear infinite;
+    will-change: transform;
+  }
+  @keyframes desk-mostrador-marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
   }
   :global(:root:not([data-theme='light'])) .desk__mostrador {
     background: #6fae8c;
