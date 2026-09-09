@@ -1,46 +1,27 @@
-import { Sparkle } from '@phosphor-icons/react';
 import { useAuth } from '@/lib/auth-context';
-import { usePreguntarLibre } from '@/lib/prefs';
 import type { EscritorioSummary } from '@/lib/escritorio';
 import { NotificationBell } from '@/components/notification-bell';
 import { UserMenu } from '@/components/user-menu';
 import { ChecklistToggle } from '@/components/checklist';
 import { Sidebar, SidebarToggle } from './sidebar';
 
-/** El Preguntar dentro de la barra (modo fijo): solo la chispa, igual que el
- *  flotante en reposo. La etiqueta vive nada más en el gesto (hover), que el
- *  flotante muestra con su pill. */
-function PreguntarHeader({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Preguntar (Ctrl K)"
-      title="Preguntar (Ctrl K)"
-      className="uiverse-ctl group grid h-10 w-10 place-items-center rounded-lg border border-uiverse bg-card/70 text-primary shadow-uiverse transition-[box-shadow,background-color,border-color] duration-200 hover:bg-card hover:shadow-uiverse-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
-    >
-      <Sparkle weight="fill" className="size-5 transition-transform duration-200 group-hover:scale-110" />
-    </button>
-  );
-}
-
 /**
  * La barra unificada del escritorio (la arma el shell a lo ancho de la
  * pantalla, fuera del contenedor centrado): riel + logo + nombre a la
- * izquierda, pegado a la esquina; Preguntar, tareas, notificaciones y cuenta a
- * la derecha. Sticky: al scrollear acompaña siempre. El riel lateral cuelga
- * del botón, abajo de la barra (ver `Sidebar inHeader`).
+ * izquierda, pegado a la esquina; tareas, notificaciones y cuenta a la
+ * derecha. Sticky: al scrollear acompaña siempre. El riel lateral cuelga del
+ * botón, abajo de la barra (ver `Sidebar inHeader`). El Preguntar no vive acá:
+ * flota arriba al centro, en su modo fijo y en el libre.
  */
-export function AppHeader({ summary, onPreguntar }: { summary: EscritorioSummary | null; onPreguntar: () => void }) {
+export function AppHeader({ summary }: { summary: EscritorioSummary | null }) {
   const { session } = useAuth();
-  const { libre } = usePreguntarLibre();
   if (!session) return null;
 
   return (
     <header className="sticky top-0 z-30 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border-soft bg-background/85 px-4 py-2.5 backdrop-blur">
       <Sidebar inHeader />
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <SidebarToggle className="hidden md:grid" />
+        <SidebarToggle className="hidden md:grid size-10! [&_svg]:size-5" />
         {session.tenant.logo ? (
           <img
             src={session.tenant.logo}
@@ -55,7 +36,6 @@ export function AppHeader({ summary, onPreguntar }: { summary: EscritorioSummary
         <p className="min-w-0 truncate font-display text-grande font-semibold">{session.tenant.name}</p>
       </div>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-        {!libre && <PreguntarHeader onClick={onPreguntar} />}
         <ChecklistToggle />
         <NotificationBell summary={summary} />
         <UserMenu />

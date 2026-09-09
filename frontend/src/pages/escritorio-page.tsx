@@ -315,8 +315,8 @@ function PreguntarFlotante({ onClick }: { onClick: () => void }) {
       className={cn(
         `group fixed z-40 flex size-12 items-center justify-center ${libre ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`,
         'rounded-[5px] border backdrop-blur-sm transition-[box-shadow,background-color,border-color,transform] duration-200 ease-out',
-        'border-uiverse bg-card/70 shadow-uiverse text-primary active:translate-y-px',
-        'hover:border-uiverse hover:bg-card hover:shadow-uiverse-hover',
+        'border-uiverse bg-card/70 shadow-[3px_3px_2px_1px_rgba(128,212,238,0.38)] text-primary active:translate-y-px',
+        'hover:border-uiverse hover:bg-card hover:shadow-[6px_6px_2px_1px_rgba(128,212,238,0.45)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
       )}
     >
@@ -820,9 +820,9 @@ export function EscritorioPage() {
 
   return (
     <div className="pt-4">
-      {/* El Preguntar flota (y se arrastra) solo en modo libre — Ajustes →
-          Preferencias. En el modo fijo vive en la barra de arriba (AppHeader). */}
-      {libre && <PreguntarFlotante onClick={openPalette} />}
+      {/* El Preguntar flota arriba al centro (fijo) o se arrastra a cualquier
+          lugar en modo libre — Ajustes → Preferencias. */}
+      <PreguntarFlotante onClick={openPalette} />
 
       {/* Saludo (y lo que hay para mirar, en la campana de arriba). */}
       <div className="mt-4">

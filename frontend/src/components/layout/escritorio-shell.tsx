@@ -80,7 +80,7 @@ export function EscritorioShell() {
     <PaletteContext.Provider value={() => setPalette(true)}>
       <SummaryContext.Provider value={summary}>
         <div className="min-h-screen">
-          {enEscritorio && <AppHeader summary={summary} onPreguntar={() => setPalette(true)} />}
+          {enEscritorio && <AppHeader summary={summary} />}
           <Sidebar />
           <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 pb-16">
             <Outlet />
