@@ -2,15 +2,14 @@ import { Sparkle } from '@phosphor-icons/react';
 import { useAuth } from '@/lib/auth-context';
 import { usePreguntarLibre } from '@/lib/prefs';
 import type { EscritorioSummary } from '@/lib/escritorio';
-import { Kbd } from '@/components/ui/kbd';
 import { NotificationBell } from '@/components/notification-bell';
 import { UserMenu } from '@/components/user-menu';
 import { ChecklistToggle } from '@/components/checklist';
 import { Sidebar, SidebarToggle } from './sidebar';
 
-/** El Preguntar dentro de la barra (modo fijo): mismo chrome uiverse que el
- *  flotante, pero en línea con los demás botones. La etiqueta aparece a partir
- *  de sm y el atajo de teclado recién en lg, para no apretar la barra. */
+/** El Preguntar dentro de la barra (modo fijo): solo la chispa, igual que el
+ *  flotante en reposo. La etiqueta vive nada más en el gesto (hover), que el
+ *  flotante muestra con su pill. */
 function PreguntarHeader({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -18,11 +17,9 @@ function PreguntarHeader({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       aria-label="Preguntar (Ctrl K)"
       title="Preguntar (Ctrl K)"
-      className="uiverse-ctl group flex h-10 items-center gap-2 rounded-lg border border-uiverse bg-card/70 px-3 text-chico font-medium text-foreground shadow-uiverse transition-[box-shadow,background-color,border-color] duration-200 hover:bg-card hover:shadow-uiverse-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
+      className="uiverse-ctl group grid h-10 w-10 place-items-center rounded-lg border border-uiverse bg-card/70 text-primary shadow-uiverse transition-[box-shadow,background-color,border-color] duration-200 hover:bg-card hover:shadow-uiverse-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
     >
-      <Sparkle weight="fill" className="size-4 text-primary transition-transform duration-200 group-hover:scale-110" />
-      <span className="hidden sm:inline">Preguntar</span>
-      <Kbd className="hidden lg:inline-flex">Ctrl K</Kbd>
+      <Sparkle weight="fill" className="size-5 transition-transform duration-200 group-hover:scale-110" />
     </button>
   );
 }
