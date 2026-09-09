@@ -49,7 +49,7 @@ export function SidebarItem({ to, icon: Icon, label, hue, index = 0 }: SidebarIt
           style={{ background: hue }}
         />
       )}
-      <Icon className="size-7 shrink-0" weight={active ? 'fill' : 'regular'} style={{ color: hue }} />
+      <Icon className="size-6 shrink-0" weight={active ? 'fill' : 'regular'} style={{ color: hue }} />
       <span className="pointer-events-none absolute left-[calc(100%+0.5rem)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2.5 py-1 text-chico text-foreground shadow-float opacity-0 transition-opacity duration-150 group-hover/item:opacity-100 group-focus-visible/item:opacity-100">
         {label}
       </span>

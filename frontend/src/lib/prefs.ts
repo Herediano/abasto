@@ -40,6 +40,7 @@ export function useTiles() {
 }
 
 const PREGUNTAR_LIBRE_KEY = 'abasto-preguntar-libre';
+const PREGUNTAR_LIBRE_EVENT = 'abasto:preguntar-libre';
 
 function leerPreguntarLibre(): boolean {
   try {
@@ -51,17 +52,29 @@ function leerPreguntarLibre(): boolean {
 
 /** El botón Preguntar del escritorio arranca fijo en su posición por defecto
  *  (arriba al centro); "libre" habilita arrastrarlo a cualquier lugar y que la
- *  posición quede guardada en este dispositivo. */
+ *  posición quede guardada en este dispositivo. El estado se comparte entre
+ *  componentes (Ajustes, header, shell, flotante) vía un evento, así activar
+ *  "libre" en Ajustes actualiza el header y el flotante al instante, sin
+ *  recargar. */
 export function usePreguntarLibre() {
   const [libre, setLibre] = useState<boolean>(leerPreguntarLibre);
   useEffect(() => {
+    function onCambio(e: Event) {
+      setLibre((e as CustomEvent<boolean>).detail);
+    }
+    window.addEventListener(PREGUNTAR_LIBRE_EVENT, onCambio);
+    return () => window.removeEventListener(PREGUNTAR_LIBRE_EVENT, onCambio);
+  }, []);
+  const cambiar = (v: boolean) => {
+    setLibre(v);
     try {
-      localStorage.setItem(PREGUNTAR_LIBRE_KEY, libre ? '1' : '0');
+      localStorage.setItem(PREGUNTAR_LIBRE_KEY, v ? '1' : '0');
     } catch {
       // sin persistencia
     }
-  }, [libre]);
-  return { libre, setLibre };
+    window.dispatchEvent(new CustomEvent(PREGUNTAR_LIBRE_EVENT, { detail: v }));
+  };
+  return { libre, setLibre: cambiar };
 }
 
 /** Los colores de avatar que ofrece Ajustes. El primero es el cian de la marca. */

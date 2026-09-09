@@ -46,7 +46,7 @@ export function RestockPage() {
 
   return (
     <>
-      <PageHeader title="Reposición" description="Productos con stock mínimo configurado que hoy están por debajo de ese umbral." />
+      <PageHeader title="Reposición" />
       <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       <ListFilters

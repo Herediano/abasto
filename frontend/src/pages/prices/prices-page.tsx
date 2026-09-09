@@ -437,7 +437,7 @@ export function PricesPage() {
 
   return (
     <>
-      <PageHeader title="Precios" description="Listas, actualización masiva y auditoría de precios." />
+      <PageHeader title="Precios" />
 
       {toolsMessage && <Alert>{toolsMessage}</Alert>}
       {error && <Alert variant="destructive">{error}</Alert>}

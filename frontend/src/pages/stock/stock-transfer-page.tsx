@@ -96,7 +96,7 @@ export function StockTransferPage() {
 
   return (
     <>
-      <PageHeader title="Transferir stock" description="Mover mercadería de un depósito a otro. Queda registrada en el historial de las dos puntas." />
+      <PageHeader title="Transferir stock" />
       <StockNav />
       {done && <Alert>{done}</Alert>}
       {error && <Alert variant="destructive">{error}</Alert>}

@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { CommandPalette } from '@/components/command-palette';
+import { PreguntarFlotante } from '@/components/preguntar-flotante';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { usePreguntarLibre } from '@/lib/prefs';
 import type { EscritorioSummary } from '@/lib/escritorio';
 import { backTargetFor } from '@/lib/modules';
 import { AppHeader } from './app-header';
@@ -32,6 +34,7 @@ export function EscritorioShell() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const enEscritorio = pathname === '/';
+  const { libre } = usePreguntarLibre();
   const [palette, setPalette] = useState(false);
   const [summary, setSummary] = useState<EscritorioSummary | null>(null);
 
@@ -79,17 +82,18 @@ export function EscritorioShell() {
   return (
     <PaletteContext.Provider value={() => setPalette(true)}>
       <SummaryContext.Provider value={summary}>
-        <div className="min-h-screen">
+        <div className="min-h-screen overflow-x-clip">
           {enEscritorio && <AppHeader summary={summary} />}
           <Sidebar />
-          <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 pb-16">
+          <div className={`mx-auto flex flex-col gap-5 px-6 pb-16 ${enEscritorio ? 'max-w-7xl' : 'max-w-5xl'}`}>
             <Outlet />
           </div>
-          <footer className="mx-auto flex max-w-6xl justify-end px-6 pb-10">
+          <footer className={`mx-auto flex justify-end px-6 pb-10 ${enEscritorio ? 'max-w-7xl' : 'max-w-5xl'}`}>
             <p className="font-display text-h3 font-semibold tracking-tight text-muted-foreground">
               abasto<span className="text-primary">.ai</span>
             </p>
           </footer>
+          {libre && <PreguntarFlotante onClick={() => setPalette(true)} />}
           <CommandPalette open={palette} onOpenChange={setPalette} />
         </div>
       </SummaryContext.Provider>

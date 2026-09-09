@@ -446,11 +446,30 @@
   line-height: 1.35;
 }
 
-/* El tamaño de cada tarjeta lo decide el usuario estirando sus bordes (spans
-   de la grilla, ver escritorio-page.tsx): no hay presets ni bento. Las celdas
-   vacías siguen la altura fija de fila del tablero. */
-.escritorio-grid .escritorio-slot {
-  min-height: 168px;
+/* El tablero lo gobierna react-grid-layout: base mínima de posicionado (el
+   paquete no trae CSS si no se importa su hoja) y las transiciones — mover
+   (FLIP) y estirar — las hace el navegador sobre los estilos que RGL mete
+   inline en las tarjetas. El grid viejo (grid CSS + slots) quedó atrás. */
+.react-grid-layout {
+  position: relative;
+}
+.react-grid-item {
+  transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+  touch-action: none;
+}
+.react-grid-item.react-draggable-dragging,
+.react-grid-item.resizing {
+  transition: none;
+  z-index: 30;
+}
+.react-grid-item.react-draggable-dragging {
+  cursor: grabbing;
+  opacity: 0.9;
+}
+.react-grid-placeholder {
+  border: 1.5px dashed color-mix(in srgb, var(--color-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  border-radius: 8px;
 }
 
 /* Bordes de estirado: zonas calientes sobre el borde derecho, el inferior y la
@@ -483,45 +502,114 @@
   height: 18px;
   cursor: nwse-resize;
 }
-.tile-resize--e::after,
-.tile-resize--s::after {
+.tile-resize--n {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 10px;
+  cursor: ns-resize;
+}
+.tile-resize--w {
+  top: 44px;
+  left: 0;
+  width: 10px;
+  height: calc(100% - 44px);
+  cursor: ew-resize;
+}
+.tile-resize--ne {
+  right: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nesw-resize;
+}
+.tile-resize--nw {
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+}
+.tile-resize--sw {
+  left: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nesw-resize;
+}
+.tile-resize--n::after {
   content: '';
   position: absolute;
+  left: 50%;
+  top: 2px;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
   border-radius: 999px;
   background: var(--color-primary);
   opacity: 0;
   transition: opacity 0.15s;
 }
-.tile-resize--e::after {
+.tile-resize--w::after {
+  content: '';
+  position: absolute;
   top: 50%;
-  right: 2px;
+  left: 2px;
   transform: translateY(-50%);
   width: 3px;
   height: 32px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity 0.15s;
 }
-.tile-resize--s::after {
-  left: 50%;
-  bottom: 2px;
-  transform: translateX(-50%);
-  width: 32px;
-  height: 3px;
-}
-.tile-resize--se::after {
+.tile-resize--ne::after {
   content: '';
   position: absolute;
   right: 3px;
-  bottom: 3px;
+  top: 3px;
   width: 7px;
   height: 7px;
   border-right: 2px solid var(--color-muted-foreground);
+  border-top: 2px solid var(--color-muted-foreground);
+  border-top-right-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tile-resize--nw::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 7px;
+  height: 7px;
+  border-left: 2px solid var(--color-muted-foreground);
+  border-top: 2px solid var(--color-muted-foreground);
+  border-top-left-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tile-resize--sw::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  border-left: 2px solid var(--color-muted-foreground);
   border-bottom: 2px solid var(--color-muted-foreground);
-  border-bottom-right-radius: 3px;
+  border-bottom-left-radius: 3px;
   opacity: 0;
   transition: opacity 0.15s;
 }
 .tile-resize--e:hover::after,
 .tile-resize--s:hover::after,
-.tile-resize--se:hover::after {
+.tile-resize--se:hover::after,
+.tile-resize--n:hover::after,
+.tile-resize--w:hover::after,
+.tile-resize--ne:hover::after,
+.tile-resize--nw:hover::after,
+.tile-resize--sw:hover::after {
   opacity: 0.65;
 }
 
@@ -631,16 +719,31 @@
   background: #93403b;
 }
 :root:not([data-theme='light']) .mostrador-open {
-  background: #6fae8c;
-  color: #04232c;
+  background: #2f7a54;
+  color: #ffffff;
 }
 :root:not([data-theme='light']) .mostrador-open:hover {
-  background: #5f9b7a;
+  background: #2a6b49;
 }
 :root:not([data-theme='light']) .mostrador-closed {
-  background: var(--ab-danger);
-  color: var(--ab-on-solid);
+  background: #c2554c;
+  color: #ffffff;
 }
 :root:not([data-theme='light']) .mostrador-closed:hover {
-  background: #ce6458;
+  background: #b0453c;
+}
+
+/* El header del módulo se estira de borde a borde cuando el contenedor del
+ * cuerpo queda centrado (≥1280px = el máximo 7xl): ancho de ventana con
+ * márgenes calculados para arrancar en el borde izquierdo. Con ventanas más
+ * chicas, compensa el padding lateral del contenedor (px-6) para cubrirlo de
+ * punta a punta, igual que antes. */
+.module-header {
+  margin-inline: -1.5rem;
+}
+@media (min-width: 80rem) {
+  .module-header {
+    margin-inline: calc(50% - 50vw);
+    width: 100vw;
+  }
 }

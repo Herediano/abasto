@@ -79,7 +79,6 @@ export function SuppliersPage() {
     <>
       <PageHeader
         title="Proveedores"
-        description="Registrá los proveedores para asociarlos a lotes y facturas de compra."
         actions={
           <>
             <ExportMenu path="/suppliers" filename="proveedores" />

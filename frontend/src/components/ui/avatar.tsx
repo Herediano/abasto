@@ -16,8 +16,8 @@ export function Avatar({
   const color = preferences?.avatarColor ?? AVATAR_COLORS[0];
   return (
     <span
-      className={cn('grid shrink-0 place-items-center overflow-hidden font-display font-bold text-white', className)}
-      style={{ background: color, borderRadius: '5px' }}
+      className={cn('grid shrink-0 place-items-center overflow-hidden font-display font-bold', className)}
+      style={{ background: color, borderRadius: '5px', color: '#ffffff' }}
     >
       {photo ? <img src={photo} alt={`Foto de ${name}`} className="size-full object-cover" /> : initials(name)}
     </span>

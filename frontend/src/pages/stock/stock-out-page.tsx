@@ -81,7 +81,7 @@ export function StockOutPage() {
 
   return (
     <>
-      <PageHeader title="Registrar egreso" description="Descuenta stock por venta, transferencia o ajuste." />
+      <PageHeader title="Registrar egreso" />
       <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       <Card>

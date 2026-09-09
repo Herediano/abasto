@@ -65,7 +65,6 @@ export function ShiftsHistoryPage() {
     <>
       <PageHeader
         title="Turnos de caja"
-        description="Apertura, cierre y arqueo de cada turno, en todas las cajas de la sucursal."
         actions={<ExportMenu path="/cash-shifts" params={filtros} filename="turnos-de-caja" />}
       />
       {error && <Alert variant="destructive">{error}</Alert>}

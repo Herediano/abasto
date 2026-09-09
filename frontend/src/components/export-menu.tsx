@@ -68,7 +68,7 @@ export function ExportMenu({
     <Menu>
       <MenuTrigger
         className={cn(
-          'group flex h-9 items-center gap-1.5 rounded-md border border-input bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:border-accent-border hover:bg-subtle hover:text-foreground data-[state=open]:bg-subtle data-[state=open]:text-foreground',
+          'group flex h-10 items-center gap-1.5 rounded-md border border-input bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:border-accent-border hover:bg-subtle hover:text-foreground data-[state=open]:bg-subtle data-[state=open]:text-foreground',
           className,
         )}
       >

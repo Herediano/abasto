@@ -325,7 +325,7 @@ export function StockInPage() {
 
   return (
     <>
-      <PageHeader title={editingInvoice ? 'Corregir factura' : 'Ingreso por factura'} description="La sucursal/depósito se toma del usuario logueado. Al confirmar se genera el ingreso de stock." />
+      <PageHeader title={editingInvoice ? 'Corregir factura' : 'Ingreso por factura'} />
       <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       {editingInvoice && <Alert>Estás corrigiendo una factura confirmada. La original queda registrada en el historial.</Alert>}

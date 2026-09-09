@@ -112,7 +112,7 @@ export function ExpirationsPage() {
 
   return (
     <>
-      <PageHeader title="Vencimientos" description="Stock con fecha de vencimiento, ordenado del más próximo al más lejano." />
+      <PageHeader title="Vencimientos" />
       <StockNav />
       {error && !editing && <Alert variant="destructive">{error}</Alert>}
       <ListFilters

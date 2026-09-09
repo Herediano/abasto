@@ -1,32 +1,29 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { CashRegister, EyeSlash, Plus, Sparkle } from '@phosphor-icons/react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react';
+import { CalendarBlank, CashRegister, EyeSlash, Plus } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
-import { Kbd } from '@/components/ui/kbd';
-import { usePalette, useEscritorioSummary } from '@/components/layout/escritorio-shell';
+import ReactGridLayout, { cloneLayout, useContainerWidth, verticalCompactor, type Compactor, type Layout, type LayoutItem } from 'react-grid-layout';
+import { useEscritorioSummary } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
 import { hora as fmtHora } from '@/lib/format';
 import { compact, statFor, type EscritorioSummary, type TileBar } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
 import { setActiveBranch } from '@/lib/branch';
-import { usePreguntarLibre } from '@/lib/prefs';
 import { cn } from '@/lib/utils';
 
 const CONFIG_KEY = 'abasto-escritorio';
 
-/** Grilla fija de columnas; sin presets de tamaño. Cada tarjeta se agranda o
- *  achica estirando sus bordes (span de columnas y filas) y el tablero fluye
- *  denso para no dejar agujeros. */
+/** Grilla fija de columnas; sin presets de tamaño. El tablero lo gobierna
+ *  react-grid-layout (drag + resize), pero la PERSISTENCIA sigue siendo la
+ *  posición densa (packed): el único desvío visual es el centrado de la última
+ *  fila incompleta (parche, react-grid-layout no lo soporta). */
 const GRID_COLS = 5;
-const GAP = 12; // gap-3
-const ROW_H = 168; // gridAutoRows
+const GAP = 12; // gap-3 (misma separación que el grid viejo)
+const ROW_H = 168; // alto de fila en px
 const MAX_ROWS = 4;
 
-type TileSpan = { w: number; h: number };
-
 /** Una tarjeta del tablero: posición explícita (col, row en 0..) y tamaño en
- *  celdas. Nada de flujo automático: cada tarjeta sabe dónde vive, así mover,
- *  estirar y reacomodar es aritmética pura y determinista. */
+ *  celdas. Se persiste densa (packed); el corrimiento de centrado es solo un
+ *  desvío de render. */
 type TilePos = { key: string; col: number; row: number; w: number; h: number };
 
 /** Mayúscula inicial y nada más: el renglón de contexto ya viene en minúscula. */
@@ -174,166 +171,6 @@ function Marquee({ text, className }: { text: string; className?: string }) {
   );
 }
 
-const PREGUNTAR_REPOSO_KEY = 'abasto-preguntar-reposo';
-const PREGUNTAR_DIM = 48; // size-12
-/** La posición se guarda como % del viewport (estable ante resize/zoom) y se
- *  aplica como px absolutos (inmune a reflows: menús, scrollbar, lo que sea).
- *  Al achicar/agrandar la ventana se recalcula de la proporción guardada. */
-function pctDePx(px: number, dim: number) {
-  return (px / dim) * 100;
-}
-function pxDePct(pct: number, dim: number) {
-  return (pct / 100) * dim;
-}
-const reposoInicial = (): { x: number; y: number } => {
-  try {
-    const raw = localStorage.getItem(PREGUNTAR_REPOSO_KEY);
-    if (raw) {
-      const p = JSON.parse(raw);
-      if (
-        typeof p.x === 'number' &&
-        typeof p.y === 'number' &&
-        p.x >= 0 && p.x <= 100 && p.y >= 0 && p.y <= 100
-      ) return p;
-    }
-  } catch {
-    // localStorage roto o modo privado: posición por defecto.
-  }
-  return { x: 49, y: 1 };
-};
-
-/**
- * El Preguntar del escritorio, flotando: una chispa que arranca arriba en el
- * centro. Lleva el chrome uiverse del sistema (borde cian + sombra dura) como
- * las tarjetas y el riel: en reposo apoya la sombra de 3 px y al acercar el
- * mouse se despega (la sombra crece) mientras se despliega una etiqueta con el
- * atajo (Ctrl K) y la chispa de cian crece. Hace falta texto recién en el
- * gesto, no en reposo.
- *
- * Puede ser fijo (por defecto: siempre en el mismo lugar, arriba al centro) o
- * libre (se arrastra a cualquier lugar sosteniendo el click y la posición queda
- * guardada en localStorage como porcentaje del viewport). El movimiento libre
- * se activa en Ajustes → Preferencias.
- */
-function PreguntarFlotante({ onClick }: { onClick: () => void }) {
-  const { libre } = usePreguntarLibre();
-  // Guardamos % (para no perder la proporción al redimensionar) pero el estado
-  // vivo son px absolutos: solo cambian en drag y en resize/zoom. Así, ningún
-  // reflow del layout (menús desplegados, scrollbar, añadir nodos al body)
-  // re-ancla el botón contra un ancho disponible que se movió.
-  const pctInicial = libre ? reposoInicial() : { x: 49, y: 1 };
-  const [reposo, setReposo] = useState(() => {
-    const pct = pctInicial;
-    return {
-      x: Math.min(Math.max(pxDePct(pct.x, window.innerWidth), 0), window.innerWidth - PREGUNTAR_DIM),
-      y: Math.min(Math.max(pxDePct(pct.y, window.innerHeight), 0), window.innerHeight - PREGUNTAR_DIM),
-    };
-  });
-  const prevVp = useRef({ w: window.innerWidth, h: window.innerHeight });
-  // Arrastre con el puntero: la diferencia entre el click y el topleft del
-  // botón se guarda al bajar, y de ahí en más la posición sigue al mouse.
-  const dragRef = useRef<{ id: number; dx: number; dy: number } | null>(null);
-  const movedRef = useRef(false);
-
-  useEffect(() => {
-    const onResize = () => {
-      const prev = prevVp.current;
-      const next = { w: window.innerWidth, h: window.innerHeight };
-      prevVp.current = next;
-      if (!prev.w || !prev.h) return;
-      setReposo(r => ({
-        x: Math.min(Math.max((r.x / prev.w) * next.w, 0), next.w - PREGUNTAR_DIM),
-        y: Math.min(Math.max((r.y / prev.h) * next.h, 0), next.h - PREGUNTAR_DIM),
-      }));
-    };
-    const onVp = () => onResize();
-    window.addEventListener('resize', onResize);
-    window.visualViewport?.addEventListener('resize', onVp);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      window.visualViewport?.removeEventListener('resize', onVp);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!libre) return;
-    try {
-      localStorage.setItem(
-        PREGUNTAR_REPOSO_KEY,
-        JSON.stringify({
-          x: pctDePx(reposo.x, window.innerWidth),
-          y: pctDePx(reposo.y, window.innerHeight),
-        }),
-      );
-    } catch {
-      // Modo privado: la posición vale para esta sesión y nada más.
-    }
-  }, [libre, reposo]);
-
-  const style: CSSProperties = {
-    left: reposo.x,
-    top: reposo.y,
-  };
-  const pillIzquierda = reposo.x > window.innerWidth / 2;
-
-  return createPortal(
-    <button
-      type="button"
-      onClick={e => {
-        // Click real (sin arrastre) → abre el buscador.
-        if (movedRef.current) {
-          movedRef.current = false;
-          return;
-        }
-        onClick();
-      }}
-      onPointerDown={e => {
-        if (e.button !== 0 || !libre) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        dragRef.current = { id: e.pointerId, dx: e.clientX - rect.left, dy: e.clientY - rect.top };
-        e.currentTarget.setPointerCapture(e.pointerId);
-      }}
-      onPointerMove={e => {
-        const d = dragRef.current;
-        if (!d || d.id !== e.pointerId) return;
-        if (Math.abs(e.movementX) + Math.abs(e.movementY) > 2) movedRef.current = true;
-        // El botón nunca sale de la ventana: se clampa al rango que lo deja
-        // adentro (no puede ir más allá de 100% - su propio ancho).
-        const pxX = Math.min(Math.max(e.clientX - d.dx, 0), window.innerWidth - PREGUNTAR_DIM);
-        const pxY = Math.min(Math.max(e.clientY - d.dy, 0), window.innerHeight - PREGUNTAR_DIM);
-        setReposo({ x: pxX, y: pxY });
-      }}
-      onPointerUp={() => {
-        dragRef.current = null;
-      }}
-      onPointerCancel={() => {
-        dragRef.current = null;
-      }}
-      aria-label="Preguntar (Ctrl K)"
-      title="Preguntar (Ctrl K)"
-      style={style}
-      className={cn(
-        `group fixed z-40 flex size-12 items-center justify-center ${libre ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`,
-        'rounded-[5px] border backdrop-blur-sm transition-[box-shadow,background-color,border-color,transform] duration-200 ease-out',
-        'border-uiverse bg-card/70 shadow-[3px_3px_2px_1px_rgba(128,212,238,0.38)] text-primary active:translate-y-px',
-        'hover:border-uiverse hover:bg-card hover:shadow-[6px_6px_2px_1px_rgba(128,212,238,0.45)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
-      )}
-    >
-      <Sparkle weight="fill" className="size-5 transition-[transform,color] duration-200 group-hover:scale-110" />
-      <span
-        className={cn(
-          'pointer-events-none absolute flex items-center gap-1.5 whitespace-nowrap rounded-[5px] border border-border bg-card px-2 py-1 text-chico font-medium text-foreground opacity-0 shadow-float transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100',
-          pillIzquierda ? 'right-full mr-2' : 'left-full ml-2',
-        )}
-      >
-        Preguntar <Kbd>Ctrl K</Kbd>
-      </span>
-    </button>,
-    document.body,
-  );
-}
-
 function AbrirMostrador({ summary }: { summary: EscritorioSummary | null }) {
   const navigate = useNavigate();
   const caja = summary?.caja;
@@ -422,13 +259,57 @@ function computeLayout(
 const porVisual = (a: TilePos, b: TilePos) => a.row - b.row || a.col - b.col;
 const aSize = ({ key, w, h }: TilePos) => ({ key, w, h });
 
+/** Centrado del renglón base incompleto de un tablero RECIÉN ARMADO (denso).
+ *  Solo se aplica en construcción —fábrica, mostrar, configs viejas— NUNCA
+ *  sobre posiciones que el usuario ya dejó a mano: una fila que no arranca en
+ *  la columna 0 ya está donde quieren que esté (p. ej. la esquina inferior
+ *  izquierda tras un drop). */
+function centrarTablero(tiles: TilePos[]): TilePos[] {
+  const celdas = tiles.map(t => ({ x: t.col, y: t.row, w: t.w, h: t.h }));
+  const fila = Math.max(0, ...celdas.map(l => l.y + l.h - 1));
+  const items = celdas.filter(l => l.y === fila);
+  const usados = items.reduce((s, l) => s + l.w, 0);
+  const minX = items.length ? Math.min(...items.map(l => l.x)) : 0;
+  const desborda = celdas.some(l => l.y < fila && l.y + l.h > fila);
+  let densa = true;
+  let cursor = minX;
+  for (const l of items) {
+    if (l.x !== cursor) {
+      densa = false;
+      break;
+    }
+    cursor += l.w;
+  }
+  const ok = usados < GRID_COLS && !desborda && densa && minX === 0;
+  if (!ok) return tiles;
+  const offset = Math.floor((GRID_COLS - usados) / 2);
+  return tiles.map(t => (t.row === fila ? { ...t, col: t.col + offset } : t));
+}
+
+/** Una tarjeta "flota" cuando no tiene nada que la sostenga desde abajo NI
+ *  nada arriba en su propia columna: quedó tirada en un vacío del tablero
+ *  (p. ej. la dejaste lejos a propósito). Estas tarjetas no participan de la
+ *  compactación — quedan clavadas donde están hasta que el usuario las mueva. */
+function flota(l: LayoutItem, layout: readonly LayoutItem[]): boolean {
+  const abajo = layout.some(
+    o => o !== l && o.x < l.x + l.w && o.x + o.w > l.x && o.y === l.y + l.h,
+  );
+  if (abajo) return false;
+  if (l.y === 0) return true;
+  return !layout.some(
+    o => o !== l && o.x < l.x + l.w && o.x + o.w > l.x && o.y + o.h === l.y,
+  );
+}
+
 /** Tablero de fábrica: los módulos en su orden, fila por fila, dejando la
  *  última columna como flanco de vacíos. Es el punto de partida de toda
  *  cuenta nueva (y de toda config guardada que no traiga tarjetas). */
 function tableroFabrica(keys: string[]): TilePos[] {
-  return computeLayout(
-    keys.map(key => ({ key, w: 1, h: 1 })),
-    GRID_COLS - 1,
+  return centrarTablero(
+    computeLayout(
+      keys.map(key => ({ key, w: 1, h: 1 })),
+      GRID_COLS - 1,
+    ),
   );
 }
 
@@ -475,8 +356,8 @@ function readConfig(keys: string[]): Config {
             }
           }
         }
-        if (collide) return { hidden, tiles: computeLayout(unicas.sort(porVisual).map(aSize), GRID_COLS) };
-        return { hidden, tiles: unicas };
+        if (collide) return { hidden, tiles: centrarTablero(computeLayout(unicas.sort(porVisual).map(aSize), GRID_COLS)) };
+        return { hidden, tiles: centrarTablero(unicas) };
       }
       // Formato intermedio (board + spans): anclas del tablero viejo, reacomodadas.
       const boardViejo = (parsed as { board?: unknown }).board;
@@ -495,7 +376,7 @@ function readConfig(keys: string[]): Config {
             h: spans[k]?.h ?? 1,
           });
         });
-        if (viejas.length > 0) return { hidden, tiles: computeLayout(viejas.sort(porVisual).map(aSize), GRID_COLS) };
+        if (viejas.length > 0) return { hidden, tiles: centrarTablero(computeLayout(viejas.sort(porVisual).map(aSize), GRID_COLS)) };
         return sembrar(hidden);
       }
       // Compat con el formato viejo (order + hidden).
@@ -522,129 +403,109 @@ function writeConfig(config: Config) {
 export function EscritorioPage() {
   const { session, can } = useAuth();
   const navigate = useNavigate();
-  const openPalette = usePalette();
-  const { libre } = usePreguntarLibre();
   const summary = useEscritorioSummary();
   const [config, setConfig] = useState<Config>(() => readConfig(gridModules(can).map(m => m.key)));
-  // Arrastre: la tarjeta agarrada, el índice de celda objetivo (solo VISUAL —
-  // nada se reacomoda durante el dragover; el commit es único, en el drop) y
-  // la última celda realmente ocupada por la tarjeta en el tablero (para
-  // commit anclado y para devolverla si el drop es inválido).
-  const [dragKey, setDragKey] = useState<string | null>(null);
-  const [hoverCell, setHoverCell] = useState<number | null>(null);
-  const [invalid, setInvalid] = useState(false);
-  const hoverRef = useRef<number | null>(null);
-  const dragKeyRef = useRef<string | null>(null);
-  // Tarjeta en estirado (y desde dónde): mientras dura, bloquea drag y click.
-  const [resizing, setResizing] = useState<{ key: string; dir: 'e' | 's' | 'se' } | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const resizingRef = useRef(false);
-  // Mientras dura un arrastre, el reacomodo en vivo salta directo (sin FLIP):
-  // la vista previa se lee al instante, la animación queda solo para el estado
-  // final (drop o resize).
-  const arrastrandoRef = useRef(false);
-  const lastResizeEnd = useRef(0);
-  // El tamaño final del estirado se anota acá y se persiste una única vez, al
-  // soltar — nada de escribir a localStorage en cada pointermove.
-  const resizeSpanRef = useRef<{ key: string; w: number; h: number } | null>(null);
+  const { width, containerRef } = useContainerWidth();
+  // Guarda de click: no navega ni un click post-arrastre/estirado ni una
+  // pulsación LARGA (la gente aprieta y mantiene para agarrar la tarjeta y
+  // acomodarse antes de arrastrar; soltar sin moverse no debe abrir nada).
+  const ultimaInteraccion = useRef(0);
+  const pressAt = useRef(0);
+  const PRESS_DRAG_MS = 350;
+  // Compactor "clavado": la compactación no mueve dos tipos de tarjeta:
+  //   1. la que se está MOVIENDO/ESTIRANDO (queda clavada en la celda del
+  //      puntero mientras las demás se reacomodan alrededor), y
+  //   2. las que "flotan" (dejadas en un vacío, sin nada debajo ni arriba en
+  //      su columna): una vez que las plantás lejos, quedan ahí para siempre
+  //      hasta que las movés vos, aunque después muevas otras tarjetas.
+  // El "fijado" se marca como estático SOLO para la compactación (los
+  // estáticos no se mueven) y se le quita la marca al resultado final: así
+  // react-grid-layout nunca ve una tarjeta realmente estática (no la
+  // podríamos arrastrar).
+  const interactivoRef = useRef<string | null>(null);
+  const interactuandoRef = useRef(false);
+  const compactor = useMemo<Compactor>(
+    () => ({
+      type: 'vertical',
+      allowOverlap: false,
+      compact(layout, cols) {
+        const activo = interactivoRef.current;
+        const clavadas = layout.filter(l => l.i !== activo && !l.static && flota(l, layout));
+        if (clavadas.length === 0 && !activo) {
+          return verticalCompactor.compact(cloneLayout(layout), cols);
+        }
+        const aFijar = new Set(clavadas.map(l => l.i));
+        if (activo) aFijar.add(activo);
+        const fijado = layout.map(l => (aFijar.has(l.i) ? { ...l, static: true } : l));
+        const compactado = verticalCompactor.compact(cloneLayout(fijado), cols);
+        // Barrido final de no-solapamiento. El compactor vertical solo empuja
+        // a las tarjetas que chocan con una CLAVADA hacia la derecha; cuando
+        // son varias (p. ej. dejás caer una tarjeta agrandada sobre una fila
+        // llena), se empujan todas a la misma columna del borde y terminan
+        // pisándose entre sí. Las que quedaron pisadas caen hacia abajo hasta
+        // despegarse. Las clavadas y la tarjeta activa no se tocan.
+        const solapar = (a: LayoutItem, b: LayoutItem) =>
+          a !== b && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+        const pisado = (p: LayoutItem) => compactado.some(o => solapar(o, p));
+        for (const p of compactado) {
+          if (p.static) continue;
+          let vueltas = 0;
+          while (pisado(p) && vueltas < MAX_ROWS * 4) {
+            p.y += 1;
+            vueltas += 1;
+          }
+        }
+        return compactado.map(l => (aFijar.has(l.i) ? { ...l, static: false } : l));
+      },
+    }),
+    [],
+  );
+  // El compactor se suelta recién cuando la estructura queda asentada: los
+  // efectos de la grilla (que recompactan tras el drop) corren en los HIJOS
+  // antes que este, y compactan con el ref todavía puesto.
+  useEffect(() => {
+    if (interactuandoRef.current) return;
+    interactivoRef.current = null;
+  });
   const [ultimoOculto, setUltimoOculto] = useState<{ key: string; label: string } | null>(null);
   const undoTimeout = useRef<number | null>(null);
-  // Foto del layout anterior (FLIP): cuando el tablero se rearma —mudanza,
-  // estirado, ocultar— cada tarjeta vuela de su lugar previo al nuevo y su
-  // tamaño escala en vez de saltar. En pleno estirado la animación es corta
-  // (se reinicia a cada paso del arrastre: efecto de seguimiento suave);
-  // fuera de él, algo más larga. Al redimensionar la ventana solo se actualiza
-  // la foto, sin animar deltas viejos.
-  const rectsRef = useRef<Map<string, DOMRect>>(new Map());
-  useLayoutEffect(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
-    const prev = rectsRef.current;
-    const next = new Map<string, DOMRect>();
-    const arrastrando = arrastrandoRef.current;
-    for (const el of Array.from(grid.querySelectorAll<HTMLElement>('[data-tile]'))) {
-      const key = el.dataset.tile ?? '';
-      const now = el.getBoundingClientRect();
-      next.set(key, now);
-      // Durante el arrastre la vista previa salta INMEDIATA (sin animación) y
-      // además la foto no avanza: así el FLIP del drop final siempre parte de
-      // cómo estaba el tablero antes de agarrar la tarjeta.
-      if (arrastrando) continue;
-      const antes = prev.get(key);
-      if (!antes) continue;
-      const dx = antes.left - now.left;
-      const dy = antes.top - now.top;
-      const sx = antes.width / now.width;
-      const sy = antes.height / now.height;
-      if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(sx - 1) < 0.03 && Math.abs(sy - 1) < 0.03) continue;
-      el.animate(
-        [
-          { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, transformOrigin: 'top left' },
-          { transform: 'translate(0, 0) scale(1, 1)' },
-        ],
-        { duration: resizingRef.current ? 200 : 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-      );
-    }
-    if (!arrastrando) rectsRef.current = next;
-  }, [config]);
-  useEffect(() => {
-    const refresh = () => {
-      const grid = gridRef.current;
-      if (!grid) return;
-      const next = new Map<string, DOMRect>();
-      for (const el of Array.from(grid.querySelectorAll<HTMLElement>('[data-tile]'))) {
-        next.set(el.dataset.tile ?? '', el.getBoundingClientRect());
-      }
-      rectsRef.current = next;
-    };
-    window.addEventListener('resize', refresh);
-    return () => window.removeEventListener('resize', refresh);
-  }, []);
 
   const canCaja = can('caja.operar');
   // Mapa módulo → definición (la grilla se arma desde las celdas, no al revés).
   const byKey = useMemo(() => new Map(gridModules(can).map(m => [m.key, m])), [can]);
-  const cols = GRID_COLS;
   const tiles = config.tiles;
-  // La vista previa del drop se calcula una sola vez por hover (layout destino
-  // completo) y el tablero real NO se mueve hasta soltar — pero el usuario ya
-  // vio exactamente dónde caería cada tarjeta, así el reacomodo no es sorpresa.
-  const baseRows = useMemo(() => Math.max(2, ...tiles.map(t => t.row + t.h)), [tiles]);
-  const previewDestino = useMemo(() => {
-    if (dragKey == null || hoverCell == null) return null;
-    const agarrada = tiles.find(x => x.key === dragKey);
-    if (!agarrada) return null;
-    const col = hoverCell % GRID_COLS;
-    const row = Math.min(Math.floor(hoverCell / GRID_COLS), baseRows - 1);
-    if (col + agarrada.w > GRID_COLS) return null;
-    return computeLayout(
-      [{ key: dragKey, w: agarrada.w, h: agarrada.h }, ...tiles.filter(x => x.key !== dragKey).sort(porVisual).map(aSize)],
-      GRID_COLS,
-      { key: dragKey, col, row },
-    );
-  }, [dragKey, hoverCell, tiles, baseRows]);
-  // Las filas se calculan del tablero real; si el drop agregaría filas (caer en
-  // el fondo), el tablero crece en vivo para mostrar hacia dónde va la tarjeta.
-  const rows = useMemo(() => {
-    if (previewDestino) return Math.max(baseRows, ...previewDestino.map(p => p.row + p.h));
-    return baseRows;
-  }, [baseRows, previewDestino]);
   const hidden = config.hidden.map(k => byKey.get(k)).filter((m): m is ModuleDef => !!m);
-  // Aplicar la vista previa EN VIVO: mientras se arrastra, el tablero se rearma
-  // en tiempo real al layout destino (con la animación FLIP), así se ve el
-  // resultado antes de soltar. El drop después solo confirma lo ya visible;
-  // cancelar (soltar afuera) restaura el layout de partida.
-  useEffect(() => {
-    if (!previewDestino || invalid || dragKey == null) return;
-    const yaAplicado =
-      tiles.length === previewDestino.length &&
-      tiles.every((t, i) => {
-        const p = previewDestino[i];
-        return t.key === p.key && t.col === p.col && t.row === p.row && t.w === p.w && t.h === p.h;
-      });
-    if (yaAplicado) return;
-    setConfig(prev => ({ ...prev, tiles: previewDestino }));
-  }, [previewDestino, invalid, dragKey]);
+
+  // La posición persistida ES la que ve react-grid-layout: sin traducciones en
+  // render ni al persistir. El centrado de la última fila incompleta se
+  // aplicó al armar el tablero (fábrica, mostrar, migración de configs
+  // viejas); después, lo que arrastrás queda EXACTAMENTE donde lo dejaste —
+  // soltar en la esquina inferior izquierda queda en la esquina, no corre por
+  // re-centrar la fila.
+  const layoutFor = useMemo<Layout>(() => {
+    return tiles.map(t => ({
+      i: t.key,
+      x: t.col,
+      y: t.row,
+      w: t.w,
+      h: t.h,
+      minW: 1,
+      minH: 1,
+      maxW: GRID_COLS,
+      maxH: MAX_ROWS,
+    }));
+  }, [tiles]);
+  // Commit de un layout (lo que da react-grid-layout tras un drag o resize):
+  // se guarda tal cual, sin reinterpretar nada.
+  const commit = (visual: Layout) => {
+    const tilesN: TilePos[] = visual.map(l => ({ key: l.i, col: l.x, row: l.y, w: l.w, h: l.h })).sort(porVisual);
+    setConfig(prev => {
+      if (JSON.stringify(prev.tiles) === JSON.stringify(tilesN)) return prev;
+      const next = { ...prev, tiles: tilesN };
+      writeConfig(next);
+      return next;
+    });
+  };
 
   const nombre = session?.user.name.split(' ')[0] ?? '';
   const hoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -676,140 +537,19 @@ export function EscritorioPage() {
   const mostrar = (key: string) => {
     const puestas = computeLayout(tiles.filter(t => t.key !== key).sort(porVisual).map(aSize), GRID_COLS);
     // Mostrar: entra de fábrica al primer hueco donde entra completa.
-    update({ hidden: config.hidden.filter(k => k !== key), tiles: computeLayout([{ key, w: 1, h: 1 }, ...puestas], GRID_COLS) });
+    update({ hidden: config.hidden.filter(k => k !== key), tiles: centrarTablero(computeLayout([{ key, w: 1, h: 1 }, ...puestas], GRID_COLS)) });
   };
-  // Estirar una tarjeta desde sus bordes: el tamaño (en celdas de la grilla)
-  // se ve en vivo durante el arrastre y queda persistido al soltar. La tarjeta
-  // queda anclada donde está y el resto se reacomoda con el mismo packing
-  // determinista del arrastre — nadie baila.
-  const spanOf = (key: string): TileSpan => {
-    const t = tiles.find(x => x.key === key);
-    return t ? { w: t.w, h: t.h } : { w: 1, h: 1 };
-  };
-  const setSpan = (key: string, w: number, h: number, persist = false) => {
-    setConfig(prev => {
-      const cur = prev.tiles.find(x => x.key === key);
-      // Si el tamaño ya es el pedido, igual hay que persistir cuando se pidió:
-      // el último pointermove ya lo aplicó en estado y el commit llega igual.
-      if (!cur || (cur.w === w && cur.h === h)) {
-        if (persist) writeConfig(prev);
-        return prev;
-      }
-      const resto = prev.tiles.filter(t => t.key !== key).sort(porVisual).map(aSize);
-      const next = { ...prev, tiles: computeLayout([{ key, w, h }, ...resto], GRID_COLS, { key, col: cur.col, row: cur.row }) };
-      if (persist) writeConfig(next);
-      return next;
-    });
-  };
-  const startResize = (key: string, dir: 'e' | 's' | 'se') => (e: ReactPointerEvent<HTMLSpanElement>) => {
-    e.preventDefault();
-    const grid = gridRef.current;
-    const card = grid?.querySelector<HTMLElement>(`[data-tile="${key}"]`);
-    if (!grid || !card) return;
-    const rect = card.getBoundingClientRect();
-    const cellW = (grid.clientWidth - (GRID_COLS - 1) * GAP) / GRID_COLS;
-    const init = spanOf(key);
-    resizingRef.current = true;
-    setResizing({ key, dir });
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // Sin captura (puntero sintético): los listeners de window alcanzan.
-    }
-    const move = (ev: globalThis.PointerEvent) => {
-      const w = dir === 's' ? init.w : Math.min(GRID_COLS, Math.max(1, Math.round((ev.clientX - rect.left) / (cellW + GAP))));
-      const h = dir === 'e' ? init.h : Math.min(MAX_ROWS, Math.max(1, Math.round((ev.clientY - rect.top) / (ROW_H + GAP))));
-      resizeSpanRef.current = { key, w, h };
-      setSpan(key, w, h);
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      resizingRef.current = false;
-      lastResizeEnd.current = Date.now();
-      setResizing(null);
-      // Persistir una sola vez, con el tamaño de la última pasada del puntero.
-      const fin = resizeSpanRef.current;
-      resizeSpanRef.current = null;
-      if (fin) setSpan(fin.key, fin.w, fin.h, true);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-  };
-  // Arrastre: dragover SOLO anota la celda objetivo (y habilita el drop); el
-  // reacomodo es único, en el drop — por eso las demás tarjetas no bailan
-  // mientras arrastrás. Soltar fuera del tablero o en su propio lugar no
-  // cambia nada. La celda objetivo es el ancla de la esquina sup-izq de la
-  // tarjeta; si no entra completa ahí, se marca inválida y no se mueve.
-  const cellFromEvent = (e: { clientX: number; clientY: number }) => {
-    const grid = gridRef.current;
-    if (!grid) return null;
-    const rect = grid.getBoundingClientRect();
-    const col = Math.floor(((e.clientX - rect.left) / grid.clientWidth) * GRID_COLS);
-    const row = Math.floor((e.clientY - rect.top) / (ROW_H + GAP));
-    if (col < 0 || col >= GRID_COLS || row < 0) return null;
-    return { col, row };
-  };
-  // El layout con el que arrancó el drag: si se cancela (soltar afuera), se
-  // restaura tal cual estaba.
-  const preDragRef = useRef<Config | null>(null);
-  const onTileDragStart = (key: string, e: ReactDragEvent) => {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', key);
-    dragKeyRef.current = key;
-    preDragRef.current = config;
-    arrastrandoRef.current = true;
-    setDragKey(key);
-    const t = tiles.find(x => x.key === key);
-    if (t) {
-      const idx = t.row * GRID_COLS + t.col;
-      hoverRef.current = idx;
-      setHoverCell(idx);
-    }
-  };
-  const onTileDragEnd = (withDrop: boolean) => {
-    // Sin drop: se deshace lo que el drag haya movido en vivo (vuelve todo a
-    // como estaba antes de agarrar la tarjeta).
-    if (!withDrop && preDragRef.current) setConfig(preDragRef.current);
-    preDragRef.current = null;
-    arrastrandoRef.current = false;
-    dragKeyRef.current = null;
-    hoverRef.current = null;
-    setDragKey(null);
-    setHoverCell(null);
-    setInvalid(false);
-  };
-  const onGridDragOver = (e: ReactDragEvent) => {
-    if (!dragKeyRef.current) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const c = cellFromEvent(e);
-    if (!c) return;
-    const idx = c.row * GRID_COLS + c.col;
-    const t = tiles.find(x => x.key === dragKeyRef.current);
-    const mal = !!t && c.col + t.w > GRID_COLS;
-    setInvalid(mal);
-    if (hoverRef.current === idx) return;
-    hoverRef.current = idx;
-    setHoverCell(idx);
-  };
-  const onGridDrop = (e: ReactDragEvent) => {
-    e.preventDefault();
-    const key = dragKeyRef.current;
-    const c = cellFromEvent(e);
-    // El drop confirma el layout que ya se está viendo (la vista previa en vivo
-    // ya lo aplicó): solo se persiste, sin saltos.
-    const ok = !!key && !!c && !!previewDestino && !invalid;
-    if (ok) update({ ...config, tiles: previewDestino });
-    onTileDragEnd(ok);
-  };
-
   // La tarjeta se despliega al módulo: se le pone el nombre de transición justo
   // antes de navegar, así el navegador morfea la tarjeta en la cabecera del
   // módulo (ver docs/diseno.md, "Navegación y continuidad").
   function open(e: MouseEvent<HTMLAnchorElement>, m: ModuleDef) {
-    // Un click que viene de soltar un estirado no navega.
-    if (resizingRef.current || Date.now() - lastResizeEnd.current < 250) {
+    // No navega si recién se soltó un arrastre/estirado, ni si la pulsación fue
+    // larga (mantener apretado para agarrar la tarjeta). Click rápido siempre
+    // abre el módulo.
+    if (
+      Date.now() - ultimaInteraccion.current < 250 ||
+      Date.now() - pressAt.current > PRESS_DRAG_MS
+    ) {
       e.preventDefault();
       return;
     }
@@ -820,15 +560,16 @@ export function EscritorioPage() {
 
   return (
     <div className="pt-4">
-      {/* El Preguntar flota arriba al centro (fijo) o se arrastra a cualquier
-          lugar en modo libre — Ajustes → Preferencias. */}
-      <PreguntarFlotante onClick={openPalette} />
-
       {/* Saludo (y lo que hay para mirar, en la campana de arriba). */}
-      <div className="mt-4">
-        <p className="text-chico text-placeholder first-letter:uppercase">{hoy}</p>
-        <h1 className="type-display mt-1 text-h1 leading-tight">
-          {saludo()}{nombre && `, ${nombre}`}.
+      <div className="mt-6">
+        <p className="flex items-center gap-1.5 text-chico font-medium tracking-[0.14em] text-placeholder">
+          <CalendarBlank weight="fill" className="size-3.5 shrink-0" />
+          <span className="capitalize">{hoy}</span>
+        </p>
+        <h1 className="type-display mt-2 text-h1 font-semibold leading-tight [text-wrap:balance]">
+          <span className="text-primary">{saludo()}</span>
+          {nombre && <span className="text-foreground">, {nombre}</span>}
+          <span className="text-primary">.</span>
         </h1>
         {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
           <p className="mt-3 text-chico text-muted-foreground">
@@ -850,34 +591,46 @@ export function EscritorioPage() {
         </div>
       )}
 
-      <div
-        ref={gridRef}
-        onDragOver={onGridDragOver}
-        onDrop={onGridDrop}
-        className="escritorio-grid grid gap-3"
-        style={{
-          gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${rows}, ${ROW_H}px)`,
-        }}
-      >
-        {/* Destino inválido: solo cuando la tarjeta no entra completa en la
-            celda se marca en rojo (el layout en vivo hace el resto del feedback). */}
-        {dragKey &&
-          hoverCell != null &&
-          invalid &&
-          (() => {
-            const t = tiles.find(x => x.key === dragKey);
-            if (!t) return null;
-            const col = hoverCell % GRID_COLS;
-            const row = Math.min(Math.floor(hoverCell / GRID_COLS), baseRows - 1);
-            return (
-              <div
+      <div ref={containerRef} className="min-w-0">
+        <ReactGridLayout
+          layout={layoutFor}
+          width={width}
+          compactor={compactor}
+          gridConfig={{ cols: GRID_COLS, rowHeight: ROW_H, margin: [GAP, GAP], containerPadding: [0, 0], maxRows: 6 }}
+          onDragStart={(_layout, _old, nuevo) => {
+            interactuandoRef.current = true;
+            interactivoRef.current = nuevo?.i ?? null;
+          }}
+          onResizeStart={(_layout, _old, nuevo) => {
+            interactuandoRef.current = true;
+            interactivoRef.current = nuevo?.i ?? null;
+          }}
+          dragConfig={{ cancel: '.tile-cancel' }}
+          resizeConfig={{
+            enabled: true,
+            handles: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
+            // Los mismos gripes de siempre (CSS .tile-resize), pero manejados
+            // por react-resizable: el ref es el que react-grid-layout espera
+            // para amarrar el arrastre de estirado al mango.
+            handleComponent: (axis, ref) => (
+              <span
+                ref={ref as Ref<HTMLSpanElement>}
                 aria-hidden="true"
-                className="pointer-events-none z-10 rounded-lg border-2 border-dashed border-destructive/60 bg-destructive/5"
-                style={{ gridColumn: `${col + 1} / span ${t.w}`, gridRow: `${row + 1} / span ${t.h}` }}
+                className={cn('react-resizable-handle tile-resize', `tile-resize--${axis}`)}
               />
-            );
-          })()}
+            ),
+          }}
+          onDragStop={layout => {
+            interactuandoRef.current = false;
+            ultimaInteraccion.current = Date.now();
+            commit(layout);
+          }}
+          onResizeStop={layout => {
+            interactuandoRef.current = false;
+            ultimaInteraccion.current = Date.now();
+            commit(layout);
+          }}
+        >
         {tiles.map(t => {
           const m = byKey.get(t.key);
           if (!m) return null;
@@ -886,30 +639,17 @@ export function EscritorioPage() {
           // reemplaza a la minimapa — la tarjeta grande muestra la serie, no
           // solo la forma.
           const grafico = m.key === 'ventas' && t.w >= 2 && stat?.bars;
-          // Anillo ámbar en las tarjetas que se moverían al soltar acá — el
-          // reacomodo real (con FLIP) es el del drop, la vista previa ya lo avisó.
-          const dp = previewDestino?.find(p => p.key === t.key);
-          const tocada = !!dp && (dp.col !== t.col || dp.row !== t.row);
           return (
           <Link
             key={m.key}
             to={m.path}
             onClick={e => open(e, m)}
-            data-tile={m.key}
-            style={{
-              gridColumn: `${t.col + 1} / span ${t.w}`,
-              gridRow: `${t.row + 1} / span ${t.h}`,
-              ['--ab-tile-hue' as string]: hueFor(m.key),
+            onMouseDown={() => {
+              pressAt.current = Date.now();
             }}
-            draggable={resizing?.key !== m.key}
-            onDragStart={e => onTileDragStart(m.key, e)}
-            onDragEnd={() => onTileDragEnd(false)}
-            className={cn(
-              'module-tile group relative flex flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
-              dragKey === m.key && 'opacity-40',
-              tocada && 'ring-2 ring-warning/60',
-              resizing?.key === m.key && 'select-none ring-2 ring-primary/40',
-            )}
+            draggable={false}
+            style={{ ['--ab-tile-hue' as string]: hueFor(m.key) }}
+            className="module-tile group relative flex flex-col gap-2 overflow-hidden rounded-lg border pl-5 pr-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
           >
             <ModuleMotif
               motif={m.motif}
@@ -986,34 +726,14 @@ export function EscritorioPage() {
                 e.stopPropagation();
                 ocultar(m.key);
               }}
-              className="absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 shadow-float transition-opacity hover:bg-background hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2 group-hover:opacity-100"
+              className="tile-cancel absolute right-2 top-2 z-10 rounded-md border border-border bg-card p-1.5 text-muted-foreground opacity-0 shadow-float transition-opacity hover:bg-background hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2 group-hover:opacity-100"
             >
               <EyeSlash className="size-3.5" />
             </button>
-            {/* Bordes de estirado: lateral derecho (ancho), inferior (alto) y
-                esquina (ambos). preventDefault en mousedown evita que el
-                navegador lo tome como drag del link. */}
-            <span
-              aria-hidden="true"
-              onPointerDown={startResize(m.key, 'e')}
-              onMouseDown={e => e.preventDefault()}
-              className="tile-resize tile-resize--e"
-            />
-            <span
-              aria-hidden="true"
-              onPointerDown={startResize(m.key, 's')}
-              onMouseDown={e => e.preventDefault()}
-              className="tile-resize tile-resize--s"
-            />
-            <span
-              aria-hidden="true"
-              onPointerDown={startResize(m.key, 'se')}
-              onMouseDown={e => e.preventDefault()}
-              className="tile-resize tile-resize--se"
-            />
           </Link>
           );
         })}
+        </ReactGridLayout>
       </div>
 
       {hidden.length > 0 && (

@@ -101,7 +101,6 @@ export function WarehousesPage() {
     <>
       <PageHeader
         title="Depósitos"
-        description="Dónde se guarda el stock, por sucursal. Las sucursales se administran en Ajustes."
         actions={
           <div className="flex gap-2">
             <ExportMenu path="/warehouses" filename="depositos" />

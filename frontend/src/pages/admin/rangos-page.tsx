@@ -121,7 +121,6 @@ export function RangosPage() {
     <>
       <PageHeader
         title="Rangos"
-        description="Qué puede hacer cada rol. Los 7 de fábrica se pueden clonar y editar; un permiso nuevo nunca aparece solo en uno que ya existe."
         actions={puedeGestionar ? <Button onClick={() => { setNuevoNombre(''); setCloneFromId(''); setNuevoError(''); setNuevoOpen(true); }}><Plus /> Nuevo rango</Button> : undefined}
       />
       {error && <Alert variant="destructive">{error}</Alert>}

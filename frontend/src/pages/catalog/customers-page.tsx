@@ -146,7 +146,6 @@ export function CustomersPage() {
     <>
       <PageHeader
         title="Clientes"
-        description="A cada cliente se le puede asignar una lista de precios."
         actions={
           <div className="flex gap-2">
             <ExportMenu path="/customers" params={{ search }} filename="clientes" />

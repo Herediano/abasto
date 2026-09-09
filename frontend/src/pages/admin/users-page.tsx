@@ -95,7 +95,6 @@ export function UsersPage() {
     <>
       <PageHeader
         title="Usuarios"
-        description="El equipo, su rango y la sucursal donde trabaja cada uno."
         actions={
           <Button onClick={openCreate}>
             <Plus /> Nuevo usuario

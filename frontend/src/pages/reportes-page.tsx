@@ -62,7 +62,7 @@ export function ReportesPage() {
 
   return (
     <>
-      <PageHeader title="Reportes" description="El pulso del negocio en un rango de fechas: ventas, márgenes, más vendidos y arqueos." />
+      <PageHeader title="Reportes" />
       {error && <Alert variant="destructive">{error}</Alert>}
 
       <Card>

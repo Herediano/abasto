@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { House, List, X } from '@phosphor-icons/react';
+import { House } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
 import { gridModules, hueFor } from '@/lib/modules';
@@ -8,9 +8,8 @@ import { useSidebar } from '@/lib/sidebar';
 import { SidebarItem } from './SidebarItem';
 
 /**
- * El botón que despliega el riel. En el escritorio vive dentro del header
- * unificado (sticky); en el resto queda fijo arriba a la izquierda, formando
- * parte del propio riel.
+ * El botón que despliega el riel. Vive en el header unificado del escritorio y
+ * en el header de cada módulo; ambos son sticky y el riel cuelga de él.
  */
 export function SidebarToggle({ className }: { className?: string }) {
   const { open, toggle } = useSidebar();
@@ -23,12 +22,33 @@ export function SidebarToggle({ className }: { className?: string }) {
       aria-label={label}
       title={label}
       className={cn(
-        'sidebar-btn grid size-14 place-items-center transition-colors',
+        'sidebar-btn grid h-10 w-12 place-items-center transition-colors',
         open ? 'bg-accent text-accent-foreground' : 'bg-sidebar text-sidebar-foreground hover:text-foreground',
         className,
       )}
     >
-      {open ? <X className="size-7" /> : <List className="size-7" />}
+      {/* Hamburguesa ⇄ X: tres líneas que se transforman (las de los bordes
+          rotan 45° hacia el centro, la del medio se desvanece). */}
+      <span aria-hidden="true" className="relative block size-5">
+        <span
+          className={cn(
+            'absolute left-0 top-[2.5px] h-[2px] w-full rounded-full bg-current transition-all duration-300 ease-out',
+            open && 'top-[9px] rotate-45',
+          )}
+        />
+        <span
+          className={cn(
+            'absolute left-0 top-[9px] h-[2px] w-full rounded-full bg-current transition-opacity duration-200',
+            open && 'opacity-0',
+          )}
+        />
+        <span
+          className={cn(
+            'absolute left-0 top-[15.5px] h-[2px] w-full rounded-full bg-current transition-all duration-300 ease-out',
+            open && 'top-[9px] -rotate-45',
+          )}
+        />
+      </span>
     </button>
   );
 }
@@ -45,7 +65,7 @@ function NavRiel({ open, settled, cascade }: { open: boolean; settled: boolean; 
       style={{ gridTemplateRows: open ? '1fr' : '0fr', opacity: open ? 1 : 0 }}
     >
       <div className={cn('min-h-0', settled ? 'overflow-visible' : 'overflow-hidden')}>
-        <nav inert={!open} className="sidebar-nav flex w-14 flex-col gap-1.5 p-1.5">
+        <nav inert={!open} className="sidebar-nav flex w-12 flex-col gap-2 p-1.5">
           <SidebarItem to="/" icon={House} label="Escritorio" hue="var(--color-primary)" index={0} />
           {mods.map((m, i) => (
             <SidebarItem
@@ -64,10 +84,10 @@ function NavRiel({ open, settled, cascade }: { open: boolean; settled: boolean; 
 }
 
 /**
- * El riel lateral. En el escritorio el botón vive en el header unificado y el
- * riel cuelga de él (abosluto, siempre pegado abajo aunque el header sea
- * sticky); acá se pasa `inHeader`. En el resto de las páginas el riel se
- * despliega en el mismo lugar que antes: botón fijo arriba a la izquierda.
+ * El riel lateral. Siempre cuelga del botón del header que lo monta: el
+ * unificado del escritorio (`AppHeader`) o el header de cada módulo
+ * (`PageHeader`), a través de la prop `inHeader`. Sin header no hay riel
+ * (POS y Caja quedan en pantalla completa; Esc vuelve).
  */
 export function Sidebar({ inHeader = false }: { inHeader?: boolean }) {
   const { can } = useAuth();
@@ -101,17 +121,14 @@ export function Sidebar({ inHeader = false }: { inHeader?: boolean }) {
   const riel = <NavRiel open={open} settled={settled} cascade={cascade} />;
   const enEscritorio = pathname === '/';
 
-  if (enEscritorio) {
-    // El riel lo monta el header del escritorio (escritorio-page): cuelga del
-    // botón, debajo del header, y sigue a la vista cuando el header se pega.
-    if (!inHeader) return null;
-    return <div className="absolute left-4 top-full z-30 hidden pt-1 md:block">{riel}</div>;
-  }
+  if (!inHeader) return null;
 
+  // El riel siempre cuelga del botón del header que lo monta, debajo de la
+  // barra. En el escritorio se ancla al header (left-4); en un módulo, al
+  // wrapper relativo que rodea al toggle en el PageHeader.
   return (
-    <div className="fixed left-4 top-4 z-30 hidden md:block">
-      <SidebarToggle />
-      <div className="mt-2">{riel}</div>
+    <div className={`absolute top-full z-30 hidden pt-1 md:block ${enEscritorio ? 'left-4' : 'left-0'}`}>
+      {riel}
     </div>
   );
 }

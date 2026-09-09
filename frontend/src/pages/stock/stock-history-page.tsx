@@ -111,7 +111,7 @@ export function StockHistoryPage() {
 
   return (
     <>
-      <PageHeader title="Historial de movimientos" description="Todos los movimientos de stock, del más reciente al más antiguo." />
+      <PageHeader title="Historial de movimientos" />
       <StockNav />
       {error && <Alert variant="destructive">{error}</Alert>}
       <ListFilters

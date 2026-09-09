@@ -50,7 +50,7 @@ export function AjustesPage() {
 
   return (
     <>
-      <PageHeader title="Ajustes" description="Tu perfil, tus preferencias y la empresa." />
+      <PageHeader title="Ajustes" />
       <div className="grid gap-4 pb-6">
         <Divider label="Mi cuenta" />
         <PerfilSection session={session!} onSaved={refresh} />
@@ -258,7 +258,7 @@ function PreferenciasSection() {
       <div className="mt-4">
         <Choice
           label="Botón Preguntar"
-          hint="La chispa que abre el buscador (Ctrl K). Fijo: siempre arriba al centro, a mano. Libre: lo arrastrás con el mouse y se queda donde lo dejás."
+          hint="El botón que abre el buscador (Ctrl K). Fijo: vive en el header, siempre igual. Libre: sale del header y podés arrastrarlo a cualquier parte de la app."
         >
           <Toggle active={!libre} onClick={() => setLibre(false)}><LockSimple weight="fill" className="size-4" /> Fijo</Toggle>
           <Toggle active={libre} onClick={() => setLibre(true)}><Sparkle weight="fill" className="size-4" /> Libre</Toggle>

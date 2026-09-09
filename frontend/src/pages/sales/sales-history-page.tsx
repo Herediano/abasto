@@ -118,7 +118,6 @@ export function SalesHistoryPage() {
     <>
       <PageHeader
         title="Ventas"
-        description="Comprobantes emitidos. Una venta no se edita: se anula y el stock vuelve."
         actions={<ExportMenu path="/sales" params={exportParams} filename="ventas" />}
       />
       {error && <Alert variant="destructive">{error}</Alert>}

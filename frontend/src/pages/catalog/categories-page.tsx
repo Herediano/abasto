@@ -93,7 +93,6 @@ export function CategoriesPage() {
     <>
       <PageHeader
         title="Categorías"
-        description="Rubros para clasificar los productos del catálogo."
         actions={
           puedeEditar && (
             <Button onClick={openCreate}>

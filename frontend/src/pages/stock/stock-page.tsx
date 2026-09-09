@@ -53,7 +53,6 @@ export function StockPage() {
     <>
       <PageHeader
         title="Stock actual"
-        description="Existencias por producto, depósito y lote."
         actions={<ExportMenu path="/stock" filename="stock" />}
       />
       <StockNav />
