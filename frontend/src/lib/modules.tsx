@@ -154,6 +154,23 @@ export function moduleForPath(pathname: string): ModuleDef | undefined {
     .sort((a, b) => b.path.length - a.path.length)[0];
 }
 
+/** A dónde "volver" desde una pantalla: el nivel anterior de la jerarquía.
+ *  Un módulo suelto (o Ajustes) vuelve al escritorio; los que viven adentro de
+ *  Ajustes (Usuarios, Rangos) vuelven a Ajustes; una ruta que cuelga de un módulo
+ *  (ej. /stock/in, /catalog/products/:id) vuelve al módulo que la contiene. */
+export function backTargetFor(pathname: string): { path: string; label: string } {
+  const exact = MODULES.find(m => m.path === pathname);
+  if (exact) {
+    if (exact.settings && exact.key !== 'ajustes') return { path: '/ajustes', label: 'Ajustes' };
+    return { path: '/', label: 'Escritorio' };
+  }
+  const parent = MODULES
+    .filter(m => pathname.startsWith(m.path + '/'))
+    .sort((a, b) => b.path.length - a.path.length)[0];
+  if (parent) return { path: parent.path, label: parent.label };
+  return { path: '/', label: 'Escritorio' };
+}
+
 /** Los módulos navegables que este rango puede ver (para el buscador de Ctrl+K). */
 export function visibleModules(can: (permission: string) => boolean): ModuleDef[] {
   return MODULES.filter(m => !m.settings && (!m.permission || can(m.permission)));

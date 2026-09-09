@@ -5,12 +5,12 @@ import { fechaHora } from '@/lib/format';
 import { api, type Branch } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { setActiveBranch } from '@/lib/branch';
-import { AVATAR_COLORS } from '@/lib/prefs';
 import { useTheme } from '@/lib/theme';
+import { Avatar } from '@/components/ui/avatar';
 import {
   Menu, MenuBlock, MenuContent, MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger,
 } from '@/components/ui/menu';
-import { cn, initials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { cerrarOtrosDesplegables, registrarDesplegable } from '@/lib/desplegables';
 
 /** Cuándo se abrió la sesión — sale del `iat` del token, sin pedir nada nuevo. */
@@ -52,7 +52,6 @@ export function UserMenu({ className }: { className?: string }) {
 
   const user = session?.user;
   const sucursal = user?.branch?.name ?? '';
-  const color = user?.preferences?.avatarColor ?? AVATAR_COLORS[0];
   const inicio = session ? inicioDeSesion(session.accessToken) : null;
   const otras = accounts.filter(a => a.user.id !== user?.id);
 
@@ -90,9 +89,7 @@ export function UserMenu({ className }: { className?: string }) {
           className,
         )}
       >
-        <span className="grid size-7 place-items-center rounded-full font-display text-micro font-bold text-white" style={{ background: color, borderRadius: '5px' }}>
-          {initials(user.name)}
-        </span>
+        <Avatar name={user.name} preferences={user.preferences} className="size-7 text-micro" />
         <span className="hidden text-chico font-semibold sm:inline">{user.name.split(' ')[0]}</span>
         <CaretDown className="size-3.5 text-placeholder transition-transform group-data-[state=open]:rotate-180" />
       </MenuTrigger>
@@ -100,9 +97,7 @@ export function UserMenu({ className }: { className?: string }) {
       <MenuContent className="w-72 p-2">
         {/* Quién sos: avatar, nombre, email y la empresa a la que pertenecés. */}
         <MenuBlock className="flex items-center gap-3 pb-2 pt-1">
-          <span className="grid size-10 shrink-0 place-items-center rounded-full font-display text-sm font-bold text-white" style={{ background: color, borderRadius: '5px' }}>
-            {initials(user.name)}
-          </span>
+          <Avatar name={user.name} preferences={user.preferences} className="size-10 text-sm" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{user.name}</p>
             <p className="truncate text-micro text-placeholder">{user.email}</p>
@@ -169,20 +164,15 @@ export function UserMenu({ className }: { className?: string }) {
           <>
             <MenuSeparator />
             <MenuLabel>Cambiar de cuenta</MenuLabel>
-            {otras.map(a => {
-              const c = a.user.preferences?.avatarColor ?? AVATAR_COLORS[0];
-              return (
+            {otras.map(a => (
                 <MenuItem key={a.user.id} onSelect={() => switchAccount(a.user.id)}>
-                  <span className="grid size-7 shrink-0 place-items-center rounded-full font-display text-micro font-bold text-white" style={{ background: c, borderRadius: '5px' }}>
-                    {initials(a.user.name)}
-                  </span>
+                  <Avatar name={a.user.name} preferences={a.user.preferences} className="size-7 text-micro" />
                   <span className="min-w-0">
                     <span className="block truncate font-semibold">{a.user.name}</span>
                     <span className="block truncate text-micro text-muted-foreground">{a.tenant.name}</span>
                   </span>
                 </MenuItem>
-              );
-            })}
+              ))}
           </>
         )}
         <MenuItem onSelect={() => navigate('/login?add=1')}>

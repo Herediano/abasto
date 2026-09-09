@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
  * Preferencias de dispositivo (viven en localStorage, no viajan con la cuenta):
  * - El tamaño de las tarjetas del escritorio (chica / mediana / grande), que se
  *   cambia desde el modo Configurar.
+ * - El botón Preguntar: fijo en su posición por defecto, o libre para arrastrarlo
+ *   a cualquier lugar (el lugar guardado es "abasto-preguntar-reposo").
  * El tema tiene su propio módulo (lib/theme.ts); el color de avatar es de la
  * cuenta y vive en session.user.preferences (backend). La densidad de las
  * tablas es fija: siempre compactas.
@@ -35,6 +37,31 @@ export function useTiles() {
     }
   }, [tiles]);
   return { tiles, setTiles };
+}
+
+const PREGUNTAR_LIBRE_KEY = 'abasto-preguntar-libre';
+
+function leerPreguntarLibre(): boolean {
+  try {
+    return localStorage.getItem(PREGUNTAR_LIBRE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** El botón Preguntar del escritorio arranca fijo en su posición por defecto
+ *  (arriba al centro); "libre" habilita arrastrarlo a cualquier lugar y que la
+ *  posición quede guardada en este dispositivo. */
+export function usePreguntarLibre() {
+  const [libre, setLibre] = useState<boolean>(leerPreguntarLibre);
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREGUNTAR_LIBRE_KEY, libre ? '1' : '0');
+    } catch {
+      // sin persistencia
+    }
+  }, [libre]);
+  return { libre, setLibre };
 }
 
 /** Los colores de avatar que ofrece Ajustes. El primero es el cian de la marca. */

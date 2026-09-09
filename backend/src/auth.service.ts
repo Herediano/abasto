@@ -168,8 +168,16 @@ export class AuthService {
       data.passwordHash = await argon2.hash(body.newPassword as string, { type: argon2.argon2id });
     }
     if (body.preferences !== undefined && body.preferences !== null && typeof body.preferences === 'object') {
+      const prefs = { ...(body.preferences as Record<string, unknown>) };
+      // La foto de perfil llega como data URI (la achica el frontend a 128 px).
+      if ('avatar' in prefs) {
+        const av = prefs.avatar;
+        if (av === null || av === '') prefs.avatar = null;
+        else if (typeof av === 'string' && av.startsWith('data:image/') && av.length <= 500_000) prefs.avatar = av;
+        else throw new UnprocessableEntityException('La foto de perfil tiene que ser una imagen y pesar menos de ~350 KB');
+      }
       const prev = ((await this.prisma.user.findUniqueOrThrow({ where: { id: userId } })).preferences as Record<string, unknown> | null) ?? {};
-      data.preferences = { ...prev, ...(body.preferences as Record<string, unknown>) };
+      data.preferences = { ...prev, ...prefs };
     }
     try {
       await this.prisma.user.update({ where: { id: userId }, data });

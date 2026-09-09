@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { ArrowLeft, Storefront } from '@phosphor-icons/react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { moduleForPath } from '@/lib/modules';
+import { moduleForPath, backTargetFor } from '@/lib/modules';
 import { Kbd } from '@/components/ui/kbd';
 import { useAuth } from '@/lib/auth-context';
 
 /**
  * Cabecera de un módulo. Se pega arriba: título y acciones siguen a la vista al
  * scrollear una tabla larga. El molde es el mismo para todos los módulos (ver
- * docs/diseno.md): "← Escritorio" + chip del ícono + rastro + título a la
+ * docs/diseno.md): "← nivel anterior" + chip del ícono + rastro + título a la
  * izquierda; Filtros / Exportar / acción principal a la derecha (via `actions`).
  *
  * El bloque chip+título lleva `view-transition-name: module-hero` para que la
@@ -19,6 +19,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
   const navigate = useNavigate();
   const { session } = useAuth();
   const mod = moduleForPath(pathname);
+  const back = backTargetFor(pathname);
   const b = session?.user;
   const otraSucursal = b?.branch && b?.homeBranch && b.branch.id !== b.homeBranch.id ? b.branch.name : null;
 
@@ -26,11 +27,11 @@ export function PageHeader({ title, description, actions }: { title: string; des
     <div className="sticky top-0 z-20 -mx-6 mb-1 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-background/85 px-6 py-3 backdrop-blur">
       <button
         type="button"
-        onClick={() => navigate('/', { viewTransition: true })}
+        onClick={() => navigate(back.path, { viewTransition: true })}
         className="uiverse-ctl flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-chico font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
-        Escritorio
+        {back.label}
         <Kbd className="ml-0.5">Esc</Kbd>
       </button>
 

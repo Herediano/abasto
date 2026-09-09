@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, Check, Moon, Percent, PencilSimple, Plus, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
+import { ArrowRight, Check, LockSimple, Moon, Percent, PencilSimple, Plus, Sparkle, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -11,13 +11,14 @@ import { Section } from '@/components/section';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { AccountList } from '@/components/account-list';
+import { Avatar } from '@/components/ui/avatar';
 import { api, errorMessage, type Branch, type PaymentAdjustment, type PaymentMethod, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { fileToResizedDataUrl } from '@/lib/image';
 import { hueFor, moduleByKey, settingsModules } from '@/lib/modules';
-import { AVATAR_COLORS } from '@/lib/prefs';
+import { AVATAR_COLORS, usePreguntarLibre } from '@/lib/prefs';
 import { useTheme } from '@/lib/theme';
-import { cn, initials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 const OWNER_RANGO = 'Dueño';
 
@@ -107,17 +108,33 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
   const user = session.user;
   const [form, setForm] = useState({ name: user.name, email: user.email });
   const [color, setColor] = useState(user.preferences?.avatarColor ?? AVATAR_COLORS[0]);
+  const [avatar, setAvatar] = useState<string | null>(user.preferences?.avatar ?? null);
   const [state, setState] = useState<'idle' | 'saving' | 'ok'>('idle');
   const [error, setError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const dirty = form.name.trim() !== user.name || form.email.trim() !== user.email || color !== (user.preferences?.avatarColor ?? AVATAR_COLORS[0]);
+  const dirty =
+    form.name.trim() !== user.name ||
+    form.email.trim() !== user.email ||
+    color !== (user.preferences?.avatarColor ?? AVATAR_COLORS[0]) ||
+    avatar !== (user.preferences?.avatar ?? null);
+
+  async function pickPhoto(file: File | undefined) {
+    if (!file) return;
+    setError('');
+    try {
+      setAvatar(await fileToResizedDataUrl(file, 128));
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setState('saving');
     setError('');
     try {
-      await api('/auth/me', { method: 'PATCH', body: JSON.stringify({ name: form.name, email: form.email, preferences: { avatarColor: color } }) }, session.accessToken);
+      await api('/auth/me', { method: 'PATCH', body: JSON.stringify({ name: form.name, email: form.email, preferences: { avatarColor: color, avatar } }) }, session.accessToken);
       await onSaved();
       setState('ok');
       setTimeout(() => setState('idle'), 1800);
@@ -131,21 +148,40 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
     <Section title="Perfil" description="Cómo te ve el resto del equipo.">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
-        <div className="flex items-center gap-4">
-          <span className="grid size-14 shrink-0 place-items-center rounded-full font-display text-h3 font-bold text-white" style={{ background: color, borderRadius: '5px' }}>
-            {initials(form.name || user.name)}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {AVATAR_COLORS.map(c => (
-              <button
-                key={c}
-                type="button"
-                aria-label={`Color ${c}`}
-                onClick={() => setColor(c)}
-                className={cn('size-7 rounded-full ring-offset-2 ring-offset-card transition-all', color === c && 'ring-2 ring-foreground')}
-                style={{ background: c }}
+        <div className="flex flex-wrap items-center gap-4">
+          <Avatar name={form.name || user.name} preferences={{ avatarColor: color, avatar: avatar ?? undefined }} className="size-14 text-h3" />
+          <div className="grid gap-2">
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={e => void pickPhoto(e.target.files?.[0])}
               />
-            ))}
+              <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
+                <UploadSimple /> {avatar ? 'Cambiar foto' : 'Subir foto'}
+              </Button>
+              {avatar && (
+                <Button type="button" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setAvatar(null)}>
+                  <Trash /> Quitar
+                </Button>
+              )}
+            </div>
+            {!avatar && (
+              <div className="flex flex-wrap gap-2">
+                {AVATAR_COLORS.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`Color ${c}`}
+                    onClick={() => setColor(c)}
+                    className={cn('size-7 rounded-full ring-offset-2 ring-offset-card transition-all', color === c && 'ring-2 ring-foreground')}
+                    style={{ background: c }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -211,13 +247,23 @@ function PasswordSection({ token }: { token: string }) {
 
 function PreferenciasSection() {
   const { theme, setTheme } = useTheme();
+  const { libre, setLibre } = usePreguntarLibre();
 
   return (
-    <Section title="Preferencias" description="El tema se guarda en este dispositivo.">
+    <Section title="Preferencias" description="Se guardan en este dispositivo.">
       <Choice label="Tema">
         <Toggle active={theme === 'light'} onClick={() => setTheme('light')}><Sun weight="fill" className="size-4" /> Claro</Toggle>
         <Toggle active={theme === 'dark'} onClick={() => setTheme('dark')}><Moon weight="fill" className="size-4" /> Oscuro</Toggle>
       </Choice>
+      <div className="mt-4">
+        <Choice
+          label="Botón Preguntar"
+          hint="La chispa que abre el buscador (Ctrl K). Fijo: siempre arriba al centro, a mano. Libre: lo arrastrás con el mouse y se queda donde lo dejás."
+        >
+          <Toggle active={!libre} onClick={() => setLibre(false)}><LockSimple weight="fill" className="size-4" /> Fijo</Toggle>
+          <Toggle active={libre} onClick={() => setLibre(true)}><Sparkle weight="fill" className="size-4" /> Libre</Toggle>
+        </Choice>
+      </div>
     </Section>
   );
 }

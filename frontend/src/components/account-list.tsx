@@ -1,8 +1,8 @@
 import { Plus, SignOut } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
-import { AVATAR_COLORS } from '@/lib/prefs';
-import { cn, initials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/ui/avatar';
 
 /**
  * Cuentas con sesión abierta en este dispositivo.
@@ -20,7 +20,6 @@ export function AccountList({ variant = 'full', onNavigate }: { variant?: 'full'
     <div className="grid gap-1.5">
       {shown.map(a => {
         const activa = a.user.id === session?.user.id;
-        const color = a.user.preferences?.avatarColor ?? AVATAR_COLORS[0];
         return (
           <div
             key={a.user.id}
@@ -35,9 +34,7 @@ export function AccountList({ variant = 'full', onNavigate }: { variant?: 'full'
               className="flex min-w-0 flex-1 items-center gap-3 text-left"
               disabled={activa}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-full font-display text-micro font-bold text-white" style={{ background: color, borderRadius: '5px' }}>
-                {initials(a.user.name)}
-              </span>
+              <Avatar name={a.user.name} preferences={a.user.preferences} className="size-8 text-micro" />
               <span className="min-w-0">
                 <span className="block truncate text-chico font-semibold">{a.user.name}</span>
                 <span className="block truncate text-micro text-muted-foreground">{a.tenant.name}</span>

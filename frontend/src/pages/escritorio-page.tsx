@@ -2,16 +2,14 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { CashRegister, EyeSlash, Plus, Sparkle } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { NotificationBell } from '@/components/notification-bell';
-import { UserMenu } from '@/components/user-menu';
-import { ChecklistToggle } from '@/components/checklist';
-import { usePalette } from '@/components/layout/escritorio-shell';
+import { Kbd } from '@/components/ui/kbd';
+import { usePalette, useEscritorioSummary } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
-import { api } from '@/lib/api';
 import { hora as fmtHora } from '@/lib/format';
 import { compact, statFor, type EscritorioSummary, type TileBar } from '@/lib/escritorio';
 import { useAuth } from '@/lib/auth-context';
 import { setActiveBranch } from '@/lib/branch';
+import { usePreguntarLibre } from '@/lib/prefs';
 import { cn } from '@/lib/utils';
 
 const CONFIG_KEY = 'abasto-escritorio';
@@ -206,20 +204,26 @@ const reposoInicial = (): { x: number; y: number } => {
 
 /**
  * El Preguntar del escritorio, flotando: una chispa que arranca arriba en el
- * centro y se puede arrastrar a cualquier lugar sosteniendo el click — la
- * posición queda guardada en localStorage como porcentaje del viewport. En
- * reposo se asoma apenas —el ícono solo, sin botón— y al acercar el mouse se
- * despliega (sombra dura estilo uiverse), listo para abrir el buscador de
- * Ctrl+K. Sin texto a propósito: no compite con el tablero, es solo una puerta
- * suspendida que el dueño mueve donde le sirva.
+ * centro. Lleva el chrome uiverse del sistema (borde cian + sombra dura) como
+ * las tarjetas y el riel: en reposo apoya la sombra de 3 px y al acercar el
+ * mouse se despega (la sombra crece) mientras se despliega una etiqueta con el
+ * atajo (Ctrl K) y la chispa de cian crece. Hace falta texto recién en el
+ * gesto, no en reposo.
+ *
+ * Puede ser fijo (por defecto: siempre en el mismo lugar, arriba al centro) o
+ * libre (se arrastra a cualquier lugar sosteniendo el click y la posición queda
+ * guardada en localStorage como porcentaje del viewport). El movimiento libre
+ * se activa en Ajustes → Preferencias.
  */
 function PreguntarFlotante({ onClick }: { onClick: () => void }) {
+  const { libre } = usePreguntarLibre();
   // Guardamos % (para no perder la proporción al redimensionar) pero el estado
   // vivo son px absolutos: solo cambian en drag y en resize/zoom. Así, ningún
   // reflow del layout (menús desplegados, scrollbar, añadir nodos al body)
   // re-ancla el botón contra un ancho disponible que se movió.
+  const pctInicial = libre ? reposoInicial() : { x: 49, y: 1 };
   const [reposo, setReposo] = useState(() => {
-    const pct = reposoInicial();
+    const pct = pctInicial;
     return {
       x: Math.min(Math.max(pxDePct(pct.x, window.innerWidth), 0), window.innerWidth - PREGUNTAR_DIM),
       y: Math.min(Math.max(pxDePct(pct.y, window.innerHeight), 0), window.innerHeight - PREGUNTAR_DIM),
@@ -252,6 +256,7 @@ function PreguntarFlotante({ onClick }: { onClick: () => void }) {
   }, []);
 
   useEffect(() => {
+    if (!libre) return;
     try {
       localStorage.setItem(
         PREGUNTAR_REPOSO_KEY,
@@ -263,12 +268,13 @@ function PreguntarFlotante({ onClick }: { onClick: () => void }) {
     } catch {
       // Modo privado: la posición vale para esta sesión y nada más.
     }
-  }, [reposo]);
+  }, [libre, reposo]);
 
   const style: CSSProperties = {
     left: reposo.x,
     top: reposo.y,
   };
+  const pillIzquierda = reposo.x > window.innerWidth / 2;
 
   return createPortal(
     <button
@@ -282,7 +288,7 @@ function PreguntarFlotante({ onClick }: { onClick: () => void }) {
         onClick();
       }}
       onPointerDown={e => {
-        if (e.button !== 0) return;
+        if (e.button !== 0 || !libre) return;
         const rect = e.currentTarget.getBoundingClientRect();
         dragRef.current = { id: e.pointerId, dx: e.clientX - rect.left, dy: e.clientY - rect.top };
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -307,14 +313,22 @@ function PreguntarFlotante({ onClick }: { onClick: () => void }) {
       title="Preguntar (Ctrl K)"
       style={style}
       className={cn(
-        'group fixed z-40 flex size-12 cursor-grab items-center justify-center active:cursor-grabbing',
-        'transition-[box-shadow,background-color,border-color] duration-300 ease-out',
+        `group fixed z-40 flex size-12 items-center justify-center ${libre ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`,
+        'rounded-[5px] border backdrop-blur-sm transition-[box-shadow,background-color,border-color,transform] duration-200 ease-out',
+        'border-uiverse bg-card/70 shadow-uiverse text-primary active:translate-y-px',
+        'hover:border-uiverse hover:bg-card hover:shadow-uiverse-hover',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
-        'rounded-[5px] border border-transparent bg-transparent text-muted-foreground',
-        'hover:border-uiverse hover:bg-card hover:text-primary hover:shadow-uiverse',
       )}
     >
-      <Sparkle weight="fill" className="size-5 transition-colors duration-300 group-hover:text-primary" />
+      <Sparkle weight="fill" className="size-5 transition-[transform,color] duration-200 group-hover:scale-110" />
+      <span
+        className={cn(
+          'pointer-events-none absolute flex items-center gap-1.5 whitespace-nowrap rounded-[5px] border border-border bg-card px-2 py-1 text-chico font-medium text-foreground opacity-0 shadow-float transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100',
+          pillIzquierda ? 'right-full mr-2' : 'left-full ml-2',
+        )}
+      >
+        Preguntar <Kbd>Ctrl K</Kbd>
+      </span>
     </button>,
     document.body,
   );
@@ -509,8 +523,9 @@ export function EscritorioPage() {
   const { session, can } = useAuth();
   const navigate = useNavigate();
   const openPalette = usePalette();
+  const { libre } = usePreguntarLibre();
+  const summary = useEscritorioSummary();
   const [config, setConfig] = useState<Config>(() => readConfig(gridModules(can).map(m => m.key)));
-  const [summary, setSummary] = useState<EscritorioSummary | null>(null);
   // Arrastre: la tarjeta agarrada, el índice de celda objetivo (solo VISUAL —
   // nada se reacomoda durante el dragover; el commit es único, en el drop) y
   // la última celda realmente ocupada por la tarjeta en el tablero (para
@@ -585,18 +600,6 @@ export function EscritorioPage() {
     window.addEventListener('resize', refresh);
     return () => window.removeEventListener('resize', refresh);
   }, []);
-
-  const token = session?.accessToken;
-  useEffect(() => {
-    if (!token) return;
-    let vivo = true;
-    api<EscritorioSummary>('/escritorio', {}, token)
-      .then(s => vivo && setSummary(s))
-      .catch(() => {});
-    return () => {
-      vivo = false;
-    };
-  }, [token]);
 
   const canCaja = can('caja.operar');
   // Mapa módulo → definición (la grilla se arma desde las celdas, no al revés).
@@ -817,33 +820,9 @@ export function EscritorioPage() {
 
   return (
     <div className="pt-4">
-      {/* El Preguntar flota en el centro exacto; con `outline-none` sobre el
-          overlay y el botón interno con eventos, no pisa nada del tablero. */}
-      <PreguntarFlotante onClick={openPalette} />
-
-      {/* Barra: logo y nombre de la empresa a la izquierda; sucursal y cuenta a la
-          derecha. El brand "abasto.ai" vive en el footer. */}
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-soft pb-4">
-        <div className="flex items-center gap-3">
-          {session?.tenant.logo ? (
-            <img
-              src={session.tenant.logo}
-              alt={session.tenant.name}
-              className="uiverse-ctl uiverse-ctl--flat size-11 shrink-0 rounded-md border border-border bg-card object-contain p-1"
-            />
-          ) : (
-            <span className="uiverse-ctl uiverse-ctl--flat type-display grid size-11 shrink-0 place-items-center rounded-md bg-primary text-h3 text-primary-foreground">
-              {session?.tenant.name.slice(0, 1).toUpperCase()}
-            </span>
-          )}
-          <p className="font-display text-grande font-semibold">{session?.tenant.name}</p>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <ChecklistToggle />
-          <NotificationBell summary={summary} />
-          <UserMenu />
-        </div>
-      </header>
+      {/* El Preguntar flota (y se arrastra) solo en modo libre — Ajustes →
+          Preferencias. En el modo fijo vive en la barra de arriba (AppHeader). */}
+      {libre && <PreguntarFlotante onClick={openPalette} />}
 
       {/* Saludo (y lo que hay para mirar, en la campana de arriba). */}
       <div className="mt-4">

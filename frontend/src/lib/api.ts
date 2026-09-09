@@ -79,6 +79,8 @@ export async function downloadFile(path: string, token: string, filename: string
 export type UserPreferences = {
   /** Color del avatar (uno de los presets de Ajustes). */
   avatarColor?: string;
+  /** Foto de perfil como data URI (la achica el frontend a 128 px). */
+  avatar?: string | null;
 };
 
 export type Session = {
