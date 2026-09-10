@@ -732,15 +732,15 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/product-detail-page.tsx": {
-    "mtime": 1789024304.142635,
-    "seen": 1789024502.4229312,
-    "ast_hash": "4353a95b5797ecb5b88b2370abf66040",
+    "mtime": 1789025132.3349733,
+    "seen": 1789025394.9642663,
+    "ast_hash": "1df90a101fd481f772298944751b2aeb",
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/products-page.tsx": {
-    "mtime": 1789024382.3716097,
-    "seen": 1789024502.4229324,
-    "ast_hash": "db4ef4a09c1c0eaaa2ddbe2e739c679a",
+    "mtime": 1789025105.570652,
+    "seen": 1789025394.964268,
+    "ast_hash": "3150750b3c2b6d9a9ce3464b37d86f62",
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/suppliers-page.tsx": {
@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "docs/diseno.md": {
-    "mtime": 1789009383.3144865,
-    "seen": 1789020040.3759043,
-    "ast_hash": "412ece5d795fcd9c894493f9b7e23b91",
+    "mtime": 1789025332.0711184,
+    "seen": 1789025394.9743621,
+    "ast_hash": "fc1a7d9625340e1f79f62d167b1d94de",
     "semantic_hash": ""
   },
   "frontend/src/components/command-palette.tsx": {

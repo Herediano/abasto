@@ -237,6 +237,17 @@ está para reconocer, no para decorar: si no ayuda a identificar algo, no va.
   saca otro.
 - **El cian es la única acción sólida.** Si aparece cian lleno, se puede tocar.
   El ámbar es aviso, el rojo es problema.
+- **Botones — una escala fija, un rol cada uno.** `primary` (cian lleno): la
+  **única** acción sólida de la pantalla, una sola, arriba a la derecha de la
+  cabecera (`Nuevo <cosa>`, `Cargar factura`). `outline`: lo secundario
+  (Editar, Exportar, Filtros, Activar/Desactivar, paginación). `ghost` /
+  `size="icon"`: lo terciario e inline (el lápiz de una fila, quitar un chip) —
+  siempre con `aria-label`. `destructive`: **solo** lo irreversible, nunca al
+  lado del `primary` (va al final, separado, o en el detalle), y siempre detrás
+  de una confirmación que nombra el ítem. Tamaños: `icon` inline en filas, `sm`
+  en barras densas y paginación, default en cabeceras y diálogos. Hover: solo
+  cambia color (los destructivos a rojo); nada «levanta» salvo las tarjetas del
+  escritorio.
 - **El estado lo dice el dato, no un marco.** «3 lotes», «4 vencidos», «+17,8 %
   vs ayer»: el texto lleva la noticia, y **la cifra clave se tiñe** —con el matiz
   del módulo para lo que le es propio (nombres, montos), ámbar cuando es un aviso
@@ -475,6 +486,41 @@ diálogo), no para agrupar.
 El estado vacío de una vista **trae su acción** (`Todavía no cargaste productos`
 → botón `Crear producto` ahí mismo), nunca es solo un cartel.
 
+### 4 · El listado — filas, selección y acciones
+
+Un listado es una vista más (una tabla). Cómo se opera sobre sus filas está
+**estandarizado** — Productos, Proveedores, Clientes, Depósitos, Categorías,
+Usuarios y Rangos se comportan igual, aprender uno es aprender todos.
+
+**Cada acción vive en UN solo lugar.** Antes de sumar un botón a un listado se
+enumeran las superficies donde ya podría estar —fila, barra de selección,
+cabecera del detalle, cabecera de la pantalla— y se elige una. Repetir una
+acción en dos lugares (y peor, una destructiva) es el error a no cometer.
+
+- **La fila abre el ítem.** Si el módulo tiene pantalla de detalle (hoy solo
+  Productos), **la fila entera es el destino**: click —o Enter con foco— abre el
+  detalle. Cursor de manito, fondo `hover:bg-subtle` (ya en `TableRow`). Sin
+  columna «Acciones» con ojo/activar/borrar.
+- **Un solo atajo en la fila: el lápiz.** Un `ghost`+`size="icon"` con
+  `aria-label`, alineado a la derecha, que abre el diálogo de edición directo.
+  Es el único control de la fila. Su celda y la del checkbox hacen
+  `stopPropagation` para no disparar la navegación.
+- **Las acciones de UN ítem viven en la cabecera de su detalle**, una sola vez:
+  `Editar` (`outline`) · `Activar/Desactivar` (`outline`) · `Eliminar` (`ghost`,
+  ícono + texto, hover a rojo, al final y separado). El módulo sin detalle mete
+  esas acciones en el diálogo de edición, no sueltas en la fila.
+- **Selección + barra de lote — la única acción de la lista.** Solo donde el
+  volumen lo pide (Productos). Un checkbox en la canaleta izquierda (no navega).
+  Con ≥ 1 marcado aparece una **barra pegajosa bajo el `PageHeader`**
+  (superficie `accent`, botones `size="sm"`, selects `h-8`): `N seleccionados`,
+  las operaciones en lote (categoría, IVA, activar, desactivar, eliminar) y
+  `Limpiar`. Cubre 1 a N: «desactivar este» = marcarlo y usar la barra. Se
+  limpia sola al cambiar filtro o página.
+- **Destructivo siempre con confirmación** cuyo título nombra el ítem («Eliminar
+  «Yerba La Merced»» / «Eliminar 12 productos») y cuyo cuerpo dice qué pasa y si
+  se puede deshacer. `Eliminar` es borrado real solo si el ítem no tiene
+  historia; si la tiene, se desactiva (y se avisa).
+
 ### Lo que el molde deja afuera
 
 Bento (grilla de tiles de distinto tamaño), todo picado en tarjetas del mismo
@@ -633,12 +679,14 @@ datos a alguien de afuera.**
   impuestos · reposición). El diálogo vive en un componente compartido
   (`components/product-form-dialog.tsx`): mismo alta/edición desde el listado y
   desde el detalle.
-- **Productos, más completo**: el detalle usa el molde del módulo (`ModuleScreen`
-  + `ModuleSection`, sin `Card`) y se edita ahí mismo. **Acciones en lote** en el
-  listado (seleccionar varios → categoría, IVA, activar/desactivar, eliminar:
-  `PATCH /products/bulk`, `POST /products/bulk-delete`). **Eliminar producto**
-  (`DELETE /products/:id`, permiso `productos.eliminar`): borrado real si nunca
-  tuvo movimientos, si no se ofrece desactivar.
+- **Productos, más completo** — y con el molde de listado estandarizado (ver
+  «El módulo → 4 · El listado»): la fila abre el detalle, único atajo el lápiz;
+  las acciones de un producto viven en la cabecera del detalle (`ModuleScreen` +
+  `ModuleSection`, sin `Card`); la barra de selección es la única acción de la
+  lista. **Acciones en lote** (`PATCH /products/bulk`, `POST
+  /products/bulk-delete`): categoría, IVA, activar/desactivar, eliminar.
+  **Eliminar producto** (`DELETE /products/:id`, permiso `productos.eliminar`):
+  borrado real si nunca tuvo movimientos, si no se desactiva.
 - **Margen en el gráfico de Ventas**: `SaleLine.unitCost` congela el costo del
   producto (`Product.costPrice`) al vender; el gráfico suma una métrica «Margen»
   (subtotal neto de promos − costo, comparada con el período anterior). Las
@@ -721,6 +769,11 @@ por módulo, personalización profunda del escritorio.
 
 ## Deudas conocidas
 
+- **Molde de listado — falta la pasada de consistencia.** Productos ya lo sigue
+  (ver «El módulo → 4 · El listado»). Falta alinear el resto: Clientes tiene un
+  botón `Desactivar` suelto en la fila (va al diálogo de edición); Depósitos
+  mezcla «Ver cajas» + lápiz; ninguno fuera de Productos tiene selección en
+  lote todavía —se suma donde el volumen lo pida—.
 - **`CLAUDE.md` decía «single App.tsx, no router»** — quedó viejo: hay
   `react-router-dom`, `page-header.tsx`, `protected-route.tsx`, `admin-route.tsx`
   (`PermissionRoute`) y un árbol `pages/`.

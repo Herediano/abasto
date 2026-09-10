@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ShoppingCartSimple, Eye, Package, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
-import { Link } from 'react-router-dom';
+import { ShoppingCartSimple, Package, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { ProductFormDialog } from '@/components/product-form-dialog';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ApiError, api, errorMessage, type Category, type Pagination, type PriceList, type Product } from '@/lib/api';
+import { api, errorMessage, type Category, type Pagination, type PriceList, type Product } from '@/lib/api';
 import { quantity } from '@/lib/format';
 import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
@@ -26,6 +26,7 @@ const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
 
 export function ProductsPage() {
   const { session, can } = useAuth();
+  const navigate = useNavigate();
   const puedeEditar = can('productos.editar');
   const puedeCrear = can('productos.crear');
   const puedeEliminar = can('productos.eliminar');
@@ -52,17 +53,16 @@ export function ProductsPage() {
   const [priceListId, setPriceListId] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<Pagination>({ total: 0, totalPages: 0, pageSize: 20, page: 1 });
+  // Edición: el lápiz de la fila abre este diálogo directo (atajo); las demás
+  // acciones de UN producto (activar, eliminar) viven en su pantalla de detalle.
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  // Selección para acciones en lote. Se limpia sola cuando cambia el filtro o la
-  // página (el conjunto visible ya no es el mismo).
+  // Selección para acciones en lote — la única forma de actuar desde la lista.
+  // Se limpia sola cuando cambia el filtro o la página.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  // Confirmaciones de borrado: un id (fila) o 'bulk' (selección).
-  const [confirmDelete, setConfirmDelete] = useState<Product | 'bulk' | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Un producto con historia no se borra: se ofrece desactivarlo.
-  const [deactivateInstead, setDeactivateInstead] = useState<Product | null>(null);
   // Cifra de cabecera: cuántos productos están bajo su mínimo (lo mismo que
   // muestra Reposición). Una sola llamada al montar.
   const [bajoMinimoTotal, setBajoMinimoTotal] = useState<number | null>(null);
@@ -171,16 +171,6 @@ export function ProductsPage() {
   const openCreate = () => { setEditing(null); setError(''); setDialogOpen(true); };
   const openEdit = (p: Product) => { setEditing(p); setError(''); setDialogOpen(true); };
 
-  async function toggleActive(p: Product) {
-    setError('');
-    try {
-      await api(`/products/${p.id}`, { method: 'PUT', body: JSON.stringify({ isActive: !p.isActive }) }, token);
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }
-
   // --- Selección + acciones en lote ------------------------------------------
   const pageIds = items.map(p => p.id);
   const allOnPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id));
@@ -214,49 +204,20 @@ export function ProductsPage() {
     }
   }
 
-  async function doDelete() {
+  async function bulkDelete() {
     setDeleting(true);
     setError('');
     setCatalogMessage('');
     try {
-      if (confirmDelete === 'bulk') {
-        const r = await api<{ deleted: number; deactivated: number }>('/products/bulk-delete', { method: 'POST', body: JSON.stringify({ ids: [...selected] }) }, token);
-        setCatalogMessage(
-          [r.deleted && `${r.deleted} ${r.deleted === 1 ? 'borrado' : 'borrados'}`, r.deactivated && `${r.deactivated} ${r.deactivated === 1 ? 'desactivado' : 'desactivados'} (ya tenían movimientos)`]
-            .filter(Boolean)
-            .join(' · ') || 'No había nada para borrar.',
-        );
-        setSelected(new Set());
-      } else if (confirmDelete) {
-        const p = confirmDelete;
-        try {
-          await api(`/products/${p.id}`, { method: 'DELETE' }, token);
-          setCatalogMessage(`«${p.name}» borrado.`);
-        } catch (err) {
-          if (err instanceof ApiError && err.data.code === 'PRODUCT_HAS_ACTIVITY') {
-            setConfirmDelete(null);
-            setDeactivateInstead(p);
-            return;
-          }
-          throw err;
-        }
-      }
-      setConfirmDelete(null);
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  async function doDeactivate() {
-    if (!deactivateInstead) return;
-    setDeleting(true);
-    try {
-      await api(`/products/${deactivateInstead.id}`, { method: 'PUT', body: JSON.stringify({ isActive: false }) }, token);
-      setCatalogMessage(`«${deactivateInstead.name}» desactivado.`);
-      setDeactivateInstead(null);
+      const r = await api<{ deleted: number; deactivated: number }>('/products/bulk-delete', { method: 'POST', body: JSON.stringify({ ids: [...selected] }) }, token);
+      setCatalogMessage(
+        [
+          r.deleted && `${r.deleted} ${r.deleted === 1 ? 'producto borrado' : 'productos borrados'}`,
+          r.deactivated && `${r.deactivated} ${r.deactivated === 1 ? 'desactivado' : 'desactivados'} (ya tenían movimientos)`,
+        ].filter(Boolean).join(' · ') || 'No había nada para borrar.',
+      );
+      setSelected(new Set());
+      setConfirmDelete(false);
       await load();
     } catch (err) {
       setError(errorMessage(err));
@@ -402,7 +363,7 @@ export function ProductsPage() {
                 </>
               )}
               {puedeEliminar && (
-                <Button variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setConfirmDelete('bulk')}>
+                <Button variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setConfirmDelete(true)}>
                   <Trash /> Eliminar
                 </Button>
               )}
@@ -446,16 +407,25 @@ export function ProductsPage() {
                     <TableHead className="text-right">Precio</TableHead>
                     <TableHead className="text-right">Stock</TableHead>
                     <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    {puedeEditar && <TableHead className="w-10" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.map(p => {
                     const bajoMinimo = p.currentStock !== undefined && p.minStock != null && p.currentStock < Number(p.minStock);
+                    const abrir = () => navigate(`/catalog/products/${p.id}`);
                     return (
-                      <TableRow key={p.id} data-state={selected.has(p.id) ? 'selected' : undefined}>
+                      <TableRow
+                        key={p.id}
+                        data-state={selected.has(p.id) ? 'selected' : undefined}
+                        className="cursor-pointer"
+                        role="link"
+                        tabIndex={0}
+                        onClick={abrir}
+                        onKeyDown={e => { if (e.key === 'Enter') abrir(); }}
+                      >
                         {(puedeEditar || puedeEliminar) && (
-                          <TableCell className="w-9">
+                          <TableCell className="w-9" onClick={e => e.stopPropagation()}>
                             <Checkbox
                               aria-label={`Seleccionar ${p.name}`}
                               checked={selected.has(p.id)}
@@ -486,30 +456,13 @@ export function ProductsPage() {
                               ? <Badge variant="destructive">Bajo mínimo</Badge>
                               : <Badge variant="success">Activo</Badge>}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link to={`/catalog/products/${p.id}`}>
-                                <Eye />
-                              </Link>
+                        {puedeEditar && (
+                          <TableCell className="w-10 text-right" onClick={e => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" aria-label={`Editar ${p.name}`} onClick={() => openEdit(p)}>
+                              <PencilSimple />
                             </Button>
-                            {puedeEditar && (
-                              <>
-                                <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
-                                  <PencilSimple />
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => toggleActive(p)}>
-                                  {p.isActive ? 'Desactivar' : 'Activar'}
-                                </Button>
-                              </>
-                            )}
-                            {puedeEliminar && (
-                              <Button variant="ghost" size="icon" aria-label={`Eliminar ${p.name}`} onClick={() => setConfirmDelete(p)}>
-                                <Trash />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -539,41 +492,18 @@ export function ProductsPage() {
         onSaved={() => { void load(); void loadCategories(); void loadBrands(); }}
       />
 
-      <Dialog open={confirmDelete !== null} onOpenChange={o => !o && setConfirmDelete(null)}>
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {confirmDelete === 'bulk'
-                ? `Eliminar ${selected.size} ${selected.size === 1 ? 'producto' : 'productos'}`
-                : `Eliminar «${confirmDelete?.name ?? ''}»`}
-            </DialogTitle>
+            <DialogTitle>Eliminar {selected.size} {selected.size === 1 ? 'producto' : 'productos'}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {confirmDelete === 'bulk'
-              ? 'Los que nunca tuvieron movimientos se borran de verdad; los que ya se usaron (stock, ventas o compras) se desactivan. Esto no se puede deshacer.'
-              : 'Se borra de verdad si nunca tuvo movimientos. Si ya se usó, te vamos a ofrecer desactivarlo. Esto no se puede deshacer.'}
+            Los que nunca tuvieron movimientos se borran; los que ya se usaron (stock, ventas o compras) se desactivan —sus registros son parte de la historia—. Esto no se puede deshacer.
           </p>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
-            <Button type="button" variant="destructive" onClick={doDelete} disabled={deleting}>
+            <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}>Cancelar</Button>
+            <Button type="button" variant="destructive" onClick={bulkDelete} disabled={deleting}>
               {deleting ? <Spinner /> : <Trash />} Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={deactivateInstead !== null} onOpenChange={o => !o && setDeactivateInstead(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>No se puede borrar</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            «{deactivateInstead?.name}» ya tuvo movimientos (stock, ventas o compras), así que es parte de la historia y no se puede borrar. Podés desactivarlo: deja de aparecer en la caja y en los listados, pero sus registros quedan.
-          </p>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDeactivateInstead(null)}>Cancelar</Button>
-            <Button type="button" onClick={doDeactivate} disabled={deleting}>
-              {deleting && <Spinner />} Desactivar
             </Button>
           </DialogFooter>
         </DialogContent>

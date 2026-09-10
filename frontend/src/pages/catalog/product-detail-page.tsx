@@ -158,11 +158,12 @@ export function ProductDetailPage() {
     }
   }
 
-  async function doDeactivate() {
+  async function setActive(isActive: boolean) {
     if (!product) return;
     setDeleting(true);
+    setError('');
     try {
-      await api(`/products/${product.id}`, { method: 'PUT', body: JSON.stringify({ isActive: false }) }, token);
+      await api(`/products/${product.id}`, { method: 'PUT', body: JSON.stringify({ isActive }) }, token);
       setDeactivatePrompt(false);
       await loadProduct();
     } catch (err) {
@@ -191,13 +192,13 @@ export function ProductDetailPage() {
               </Button>
             )}
             {puedeEditarProducto && (
-              <Button variant="outline" onClick={() => void api(`/products/${product.id}`, { method: 'PUT', body: JSON.stringify({ isActive: !product.isActive }) }, token).then(loadProduct)}>
+              <Button variant="outline" disabled={deleting} onClick={() => void setActive(!product.isActive)}>
                 {product.isActive ? 'Desactivar' : 'Activar'}
               </Button>
             )}
             {puedeEliminar && (
-              <Button variant="ghost" size="icon" aria-label="Eliminar producto" onClick={() => setConfirmDelete(true)}>
-                <Trash />
+              <Button variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+                <Trash /> Eliminar
               </Button>
             )}
           </>
@@ -405,7 +406,7 @@ export function ProductDetailPage() {
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDeactivatePrompt(false)}>Cancelar</Button>
-            <Button type="button" onClick={doDeactivate} disabled={deleting}>
+            <Button type="button" onClick={() => void setActive(false)} disabled={deleting}>
               {deleting && <Spinner />} Desactivar
             </Button>
           </DialogFooter>
