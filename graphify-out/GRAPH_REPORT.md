@@ -1,7 +1,7 @@
 # Graph Report - abasto  (2026-09-10)
 
 ## Corpus Check
-- 266 files · ~173,398 words
+- 266 files · ~173,722 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `edd79ed7`
+- Built from commit: `7ee0e2bc`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -548,7 +548,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `AuthService` connect `AuthService` to `StockService`, `app.module.ts`, `Auth Architecture (JWT, Guards, Argon2id)`, `.token`?**
   _High betweenness centrality (0.342) - this node is a cross-community bridge._
 - **Why does `AuthRequest` connect `AuthRequest` to `app.module.ts`, `AuthService`, `StockService`, `PromotionsController`, `PriceRulesController`, `EscritorioController`, `CuentasCorrientesController`, `PriceListsController`, `SalesController`, `CustomersController`, `prices.service.ts`, `CreditNotesService`, `Tenants Controller`, `BranchesController`, `promotions.controller.ts`, `CategoriesController`, `ReportesController`, `PurchasesController`, `SuppliersController`, `Auth Architecture (JWT, Guards, Argon2id)`, `products.controller.ts`, `RequirePermission`, `TasksController`, `RangosService`, `WarehousesController`, `PricesController`?**
-  _High betweenness centrality (0.189) - this node is a cross-community bridge._
+  _High betweenness centrality (0.190) - this node is a cross-community bridge._
 - **Why does `api` connect `api` to `stock-in-page.tsx`, `cn`, `money`, `.token`, `escritorio-shell.tsx`, `StockInPage`, `ventas-chart.tsx`, `pos-page.tsx`, `useAuth`, `WarehousesPage`, `stock-history-page.tsx`, `RangosPage`, `user-menu.tsx`, `downloadFile`, `errorMessage`, `CategoriesPage`, `api.ts`, `sales-history-page.tsx`, `use-async.ts`?**
   _High betweenness centrality (0.130) - this node is a cross-community bridge._
 - **What connects `$schema`, `plugin`, `name` to the rest of the system?**

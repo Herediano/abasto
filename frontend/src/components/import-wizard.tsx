@@ -133,7 +133,7 @@ export function ImportWizard({
         {step === 'map' && inspect && (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              {inspect.rowCount} filas. Confirmá qué columna del archivo va en cada dato. Las que dejes «sin usar» no se tocan.
+              {inspect.rowCount} {inspect.rowCount === 1 ? 'fila' : 'filas'}. Confirmá qué columna del archivo va en cada dato. Las que dejes «sin usar» no se tocan (una celda vacía tampoco borra nada).
             </p>
             <div className="grid max-h-[50vh] gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
               {fields.map(f => (

@@ -5,19 +5,22 @@ import { cell, normalizeHeader, normalizeNumber, type ColumnMapping, type Import
 // controller, que tiene la máquina de precios y la secuencia de SKU.
 
 export const PRODUCT_IMPORT_FIELDS: ImportField[] = [
-  { key: 'barcode', label: 'Código de barras', aliases: ['codigodebarras', 'codbarras', 'codbarra', 'barcode', 'ean', 'ean13', 'codigo'], kind: 'text', matchKey: true },
+  { key: 'barcode', label: 'Código de barras', aliases: ['codigodebarras', 'codbarras', 'codbarra', 'barcode', 'ean', 'ean13'], kind: 'text', matchKey: true },
   { key: 'name', label: 'Nombre', aliases: ['producto', 'nombre', 'descripcion', 'detalle', 'name'], kind: 'text', requiredForCreate: true },
   { key: 'brand', label: 'Marca', aliases: ['marca', 'brand'], kind: 'text' },
   { key: 'category', label: 'Categoría', aliases: ['categoria', 'rubro', 'category'], kind: 'text', help: 'Tiene que existir; no se crean solas.' },
-  { key: 'unit', label: 'Unidad de venta', aliases: ['unidaddeventa', 'unidadventa', 'unidad', 'unit'], kind: 'enum', help: 'unidad, kg, g, litro, ml, metro, docena' },
-  { key: 'iva', label: 'IVA', aliases: ['iva', 'alicuota', 'alicuotaiva', 'ivapercent'], kind: 'enum', help: '21, 10.5, 27, 0, 2.5, 5, exento, no gravado' },
-  { key: 'purchaseUnit', label: 'Unidad de compra (bulto)', aliases: ['unidaddecompra', 'unidadcompra', 'bulto'], kind: 'text' },
-  { key: 'unitsPerPurchase', label: 'Unidades por bulto', aliases: ['unidadesporbulto', 'unidxbulto', 'uxb'], kind: 'number' },
+  { key: 'unit', label: 'Unidad de venta', aliases: ['unidaddeventa', 'unidadventa', 'unidadvta', 'unit'], kind: 'enum', help: 'unidad, kg, g, litro, ml, metro, docena' },
+  { key: 'isWeighed', label: 'Pesable', aliases: ['pesable', 'sepesa', 'porpeso', 'balanza'], kind: 'boolean', help: 'Sí / No. Si es sí, se vende por kilo.' },
+  { key: 'iva', label: 'IVA', aliases: ['iva', 'alicuotaiva', 'ivapercent', 'alicuota'], kind: 'enum', help: '21, 10.5, 27, 0, 2.5, 5, exento, no gravado' },
+  { key: 'internalTax', label: 'Impuestos internos %', aliases: ['impuestosinternos', 'impinternos', 'impuestointerno', 'internos', 'iinternos'], kind: 'number', help: 'Alcohol, cigarrillos, bebidas. 0 si no aplica.' },
+  { key: 'purchaseUnit', label: 'Unidad de compra (bulto)', aliases: ['unidaddecompra', 'unidadcompra', 'unidadcpra', 'bulto', 'nombrebulto'], kind: 'text', help: 'Caja, pack, pallet… Necesita también "Unidades por bulto".' },
+  { key: 'unitsPerPurchase', label: 'Unidades por bulto', aliases: ['unidadesporbulto', 'unidxbulto', 'uxb', 'cantidadporbulto', 'cantxbulto'], kind: 'number' },
+  { key: 'packBarcode', label: 'Código de barras del bulto', aliases: ['codigodebarrasdelbulto', 'codigodelbulto', 'codbulto', 'eanbulto', 'barcodebulto'], kind: 'text' },
   { key: 'minStock', label: 'Stock mínimo', aliases: ['stockminimo', 'minimo', 'minstock'], kind: 'number' },
   { key: 'maxStock', label: 'Reponer hasta', aliases: ['reponerhasta', 'stockmaximo', 'maximo', 'maxstock'], kind: 'number' },
   { key: 'costPrice', label: 'Precio de costo', aliases: ['preciodecosto', 'preciocosto', 'costo', 'preciocompra', 'cost'], kind: 'number' },
   { key: 'salePrice', label: 'Precio de venta', aliases: ['preciodeventa', 'precioventa', 'precio', 'pvp', 'saleprice'], kind: 'number' },
-  { key: 'manejaVencimiento', label: 'Maneja vencimiento', aliases: ['manejavencimiento', 'vencimiento', 'vence'], kind: 'boolean' },
+  { key: 'manejaVencimiento', label: 'Maneja vencimiento', aliases: ['manejavencimiento', 'vencimiento', 'vence', 'lote'], kind: 'boolean', help: 'Sí / No. Fiambres, lácteos, todo lo que vence.' },
 ];
 
 const SALE_UNITS = ['unidad', 'kg', 'g', 'litro', 'ml', 'metro', 'docena'];
@@ -66,15 +69,18 @@ function iva(raw: string): Parsed<{ ivaSituacion: string; taxRate: number }> {
 
 export type ImportedProductFields = {
   name?: string;
-  brand?: string | null;
-  categoryId?: string | null;
+  brand?: string;
+  categoryId?: string;
   unit?: string;
+  isWeighed?: boolean;
   ivaSituacion?: string;
   taxRate?: number;
-  purchaseUnit?: string | null;
+  internalTaxRate?: number;
+  purchaseUnit?: string;
   unitsPerPurchase?: number;
-  minStock?: number | null;
-  maxStock?: number | null;
+  packBarcode?: string;
+  minStock?: number;
+  maxStock?: number;
   manejaVencimiento?: boolean;
 };
 
@@ -135,19 +141,38 @@ export function planProductRows(params: {
       if (u === INVALID) return fail(`Unidad de venta «${val(row, 'unit')}» no válida`);
       if (u) fields.unit = u;
     }
+    if (has('isWeighed')) {
+      const b = bool(val(row, 'isWeighed'));
+      if (b !== null) fields.isWeighed = b;
+    }
     if (has('iva')) {
       const r = iva(val(row, 'iva'));
       if (r === INVALID) return fail(`IVA «${val(row, 'iva')}» no válido`);
       if (r) { fields.ivaSituacion = r.ivaSituacion; fields.taxRate = r.taxRate; }
     }
+    if (has('internalTax')) {
+      const n = num(val(row, 'internalTax'));
+      if (n === INVALID) return fail('Impuestos internos no es un número');
+      if (n !== null) fields.internalTaxRate = n;
+    }
     if (has('purchaseUnit') && val(row, 'purchaseUnit')) {
       const pu = val(row, 'purchaseUnit');
       const upRaw = num(has('unitsPerPurchase') ? val(row, 'unitsPerPurchase') : '');
       if (upRaw === INVALID) return fail('Unidades por bulto no es un número');
-      if (!upRaw || upRaw <= 1) return fail(`El bulto «${pu}» tiene que traer más de una unidad`);
+      if (!upRaw || upRaw <= 1) return fail(`El bulto «${pu}» tiene que traer más de una unidad (revisá la columna «Unidades por bulto»)`);
       fields.purchaseUnit = pu;
       fields.unitsPerPurchase = upRaw;
     }
+    if (has('packBarcode')) {
+      const v = val(row, 'packBarcode');
+      if (v) {
+        if (v === barcode) return fail('El código del bulto no puede ser igual al código principal');
+        if (takenBarcodes.has(v)) return fail(`El código del bulto ${v} ya lo usa otro producto`);
+        fields.packBarcode = v;
+      }
+    }
+    // Pesable siempre se vende por kilo.
+    if (fields.isWeighed === true) fields.unit = 'kg';
     for (const [key, target] of [['minStock', 'minStock'], ['maxStock', 'maxStock']] as const) {
       if (!has(key)) continue;
       const n = num(val(row, key));

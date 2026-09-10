@@ -494,8 +494,10 @@ export class ProductsController {
       { header: 'Marca', key: 'brand', width: 18 },
       { header: 'Categoría', key: 'category', width: 20 },
       { header: 'Unidad de venta', key: 'unit', width: 14 },
+      { header: 'Pesable', key: 'isWeighed', width: 10 },
       { header: 'Unidad de compra', key: 'purchaseUnit', width: 16 },
       { header: 'Unidades por bulto', key: 'unitsPerPurchase', width: 16 },
+      { header: 'Código del bulto', key: 'packBarcode', width: 18 },
       { header: 'Precio de costo', key: 'costPrice', width: 16 },
       { header: 'Precio de venta', key: 'salePrice', width: 16 },
       { header: 'Margen %', key: 'margin', width: 12 },
@@ -503,6 +505,7 @@ export class ProductsController {
       { header: 'Imp. internos %', key: 'internalTaxRate', width: 14 },
       { header: 'Stock actual', key: 'currentStock', width: 13 },
       { header: 'Stock mínimo', key: 'minStock', width: 13 },
+      { header: 'Reponer hasta', key: 'maxStock', width: 13 },
       { header: 'Maneja vencimiento', key: 'manejaVencimiento', width: 18 },
       { header: 'Estado', key: 'status', width: 12 },
       { header: 'Creado', key: 'createdAt', width: 18 },
@@ -527,8 +530,10 @@ export class ProductsController {
         brand: p.brand ?? '',
         category: p.category?.name ?? '',
         unit: p.unit,
+        isWeighed: p.isWeighed ? 'Sí' : 'No',
         purchaseUnit: p.purchaseUnit ?? '',
         unitsPerPurchase: Number(p.unitsPerPurchase),
+        packBarcode: p.packBarcode ?? '',
         costPrice: cost,
         salePrice: sale,
         margin: cost != null && sale != null && sale > 0 ? (sale - cost) / sale : null,
@@ -536,6 +541,7 @@ export class ProductsController {
         internalTaxRate: Number(p.internalTaxRate),
         currentStock: stock.get(p.id) ?? 0,
         minStock: p.minStock != null ? Number(p.minStock) : null,
+        maxStock: p.maxStock != null ? Number(p.maxStock) : null,
         manejaVencimiento: p.manejaVencimiento ? 'Sí' : 'No',
         status: p.isActive ? 'Activo' : 'Inactivo',
         createdAt: p.createdAt,
@@ -602,6 +608,10 @@ export class ProductsController {
     try { mapping = { ...(JSON.parse(body.mapping || '{}') as ColumnMapping) }; }
     catch { throw new BadRequestException('El mapeo de columnas no es válido'); }
     if (mapping.barcode == null || mapping.barcode < 0) throw new UnprocessableEntityException('Falta indicar qué columna tiene el código de barras');
+    const mapped = (k: string) => mapping[k] != null && mapping[k] >= 0;
+    if (mapped('purchaseUnit') && !mapped('unitsPerPurchase')) {
+      throw new UnprocessableEntityException('Mapeaste «Unidad de compra (bulto)» pero falta «Unidades por bulto»: sin eso no se sabe cuántas unidades trae el bulto.');
+    }
 
     const barcodesInFile = [...new Set(sheet.rows.map(r => cell(r, mapping, 'barcode')).filter(Boolean))];
     const [existing, cats, todos, extra] = await Promise.all([
@@ -654,10 +664,13 @@ export class ProductsController {
             name: c.fields.name!, unit: c.fields.unit ?? 'unidad',
             brand: c.fields.brand ?? undefined,
             categoryId: c.fields.categoryId ?? undefined,
+            isWeighed: c.fields.isWeighed ?? undefined,
             ivaSituacion: c.fields.ivaSituacion ?? undefined,
             taxRate: c.fields.taxRate ?? undefined,
+            internalTaxRate: c.fields.internalTaxRate ?? undefined,
             purchaseUnit: c.fields.purchaseUnit ?? undefined,
             unitsPerPurchase: c.fields.unitsPerPurchase ?? undefined,
+            packBarcode: c.fields.packBarcode ?? undefined,
             minStock: c.fields.minStock ?? undefined,
             maxStock: c.fields.maxStock ?? undefined,
             manejaVencimiento: c.fields.manejaVencimiento ?? undefined,
@@ -673,9 +686,12 @@ export class ProductsController {
         if (f.brand !== undefined) data.brand = f.brand;
         if (f.categoryId !== undefined) data.categoryId = f.categoryId;
         if (f.unit !== undefined) data.unit = f.unit;
+        if (f.isWeighed !== undefined) data.isWeighed = f.isWeighed;
         if (f.ivaSituacion !== undefined) { data.ivaSituacion = f.ivaSituacion; data.taxRate = f.taxRate; }
+        if (f.internalTaxRate !== undefined) data.internalTaxRate = f.internalTaxRate;
         if (f.purchaseUnit !== undefined) data.purchaseUnit = f.purchaseUnit;
         if (f.unitsPerPurchase !== undefined) data.unitsPerPurchase = f.unitsPerPurchase;
+        if (f.packBarcode !== undefined) data.packBarcode = f.packBarcode;
         if (f.minStock !== undefined) data.minStock = f.minStock;
         if (f.maxStock !== undefined) data.maxStock = f.maxStock;
         if (f.manejaVencimiento !== undefined) data.manejaVencimiento = f.manejaVencimiento;
