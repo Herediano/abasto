@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req, Res, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Prisma } from '@prisma/client';
 import ExcelJS from 'exceljs';
@@ -115,12 +115,6 @@ export class ProductsController {
       this.prisma.productLot.deleteMany({ where: { tenantId, productId: { in: ids } } }),
       this.prisma.product.deleteMany({ where: { tenantId, id: { in: ids } } }),
     ]);
-  }
-
-  private parseIds(raw: unknown): string[] {
-    const ids = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string' && !!x) : [];
-    if (!ids.length) throw new BadRequestException('Elegí al menos un producto');
-    return [...new Set(ids)];
   }
 
   @Get() @RequirePermission('productos.ver')
@@ -509,60 +503,6 @@ export class ProductsController {
       }
     }
     return { updated, renamed, notFound, invalid, matchedColumns };
-  }
-
-  /**
-   * Cambio en lote de un conjunto de productos: categoría, marca, IVA, stock
-   * mínimo o estado. Sólo los campos presentes en `set` se tocan. No pasa por
-   * el historial de precios porque no toca precios.
-   */
-  @Patch('bulk')
-  @RequirePermission('productos.editar')
-  async bulkUpdate(@Req() request: AuthRequest, @Body() body: { ids?: unknown; set?: Record<string, unknown> }) {
-    const tenantId = request.user.tenantId;
-    const ids = this.parseIds(body.ids);
-    const set = body.set ?? {};
-    const data: Prisma.ProductUncheckedUpdateManyInput = {};
-
-    if ('categoryId' in set) {
-      const c = set.categoryId;
-      if (c === null || c === '') data.categoryId = null;
-      else if (typeof c === 'string') {
-        if (!(await this.prisma.category.findFirst({ where: { id: c, tenantId } }))) throw new BadRequestException('Categoría no encontrada');
-        data.categoryId = c;
-      }
-    }
-    if ('brand' in set) data.brand = set.brand === null || set.brand === '' ? null : typeof set.brand === 'string' ? set.brand.trim() : undefined;
-    if ('taxRate' in set) {
-      const t = parseOptionalDecimal(set.taxRate, 'taxRate');
-      assertTaxRate(t ?? undefined);
-      if (t != null) data.taxRate = t;
-    }
-    if ('minStock' in set) data.minStock = parseOptionalDecimal(set.minStock, 'minStock') ?? null;
-    if ('isActive' in set && typeof set.isActive === 'boolean') data.isActive = set.isActive;
-
-    if (!Object.keys(data).length) throw new BadRequestException('No hay cambios para aplicar');
-    const { count } = await this.prisma.product.updateMany({ where: { tenantId, id: { in: ids } }, data });
-    return { updated: count };
-  }
-
-  /**
-   * Borrado en lote: los que nunca se movieron se borran de verdad; los que ya
-   * tienen historia se desactivan. Devuelve el desglose para poder avisarlo.
-   */
-  @Post('bulk-delete')
-  @RequirePermission('productos.eliminar')
-  async bulkDelete(@Req() request: AuthRequest, @Body() body: { ids?: unknown }) {
-    const tenantId = request.user.tenantId;
-    const asked = this.parseIds(body.ids);
-    const own = await this.prisma.product.findMany({ where: { tenantId, id: { in: asked } }, select: { id: true } });
-    const ids = own.map(p => p.id);
-    const conActividad = await this.productsWithActivity(ids);
-    const limpios = ids.filter(id => !conActividad.has(id));
-    const aDesactivar = ids.filter(id => conActividad.has(id));
-    await this.hardDeleteProducts(tenantId, limpios);
-    if (aDesactivar.length) await this.prisma.product.updateMany({ where: { tenantId, id: { in: aDesactivar } }, data: { isActive: false } });
-    return { deleted: limpios.length, deactivated: aDesactivar.length };
   }
 
   @Get(':id') @RequirePermission('productos.ver')

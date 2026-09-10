@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
@@ -19,15 +18,11 @@ import { quantity } from '@/lib/format';
 import { money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
-// Alícuotas vigentes en Argentina; el backend valida contra la misma lista.
-const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
-
 export function ProductsPage() {
   const { session, can } = useAuth();
   const navigate = useNavigate();
   const puedeEditar = can('productos.editar');
   const puedeCrear = can('productos.crear');
-  const puedeEliminar = can('productos.eliminar');
   const token = session!.accessToken;
   const [items, setItems] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -51,13 +46,10 @@ export function ProductsPage() {
   const [priceListId, setPriceListId] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<Pagination>({ total: 0, totalPages: 0, pageSize: 20, page: 1 });
-  // La fila abre la pantalla del producto; ahí se ve y se edita todo. Desde la
-  // lista solo se explora y se actúa en lote sobre lo seleccionado.
-  // Se limpia sola cuando cambia el filtro o la página.
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  // La lista solo explora. Cada producto se abre en su pantalla y ahí se ve y se
+  // edita todo (una acción = un solo lugar). Los cambios masivos se harán por
+  // Excel (exportar filtrado → editar → importar), junto con el importador de
+  // Precios; no hay selección con checkbox.
   // Cifra de cabecera: cuántos productos están bajo su mínimo (lo mismo que
   // muestra Reposición). Una sola llamada al montar.
   const [bajoMinimoTotal, setBajoMinimoTotal] = useState<number | null>(null);
@@ -123,7 +115,6 @@ export function ProductsPage() {
 
   useEffect(() => { void loadCategories(); void loadBrands(); void loadPriceLists(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setPage(1); }, [search, categoryId, brand, status, priced, stock, sort, priceListId]);
-  useEffect(() => { setSelected(new Set()); }, [search, categoryId, brand, status, priced, stock, sort, priceListId, page]);
   useEffect(() => { void load(); }, [token, search, categoryId, brand, status, priced, stock, sort, priceListId, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
@@ -164,61 +155,6 @@ export function ProductsPage() {
   }
 
   const nuevoProducto = () => navigate('/catalog/products/new');
-
-  // --- Selección + acciones en lote ------------------------------------------
-  const pageIds = items.map(p => p.id);
-  const allOnPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id));
-  const toggleOne = (id: string) =>
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  const toggleAllOnPage = () =>
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (allOnPageSelected) pageIds.forEach(id => next.delete(id));
-      else pageIds.forEach(id => next.add(id));
-      return next;
-    });
-
-  async function bulkSet(set: Record<string, unknown>) {
-    setBulkBusy(true);
-    setError('');
-    setCatalogMessage('');
-    try {
-      const { updated } = await api<{ updated: number }>('/products/bulk', { method: 'PATCH', body: JSON.stringify({ ids: [...selected], set }) }, token);
-      setCatalogMessage(`${updated} ${updated === 1 ? 'producto actualizado' : 'productos actualizados'}.`);
-      setSelected(new Set());
-      await Promise.all([load(), loadBrands()]);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBulkBusy(false);
-    }
-  }
-
-  async function bulkDelete() {
-    setDeleting(true);
-    setError('');
-    setCatalogMessage('');
-    try {
-      const r = await api<{ deleted: number; deactivated: number }>('/products/bulk-delete', { method: 'POST', body: JSON.stringify({ ids: [...selected] }) }, token);
-      setCatalogMessage(
-        [
-          r.deleted && `${r.deleted} ${r.deleted === 1 ? 'producto borrado' : 'productos borrados'}`,
-          r.deactivated && `${r.deactivated} ${r.deactivated === 1 ? 'desactivado' : 'desactivados'} (ya tenían movimientos)`,
-        ].filter(Boolean).join(' · ') || 'No había nada para borrar.',
-      );
-      setSelected(new Set());
-      setConfirmDelete(false);
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setDeleting(false);
-    }
-  }
 
   const resumen = !loading && pagination.total > 0 && (
     <SummaryLine
@@ -320,72 +256,6 @@ export function ProductsPage() {
         )}
       </ListFilters>
 
-          {!loading && selected.size > 0 && (puedeEditar || puedeEliminar) && (
-            <div className="sticky top-[57px] z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-accent-border bg-accent/60 px-3 py-2 text-chico backdrop-blur">
-              <span className="font-semibold text-accent-foreground">
-                {selected.size} {selected.size === 1 ? 'seleccionado' : 'seleccionados'}
-              </span>
-
-              {puedeEditar && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted-foreground">Cambiar:</span>
-                  <Select
-                    aria-label="Cambiar categoría"
-                    className="h-8 w-auto min-w-36 text-chico"
-                    value=""
-                    disabled={bulkBusy}
-                    onChange={e => { if (e.target.value) void bulkSet({ categoryId: e.target.value === '__none__' ? null : e.target.value }); }}
-                  >
-                    <option value="">categoría…</option>
-                    <option value="__none__">Sin categoría</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </Select>
-                  <Select
-                    aria-label="Cambiar marca"
-                    className="h-8 w-auto min-w-28 text-chico"
-                    value=""
-                    disabled={bulkBusy}
-                    onChange={e => { if (e.target.value) void bulkSet({ brand: e.target.value === '__none__' ? null : e.target.value }); }}
-                  >
-                    <option value="">marca…</option>
-                    <option value="__none__">Sin marca</option>
-                    {brands.map(b => <option key={b} value={b}>{b}</option>)}
-                  </Select>
-                  <Select
-                    aria-label="Cambiar IVA"
-                    className="h-8 w-auto min-w-20 text-chico"
-                    value=""
-                    disabled={bulkBusy}
-                    onChange={e => { if (e.target.value) void bulkSet({ taxRate: e.target.value }); }}
-                  >
-                    <option value="">IVA…</option>
-                    {TAX_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
-                  </Select>
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2">
-                {puedeEditar && (
-                  <>
-                    <span className="h-4 w-px bg-border" />
-                    <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => void bulkSet({ isActive: true })}>Activar</Button>
-                    <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => void bulkSet({ isActive: false })}>Desactivar</Button>
-                  </>
-                )}
-                {puedeEliminar && (
-                  <Button variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setConfirmDelete(true)}>
-                    <Trash /> Eliminar
-                  </Button>
-                )}
-              </div>
-
-              <button type="button" className="ml-auto text-muted-foreground hover:text-foreground hover:underline" onClick={() => setSelected(new Set())}>
-                Limpiar selección
-              </button>
-              {bulkBusy && <Spinner />}
-            </div>
-          )}
-
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
@@ -403,20 +273,11 @@ export function ProductsPage() {
             <div>
               <Table>
                 <TableHeader>
-                  {/* Seis columnas, no diez. La categoría y el margen viven en
+                  {/* Cinco columnas, no diez. La categoría y el margen viven en
                       el detalle del producto: en el listado eran ruido. El
                       código de barras va debajo del nombre, no en su propia
                       columna. */}
                   <TableRow>
-                    {(puedeEditar || puedeEliminar) && (
-                      <TableHead className="w-9">
-                        <Checkbox
-                          aria-label="Seleccionar todos"
-                          checked={allOnPageSelected}
-                          onCheckedChange={toggleAllOnPage}
-                        />
-                      </TableHead>
-                    )}
                     <TableHead>Producto</TableHead>
                     <TableHead>Marca</TableHead>
                     <TableHead className="text-right">Precio</TableHead>
@@ -431,22 +292,12 @@ export function ProductsPage() {
                     return (
                       <TableRow
                         key={p.id}
-                        data-state={selected.has(p.id) ? 'selected' : undefined}
                         className="cursor-pointer"
                         role="link"
                         tabIndex={0}
                         onClick={abrir}
                         onKeyDown={e => { if (e.key === 'Enter') abrir(); }}
                       >
-                        {(puedeEditar || puedeEliminar) && (
-                          <TableCell className="w-9" onClick={e => e.stopPropagation()}>
-                            <Checkbox
-                              aria-label={`Seleccionar ${p.name}`}
-                              checked={selected.has(p.id)}
-                              onCheckedChange={() => toggleOne(p.id)}
-                            />
-                          </TableCell>
-                        )}
                         <TableCell>
                           <div className="font-medium leading-snug">{p.name}</div>
                           <div className="mt-0.5 font-mono text-chico text-placeholder">
@@ -491,23 +342,6 @@ export function ProductsPage() {
             </div>
           )}
       </ModuleScreen>
-
-      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar {selected.size} {selected.size === 1 ? 'producto' : 'productos'}</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Los que nunca tuvieron movimientos se borran; los que ya se usaron (stock, ventas o compras) se desactivan —sus registros son parte de la historia—. Esto no se puede deshacer.
-          </p>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}>Cancelar</Button>
-            <Button type="button" variant="destructive" onClick={bulkDelete} disabled={deleting}>
-              {deleting ? <Spinner /> : <Trash />} Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={confirmingCatalog} onOpenChange={setConfirmingCatalog}>
         <DialogContent>

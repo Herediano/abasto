@@ -91,9 +91,6 @@ export function ProductDetailPage() {
   const [baseline, setBaseline] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [referenceHint, setReferenceHint] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [creatingCategory, setCreatingCategory] = useState(false);
-  const [savingCategory, setSavingCategory] = useState(false);
 
   const [newBarcode, setNewBarcode] = useState('');
   const [savingBarcode, setSavingBarcode] = useState(false);
@@ -170,24 +167,6 @@ export function ProductDetailPage() {
     }, 400);
     return () => clearTimeout(t);
   }, [form.barcode, creando, token]);
-
-  async function createCategory() {
-    const name = newCategoryName.trim();
-    if (!name) return;
-    setSavingCategory(true);
-    setError('');
-    try {
-      const created = await api<Category>('/categories', { method: 'POST', body: JSON.stringify({ name }) }, token);
-      setCategories(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      set('categoryId', created.id);
-      setNewCategoryName('');
-      setCreatingCategory(false);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSavingCategory(false);
-    }
-  }
 
   async function save() {
     setSaving(true);
@@ -322,36 +301,10 @@ export function ProductDetailPage() {
         </Field>
         {referenceHint && creando && <p className="text-xs text-muted-foreground">Nombre y marca autocompletados desde la base de referencia. Revisalos antes de guardar.</p>}
         <Field label="Categoría" htmlFor="p-category" hint="(opcional)">
-          {creatingCategory ? (
-            <div className="flex gap-2">
-              <Input
-                autoFocus
-                placeholder="Nombre de la categoría"
-                value={newCategoryName}
-                onChange={e => setNewCategoryName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); void createCategory(); }
-                  if (e.key === 'Escape') { setCreatingCategory(false); setNewCategoryName(''); }
-                }}
-              />
-              <Button type="button" size="sm" onClick={() => void createCategory()} disabled={savingCategory || !newCategoryName.trim()}>
-                {savingCategory ? <Spinner /> : 'Crear'}
-              </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => { setCreatingCategory(false); setNewCategoryName(''); }}>Cancelar</Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Select id="p-category" value={form.categoryId} disabled={soloLectura} onChange={e => set('categoryId', e.target.value)}>
-                <option value="">Sin categoría</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </Select>
-              {!soloLectura && (
-                <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setCreatingCategory(true)}>
-                  <Plus /> Nueva
-                </Button>
-              )}
-            </div>
-          )}
+          <Select id="p-category" value={form.categoryId} disabled={soloLectura} onChange={e => set('categoryId', e.target.value)}>
+            <option value="">Sin categoría</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Select>
         </Field>
       </div>
 
