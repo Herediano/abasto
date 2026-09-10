@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShoppingCartSimple, Package, Plus, Trash } from '@phosphor-icons/react';
+import { ShoppingCartSimple, Package, Plus, Trash, UploadSimple } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Field } from '@/components/field';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen, SummaryLine } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
+import { ImportWizard } from '@/components/import-wizard';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -38,6 +39,7 @@ export function ProductsPage() {
   const [stock, setStock] = useState('');
   const [sort, setSort] = useState('name');
   const [importingCatalog, setImportingCatalog] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [confirmingCatalog, setConfirmingCatalog] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [clearingCatalog, setClearingCatalog] = useState(false);
@@ -174,6 +176,11 @@ export function ProductsPage() {
             {puedeEditar && (
               <Button variant="outline" onClick={() => setConfirmingCatalog(true)} disabled={importingCatalog}>
                 {importingCatalog ? <Spinner /> : <Package />} Cargar catálogo regional
+              </Button>
+            )}
+            {puedeCrear && (
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <UploadSimple /> Importar
               </Button>
             )}
             <ExportMenu path="/products" params={filterParams()} filename="productos" />
@@ -390,6 +397,16 @@ export function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onDone={() => { void load(); void loadBrands(); void loadCategories(); }}
+        token={token}
+        title="Importar productos desde Excel"
+        fieldsPath="/products/import-fields"
+        importPath="/products/import"
+      />
     </>
   );
 }

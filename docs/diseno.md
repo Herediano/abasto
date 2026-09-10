@@ -524,14 +524,13 @@ acción en dos lugares (y peor, una destructiva) es el error a no cometer.
   escalas por cantidad; historial de cambios. Las otras listas y la
   actualización masiva viven en el módulo Precios). El resumen (`SummaryLine` +
   un renglón de contexto) va arriba de las pestañas.
-- **Los cambios masivos son por Excel, no con checkbox.** Exportar filtrado →
-  editar en la planilla → reimportar. No hay selección múltiple en las filas: el
-  volumen de un catálogo mayorista se edita mejor en Excel, y evita repetir en
-  una barra de lote lo que ya vive en el detalle. (El importador de productos se
-  construye junto con el de Precios.)
-- **Grupos plegados cuando el caso simple no los necesita.** En el detalle,
-  bloques que la mayoría no vuelve a tocar tras el alta (Impuestos: «IVA 21 %»)
-  arrancan colapsados con un resumen de una línea y un `Editar` que los abre.
+- **Los cambios masivos son por Excel, no con checkbox.** No hay selección
+  múltiple en las filas: el volumen de un catálogo mayorista se edita mejor en
+  Excel, y evita repetir en una barra de lote lo que ya vive en el detalle. El
+  botón **Importar** de Productos abre el wizard (`components/import-wizard.tsx`):
+  subir → mapear columnas → previsualizar qué cambia → aplicar. Exportar filtrado
+  → editar → reimportar el mismo archivo es el flujo pensado. Una celda vacía no
+  borra: significa «no cambiar ese campo».
 - **Destructivo siempre con confirmación** cuyo título nombra el ítem («Eliminar
   «Yerba La Merced»») y cuyo cuerpo dice qué pasa y si se puede deshacer.
   `Eliminar` es borrado real solo si el ítem no tiene historia; si la tiene, se
@@ -808,11 +807,10 @@ por módulo, personalización profunda del escritorio.
   botón `Desactivar` suelto en la fila (va al diálogo de edición); Depósitos
   mezcla «Ver cajas» + lápiz. Ningún módulo salvo Productos tiene pantalla de
   detalle propia todavía —los demás siguen con diálogo de edición y su lápiz—.
-- **Importador de productos por Excel — falta.** Los cambios masivos del catálogo
-  (categoría, marca, IVA, mín/máx a cientos de productos) se van a hacer
-  exportando filtrado, editando la planilla y reimportando, junto con el
-  importador del módulo Precios. Hasta que exista, esos cambios son de a uno
-  desde la pantalla del producto.
+- **Precios** — ver `docs/plan-precios.md`. Hecho: precio editable en la pantalla
+  del producto (Etapa 0) y el wizard de importación de productos (Etapa 1).
+  Falta: que «Importar precios» del módulo Precios reuse el mismo wizard;
+  simplificar la pestaña «Actualizar»; el alta de promociones en criollo.
 - **`CLAUDE.md` decía «single App.tsx, no router»** — quedó viejo: hay
   `react-router-dom`, `page-header.tsx`, `protected-route.tsx`, `admin-route.tsx`
   (`PermissionRoute`) y un árbol `pages/`.

@@ -143,6 +143,17 @@ export type ProductStockRule = {
   maxStock: string | null;
 };
 
+// --- Importador de Excel ---
+export type ImportField = { key: string; label: string; kind: string; matchKey?: boolean; requiredForCreate?: boolean; help?: string };
+export type ImportInspect = { headers: string[]; rowCount: number; suggested: Record<string, number>; sampleRows: string[][] };
+export type ImportError = { row: number; message: string };
+export type ImportPreview = {
+  willCreate: number; willUpdate: number; skipped: number;
+  errors: ImportError[];
+  sample: { barcode: string; action: string; campos: string[] }[];
+};
+export type ImportApplyResult = { created: number; updated: number; skipped: number; errors: ImportError[] };
+
 export type PriceHistoryRow = {
   id: string;
   field: 'cost' | 'sale';

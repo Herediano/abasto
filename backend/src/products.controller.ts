@@ -10,6 +10,8 @@ import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
 import { parsePricesFile } from './price-import.util';
+import { autoMap, cell, normalizeHeader, readSheet, type ColumnMapping } from './sheet-import.util';
+import { PRODUCT_IMPORT_FIELDS, planProductRows, type PlanRow } from './product-import.util';
 import { sendExport } from './export.util';
 import { priceChange, type PriceHistoryEntry } from './price-history.util';
 import { guardarPrecio, resolverPrecios } from './price-resolver.util';
@@ -558,6 +560,158 @@ export class ProductsController {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="productos.xlsx"');
     res.send(Buffer.from(buffer));
+  }
+
+  /** Catálogo de columnas que entiende el importador de productos (para el wizard). */
+  @Get('import-fields') @RequirePermission('productos.crear')
+  importFields() {
+    return { fields: PRODUCT_IMPORT_FIELDS };
+  }
+
+  /**
+   * Importa productos desde Excel/CSV, en 3 fases (se re-sube el archivo en cada
+   * una; son chicos):
+   *  - `phase=inspect` (sin mapping): devuelve encabezados, mapeo sugerido y filas de muestra.
+   *  - `phase=preview` + `mapping`: devuelve el plan (crear/actualizar/errores) sin tocar nada.
+   *  - `phase=apply` + `mapping`: lo aplica.
+   * `mapping` es un JSON { campo: índiceDeColumna }.
+   */
+  @Post('import')
+  @RequirePermission('productos.crear')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } }))
+  async importProducts(@Req() request: AuthRequest, @UploadedFile() file: Express.Multer.File, @Body() body: { mapping?: string; phase?: string }) {
+    if (!file) throw new BadRequestException('Subí un archivo .csv o .xlsx');
+    const tenantId = request.user.tenantId;
+    const userId = request.user.id;
+    const phase = body.phase === 'apply' ? 'apply' : body.phase === 'preview' ? 'preview' : 'inspect';
+
+    const sheet = await readSheet(file.buffer, file.originalname);
+    if (!sheet.headers.length) throw new UnprocessableEntityException('El archivo está vacío o no se pudo leer');
+    if (sheet.rows.length > 10000) throw new UnprocessableEntityException('El archivo tiene demasiadas filas (máximo 10.000 por vez)');
+
+    if (phase === 'inspect') {
+      return {
+        headers: sheet.headers,
+        rowCount: sheet.rows.filter(r => r.some(c => c.trim())).length,
+        suggested: autoMap(sheet.headers, PRODUCT_IMPORT_FIELDS),
+        sampleRows: sheet.rows.filter(r => r.some(c => c.trim())).slice(0, 5),
+      };
+    }
+
+    let mapping: ColumnMapping = {};
+    try { mapping = { ...(JSON.parse(body.mapping || '{}') as ColumnMapping) }; }
+    catch { throw new BadRequestException('El mapeo de columnas no es válido'); }
+    if (mapping.barcode == null || mapping.barcode < 0) throw new UnprocessableEntityException('Falta indicar qué columna tiene el código de barras');
+
+    const barcodesInFile = [...new Set(sheet.rows.map(r => cell(r, mapping, 'barcode')).filter(Boolean))];
+    const [existing, cats, todos, extra] = await Promise.all([
+      this.prisma.product.findMany({ where: { tenantId, barcode: { in: barcodesInFile } }, select: { id: true, barcode: true } }),
+      this.prisma.category.findMany({ where: { tenantId }, select: { id: true, name: true } }),
+      this.prisma.product.findMany({ where: { tenantId }, select: { barcode: true, packBarcode: true } }),
+      this.prisma.productBarcode.findMany({ where: { tenantId }, select: { barcode: true } }),
+    ]);
+    const existingByBarcode = new Map(existing.map(p => [p.barcode, { id: p.id }]));
+    const categoriesByName = new Map(cats.map(c => [normalizeHeader(c.name), c.id]));
+    const takenBarcodes = new Set<string>();
+    for (const p of todos) { if (!existingByBarcode.has(p.barcode)) takenBarcodes.add(p.barcode); if (p.packBarcode) takenBarcodes.add(p.packBarcode); }
+    for (const b of extra) takenBarcodes.add(b.barcode);
+
+    const plan = planProductRows({ sheet, mapping, existingByBarcode, categoriesByName, takenBarcodes });
+    const creates = plan.filter((p): p is Extract<PlanRow, { kind: 'create' }> => p.kind === 'create');
+    const updates = plan.filter((p): p is Extract<PlanRow, { kind: 'update' }> => p.kind === 'update');
+    const errors = plan.filter((p): p is Extract<PlanRow, { kind: 'error' }> => p.kind === 'error');
+
+    if (phase === 'preview') {
+      return {
+        willCreate: creates.length,
+        willUpdate: updates.length,
+        skipped: plan.filter(p => p.kind === 'skip').length,
+        errors: errors.map(e => ({ row: e.rowNumber, message: e.message })),
+        sample: [...creates, ...updates].slice(0, 15).map(p => ({
+          barcode: p.barcode,
+          action: p.kind === 'create' ? 'Crear' : 'Actualizar',
+          campos: [...Object.keys(p.fields).filter(k => k !== 'taxRate'), ...(p.cost != null ? ['costo'] : []), ...(p.sale != null ? ['venta'] : [])],
+        })),
+      };
+    }
+
+    const base = await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true }, select: { id: true } });
+    if ([...creates, ...updates].some(p => p.sale != null) && !base) {
+      throw new UnprocessableEntityException('No hay una lista de precios base para cargar precios de venta');
+    }
+
+    let created = 0;
+    let updated = 0;
+    await this.prisma.$transaction(async tx => {
+      if (creates.length) {
+        const [{ product_code_seq: seqEnd }] = await tx.$queryRaw<Array<{ product_code_seq: number }>>`
+          UPDATE tenants SET product_code_seq = product_code_seq + ${creates.length} WHERE id = ${tenantId}::uuid RETURNING product_code_seq
+        `;
+        const seqStart = seqEnd - creates.length + 1;
+        await tx.product.createMany({
+          data: creates.map((c, i) => ({
+            tenantId, sku: String(seqStart + i), barcode: c.barcode,
+            name: c.fields.name!, unit: c.fields.unit ?? 'unidad',
+            brand: c.fields.brand ?? undefined,
+            categoryId: c.fields.categoryId ?? undefined,
+            ivaSituacion: c.fields.ivaSituacion ?? undefined,
+            taxRate: c.fields.taxRate ?? undefined,
+            purchaseUnit: c.fields.purchaseUnit ?? undefined,
+            unitsPerPurchase: c.fields.unitsPerPurchase ?? undefined,
+            minStock: c.fields.minStock ?? undefined,
+            maxStock: c.fields.maxStock ?? undefined,
+            manejaVencimiento: c.fields.manejaVencimiento ?? undefined,
+          })),
+        });
+        created = creates.length;
+      }
+
+      for (const u of updates) {
+        const data: Prisma.ProductUncheckedUpdateInput = {};
+        const f = u.fields;
+        if (f.name !== undefined) data.name = f.name;
+        if (f.brand !== undefined) data.brand = f.brand;
+        if (f.categoryId !== undefined) data.categoryId = f.categoryId;
+        if (f.unit !== undefined) data.unit = f.unit;
+        if (f.ivaSituacion !== undefined) { data.ivaSituacion = f.ivaSituacion; data.taxRate = f.taxRate; }
+        if (f.purchaseUnit !== undefined) data.purchaseUnit = f.purchaseUnit;
+        if (f.unitsPerPurchase !== undefined) data.unitsPerPurchase = f.unitsPerPurchase;
+        if (f.minStock !== undefined) data.minStock = f.minStock;
+        if (f.maxStock !== undefined) data.maxStock = f.maxStock;
+        if (f.manejaVencimiento !== undefined) data.manejaVencimiento = f.manejaVencimiento;
+        if (Object.keys(data).length) await tx.product.update({ where: { id: u.productId }, data });
+        updated++;
+      }
+
+      const conPrecio = [...creates, ...updates].filter(p => p.cost != null || p.sale != null);
+      if (conPrecio.length) {
+        const prods = new Map((await tx.product.findMany({
+          where: { tenantId, barcode: { in: conPrecio.map(p => p.barcode) } },
+          select: { id: true, barcode: true, costPrice: true, salePrice: true },
+        })).map(p => [p.barcode, p]));
+        const historia: PriceHistoryEntry[] = [];
+        for (const p of conPrecio) {
+          const prod = prods.get(p.barcode);
+          if (!prod) continue;
+          if (p.cost != null) {
+            const h = priceChange({ tenantId, productId: prod.id, field: 'cost', before: prod.costPrice, after: p.cost, source: 'import', userId });
+            if (h) { historia.push(h); await tx.product.update({ where: { id: prod.id }, data: { costPrice: p.cost } }); }
+          }
+          if (p.sale != null && base) {
+            const h = priceChange({ tenantId, productId: prod.id, field: 'sale', before: prod.salePrice, after: p.sale, source: 'import', userId });
+            if (h) { historia.push(h); await guardarPrecio(tx, { tenantId, productId: prod.id, priceListId: base.id, price: p.sale, source: 'import', userId }); }
+          }
+        }
+        if (historia.length) await tx.productPriceHistory.createMany({ data: historia });
+      }
+    }, { timeout: 120_000, maxWait: 10_000 });
+
+    return {
+      created,
+      updated,
+      skipped: plan.filter(p => p.kind === 'skip').length,
+      errors: errors.map(e => ({ row: e.rowNumber, message: e.message })),
+    };
   }
 
   @Post('import-prices')

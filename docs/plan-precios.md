@@ -45,16 +45,23 @@ el conjunto, en el módulo*.
 
 ### 2 · ¿Dónde va el importador?
 
-**No en Proveedores.** Un solo componente `ImportWizard` (subir → mapear
-columnas → previsualizar → aplicar), reusado en dos botones:
+**No en Proveedores.** Un solo componente `ImportWizard`
+(`components/import-wizard.tsx`) — subir → mapear columnas → previsualizar →
+aplicar — reusado en dos botones:
 
-- **Productos → "Importar"** → crea/actualiza productos (nombre, marca,
-  categoría, IVA, unidades, mín/máx, + proveedor/código/costo).
-- **Precios → "Importar precios"** (ya está) → solo costo y venta sobre
-  productos existentes.
+- **Productos → "Importar"** (hecho) → crea/actualiza productos: nombre, marca,
+  categoría (tiene que existir), unidad, IVA, bulto, mín/máx, costo, venta,
+  vencimiento. Match por código de barras. Celda vacía = no cambiar ese campo.
+  Backend: `sheet-import.util.ts` (leer la grilla, `autoMap` por índice de
+  columna), `product-import.util.ts` (campos + `planProductRows`),
+  `POST /products/import` en 3 fases (`phase=inspect|preview|apply`).
+- **Precios → "Importar precios"** → solo costo y venta sobre productos
+  existentes. Todavía usa su propio diálogo (`import-prices`); falta migrarlo
+  al mismo wizard con un set de columnas más chico.
 
-Mismo wizard, distinto set de columnas. Reusa el parser `parsePricesFile`
-(generalizarlo a `parseSheet`). Se llama "Importar desde Excel".
+Todo lo de bajo nivel (parseo xlsx/csv, formato de número argentino) salió de
+`price-import.util.ts` a `sheet-import.util.ts`, que ahora comparten los dos.
+Proveedor/código/costo por fila queda para una siguiente pasada.
 
 ### 3 · Poner / cambiar precios
 
@@ -86,7 +93,7 @@ El modelo (`Promotion` + `config` JSON, tipos `nxm / a_plus_b / percent / amount
 | Etapa | Qué | Estado |
 |---|---|---|
 | **0** | Precio editable en la pestaña Precios del producto + margen en vivo + "calcular venta". Barrer carteles vencidos. | **hecho** |
-| **1** | Componente `ImportWizard` (subir → mapear → preview → aplicar). Primero Productos → "Importar"; luego "Importar precios" lo reusa. | — |
+| **1** | Componente `ImportWizard` (subir → mapear → preview → aplicar) para Productos → "Importar". Falta que "Importar precios" del módulo Precios reuse el mismo wizard (hoy sigue con su diálogo propio). | **hecho (productos)** |
 | **2** | Simplificar "Actualizar". Margen objetivo por categoría para "sugerir precio". | — |
 | **3** | Promos: diálogos por tipo + orden por prioridad + flag exclusiva. | — |
 | **4** | Nice to have: "Precios Cuidados" como lista/flag; comparar contra la lista anterior; etiquetas de lo que cambió. | — |

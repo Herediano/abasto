@@ -336,10 +336,10 @@
     "semantic_hash": "31c1d4d3a9a120cb3144e8a57f899039"
   },
   "backend/src/price-import.util.ts": {
-    "mtime": 1788712171.8043208,
-    "seen": 1789020040.3755262,
-    "ast_hash": "831faafdffcfb99909df3e8d56c47b7d",
-    "semantic_hash": "831faafdffcfb99909df3e8d56c47b7d"
+    "mtime": 1789032609.026656,
+    "seen": 1789033347.7114947,
+    "ast_hash": "0c3ce107982dd70e80d1c70902f8ac98",
+    "semantic_hash": ""
   },
   "backend/src/price-lists.controller.ts": {
     "mtime": 1788750731.351888,
@@ -402,9 +402,9 @@
     "semantic_hash": ""
   },
   "backend/src/products.controller.ts": {
-    "mtime": 1789032053.1857822,
-    "seen": 1789032375.4104075,
-    "ast_hash": "a1ec997995c4a433a535d00b2211d218",
+    "mtime": 1789033001.0225828,
+    "seen": 1789033347.7129319,
+    "ast_hash": "f326f214f8e8dc8ce20c8a8ac0c2f41a",
     "semantic_hash": ""
   },
   "backend/src/promotions.controller.ts": {
@@ -654,9 +654,9 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/api.ts": {
-    "mtime": 1789030932.0799918,
-    "seen": 1789031299.9396272,
-    "ast_hash": "811e06f80cfad061c825e64ab94f366b",
+    "mtime": 1789033116.021383,
+    "seen": 1789033347.7222543,
+    "ast_hash": "f697d8f227fadda44d7d611f72406d27",
     "semantic_hash": ""
   },
   "frontend/src/lib/auth-context.tsx": {
@@ -738,9 +738,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/products-page.tsx": {
-    "mtime": 1789030358.5925636,
-    "seen": 1789030488.2210765,
-    "ast_hash": "10bf212008d3881b22ce55c55624b973",
+    "mtime": 1789033194.9607728,
+    "seen": 1789033347.7256715,
+    "ast_hash": "fabcc7b4156b3ed6b4628cdb62780ca5",
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/suppliers-page.tsx": {
@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "docs/diseno.md": {
-    "mtime": 1789032354.3431218,
-    "seen": 1789032375.4368284,
-    "ast_hash": "7818ecd88f4a50fbe997e9f9b8861b80",
+    "mtime": 1789033327.1372266,
+    "seen": 1789033347.736232,
+    "ast_hash": "070bb81289b7364d23428f17e6623d2d",
     "semantic_hash": ""
   },
   "frontend/src/components/command-palette.tsx": {
@@ -1560,9 +1560,27 @@
     "semantic_hash": ""
   },
   "docs/plan-precios.md": {
-    "mtime": 1789032333.0994923,
-    "seen": 1789032375.437173,
-    "ast_hash": "aa8f4a88ccc3c3492311f59fc1a6a5d6",
+    "mtime": 1789033304.9789624,
+    "seen": 1789033347.7365055,
+    "ast_hash": "b17f96cfaefe17c271bd8d9097b786f5",
+    "semantic_hash": ""
+  },
+  "backend/src/product-import.util.ts": {
+    "mtime": 1789033052.8209598,
+    "seen": 1789033347.7126377,
+    "ast_hash": "1dbad6d455522667ae869ebd83715f58",
+    "semantic_hash": ""
+  },
+  "backend/src/sheet-import.util.ts": {
+    "mtime": 1789032944.1754894,
+    "seen": 1789033347.7145338,
+    "ast_hash": "42b5002d0c98ec785373fe679f543cef",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/import-wizard.tsx": {
+    "mtime": 1789033267.8850298,
+    "seen": 1789033347.717239,
+    "ast_hash": "f578c74eeb7f862b6fabe0143d8328ea",
     "semantic_hash": ""
   }
 }
