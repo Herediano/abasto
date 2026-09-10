@@ -106,8 +106,8 @@ export class ProductsController {
     // el escaneo tiene que encontrarlo por cualquiera de ellos.
     if (query.barcode) filters.push({ OR: [{ barcode: query.barcode }, { packBarcode: query.barcode }, { extraBarcodes: { some: { barcode: query.barcode } } }] });
     // Un pesable se escanea con el código de balanza (peso embebido), que no es
-    // el barcode del producto: se resuelve el producto por su código interno.
-    if (query.internalCode) filters.push({ internalCode: query.internalCode });
+    // el barcode del producto: se resuelve el producto por su SKU.
+    if (query.sku) filters.push({ sku: query.sku });
     if (searchIds) filters.push({ id: { in: searchIds } });
     return {
       tenantId,
@@ -368,7 +368,7 @@ export class ProductsController {
       await this.prisma.product.createMany({
         data: toCreate.map((r, i) => ({
           tenantId,
-          internalCode: String(startCode + i),
+          sku: String(startCode + i),
           barcode: r.ean,
           name: r.name,
           brand: r.brand ?? undefined,
@@ -439,7 +439,7 @@ export class ProductsController {
         'csv',
         'productos',
         [
-          { header: 'Código interno', key: 'internalCode' },
+          { header: 'SKU', key: 'sku' },
           { header: 'Código de barras', key: 'barcode' },
           { header: 'Producto', key: 'name' },
           { header: 'Marca', key: 'brand' },
@@ -453,7 +453,7 @@ export class ProductsController {
           { header: 'Estado', key: 'status' },
         ],
         products.map(p => ({
-          internalCode: p.internalCode ?? '',
+          sku: p.sku ?? '',
           barcode: p.barcode,
           name: p.name,
           brand: p.brand ?? '',
@@ -479,7 +479,7 @@ export class ProductsController {
     // conservan su encabezado exacto para que la planilla siga sirviendo como
     // base del reimporte de precios (products/import-prices).
     sheet.columns = [
-      { header: 'Código interno', key: 'internalCode', width: 14 },
+      { header: 'SKU', key: 'sku', width: 14 },
       { header: 'Código de barras', key: 'barcode', width: 18 },
       { header: 'Códigos adicionales', key: 'extraBarcodes', width: 24 },
       { header: 'Producto', key: 'name', width: 42 },
@@ -512,7 +512,7 @@ export class ProductsController {
       const cost = p.costPrice ? Number(p.costPrice) : null;
       const sale = p.salePrice ? Number(p.salePrice) : null;
       const row = sheet.addRow({
-        internalCode: p.internalCode ?? '',
+        sku: p.sku ?? '',
         barcode: p.barcode,
         extraBarcodes: p.extraBarcodes.map(b => b.barcode).join(' / '),
         name: p.name,
@@ -839,13 +839,13 @@ export class ProductsController {
     await this.assertBarcodeFree(tenantId, barcode);
     if (pack.packBarcode) await this.assertBarcodeFree(tenantId, pack.packBarcode);
 
-    const [{ product_code_seq: internalCode }] = await this.prisma.$queryRaw<Array<{ product_code_seq: number }>>`
+    const [{ product_code_seq: sku }] = await this.prisma.$queryRaw<Array<{ product_code_seq: number }>>`
       UPDATE tenants SET product_code_seq = product_code_seq + 1 WHERE id = ${tenantId}::uuid RETURNING product_code_seq
     `;
 
     try {
       return await this.prisma.product.create({ data: {
-        tenantId, internalCode: String(internalCode), barcode, name: (body.name as string).trim(), unit,
+        tenantId, sku: String(sku), barcode, name: (body.name as string).trim(), unit,
         categoryId,
         brand: typeof body.brand === 'string' ? body.brand : undefined,
         description: typeof body.description === 'string' ? body.description : undefined,

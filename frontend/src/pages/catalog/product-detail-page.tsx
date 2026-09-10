@@ -36,7 +36,6 @@ const IVA_OPCIONES: { value: string; label: string }[] = [
   { value: '2.5', label: '2,5%' },
   { value: '5', label: '5%' },
 ];
-const ivaLabel = (v: string) => IVA_OPCIONES.find(o => o.value === v)?.label ?? `${v}%`;
 
 // Unidad de venta: lista cerrada, misma que valida el backend (SALE_UNITS).
 const SALE_UNITS: { value: string; label: string }[] = [
@@ -119,8 +118,6 @@ export function ProductDetailPage() {
   const [baseline, setBaseline] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [referenceHint, setReferenceHint] = useState(false);
-  const [impuestosAbierto, setImpuestosAbierto] = useState(false);
-  const [internoManual, setInternoManual] = useState(false);
 
   const [newBarcode, setNewBarcode] = useState('');
   const [savingBarcode, setSavingBarcode] = useState(false);
@@ -468,41 +465,17 @@ export function ProductDetailPage() {
       </div>
 
       <div className="grid gap-3">
-        <div className="flex items-center justify-between">
-          <p className="text-chico font-semibold text-muted-foreground">Impuestos</p>
-          {!impuestosAbierto && (
-            <button type="button" className="text-chico text-muted-foreground hover:text-foreground hover:underline" onClick={() => setImpuestosAbierto(true)}>
-              Editar
-            </button>
-          )}
+        <p className="text-chico font-semibold text-muted-foreground">Impuestos</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="IVA" htmlFor="p-iva">
+            <Select id="p-iva" value={form.ivaSituacion} disabled={soloLectura} onChange={e => set('ivaSituacion', e.target.value)}>
+              {IVA_OPCIONES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </Select>
+          </Field>
+          <Field label="Impuestos internos %" htmlFor="p-int" hint="(opcional · alcohol, cigarrillos, bebidas)">
+            <Input id="p-int" type="number" min="0" step="0.01" value={form.internalTaxRate} disabled={soloLectura} onChange={e => set('internalTaxRate', e.target.value)} />
+          </Field>
         </div>
-        {!impuestosAbierto ? (
-          <p className="text-sm text-muted-foreground">
-            IVA {ivaLabel(form.ivaSituacion)}
-            {Number(form.internalTaxRate) > 0 ? ` · Impuestos internos ${form.internalTaxRate}%` : ''}
-          </p>
-        ) : (
-          <>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="IVA" htmlFor="p-iva">
-                <Select id="p-iva" value={form.ivaSituacion} disabled={soloLectura} onChange={e => set('ivaSituacion', e.target.value)}>
-                  {IVA_OPCIONES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </Select>
-              </Field>
-              {(internoManual || Number(form.internalTaxRate) > 0) ? (
-                <Field label="Impuestos internos %" htmlFor="p-int" hint="(alcohol, cigarrillos, bebidas)">
-                  <Input id="p-int" type="number" min="0" step="0.01" value={form.internalTaxRate} disabled={soloLectura} onChange={e => set('internalTaxRate', e.target.value)} />
-                </Field>
-              ) : !soloLectura && (
-                <div className="flex items-end">
-                  <button type="button" className="text-chico text-primary hover:underline" onClick={() => setInternoManual(true)}>
-                    + Impuesto interno
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
       </div>
 
       <div className="grid gap-3">
@@ -726,7 +699,7 @@ export function ProductDetailPage() {
               />
               <p className="text-micro text-placeholder">
                 <span className="font-mono">{product.barcode}</span>
-                {product.internalCode ? <> · Código interno <span className="font-mono">{product.internalCode}</span></> : null}
+                {product.sku ? <> · SKU <span className="font-mono">{product.sku}</span></> : null}
                 {!product.isActive ? ' · Desactivado' : ''}
               </p>
             </div>

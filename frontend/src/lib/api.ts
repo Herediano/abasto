@@ -107,7 +107,7 @@ export type Product = {
   id: string;
   name: string;
   barcode: string;
-  internalCode?: string | null;
+  sku?: string | null;
   categoryId?: string | null;
   categoryName?: string | null;
   unit: string;

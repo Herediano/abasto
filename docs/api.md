@@ -25,7 +25,7 @@ Los endpoints protegidos usan el tenant derivado del JWT; ya no aceptan `x-tenan
 - `GET /api/suppliers`: lista proveedores activos para seleccionar en lotes.
 - `POST /api/suppliers`: crea un proveedor del tenant autenticado. Recibe `name` obligatorio y opcionalmente `legalName`, `taxId`, `email`, `phone` y `address`.
 - `PUT /api/suppliers/:id`: modifica un proveedor; requiere rol `admin`.
-- `PUT /api/products/:id`: modifica barcode, código interno, nombre, categoría, unidad, marca y vencimiento; requiere rol `admin`.
+- `PUT /api/products/:id`: modifica barcode, SKU, nombre, categoría, unidad, marca y vencimiento; requiere rol `admin`.
 - `PUT /api/warehouses/:id`: modifica nombre, código y dirección; requiere rol `admin`.
 - `PUT /api/products/:productId/lots/:lotId`: modifica número de lote, vencimiento, proveedor y depósito; requiere rol `admin`.
 - `GET /api/purchases/invoices`: lista facturas de compra del tenant.

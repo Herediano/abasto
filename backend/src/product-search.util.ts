@@ -71,7 +71,7 @@ export async function buscarProductoIds(
   if (!terminos.length) return [];
 
   const base = Prisma.sql`
-    SELECT id, name, product_haystack(name, brand, barcode, internal_code) AS h
+    SELECT id, name, product_haystack(name, brand, barcode, sku) AS h
     FROM products
     WHERE tenant_id = ${tenantId}::uuid
   `;

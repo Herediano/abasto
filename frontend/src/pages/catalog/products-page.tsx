@@ -302,7 +302,7 @@ export function ProductsPage() {
                           <div className="font-medium leading-snug">{p.name}</div>
                           <div className="mt-0.5 font-mono text-chico text-placeholder">
                             {p.barcode}
-                            {p.internalCode && <> · #{p.internalCode}</>}
+                            {p.sku && <> · SKU {p.sku}</>}
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{p.brand ?? '—'}</TableCell>

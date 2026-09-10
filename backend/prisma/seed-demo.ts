@@ -175,7 +175,7 @@ async function main() {
       data: {
         tenantId,
         barcode,
-        internalCode: `D${pad(i + 1, 4)}`,
+        sku: `D${pad(i + 1, 4)}`,
         name: p.name,
         categoryId: catByName.get(p.cat)!,
         unit: esPesable ? 'kg' : 'unidad',

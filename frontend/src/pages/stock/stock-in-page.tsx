@@ -383,7 +383,7 @@ export function StockInPage() {
                     </div>
                   </Field>
                   <div className="col-span-2 flex items-end pb-2 text-sm text-muted-foreground">
-                    {lookupPending ? 'Buscando...' : product ? `${product.name}${product.internalCode ? ` · ${product.internalCode}` : ''}` : ''}
+                    {lookupPending ? 'Buscando...' : product ? `${product.name}${product.sku ? ` · SKU ${product.sku}` : ''}` : ''}
                   </div>
                   <Field label={line.byPackage ? `Cantidad (${product?.purchaseUnit || 'bultos'})` : 'Cantidad'} htmlFor="line-quantity">
                     <Input id="line-quantity" min="0.001" step="0.001" type="number" value={line.quantity} onChange={e => setLine({ ...line, quantity: e.target.value })} />

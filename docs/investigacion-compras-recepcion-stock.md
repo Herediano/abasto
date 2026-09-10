@@ -25,7 +25,7 @@ El usuario queda asociado a un depósito/sucursal. En el ingreso no se seleccion
 ## Decisiones de esta primera implementación
 
 - Barcode obligatorio y único por tenant.
-- Código interno opcional para búsquedas internas.
+- SKU opcional para búsquedas internas.
 - Facturas de compra con estado borrador/confirmada/anulada.
 - Confirmar factura genera stock; crear borrador no genera stock.
 - Lote obligatorio para productos que manejan vencimiento.
