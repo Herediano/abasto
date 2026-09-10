@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react';
 import { CalendarBlank, CashRegister, EyeSlash, Plus } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
-import ReactGridLayout, { cloneLayout, useContainerWidth, verticalCompactor, type Compactor, type Layout, type LayoutItem } from 'react-grid-layout';
+import ReactGridLayout, { noCompactor, useContainerWidth, type Compactor, type Layout } from 'react-grid-layout';
 import { useEscritorioSummary } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
 import { hora as fmtHora } from '@/lib/format';
@@ -19,7 +19,10 @@ const CONFIG_KEY = 'abasto-escritorio';
 const GRID_COLS = 5;
 const GAP = 12; // gap-3 (misma separación que el grid viejo)
 const ROW_H = 168; // alto de fila en px
-const MAX_ROWS = 4;
+/** Tope duro de apilado: el tablero nunca crece más de 6 filas. Vale como
+ *  altura máxima de una tarjeta, como `maxRows` de la grilla y como clamp de
+ *  toda posición que venga de localStorage. */
+const MAX_ROWS = 6;
 
 /** Una tarjeta del tablero: posición explícita (col, row en 0..) y tamaño en
  *  celdas. Se persiste densa (packed); el corrimiento de centrado es solo un
@@ -286,20 +289,25 @@ function centrarTablero(tiles: TilePos[]): TilePos[] {
   return tiles.map(t => (t.row === fila ? { ...t, col: t.col + offset } : t));
 }
 
-/** Una tarjeta "flota" cuando no tiene nada que la sostenga desde abajo NI
- *  nada arriba en su propia columna: quedó tirada en un vacío del tablero
- *  (p. ej. la dejaste lejos a propósito). Estas tarjetas no participan de la
- *  compactación — quedan clavadas donde están hasta que el usuario las mueva. */
-function flota(l: LayoutItem, layout: readonly LayoutItem[]): boolean {
-  const abajo = layout.some(
-    o => o !== l && o.x < l.x + l.w && o.x + o.w > l.x && o.y === l.y + l.h,
-  );
-  if (abajo) return false;
-  if (l.y === 0) return true;
-  return !layout.some(
-    o => o !== l && o.x < l.x + l.w && o.x + o.w > l.x && o.y + o.h === l.y,
+/** Un layout es inválido cuando NO se puede aceptar: alguna tarjeta se pasa
+ *  del tope de 6 filas, o dos tarjetas se pisan (la compactación no encontró
+ *  lugar). Lo usan el commit (para descartar el movimiento) y el arrastre
+ *  (para avisarle al usuario, con cursor de prohibido, que ahí no entra). */
+type Caja = { x: number; y: number; w: number; h: number };
+function layoutInvalido(items: readonly Caja[]): boolean {
+  if (items.some(l => l.y + l.h > MAX_ROWS)) return true;
+  return items.some((a, i) =>
+    items.some(
+      (b, j) => j > i && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y,
+    ),
   );
 }
+
+/** El tablero es un damero fijo: SIN gravedad ni compactación. Cada tarjeta
+ *  queda EXACTAMENTE donde el usuario la suelta; sacar una de arriba no hace
+ *  subir a las de abajo. `preventCollision` bloquea arrastrar/estirar sobre
+ *  una celda ocupada (la tarjeta rebota) y `maxRows` frena en la fila 6. */
+const damero: Compactor = { ...noCompactor, preventCollision: true };
 
 /** Tablero de fábrica: los módulos en su orden, fila por fila, dejando la
  *  última columna como flanco de vacíos. Es el punto de partida de toda
@@ -331,9 +339,9 @@ function readConfig(keys: string[]): Config {
           .map(t => ({
             key: t.key,
             col: Math.max(0, Math.min(GRID_COLS - 1, Math.floor(t.col) || 0)),
-            row: Math.max(0, Math.floor(t.row) || 0),
+            row: Math.max(0, Math.min(MAX_ROWS - 1, Math.floor(t.row) || 0)),
             w: Math.min(GRID_COLS, Math.max(1, Math.floor(t.w) || 1)),
-            h: Math.max(1, Math.floor(t.h) || 1),
+            h: Math.min(MAX_ROWS, Math.max(1, Math.floor(t.h) || 1)),
           }));
         // Dos tarjetas con la misma clave no tienen sentido: queda la primera.
         const unicas: TilePos[] = [];
@@ -410,63 +418,15 @@ export function EscritorioPage() {
   // pulsación LARGA (la gente aprieta y mantiene para agarrar la tarjeta y
   // acomodarse antes de arrastrar; soltar sin moverse no debe abrir nada).
   const ultimaInteraccion = useRef(0);
-  const pressAt = useRef(0);
-  const PRESS_DRAG_MS = 350;
-  // Compactor "clavado": la compactación no mueve dos tipos de tarjeta:
-  //   1. la que se está MOVIENDO/ESTIRANDO (queda clavada en la celda del
-  //      puntero mientras las demás se reacomodan alrededor), y
-  //   2. las que "flotan" (dejadas en un vacío, sin nada debajo ni arriba en
-  //      su columna): una vez que las plantás lejos, quedan ahí para siempre
-  //      hasta que las movés vos, aunque después muevas otras tarjetas.
-  // El "fijado" se marca como estático SOLO para la compactación (los
-  // estáticos no se mueven) y se le quita la marca al resultado final: así
-  // react-grid-layout nunca ve una tarjeta realmente estática (no la
-  // podríamos arrastrar).
-  const interactivoRef = useRef<string | null>(null);
-  const interactuandoRef = useRef(false);
-  const compactor = useMemo<Compactor>(
-    () => ({
-      type: 'vertical',
-      allowOverlap: false,
-      compact(layout, cols) {
-        const activo = interactivoRef.current;
-        const clavadas = layout.filter(l => l.i !== activo && !l.static && flota(l, layout));
-        if (clavadas.length === 0 && !activo) {
-          return verticalCompactor.compact(cloneLayout(layout), cols);
-        }
-        const aFijar = new Set(clavadas.map(l => l.i));
-        if (activo) aFijar.add(activo);
-        const fijado = layout.map(l => (aFijar.has(l.i) ? { ...l, static: true } : l));
-        const compactado = verticalCompactor.compact(cloneLayout(fijado), cols);
-        // Barrido final de no-solapamiento. El compactor vertical solo empuja
-        // a las tarjetas que chocan con una CLAVADA hacia la derecha; cuando
-        // son varias (p. ej. dejás caer una tarjeta agrandada sobre una fila
-        // llena), se empujan todas a la misma columna del borde y terminan
-        // pisándose entre sí. Las que quedaron pisadas caen hacia abajo hasta
-        // despegarse. Las clavadas y la tarjeta activa no se tocan.
-        const solapar = (a: LayoutItem, b: LayoutItem) =>
-          a !== b && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-        const pisado = (p: LayoutItem) => compactado.some(o => solapar(o, p));
-        for (const p of compactado) {
-          if (p.static) continue;
-          let vueltas = 0;
-          while (pisado(p) && vueltas < MAX_ROWS * 4) {
-            p.y += 1;
-            vueltas += 1;
-          }
-        }
-        return compactado.map(l => (aFijar.has(l.i) ? { ...l, static: false } : l));
-      },
-    }),
-    [],
-  );
-  // El compactor se suelta recién cuando la estructura queda asentada: los
-  // efectos de la grilla (que recompactan tras el drop) corren en los HIJOS
-  // antes que este, y compactan con el ref todavía puesto.
-  useEffect(() => {
-    if (interactuandoRef.current) return;
-    interactivoRef.current = null;
-  });
+  // Dónde arrancó la pulsación: si el puntero casi no se movió entre el
+  // mousedown y el click, es un click de verdad y abre el módulo — no importa
+  // cuánto lo mantuvo apretado. Solo un desplazamiento real (arrastre) lo frena.
+  const pressPos = useRef<{ x: number; y: number } | null>(null);
+  const CLICK_SLOP_PX = 5;
+  // Se incrementa para remontar la grilla y forzarla a re-sincronizar con
+  // `layoutFor` cuando hay que descartar un movimiento (react-grid-layout se
+  // queda con su estado interno si el layout que le pasás es deep-equal).
+  const [gridNonce, setGridNonce] = useState(0);
   const [ultimoOculto, setUltimoOculto] = useState<{ key: string; label: string } | null>(null);
   const undoTimeout = useRef<number | null>(null);
 
@@ -496,8 +456,15 @@ export function EscritorioPage() {
     }));
   }, [tiles]);
   // Commit de un layout (lo que da react-grid-layout tras un drag o resize):
-  // se guarda tal cual, sin reinterpretar nada.
+  // se guarda tal cual, sin reinterpretar nada — salvo el tope duro de apilado.
   const commit = (visual: Layout) => {
+    // Movimiento inválido → se descarta entero y la grilla vuelve sola a la
+    // última posición válida (remonte por `gridNonce`). No se reacomoda nada:
+    // si no entra, no se mueve (ver `layoutInvalido`).
+    if (layoutInvalido(visual)) {
+      setGridNonce(n => n + 1);
+      return;
+    }
     const tilesN: TilePos[] = visual.map(l => ({ key: l.i, col: l.x, row: l.y, w: l.w, h: l.h })).sort(porVisual);
     setConfig(prev => {
       if (JSON.stringify(prev.tiles) === JSON.stringify(tilesN)) return prev;
@@ -543,13 +510,12 @@ export function EscritorioPage() {
   // antes de navegar, así el navegador morfea la tarjeta en la cabecera del
   // módulo (ver docs/diseno.md, "Navegación y continuidad").
   function open(e: MouseEvent<HTMLAnchorElement>, m: ModuleDef) {
-    // No navega si recién se soltó un arrastre/estirado, ni si la pulsación fue
-    // larga (mantener apretado para agarrar la tarjeta). Click rápido siempre
-    // abre el módulo.
-    if (
-      Date.now() - ultimaInteraccion.current < 250 ||
-      Date.now() - pressAt.current > PRESS_DRAG_MS
-    ) {
+    // No navega si recién se soltó un arrastre/estirado, ni si el puntero se
+    // movió (arrastre en curso). Mantener apretado sin mover SÍ abre el módulo.
+    const movido = pressPos.current
+      ? Math.hypot(e.clientX - pressPos.current.x, e.clientY - pressPos.current.y)
+      : 0;
+    if (Date.now() - ultimaInteraccion.current < 250 || movido > CLICK_SLOP_PX) {
       e.preventDefault();
       return;
     }
@@ -593,19 +559,12 @@ export function EscritorioPage() {
 
       <div ref={containerRef} className="min-w-0">
         <ReactGridLayout
+          key={gridNonce}
           layout={layoutFor}
           width={width}
-          compactor={compactor}
-          gridConfig={{ cols: GRID_COLS, rowHeight: ROW_H, margin: [GAP, GAP], containerPadding: [0, 0], maxRows: 6 }}
-          onDragStart={(_layout, _old, nuevo) => {
-            interactuandoRef.current = true;
-            interactivoRef.current = nuevo?.i ?? null;
-          }}
-          onResizeStart={(_layout, _old, nuevo) => {
-            interactuandoRef.current = true;
-            interactivoRef.current = nuevo?.i ?? null;
-          }}
-          dragConfig={{ cancel: '.tile-cancel' }}
+          compactor={damero}
+          gridConfig={{ cols: GRID_COLS, rowHeight: ROW_H, margin: [GAP, GAP], containerPadding: [0, 0], maxRows: MAX_ROWS }}
+          dragConfig={{ cancel: '.tile-cancel', threshold: CLICK_SLOP_PX }}
           resizeConfig={{
             enabled: true,
             handles: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
@@ -621,12 +580,10 @@ export function EscritorioPage() {
             ),
           }}
           onDragStop={layout => {
-            interactuandoRef.current = false;
             ultimaInteraccion.current = Date.now();
             commit(layout);
           }}
           onResizeStop={layout => {
-            interactuandoRef.current = false;
             ultimaInteraccion.current = Date.now();
             commit(layout);
           }}
@@ -644,8 +601,8 @@ export function EscritorioPage() {
             key={m.key}
             to={m.path}
             onClick={e => open(e, m)}
-            onMouseDown={() => {
-              pressAt.current = Date.now();
+            onMouseDown={e => {
+              pressPos.current = { x: e.clientX, y: e.clientY };
             }}
             draggable={false}
             style={{ ['--ab-tile-hue' as string]: hueFor(m.key) }}
