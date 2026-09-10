@@ -519,9 +519,11 @@ acción en dos lugares (y peor, una destructiva) es el error a no cometer.
   alternativos, todos en un solo bloque— · unidades · impuestos · tipo) ·
   `Stock` (**reposición** —mínimo + reponer hasta, acá y en ningún otro lado—,
   existencias por depósito, **proveedores** —editable: agregar a mano, código
-  del proveedor, costo, y la ★ del preferido—) · `Precios` (costo/venta,
-  escalas, historial). El resumen (`SummaryLine` + un renglón de contexto) va
-  arriba de las pestañas.
+  del proveedor, costo, y la ★ del preferido—) · `Precios` (costo y venta
+  **editables acá** con margen en vivo y «calcular venta con margen X%»;
+  escalas por cantidad; historial de cambios. Las otras listas y la
+  actualización masiva viven en el módulo Precios). El resumen (`SummaryLine` +
+  un renglón de contexto) va arriba de las pestañas.
 - **Los cambios masivos son por Excel, no con checkbox.** Exportar filtrado →
   editar en la planilla → reimportar. No hay selección múltiple en las filas: el
   volumen de un catálogo mayorista se edita mejor en Excel, y evita repetir en
@@ -761,7 +763,9 @@ datos a alguien de afuera.**
 2. **Un molde por tipo de pantalla** y un componente que lo fije (cabecera +
    ancho + Exportar), para que ~20 módulos se sientan uno solo.
 3. **Reportes** con la dirección nueva (hoy es todo tablas).
-4. **Precios** agrupado (hoy son 8 recuadros en un scroll).
+4. **Precios** — ver `docs/plan-precios.md`. El módulo ya está en pestañas
+   (Listas / Actualizar / Promociones / Historial); falta simplificar
+   «Actualizar», el wizard de importación y el alta de promos en criollo.
 5. **`EmptyState` con acción**; barrer `text-xs` a la escala de tokens.
 
 ### Producto

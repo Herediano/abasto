@@ -695,6 +695,54 @@ export class ProductsController {
     });
   }
 
+  /**
+   * Precio de costo y de venta de UN producto, desde su pantalla. El costo es
+   * un campo del producto; la venta va a ProductPrice de la lista base (misma
+   * ruta que usa la actualización masiva). Los cambios quedan en el historial.
+   */
+  @Put(':id/price')
+  @RequirePermission('precios.editar')
+  async setPrice(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: { costPrice?: unknown; salePrice?: unknown }) {
+    const tenantId = request.user.tenantId;
+    const userId = request.user.id;
+    const product = await this.prisma.product.findFirst({ where: { id, tenantId }, select: { id: true, costPrice: true, salePrice: true } });
+    if (!product) throw new BadRequestException('Producto no encontrado');
+    const tocaCosto = body.costPrice !== undefined;
+    const tocaVenta = body.salePrice !== undefined;
+    if (!tocaCosto && !tocaVenta) return { costPrice: product.costPrice, salePrice: product.salePrice };
+    const nuevoCosto = tocaCosto ? parseOptionalDecimal(body.costPrice, 'costPrice') : undefined;
+    const nuevaVenta = tocaVenta ? parseOptionalDecimal(body.salePrice, 'salePrice') : undefined;
+    if (tocaVenta && (nuevaVenta === null || nuevaVenta === undefined || nuevaVenta <= 0)) {
+      throw new UnprocessableEntityException('El precio de venta tiene que ser un número mayor a cero');
+    }
+    const base = tocaVenta ? await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true }, select: { id: true } }) : null;
+    if (tocaVenta && !base) throw new UnprocessableEntityException('No hay una lista de precios base configurada');
+
+    await this.prisma.$transaction(async tx => {
+      const historia: PriceHistoryEntry[] = [];
+      if (tocaCosto) {
+        if (nuevoCosto === null) {
+          if (product.costPrice != null) await tx.product.update({ where: { id }, data: { costPrice: null } });
+        } else {
+          const h = priceChange({ tenantId, productId: id, field: 'cost', before: product.costPrice, after: nuevoCosto, source: 'manual', userId });
+          if (h) {
+            historia.push(h);
+            await tx.product.update({ where: { id }, data: { costPrice: nuevoCosto } });
+          }
+        }
+      }
+      if (tocaVenta && nuevaVenta != null) {
+        const h = priceChange({ tenantId, productId: id, field: 'sale', before: product.salePrice, after: nuevaVenta, source: 'manual', userId });
+        if (h) {
+          historia.push(h);
+          await guardarPrecio(tx, { tenantId, productId: id, priceListId: base!.id, price: nuevaVenta, source: 'manual', userId });
+        }
+      }
+      if (historia.length) await tx.productPriceHistory.createMany({ data: historia });
+    });
+    return this.prisma.product.findFirst({ where: { id }, select: { id: true, costPrice: true, salePrice: true } });
+  }
+
   @Post(':id/barcodes')
   @RequirePermission('productos.editar')
   async addBarcode(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: { barcode?: unknown }) {

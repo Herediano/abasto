@@ -53,8 +53,11 @@ const unitPlural = (u: string) => (u === 'unidad' ? 'unidades' : unitLabel(u));
 
 const EMPTY_FORM = {
   barcode: '', name: '', brand: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', packBarcode: '',
-  ivaSituacion: '21', internalTaxRate: '0', minStock: '', maxStock: '', manejaVencimiento: false, isWeighed: false,
+  ivaSituacion: '21', internalTaxRate: '0', minStock: '', maxStock: '', costPrice: '', salePrice: '', manejaVencimiento: false, isWeighed: false,
 };
+
+// Redondeo suave del "calcular venta": a la decena de peso más cercana.
+const redondearPrecio = (n: number) => (Number.isFinite(n) && n > 0 ? Math.round(n / 10) * 10 : 0);
 type FormState = typeof EMPTY_FORM;
 
 function formOf(p: Product): FormState {
@@ -71,6 +74,8 @@ function formOf(p: Product): FormState {
     internalTaxRate: p.internalTaxRate ?? '0',
     minStock: p.minStock ?? '',
     maxStock: p.maxStock ?? '',
+    costPrice: p.costPrice ?? '',
+    salePrice: p.salePrice ?? '',
     manejaVencimiento: p.manejaVencimiento,
     isWeighed: p.isWeighed,
   };
@@ -123,6 +128,7 @@ export function ProductDetailPage() {
   const [savingBarcode, setSavingBarcode] = useState(false);
   const [tierForm, setTierForm] = useState({ minQty: '', price: '', priceListId: '' });
   const [savingTier, setSavingTier] = useState(false);
+  const [margenObjetivo, setMargenObjetivo] = useState('');
   // Proveedores del producto (se cargan a mano además de venir de las compras).
   const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
   const [newSupplier, setNewSupplier] = useState({ supplierId: '', supplierCode: '', cost: '' });
@@ -182,7 +188,7 @@ export function ProductDetailPage() {
     api<PriceList[]>('/price-lists', {}, token).then(setPriceLists).catch(() => {});
     api<Branch[]>('/branches', {}, token).then(setBranches).catch(() => {});
     if (can('proveedores.ver')) api<Supplier[]>('/suppliers', {}, token).then(setSupplierOptions).catch(() => {});
-  }, [token, can]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (creando) {
@@ -261,6 +267,14 @@ export function ProductDetailPage() {
             method: 'PUT',
             body: JSON.stringify({ branchId: ruleBranchId, minStock: branchRule.minStock || null, maxStock: branchRule.maxStock || null }),
           }, token);
+        }
+        const precioBody: Record<string, unknown> = {};
+        if (puedeEditarPrecios) {
+          if (form.costPrice !== baseline.costPrice) precioBody.costPrice = form.costPrice.trim() === '' ? null : form.costPrice;
+          if (form.salePrice !== baseline.salePrice && form.salePrice.trim() !== '') precioBody.salePrice = form.salePrice;
+        }
+        if (Object.keys(precioBody).length) {
+          await api(`/products/${id}/price`, { method: 'PUT', body: JSON.stringify(precioBody) }, token);
         }
         await loadProduct();
       }
@@ -409,6 +423,9 @@ export function ProductDetailPage() {
 
   const totalStock = stock.reduce((sum, s) => sum + Number(s.quantity), 0);
   const m = product ? margin(product.costPrice, product.salePrice) : null;
+  // Margen y ganancia en vivo, sobre lo que hay en el formulario (no lo guardado).
+  const mForm = margin(form.costPrice || null, form.salePrice || null);
+  const gananciaForm = Number(form.costPrice) > 0 && Number(form.salePrice) > 0 ? Number(form.salePrice) - Number(form.costPrice) : null;
 
   const generalTab = (
     <div className="flex flex-col gap-6">
@@ -710,16 +727,44 @@ export function ProductDetailPage() {
 
   const preciosTab = (
     <div className="flex flex-col gap-6">
-      <ModuleSection title="Costo y precio de venta" description="Se cargan y se auditan en el módulo de Precios.">
-        <p className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm text-muted-foreground">
-          <span>Costo <span className="font-semibold tabular text-foreground">{product?.costPrice ? money(Number(product.costPrice)) : '—'}</span></span>
-          <span>Venta <span className="font-semibold tabular text-foreground">{product?.salePrice ? money(Number(product.salePrice)) : '—'}</span></span>
-          <span>Margen <span className="font-semibold tabular text-foreground">{m === null ? '—' : `${m.toFixed(0)}%`}</span></span>
+      <ModuleSection
+        title="Costo y precio de venta"
+        description={puedeEditarPrecios
+          ? 'La venta es el precio de la lista base (mostrador). Las otras listas y las actualizaciones masivas van en el módulo Precios. Cada cambio queda en el historial de abajo.'
+          : 'Se cargan desde el módulo de Precios.'}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Precio de costo" htmlFor="p-cost" hint="(lo que te cuesta)">
+            <Input id="p-cost" type="number" min="0" step="0.01" value={form.costPrice} disabled={soloLectura || !puedeEditarPrecios} onChange={e => set('costPrice', e.target.value)} />
+          </Field>
+          <Field label="Precio de venta" htmlFor="p-sale" hint="(mostrador · lista base)">
+            <Input id="p-sale" type="number" min="0" step="0.01" value={form.salePrice} disabled={soloLectura || !puedeEditarPrecios} onChange={e => set('salePrice', e.target.value)} />
+          </Field>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Margen <span className="font-semibold tabular text-foreground">{mForm === null ? '—' : `${mForm.toFixed(0)}%`}</span>
+          {gananciaForm !== null && <> · ganás <span className="font-medium text-foreground">{money(gananciaForm)}</span> por {unitLabel(form.unit)}</>}
         </p>
-        <Button variant="outline" size="sm" onClick={() => navigate('/precios')}>Ir a Precios</Button>
+        {puedeEditarPrecios && !soloLectura && Number(form.costPrice) > 0 && (
+          <div className="flex flex-wrap items-end gap-2">
+            <Field label="Calcular la venta con margen" htmlFor="p-margobj" hint="%" className="max-w-40">
+              <Input id="p-margobj" type="number" min="0" max="99" step="1" value={margenObjetivo} onChange={e => setMargenObjetivo(e.target.value)} />
+            </Field>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!(Number(margenObjetivo) > 0 && Number(margenObjetivo) < 100)}
+              onClick={() => set('salePrice', String(redondearPrecio(Number(form.costPrice) / (1 - Number(margenObjetivo) / 100))))}
+            >
+              Calcular venta
+            </Button>
+          </div>
+        )}
+        <Button variant="ghost" size="sm" onClick={() => navigate('/precios')}>Abrir módulo Precios</Button>
       </ModuleSection>
 
-      <ModuleSection title="Escalas por cantidad" description="A partir de cierta cantidad rige otro precio. Todavía no se aplican: las va a usar el módulo de ventas.">
+      <ModuleSection title="Escalas por cantidad" description="A partir de cierta cantidad rige otro precio. Se aplican en la caja.">
         {tiers.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {tiers.map(t => (

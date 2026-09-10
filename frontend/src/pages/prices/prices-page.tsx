@@ -803,7 +803,7 @@ export function PricesPage() {
         <div className="flex flex-col">
           <ModuleSection
             title="Promociones"
-            description={<>Se configuran acá y quedan listas. <strong>Todavía no se aplican</strong>: hace falta el módulo de ventas para que se descuenten al cobrar.</>}
+            description="Se configuran acá y se aplican solas en la caja mientras estén vigentes. F6 en la caja lista las ofertas del momento."
             actions={
               <>
                 <ExportMenu path="/promotions" filename="promociones" />

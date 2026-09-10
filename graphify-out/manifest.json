@@ -402,9 +402,9 @@
     "semantic_hash": ""
   },
   "backend/src/products.controller.ts": {
-    "mtime": 1789030892.2776754,
-    "seen": 1789031299.9305863,
-    "ast_hash": "fcb44e84d6abdd3091d5a35617d7df8b",
+    "mtime": 1789032053.1857822,
+    "seen": 1789032375.4104075,
+    "ast_hash": "a1ec997995c4a433a535d00b2211d218",
     "semantic_hash": ""
   },
   "backend/src/promotions.controller.ts": {
@@ -732,9 +732,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/product-detail-page.tsx": {
-    "mtime": 1789031191.365621,
-    "seen": 1789031299.9429142,
-    "ast_hash": "27110cc3e70a52d8fcf6a3629323f2f8",
+    "mtime": 1789032282.70235,
+    "seen": 1789032375.4244711,
+    "ast_hash": "c47612c96565fb1066ed2ebc65cde694",
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/products-page.tsx": {
@@ -756,9 +756,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/prices/prices-page.tsx": {
-    "mtime": 1789012530.0676095,
-    "seen": 1789020040.3757257,
-    "ast_hash": "5901419b711278462ebe30113e50e3ba",
+    "mtime": 1789032130.2748537,
+    "seen": 1789032375.4250698,
+    "ast_hash": "a48f684139d291bec6ff4904bb04fca6",
     "semantic_hash": ""
   },
   "frontend/src/pages/sales/pos-page.tsx": {
@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "docs/diseno.md": {
-    "mtime": 1789031260.8876104,
-    "seen": 1789031299.9533997,
-    "ast_hash": "6e47b3b3ace6397d204424c669d77647",
+    "mtime": 1789032354.3431218,
+    "seen": 1789032375.4368284,
+    "ast_hash": "7818ecd88f4a50fbe997e9f9b8861b80",
     "semantic_hash": ""
   },
   "frontend/src/components/command-palette.tsx": {
@@ -1557,6 +1557,12 @@
     "mtime": 1789028814.7625103,
     "seen": 1789029364.655092,
     "ast_hash": "83e42fab4268af1a3081a2cc44af064e",
+    "semantic_hash": ""
+  },
+  "docs/plan-precios.md": {
+    "mtime": 1789032333.0994923,
+    "seen": 1789032375.437173,
+    "ast_hash": "aa8f4a88ccc3c3492311f59fc1a6a5d6",
     "semantic_hash": ""
   }
 }
