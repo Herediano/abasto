@@ -3,6 +3,14 @@
 > La estrella polar. Antes de diseñar o construir una pantalla, se chequea contra
 > este documento. Es un documento vivo: se corrige a medida que se aprende, pero
 > las **bases** de acá no se olvidan.
+>
+> **Estado (2026-09):** las **bases** (qué es, alcance, estructura
+> empresa→sucursal→usuario, rangos, los jobs) siguen valiendo. La sección
+> «Conceptos de dominio» y «Distancia entre el código y el objetivo» están
+> parcialmente vencidas —mucho de lo que figura como «falta» ya está—; cuando el
+> texto discrepe con el código, manda el código. Lo que todavía falta de verdad
+> para vender: capa fiscal ARCA, cuentas a pagar / órdenes de compra, impresión
+> (ticket, etiquetas, X/Z) y la capa SaaS (onboarding, planes, cobro).
 
 ## Qué es
 
@@ -252,8 +260,11 @@ Al momento de escribir esto (2026-09):
   (`User.rangoId`, ya no existe `role`). Autorizar anular un ítem del carrito
   ahora valida el permiso `caja.autorizar_anulacion` de quien presta sus
   credenciales, no un rol fijo.
-- **Sucursal:** no hay modelo de sucursal; se usa `Warehouse` (depósito). Hay que
-  separar los conceptos.
+- **Sucursal:** construido — `Branch` es una entidad propia; un `Warehouse`
+  pertenece a una sucursal y toda sucursal nace con depósito + caja. El usuario
+  se asigna a una sucursal (`User.branchId`); la sucursal activa viaja en
+  `X-Branch` y acota stock, ventas, caja, compras, vencimientos y reposición.
+  Catálogo, precios, proveedores, clientes y cuenta corriente son de la empresa.
 - **Caja / turno / arqueo:** construido — `CashRegister`/`CashShift`/
   `CashMovement`. Apertura con fondo, movimientos durante el turno, cierre con
   arqueo (esperado/contado/diferencia) y desglose por medio de pago. Sin turno

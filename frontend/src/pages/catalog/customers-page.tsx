@@ -1,15 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { PencilSimple, Plus, MagnifyingGlass, UsersThree, Wallet } from '@phosphor-icons/react';
+import { PencilSimple, Plus, UsersThree, Wallet } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ExportMenu } from '@/components/export-menu';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
+import { ListFilters } from '@/components/list-filters';
+import { ModuleScreen, SummaryLine } from '@/components/module-screen';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -142,9 +142,25 @@ export function CustomersPage() {
     }
   }
 
+  const deudores = items.filter(c => Number(c.accountBalance) > 0);
+  const totalDeuda = deudores.reduce((a, c) => a + Number(c.accountBalance), 0);
+  const resumen = !loading && items.length > 0 && (
+    <SummaryLine
+      items={[
+        { label: 'Clientes', value: String(items.length) },
+        ...(totalDeuda > 0
+          ? [
+              { label: 'En cuenta corriente', value: money(totalDeuda) },
+              { label: 'Con deuda', value: String(deudores.length), tone: 'warn' as const },
+            ]
+          : []),
+      ]}
+    />
+  );
+
   return (
     <>
-      <PageHeader
+      <ModuleScreen
         title="Clientes"
         actions={
           <div className="flex gap-2">
@@ -152,26 +168,31 @@ export function CustomersPage() {
             {puedeCrear && <Button onClick={() => openDialog(null)}><Plus /> Nuevo cliente</Button>}
           </div>
         }
-      />
-      {error && !open && <Alert variant="destructive">{error}</Alert>}
+        summary={resumen || undefined}
+      >
+        {error && !open && <Alert variant="destructive">{error}</Alert>}
 
-      <Card>
-        <CardContent>
-          <Field label="Buscar" htmlFor="search" className="max-w-sm">
-            <div className="relative">
-              <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input id="search" className="pl-8" placeholder="Nombre o CUIT" value={searchInput} onChange={e => setSearchInput(e.target.value)} />
-            </div>
-          </Field>
-        </CardContent>
-      </Card>
+        <ListFilters
+          search={searchInput}
+          onSearch={setSearchInput}
+          searchPlaceholder="Nombre o CUIT"
+          searchLabel="Buscar clientes"
+          activeFilters={[]}
+        />
 
-      <Card>
-        <CardContent className="p-0">
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={UsersThree} title="Sin clientes" description="Creá el primero para poder asignarle una lista de precios." />
+            <EmptyState
+              icon={UsersThree}
+              title={search ? 'Sin resultados' : 'Todavía no hay clientes'}
+              description={
+                search
+                  ? `Ningún cliente coincide con «${search}».`
+                  : 'Creá el primero para poder asignarle una lista de precios.'
+              }
+              action={!search && puedeCrear ? <Button onClick={() => openDialog(null)}><Plus /> Nuevo cliente</Button> : undefined}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -189,13 +210,13 @@ export function CustomersPage() {
                 {items.map(c => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.taxId ?? '—'}</TableCell>
+                    <TableCell className="font-mono text-chico">{c.taxId ?? '—'}</TableCell>
                     <TableCell>{c.priceListName ? <Badge variant="secondary">{c.priceListName}</Badge> : <span className="text-muted-foreground">Lista base</span>}</TableCell>
                     <TableCell className="tabular">
                       {c.accountBalance && Number(c.accountBalance) !== 0
                         ? <span className={Number(c.accountBalance) > 0 ? 'font-medium text-warning' : 'font-medium text-success'}>{money(Number(c.accountBalance))}</span>
                         : <span className="text-muted-foreground">Sin saldo</span>}
-                      {c.creditLimit && <span className="ml-1 text-xs text-placeholder">/ {money(Number(c.creditLimit))}</span>}
+                      {c.creditLimit && <span className="ml-1 text-chico text-placeholder">/ {money(Number(c.creditLimit))}</span>}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{c.phone ?? c.email ?? '—'}</TableCell>
                     <TableCell>{c.isActive ? <Badge variant="success">Activo</Badge> : <Badge variant="destructive">Inactivo</Badge>}</TableCell>
@@ -221,8 +242,7 @@ export function CustomersPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+      </ModuleScreen>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -291,11 +311,11 @@ export function CustomersPage() {
               {cuentaError && <Alert variant="destructive">{cuentaError}</Alert>}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-md border border-border p-3">
-                  <p className="text-xs text-placeholder">Saldo</p>
+                  <p className="text-chico text-placeholder">Saldo</p>
                   <p className={cuenta.balance > 0 ? 'font-semibold text-warning tabular' : 'font-semibold tabular'}>{money(cuenta.balance)}</p>
                 </div>
                 <div className="rounded-md border border-border p-3">
-                  <p className="text-xs text-placeholder">Disponible</p>
+                  <p className="text-chico text-placeholder">Disponible</p>
                   <p className="font-semibold tabular">{cuenta.available === null ? 'Sin tope' : money(cuenta.available)}</p>
                 </div>
               </div>
@@ -321,7 +341,7 @@ export function CustomersPage() {
                             {m.type === 'sale' ? 'Venta a cuenta corriente' : m.type === 'payment' ? 'Cobro' : 'Ajuste'}
                             {m.notes ? ` · ${m.notes}` : ''}
                           </p>
-                          <p className="text-xs text-placeholder">{fechaHora(m.occurredAt)} · {m.userName}</p>
+                          <p className="text-chico text-placeholder">{fechaHora(m.occurredAt)} · {m.userName}</p>
                         </div>
                         <span className={cn('shrink-0 font-medium tabular', Number(m.amount) > 0 ? 'text-warning' : 'text-success')}>
                           {Number(m.amount) > 0 ? '+' : ''}{money(Number(m.amount))}

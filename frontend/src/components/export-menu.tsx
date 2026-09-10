@@ -2,8 +2,61 @@ import { useState } from 'react';
 import { CaretDown, Check, DownloadSimple } from '@phosphor-icons/react';
 import { downloadFile, exportText } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { Button } from '@/components/ui/button';
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
+import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/utils';
+
+type ExportParams = Record<string, string | number | undefined> | URLSearchParams;
+
+function toQs(params?: ExportParams): URLSearchParams {
+  const p = params instanceof URLSearchParams ? new URLSearchParams(params) : new URLSearchParams();
+  if (params && !(params instanceof URLSearchParams)) {
+    for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') p.set(k, String(v));
+  }
+  return p;
+}
+
+/**
+ * Botón único "Exportar" que baja el Excel de una vez, sin menú. Para las
+ * secciones de un módulo (ej. cada bloque de Reportes), donde un menú por
+ * sección sería demasiado. Mismo endpoint que `ExportMenu`
+ * (`GET {path}/export?format=xlsx`).
+ */
+export function ExportButton({
+  path,
+  params,
+  filename,
+  label = 'Exportar',
+}: {
+  path: string;
+  params?: ExportParams;
+  filename: string;
+  label?: string;
+}) {
+  const { session } = useAuth();
+  const token = session!.accessToken;
+  const [busy, setBusy] = useState(false);
+
+  async function go() {
+    setBusy(true);
+    try {
+      const p = toQs(params);
+      p.set('format', 'xlsx');
+      await downloadFile(`${path}/export?${p}`, token, `${filename}.xlsx`);
+    } catch {
+      // el error de red ya se ve en consola; no vale un modal por un export
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Button variant="outline" size="sm" onClick={() => void go()} disabled={busy}>
+      {busy ? <Spinner /> : <DownloadSimple />} {label}
+    </Button>
+  );
+}
 
 /**
  * Botón "Exportar" — el mismo en todos los listados (ver docs/diseno.md). Baja

@@ -54,7 +54,7 @@ const fmt = (metric: Metric, n: number | null) => (n == null ? '—' : metric ==
  * comparable, en barras (la clara de atrás es el período previo). Los datos
  * vienen de GET /api/reportes/ventas.
  */
-export function VentasChart() {
+export function VentasChart({ plain = false }: { plain?: boolean }) {
   const { session } = useAuth();
   const token = session!.accessToken;
   const [period, setPeriod] = useState<Period>('semana');
@@ -100,7 +100,7 @@ export function VentasChart() {
   const ih = H - mB - 8;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 shadow-card sm:p-5">
+    <div className={plain ? '' : 'rounded-lg border border-border bg-card p-4 shadow-card sm:p-5'}>
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex gap-0.5 rounded-md border border-border bg-background p-0.5">
           {PERIODS.map(p => (

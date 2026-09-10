@@ -98,27 +98,34 @@ export function statFor(key: string, s: EscritorioSummary): TileStat | null {
     case 'turnos':
       return s.turnos ? { value: plural(s.turnos.abiertos, 'turno', 'turnos'), hint: 'aperturas, cierres y arqueos del día' } : null;
     case 'stock': {
+      // La tarjeta de Stock cubre las dos cosas que hay que atender: lo que
+      // está bajo el mínimo (para reponer) y lo que está por vencer. Reposición
+      // y Vencimientos son vistas de Stock, no tarjetas propias.
       if (!s.stock) return null;
-      if (s.stock.bajoMinimo === 0) return { value: 'Al día', hint: 'todo por encima del mínimo' };
+      const bajo = s.stock.bajoMinimo;
+      const vto = s.vencimientos?.lotes ?? 0;
+      if (bajo === 0 && vto === 0) {
+        return { value: 'Al día', hint: 'por encima del mínimo, nada por vencer' };
+      }
+      if (bajo > 0) {
+        return {
+          value: `${bajo}`,
+          hint: `bajo el mínimo · ${ejemplos(s.stock.ejemplos)}`,
+          caption: vto > 0 ? `bajo el mínimo · ${vto} por vencer` : 'bajo el mínimo',
+          rows: s.stock.ejemplos.slice(0, 3).map(n => ({ label: lc(n) })),
+          flag: 'hot',
+        };
+      }
+      // Sólo vencimientos.
+      const dias = s.vencimientos?.dias ?? 14;
+      const ej = ejemplos(s.vencimientos?.ejemplos ?? [], 1);
       return {
-        value: `${s.stock.bajoMinimo}`,
-        hint: `bajo el mínimo · ${ejemplos(s.stock.ejemplos)}`,
-        caption: 'bajo el mínimo',
-        rows: s.stock.ejemplos.slice(0, 3).map(n => ({ label: lc(n) })),
-        flag: 'hot',
+        value: `${vto}`,
+        hint: `por vencer en ≤ ${dias} día${dias === 1 ? '' : 's'}${ej ? ` · ${ej}` : ''}`,
+        caption: 'por vencer',
+        rows: (s.vencimientos?.ejemplos ?? []).slice(0, 3).map(n => ({ label: lc(n) })),
+        flag: 'warn',
       };
-    }
-    case 'reposicion': {
-      if (!s.reposicion) return null;
-      if (s.reposicion.productos === 0) return { value: 'Nada urgente', hint: 'no hay faltantes que pedir' };
-      return { value: `${s.reposicion.productos}`, hint: 'productos para pedir', flag: 'warn' };
-    }
-    case 'vencimientos': {
-      if (!s.vencimientos) return null;
-      if (s.vencimientos.lotes === 0) return { value: '0 lotes', hint: 'nada vence en 14 días' };
-      const dias = s.vencimientos.dias ?? 14;
-      const ej = ejemplos(s.vencimientos.ejemplos, 1);
-      return { value: `${s.vencimientos.lotes}`, hint: `vencen en ≤ ${dias} día${dias === 1 ? '' : 's'}${ej ? ` · ${ej}` : ''}`, flag: 'warn' };
     }
 case 'compras': {
       if (!s.compras) return null;
@@ -179,8 +186,8 @@ export function pendientes(s: EscritorioSummary): Pendiente[] {
   const add = (n: number, sing: string, plu: string, path: string, module: string) => {
     if (n > 0) out.push({ label: n === 1 ? sing : plu, count: n, path, module });
   };
-  if (s.stock) add(s.stock.bajoMinimo, 'Producto bajo mínimo', 'Productos bajo mínimo', '/stock/restock', 'reposicion');
-  if (s.vencimientos) add(s.vencimientos.lotes, 'Lote por vencer', 'Lotes por vencer', '/stock/expirations', 'vencimientos');
+  if (s.stock) add(s.stock.bajoMinimo, 'Producto bajo mínimo', 'Productos bajo mínimo', '/stock/restock', 'stock');
+  if (s.vencimientos) add(s.vencimientos.lotes, 'Lote por vencer', 'Lotes por vencer', '/stock/expirations', 'stock');
   if (s.compras) add(s.compras.sinCargar, 'Compra sin cargar', 'Compras sin cargar', '/stock/in', 'stock');
   if (s.precios) add(s.precios.pendientes, 'Precio sin trasladar', 'Precios sin trasladar', '/precios', 'precios');
   if (s.cuentacorriente) add(s.cuentacorriente.vencidos, 'Cuenta vencida', 'Cuentas vencidas', '/catalog/customers', 'clientes');

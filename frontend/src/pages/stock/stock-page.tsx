@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Package } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { ListFilters } from '@/components/list-filters';
-import { PageHeader } from '@/components/page-header';
+import { ModuleScreen } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
 import { Select } from '@/components/ui/select';
-import { StockNav } from '@/components/stock-nav';
+import { stockViews } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type StockItem } from '@/lib/api';
@@ -16,7 +15,7 @@ import { fecha, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 export function StockPage() {
-  const { session } = useAuth();
+  const { session, can } = useAuth();
   const token = session!.accessToken;
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,12 +49,11 @@ export function StockPage() {
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   return (
-    <>
-      <PageHeader
-        title="Stock actual"
-        actions={<ExportMenu path="/stock" filename="stock" />}
-      />
-      <StockNav />
+    <ModuleScreen
+      title="Stock"
+      views={stockViews(can)}
+      actions={<ExportMenu path="/stock" filename="stock" />}
+    >
       {error && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
         search={search}
@@ -73,16 +71,14 @@ export function StockPage() {
           </Field>
         )}
       </ListFilters>
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <PageSpinner />
-          ) : items.length === 0 ? (
-            <EmptyState icon={Package} title="No hay stock registrado" description="Registrá un ingreso para empezar a ver existencias acá." />
-          ) : visibles.length === 0 ? (
-            <EmptyState icon={Package} title="Sin resultados" description="Ningún ítem de stock coincide con la búsqueda." />
-          ) : (
-            <Table>
+      {loading ? (
+        <PageSpinner />
+      ) : items.length === 0 ? (
+        <EmptyState icon={Package} title="Todavía no hay stock" description="Registrá un ingreso para empezar a ver existencias acá." />
+      ) : visibles.length === 0 ? (
+        <EmptyState icon={Package} title="Sin resultados" description="Ningún ítem de stock coincide con la búsqueda." />
+      ) : (
+        <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Producto</TableHead>
@@ -102,11 +98,9 @@ export function StockPage() {
                     <TableCell className="text-right font-semibold tabular">{quantity(i.quantity)}</TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </>
+          </TableBody>
+        </Table>
+      )}
+    </ModuleScreen>
   );
 }

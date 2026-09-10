@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
-import { Section } from '@/components/section';
+import { ExportButton } from '@/components/export-menu';
+import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-screen';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage } from '@/lib/api';
 import { fecha, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
+
+type View = 'ventas' | 'caja' | 'cuentas';
 
 const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
 
@@ -26,23 +27,10 @@ type Panel = {
   cuentasCorrientes: { id: string; name: string; balance: number; creditLimit: number | null }[];
 };
 
-function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <p className="text-micro font-semibold text-placeholder">{label}</p>
-      <p className="mt-1 font-display text-h2 font-semibold tabular">{value}</p>
-      {hint && <p className="mt-0.5 text-micro text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
-function Bloque({ title, children }: { title: string; children: React.ReactNode }) {
-  return <Section title={title}>{children}</Section>;
-}
-
 export function ReportesPage() {
   const { session } = useAuth();
   const token = session!.accessToken;
+  const [view, setView] = useState<View>('ventas');
   const hoy = inputDate();
   const hace30 = inputDate(Date.now() - 30 * 864e5);
   const [from, setFrom] = useState(hace30);
@@ -60,35 +48,51 @@ export function ReportesPage() {
       .finally(() => setLoading(false));
   }, [token, from, to]);
 
+  const resumen = data && (
+    <SummaryLine
+      items={[
+        { label: 'Ventas', value: money(data.totales.ventas) },
+        { label: 'Ticket promedio', value: money(data.totales.tickets ? data.totales.ventas / data.totales.tickets : 0) },
+        ...(data.verPlata && data.stockValorizado != null
+          ? [{ label: 'Stock valorizado', value: money(data.stockValorizado) }]
+          : []),
+      ]}
+    />
+  );
+
   return (
-    <>
-      <PageHeader title="Reportes" />
+    <ModuleScreen
+      title="Reportes"
+      summary={resumen || undefined}
+      views={[
+        { key: 'ventas', label: 'Ventas' },
+        { key: 'caja', label: 'Caja' },
+        { key: 'cuentas', label: 'Cuentas' },
+      ]}
+      view={view}
+      onView={k => setView(k as View)}
+    >
       {error && <Alert variant="destructive">{error}</Alert>}
 
-      <Card>
-        <CardContent className="grid gap-4 sm:grid-cols-2 sm:max-w-md">
-          <Field label="Desde" htmlFor="r-from">
-            <Input id="r-from" type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} />
-          </Field>
-          <Field label="Hasta" htmlFor="r-to">
-            <Input id="r-to" type="date" value={to} min={from} max={hoy} onChange={e => setTo(e.target.value)} />
-          </Field>
-        </CardContent>
-      </Card>
+      {/* El rango de fechas es el control principal de Reportes: queda a la
+          vista, no detrás de «Filtros». */}
+      <div className="grid gap-3 sm:max-w-md sm:grid-cols-2">
+        <Field label="Desde" htmlFor="r-from">
+          <Input id="r-from" type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} />
+        </Field>
+        <Field label="Hasta" htmlFor="r-to">
+          <Input id="r-to" type="date" value={to} min={from} max={hoy} onChange={e => setTo(e.target.value)} />
+        </Field>
+      </div>
 
       {loading || !data ? (
         <PageSpinner />
-      ) : (
-        <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Tile label="Ventas" value={money(data.totales.ventas)} hint={`${data.totales.tickets} tickets`} />
-            <Tile label="Ticket promedio" value={money(data.totales.tickets ? data.totales.ventas / data.totales.tickets : 0)} />
-            {data.verPlata && data.stockValorizado != null && (
-              <Tile label="Stock valorizado" value={money(data.stockValorizado)} hint="a costo, sucursal activa" />
-            )}
-          </div>
-
-          <Bloque title="Ventas por medio de pago">
+      ) : view === 'ventas' ? (
+        <div className="flex flex-col">
+          <ModuleSection
+            title="Por medio de pago"
+            actions={<ExportButton path="/reportes/panel" params={{ from, to, section: 'medioDePago' }} filename="ventas-por-medio-de-pago" />}
+          >
             <Table>
               <TableHeader>
                 <TableRow>
@@ -107,30 +111,12 @@ export function ReportesPage() {
                 ))}
               </TableBody>
             </Table>
-          </Bloque>
+          </ModuleSection>
 
-          <Bloque title="Comparativa entre sucursales">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Sucursal</TableHead>
-                  <TableHead className="text-right">Tickets</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.porSucursal.map((s, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{s.branch}{s.warehouse !== s.branch ? ` · ${s.warehouse}` : ''}</TableCell>
-                    <TableCell className="text-right tabular">{s.count}</TableCell>
-                    <TableCell className="text-right tabular">{money(s.total)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Bloque>
-
-          <Bloque title="Ventas por cajero">
+          <ModuleSection
+            title="Por cajero"
+            actions={<ExportButton path="/reportes/panel" params={{ from, to, section: 'cajero' }} filename="ventas-por-cajero" />}
+          >
             <Table>
               <TableHeader>
                 <TableRow>
@@ -149,9 +135,36 @@ export function ReportesPage() {
                 ))}
               </TableBody>
             </Table>
-          </Bloque>
+          </ModuleSection>
 
-          <Bloque title="Más vendidos">
+          <ModuleSection
+            title="Comparativa entre sucursales"
+            actions={<ExportButton path="/reportes/panel" params={{ from, to, section: 'sucursales' }} filename="ventas-por-sucursal" />}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Sucursal</TableHead>
+                  <TableHead className="text-right">Tickets</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.porSucursal.map((s, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{s.branch}{s.warehouse !== s.branch ? ` · ${s.warehouse}` : ''}</TableCell>
+                    <TableCell className="text-right tabular">{s.count}</TableCell>
+                    <TableCell className="text-right tabular">{money(s.total)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ModuleSection>
+
+          <ModuleSection
+            title="Más vendidos"
+            actions={<ExportButton path="/reportes/panel" params={{ from, to, section: 'masVendidos' }} filename="mas-vendidos" />}
+          >
             <Table>
               <TableHeader>
                 <TableRow>
@@ -172,11 +185,16 @@ export function ReportesPage() {
                 ))}
               </TableBody>
             </Table>
-          </Bloque>
-
-          <Bloque title="Arqueos con diferencia">
+          </ModuleSection>
+        </div>
+      ) : view === 'caja' ? (
+        <div className="flex flex-col">
+          <ModuleSection
+            title="Arqueos con diferencia"
+            actions={data.arqueosConDiferencia.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, section: 'arqueos' }} filename="arqueos-con-diferencia" /> : undefined}
+          >
             {data.arqueosConDiferencia.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Ningún turno cerró con diferencia en este rango.</p>
+              <p className="text-chico text-muted-foreground">Ningún turno cerró con diferencia en este rango.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -201,11 +219,16 @@ export function ReportesPage() {
                 </TableBody>
               </Table>
             )}
-          </Bloque>
-
-          <Bloque title="Cuentas corrientes con saldo">
+          </ModuleSection>
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          <ModuleSection
+            title="Cuentas corrientes con saldo"
+            actions={data.cuentasCorrientes.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, section: 'cuentas' }} filename="cuentas-corrientes" /> : undefined}
+          >
             {data.cuentasCorrientes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Ningún cliente tiene saldo pendiente.</p>
+              <p className="text-chico text-muted-foreground">Ningún cliente tiene saldo pendiente.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -226,9 +249,9 @@ export function ReportesPage() {
                 </TableBody>
               </Table>
             )}
-          </Bloque>
-        </>
+          </ModuleSection>
+        </div>
       )}
-    </>
+    </ModuleScreen>
   );
 }

@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
-import { StockNav } from '@/components/stock-nav';
+import { ModuleScreen } from '@/components/module-screen';
+import { stockViews } from '@/components/stock-nav';
 import { ProductPicker } from '@/components/product-picker';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
@@ -24,7 +23,7 @@ type StockRow = { warehouseId: string; warehouseName: string; productLotId: stri
  * con el mismo `operationId`) en una sola transacción.
  */
 export function StockTransferPage() {
-  const { session } = useAuth();
+  const { session, can } = useAuth();
   const token = session!.accessToken;
   const navigate = useNavigate();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -95,14 +94,10 @@ export function StockTransferPage() {
   const manejaLote = Boolean(product?.manejaVencimiento);
 
   return (
-    <>
-      <PageHeader title="Transferir stock" />
-      <StockNav />
+    <ModuleScreen title="Stock" views={stockViews(can)}>
       {done && <Alert>{done}</Alert>}
       {error && <Alert variant="destructive">{error}</Alert>}
-      <Card>
-        <CardContent>
-          <form className="grid max-w-lg gap-4" onSubmit={submit}>
+      <form className="grid max-w-lg gap-4" onSubmit={submit}>
             <Field label="Producto" htmlFor="product">
               <ProductPicker id="product" token={token} value={product} onSelect={setProduct} />
             </Field>
@@ -143,17 +138,15 @@ export function StockTransferPage() {
               <Textarea id="notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </Field>
 
-            <div className="flex gap-2">
-              <Button disabled={saving || !product || !form.toWarehouseId} className="w-fit">
-                {saving && <Spinner />} Transferir
-              </Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/stock/history?movementType=transfer_out')}>
-                Ver transferencias
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </>
+        <div className="flex gap-2">
+          <Button disabled={saving || !product || !form.toWarehouseId} className="w-fit">
+            {saving && <Spinner />} Transferir
+          </Button>
+          <Button type="button" variant="outline" onClick={() => navigate('/stock/history?movementType=transfer_out')}>
+            Ver transferencias
+          </Button>
+        </div>
+      </form>
+    </ModuleScreen>
   );
 }

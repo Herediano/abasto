@@ -4,14 +4,13 @@ import { Eye, ClockCounterClockwise as HistoryIcon } from '@phosphor-icons/react
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
-import { PageHeader } from '@/components/page-header';
-import { StockNav } from '@/components/stock-nav';
+import { ModuleScreen } from '@/components/module-screen';
+import { stockViews } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -44,7 +43,7 @@ function originLabel(referenceType?: string | null) {
 }
 
 export function StockHistoryPage() {
-  const { session } = useAuth();
+  const { session, can } = useAuth();
   const token = session!.accessToken;
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -111,8 +110,7 @@ export function StockHistoryPage() {
 
   return (
     <>
-      <PageHeader title="Historial de movimientos" />
-      <StockNav />
+      <ModuleScreen title="Stock" views={stockViews(can)}>
       {error && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
         search={searchInput}
@@ -153,15 +151,13 @@ export function StockHistoryPage() {
         </Field>
       </ListFilters>
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <PageSpinner />
-          ) : items.length === 0 ? (
-            <EmptyState icon={HistoryIcon} title="Sin movimientos" description="No hay movimientos que coincidan con los filtros elegidos." />
-          ) : (
-            <>
-              <Table>
+      {loading ? (
+        <PageSpinner />
+      ) : items.length === 0 ? (
+        <EmptyState icon={HistoryIcon} title="Sin movimientos" description="No hay movimientos que coincidan con los filtros elegidos." />
+      ) : (
+        <div>
+          <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fecha</TableHead>
@@ -191,23 +187,22 @@ export function StockHistoryPage() {
                   ))}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted-foreground">
-                <span>
-                  Página {page} de {pagination.totalPages || 1} · {pagination.total} movimientos
-                </span>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                    Anterior
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>
-                    Siguiente
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+          <div className="flex items-center justify-between border-t border-border pt-3 text-chico text-muted-foreground">
+            <span>
+              Página {page} de {pagination.totalPages || 1} · {pagination.total} movimientos
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                Anterior
+              </Button>
+              <Button variant="outline" size="sm" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>
+                Siguiente
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      </ModuleScreen>
 
       <Dialog open={!!viewing} onOpenChange={open => !open && setViewing(null)}>
         <DialogContent>

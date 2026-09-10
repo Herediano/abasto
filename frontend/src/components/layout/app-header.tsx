@@ -60,9 +60,12 @@ return (
           onClick={abrirPalette}
           aria-label="Preguntar (Ctrl K)"
           title="Preguntar (Ctrl K)"
-          className="uiverse-ctl absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-[5px] border border-uiverse bg-card/70 text-primary shadow-[3px_3px_2px_1px_rgba(128,212,238,0.38)] transition-[box-shadow,background-color,border-color] duration-200 ease-out hover:border-uiverse hover:bg-card hover:shadow-[6px_6px_2px_1px_rgba(128,212,238,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
+          className="group absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--ab-preguntar)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2"
         >
-          <Sparkle weight="fill" className="size-5" />
+          <Sparkle
+            weight="fill"
+            className="size-6 transition-transform duration-200 group-hover:scale-110"
+          />
         </button>
       )}
     </header>

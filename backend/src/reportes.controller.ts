@@ -1,11 +1,18 @@
-import { Controller, Get, Inject, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
+import { sendExport, type ExportColumn } from './export.util';
 
 type Period = 'hoy' | 'semana' | 'mes' | 'anio';
+
+const PAGO_LABEL: Record<string, string> = {
+  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente',
+};
+const MONEY_FMT = '#,##0.00';
 
 // Todo se resuelve en SQL contra la zona horaria de la base — las columnas son
 // `timestamp without time zone` y los `@default(now())` se guardan en hora
@@ -74,7 +81,76 @@ export class ReportesController {
    */
   @Get('panel')
   @RequirePermission('reportes.ver')
-  async panel(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
+  panel(@Req() request: AuthRequest, @Query() query: Record<string, string | undefined>) {
+    return this.buildPanel(request, query);
+  }
+
+  /**
+   * Una sección del panel como Excel/CSV (`?section=<clave>&from=&to=&format=`).
+   * Reusa exactamente el mismo cálculo que `/panel`; sólo elige qué columnas y
+   * filas mandar. Ver docs/diseno.md, «Exportar — la salida universal».
+   */
+  @Get('panel/export')
+  @RequirePermission('reportes.ver')
+  async panelExport(
+    @Req() request: AuthRequest,
+    @Query() query: Record<string, string | undefined>,
+    @Res() res: Response,
+  ) {
+    const d = await this.buildPanel(request, query);
+    const M = (key: string): ExportColumn => ({ header: '', key, numFmt: MONEY_FMT, width: 16 });
+    const sections: Record<string, { name: string; columns: ExportColumn[]; rows: Record<string, unknown>[] }> = {
+      medioDePago: {
+        name: 'ventas-por-medio-de-pago',
+        columns: [{ header: 'Medio', key: 'medio', width: 20 }, { header: 'Operaciones', key: 'ops' }, { ...M('total'), header: 'Total' }],
+        rows: d.porMedioDePago.map(m => ({ medio: PAGO_LABEL[m.method] ?? m.method, ops: m.count, total: m.total })),
+      },
+      cajero: {
+        name: 'ventas-por-cajero',
+        columns: [{ header: 'Cajero', key: 'cajero', width: 24 }, { header: 'Tickets', key: 'tickets' }, { ...M('total'), header: 'Total' }],
+        rows: d.porCajero.map(c => ({ cajero: c.name, tickets: c.count, total: c.total })),
+      },
+      sucursales: {
+        name: 'ventas-por-sucursal',
+        columns: [{ header: 'Sucursal', key: 'sucursal', width: 28 }, { header: 'Tickets', key: 'tickets' }, { ...M('total'), header: 'Total' }],
+        rows: d.porSucursal.map(s => ({ sucursal: s.warehouse !== s.branch ? `${s.branch} · ${s.warehouse}` : s.branch, tickets: s.count, total: s.total })),
+      },
+      masVendidos: {
+        name: 'mas-vendidos',
+        columns: [
+          { header: 'Producto', key: 'producto', width: 34 },
+          { header: 'Unidades', key: 'unidades' },
+          { ...M('facturado'), header: 'Facturado' },
+          ...(d.verPlata ? [{ ...M('margen'), header: 'Margen' }] : []),
+        ],
+        rows: d.masVendidos.map(r => ({ producto: r.name, unidades: r.qty, facturado: r.revenue, margen: r.margin ?? '' })),
+      },
+      arqueos: {
+        name: 'arqueos-con-diferencia',
+        columns: [
+          { header: 'Caja', key: 'caja', width: 20 },
+          { header: 'Cerró', key: 'cerro', width: 22 },
+          { header: 'Fecha', key: 'fecha', numFmt: 'dd/mm/yyyy' },
+          { ...M('diferencia'), header: 'Diferencia' },
+        ],
+        rows: d.arqueosConDiferencia.map(a => ({ caja: a.cashRegister, cerro: a.closedBy, fecha: a.closedAt ? new Date(a.closedAt) : '', diferencia: a.difference })),
+      },
+      cuentas: {
+        name: 'cuentas-corrientes',
+        columns: [{ header: 'Cliente', key: 'cliente', width: 30 }, { ...M('saldo'), header: 'Saldo' }, { ...M('limite'), header: 'Límite' }],
+        rows: d.cuentasCorrientes.map(c => ({ cliente: c.name, saldo: c.balance, limite: c.creditLimit ?? '' })),
+      },
+    };
+    const s = sections[query.section ?? ''];
+    if (!s) {
+      res.status(400).json({ code: 'BAD_SECTION', message: 'Sección de reporte desconocida' });
+      return;
+    }
+    const rango = `${d.range.from}_${d.range.to}`;
+    await sendExport(res, query.format, `${s.name}_${rango}`, s.columns, s.rows);
+  }
+
+  private async buildPanel(request: AuthRequest, query: Record<string, string | undefined>) {
     const tenantId = request.user.tenantId;
     const whIds = request.user.branchWarehouseIds ?? [];
     const desde = query.from ? new Date(`${query.from}T00:00:00`) : new Date(Date.now() - 30 * 864e5);

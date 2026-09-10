@@ -5,8 +5,25 @@
 > el sistema); esto es **cómo se ve, cómo se navega y por qué**.
 >
 > Es un documento vivo —«Hecho» y «Lo que sigue» se actualizan a medida que se
-> avanza— pero **las bases** (el sistema visual, las reglas, el escritorio, el
-> módulo, la navegación) no se tocan sin una razón fuerte y escrita.
+> avanza— pero **las bases** (el sistema visual, las reglas, la navegación) no se
+> tocan sin una razón fuerte y escrita.
+
+## Estado (2026-09)
+
+- **El escritorio y el encabezado están cerrados.** La estética a la que
+  llegaron —el sticker de offset duro, la barra unificada sticky full-width, el
+  Preguntar flotante, la grilla arrastrable, el color por módulo en las
+  tarjetas— es la buena y costó varias vueltas llegar ahí. No se rediseñan: lo
+  que dice este doc sobre esas dos pantallas es descriptivo, no una propuesta a
+  revisar. Cualquier detalle del código que se desvíe del texto de abajo para
+  esas dos pantallas, **gana el código** (y se corrige el texto, no la pantalla).
+- **La experiencia de los módulos todavía no se trabajó.** Lo que hay adentro de
+  cada módulo (Precios, Reportes, Stock, Clientes…) creció suelto, pantalla por
+  pantalla, sin un molde real. Eso es lo que sigue. El criterio viejo de
+  **«bento»** para las pantallas de lectura **queda descartado** —la dirección
+  nueva está en definición (ver «El módulo»).
+- `docs/producto.md` está desactualizado en varios puntos de alcance; cuando
+  discrepe con el código, manda el código.
 
 ## Cómo leer este documento
 
@@ -235,8 +252,12 @@ está para reconocer, no para decorar: si no ayuda a identificar algo, no va.
 - **La estructura es información.** Bordes, franjas, numeración, divisiones:
   codifican algo del contenido, no lo decoran. Marcadores numerados (01 / 02 /
   03) solo si el contenido de verdad es una secuencia.
-- **Bento para mirar, formularios tranquilos para hacer.** La elevación y los
-  grupos siempre significan algo; no se decora con tarjetas.
+- **No se decora con tarjetas.** La elevación y los grupos siempre significan
+  algo. Un recuadro con borde, fondo y sombra dice «objeto aparte»: se gasta
+  cuando de verdad hay un objeto aparte, no para separar dos grupos de una misma
+  pantalla (para eso alcanza el aire y un título). Cómo se resuelve la lectura
+  de un módulo está en definición; el criterio de «bento» (grilla de tiles
+  heterogéneos de distinto tamaño) quedó atrás.
 - **Consistencia.** Si editar un registro se hace de una manera en Clientes, la
   misma manera vale en Proveedores y Productos. Quien aprende una pantalla
   entiende las demás.
@@ -282,10 +303,12 @@ Marcas de página generada. No van, aunque «queden bien»:
 
 ## El escritorio
 
-La pantalla de inicio —y **la única navegación**— es el escritorio: una **caja
-con todos los módulos**, una tarjeta por módulo. Se entra al escritorio, se toca
-un módulo, se trabaja adentro, se vuelve al escritorio para ir a otro. No hay
-riel que lo duplique.
+La pantalla de inicio —y **la navegación principal**— es el escritorio: una
+**caja con todos los módulos**, una tarjeta por módulo. Se entra al escritorio,
+se toca un módulo, se trabaja adentro, se vuelve al escritorio para ir a otro.
+Adentro de un módulo hay un atajo: el botón ☰ del encabezado despliega un riel
+de íconos para saltar directo a otro módulo (ver «El módulo → El riel»). El
+escritorio no tiene ese riel.
 
 Cumple dos funciones a la vez: **navegación** y **centro de estado del negocio**.
 Entrás a la mañana, ves de un vistazo dónde hay algo para atender, y entrás ahí.
@@ -401,22 +424,63 @@ sola columna**. Es una variante de maquetado, no otro concepto.
 
 ---
 
-## El módulo — también un solo molde
+## El módulo — un solo molde (en construcción)
 
-Todos los módulos se abren y se ven igual. Nada de que uno tenga barra lateral y
-otro no.
+> **Esto es la zona de trabajo activa.** El escritorio y el encabezado ya están;
+> lo de adentro de cada módulo creció suelto y ahora tiene un molde. Se está
+> aplicando módulo por módulo —el primero es **Ventas**—. Hasta que esté en
+> todos, algunas pantallas todavía se ven al viejo estilo (recuadros apilados).
 
-- **Cabecera pegajosa** (`PageHeader`): a la izquierda **← Escritorio** (+ `Esc`),
-  después el **chip con el ícono** + un rastro (`Escritorio / Vencimientos`) + el
-  **título** en h2; a la derecha las acciones —**Filtros**, **Exportar** y la
-  **acción principal** del módulo (`Nueva venta`, `Cargar factura`, `Registrar
-  cobro`…).
-- **Filtros** viven detrás del botón; lo que está activo vuelve como **chips** que
-  se sacan de a uno (el molde que estrenó Productos).
-- **Cuerpo**: una tabla con las columnas justas, o el contenido propio del módulo
-  (el gráfico en Ventas, la lista en Reportes). Tablas con aire, cabecera sobre
-  superficie levantada, números por dígito en `tabular-nums` de Geist. El
-  encabezado de columna va en capitalización normal —sin versalita.
+El molde tiene **tres partes fijas** en el cuerpo, siempre en el mismo orden. El
+componente `ModuleScreen` (`components/module-screen.tsx`) las arma; una pantalla
+nueva no maqueta ninguna a mano. La navegación entre módulos NO es parte del
+molde — ya existe y no se toca (ver «El riel», abajo).
+
+### El riel de módulos — NO SE TOCA
+
+Un **botón ☰** en el encabezado de cada módulo que, al tocarlo, **despliega el
+riel ahí mismo, hacia abajo** (los íconos de los módulos, para saltar de uno a
+otro sin volver al escritorio). Es como está y funciona bien: **no es una
+columna fija**, no empuja el layout, se abre y se cierra desde ese botón y ya.
+Cualquier cambio en el riel se pide y se escribe acá primero.
+
+### 1 · La cabecera — `PageHeader`, pegajosa
+
+A la izquierda **← Escritorio** (+ `Esc`), el **chip del ícono con el matiz del
+módulo** + rastro + el **título en h2 (24 px)**; a la derecha **Filtros**,
+**Exportar** y la **acción principal** (`Cargar factura`, `Registrar cobro`…).
+Los filtros viven detrás del botón y lo activo vuelve como **chips** que se
+sacan de a uno.
+
+### 2 · Línea de resumen — las cifras que importan
+
+Una sola línea de texto **chico** (no tiles grandes) con las 2 a 4 cifras clave
+del módulo: `Hoy $1,28 M · 43 tickets · promedio $29.700`. Monocroma; una cifra
+se tiñe **solo** si es una alerta (ámbar aviso, ladrillo problema). Es opcional:
+un módulo que no tiene una cifra de cabecera no la lleva.
+
+### 3 · Vistas — una a la vez
+
+Una **fila de pestañas** que nombra lo que hay para ver, y **debajo una sola
+vista ocupando todo el ancho**. Ventas: `Comprobantes` · `Resumen`. Precios:
+`Listas` · `Actualizar` · `Promociones` · `Historial`. Un listado simple puede
+tener una sola vista y entonces no muestra la fila.
+
+La vista es **una tabla, un gráfico, o secciones de formulario** — **sin
+recuadro**. Una sección dentro de una vista es: título en h3 + una línea fina +
+el contenido, con 24 px de aire entre secciones. Adentro de una vista **nunca
+hay tarjetas**. La elevación queda para lo que de verdad flota (un menú, un
+diálogo), no para agrupar.
+
+El estado vacío de una vista **trae su acción** (`Todavía no cargaste productos`
+→ botón `Crear producto` ahí mismo), nunca es solo un cartel.
+
+### Lo que el molde deja afuera
+
+Bento (grilla de tiles de distinto tamaño), todo picado en tarjetas del mismo
+radio y la misma sombra, un segundo color o una segunda tipografía para «darle
+vida», tablas envueltas en un `Card`. El carácter ya se gastó en el escritorio;
+adentro del módulo manda la claridad.
 
 ---
 
@@ -430,9 +494,12 @@ otro no.
 - **No perder el lugar.** El escritorio te espera como lo dejaste (scroll,
   configuración). A futuro, cada módulo conserva su contexto de trabajo (filtros,
   búsqueda, fila seleccionada) al ir y volver —«espacios de trabajo paralelos».
+- **Entre módulos**, el riel que despliega el botón ☰ del encabezado (ver «El
+  módulo → El riel») permite saltar sin volver al escritorio. Es navegación
+  rápida entre pares, no una barra que duplica el escritorio: no lleva estado
+  del negocio, no se puede configurar, y en el escritorio no existe.
 - **Adentro de un módulo**, su propia navegación cuando haga falta
-  (`Escritorio → Clientes → Cliente → Historial`). Nunca una barra global con
-  todo el sistema.
+  (`Escritorio → Clientes → Cliente → Historial`).
 - **La caja** se abre desde el escritorio (botón de modo) y toma la pantalla
   completa; el cajero no ve el escritorio mientras cobra.
 
@@ -599,6 +666,17 @@ datos a alguien de afuera.**
 ---
 
 ## Lo que sigue, en orden
+
+### Diseño — la prioridad
+
+1. **Definir la dirección del cuerpo del módulo** (ver «El módulo»): qué
+   reemplaza al bento para las pantallas de lectura, cómo se ve una sección de
+   formulario sin recuadro. Cuando esté, se escribe acá y recién ahí se aplica.
+2. **Un molde por tipo de pantalla** y un componente que lo fije (cabecera +
+   ancho + Exportar), para que ~20 módulos se sientan uno solo.
+3. **Reportes** con la dirección nueva (hoy es todo tablas).
+4. **Precios** agrupado (hoy son 8 recuadros en un scroll).
+5. **`EmptyState` con acción**; barrer `text-xs` a la escala de tokens.
 
 ### Producto
 

@@ -2,11 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
-import { StockNav } from '@/components/stock-nav';
+import { ModuleScreen } from '@/components/module-screen';
+import { stockViews } from '@/components/stock-nav';
 import { ProductPicker } from '@/components/product-picker';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
@@ -23,7 +22,7 @@ const MOVEMENT_TYPES = [
 ] as const;
 
 export function StockOutPage() {
-  const { session } = useAuth();
+  const { session, can } = useAuth();
   const token = session!.accessToken;
   const navigate = useNavigate();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -80,13 +79,9 @@ export function StockOutPage() {
   }
 
   return (
-    <>
-      <PageHeader title="Registrar egreso" />
-      <StockNav />
+    <ModuleScreen title="Stock" views={stockViews(can)}>
       {error && <Alert variant="destructive">{error}</Alert>}
-      <Card>
-        <CardContent>
-          <form className="grid max-w-lg gap-4" onSubmit={submit}>
+      <form className="grid max-w-lg gap-4" onSubmit={submit}>
             <Field label="Producto" htmlFor="product">
               <ProductPicker id="product" token={token} value={product} onSelect={setProduct} />
             </Field>
@@ -124,12 +119,10 @@ export function StockOutPage() {
             <Field label="Notas" htmlFor="notes" hint="(opcional)">
               <Textarea id="notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </Field>
-            <Button disabled={saving} className="w-fit">
-              {saving && <Spinner />} Guardar movimiento
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </>
+        <Button disabled={saving} className="w-fit">
+          {saving && <Spinner />} Guardar movimiento
+        </Button>
+      </form>
+    </ModuleScreen>
   );
 }

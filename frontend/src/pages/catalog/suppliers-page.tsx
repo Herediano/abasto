@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { MagnifyingGlass, PencilSimple, Plus, Truck } from '@phosphor-icons/react';
+import { PencilSimple, Plus, Truck } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
+import { ListFilters } from '@/components/list-filters';
+import { ModuleScreen } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -77,7 +77,7 @@ export function SuppliersPage() {
 
   return (
     <>
-      <PageHeader
+      <ModuleScreen
         title="Proveedores"
         actions={
           <>
@@ -89,23 +89,26 @@ export function SuppliersPage() {
             )}
           </>
         }
-      />
-      <div className="relative max-w-sm">
-        <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-placeholder" />
-        <Input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar proveedor, razón social o CUIT…"
-          className="pl-9"
-        />
-      </div>
+      >
+        {error && <Alert variant="destructive">{error}</Alert>}
 
-      <Card>
-        <CardContent className="p-0">
+        <ListFilters
+          search={search}
+          onSearch={setSearch}
+          searchPlaceholder="Buscar proveedor, razón social o CUIT"
+          searchLabel="Buscar proveedores"
+          activeFilters={[]}
+        />
+
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={Truck} title="Sin proveedores" description="Registrá tu primer proveedor para poder cargar facturas de compra." />
+            <EmptyState
+              icon={Truck}
+              title="Todavía no hay proveedores"
+              description="Registrá tu primer proveedor para poder cargar facturas de compra."
+              action={can('proveedores.crear') ? <Button onClick={openCreate}><Plus /> Nuevo proveedor</Button> : undefined}
+            />
           ) : filtered.length === 0 ? (
             <EmptyState icon={Truck} title="Sin resultados" description={`Ningún proveedor coincide con «${search}».`} />
           ) : (
@@ -140,8 +143,7 @@ export function SuppliersPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+      </ModuleScreen>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

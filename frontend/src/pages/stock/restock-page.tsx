@@ -3,13 +3,12 @@ import { Link } from 'react-router-dom';
 import { ArrowsClockwise } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { ListFilters } from '@/components/list-filters';
-import { PageHeader } from '@/components/page-header';
+import { ModuleScreen } from '@/components/module-screen';
+import { stockViews } from '@/components/stock-nav';
 import { Select } from '@/components/ui/select';
-import { StockNav } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type LowStockProduct } from '@/lib/api';
@@ -17,7 +16,7 @@ import { quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 export function RestockPage() {
-  const { session } = useAuth();
+  const { session, can } = useAuth();
   const token = session!.accessToken;
   const [items, setItems] = useState<LowStockProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,9 +44,7 @@ export function RestockPage() {
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   return (
-    <>
-      <PageHeader title="Reposición" />
-      <StockNav />
+    <ModuleScreen title="Stock" views={stockViews(can)}>
       {error && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
         search={search}
@@ -64,16 +61,14 @@ export function RestockPage() {
           </Select>
         </Field>
       </ListFilters>
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <PageSpinner />
-          ) : items.length === 0 ? (
-            <EmptyState icon={ArrowsClockwise} title="Todo en orden" description="Ningún producto con stock mínimo configurado está por debajo del umbral. Configurá un stock mínimo desde la ficha de cada producto para que aparezca acá cuando corresponda reponerlo." />
-          ) : visibles.length === 0 ? (
-            <EmptyState icon={ArrowsClockwise} title="Sin resultados" description="Ningún producto coincide con la búsqueda." />
-          ) : (
-            <Table>
+      {loading ? (
+        <PageSpinner />
+      ) : items.length === 0 ? (
+        <EmptyState icon={ArrowsClockwise} title="Todo en orden" description="Ningún producto con stock mínimo configurado está por debajo del umbral. Configurá un stock mínimo desde la ficha de cada producto para que aparezca acá cuando corresponda reponerlo." />
+      ) : visibles.length === 0 ? (
+        <EmptyState icon={ArrowsClockwise} title="Sin resultados" description="Ningún producto coincide con la búsqueda." />
+      ) : (
+        <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Producto</TableHead>
@@ -101,11 +96,9 @@ export function RestockPage() {
                     </TableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </>
+          </TableBody>
+        </Table>
+      )}
+    </ModuleScreen>
   );
 }

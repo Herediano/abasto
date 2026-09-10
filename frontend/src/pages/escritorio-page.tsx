@@ -6,6 +6,7 @@ import { useEscritorioSummary } from '@/components/layout/escritorio-shell';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
 import { hora as fmtHora } from '@/lib/format';
 import { compact, statFor, type EscritorioSummary, type TileBar } from '@/lib/escritorio';
+import { prefetchRoute } from '@/lib/lazy-pages';
 import { useAuth } from '@/lib/auth-context';
 import { setActiveBranch } from '@/lib/branch';
 import { cn } from '@/lib/utils';
@@ -185,6 +186,8 @@ function AbrirMostrador({ summary }: { summary: EscritorioSummary | null }) {
     <button
       type="button"
       onClick={() => navigate('/ventas')}
+      onMouseEnter={() => prefetchRoute('/ventas')}
+      onFocus={() => prefetchRoute('/ventas')}
       className={cn(
         'group relative flex max-w-[240px] flex-col items-start gap-0.5 overflow-hidden rounded-lg px-4 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2 uiverse-ctl',
         abierta ? 'mostrador-open' : 'mostrador-closed',
@@ -365,7 +368,11 @@ function readConfig(keys: string[]): Config {
           }
         }
         if (collide) return { hidden, tiles: centrarTablero(computeLayout(unicas.sort(porVisual).map(aSize), GRID_COLS)) };
-        return { hidden, tiles: centrarTablero(unicas) };
+        // Config válida guardada por el usuario: se respeta TAL CUAL. Nada de
+        // centrar la última fila — esas posiciones ya son las que quiso dejar
+        // (una tarjeta sola en la esquina izquierda tiene que volver a esa
+        // esquina, no correrse al centro).
+        return { hidden, tiles: unicas };
       }
       // Formato intermedio (board + spans): anclas del tablero viejo, reacomodadas.
       const boardViejo = (parsed as { board?: unknown }).board;
@@ -435,6 +442,26 @@ export function EscritorioPage() {
   const byKey = useMemo(() => new Map(gridModules(can).map(m => [m.key, m])), [can]);
   const tiles = config.tiles;
   const hidden = config.hidden.map(k => byKey.get(k)).filter((m): m is ModuleDef => !!m);
+
+  // Una vez que el escritorio quedó quieto, bajamos en segundo plano el chunk
+  // de cada módulo del tablero (y el de la Caja). Es un ERP de todo el día:
+  // la misma persona abre los mismos módulos una y otra vez, así que gastar el
+  // idle en tenerlos listos vale más que ahorrar ese tráfico. El hover ya
+  // cubre lo inmediato; esto cubre "click sin pasar el mouse antes" y teclado.
+  useEffect(() => {
+    const paths = new Set(tiles.map(t => byKey.get(t.key)?.path).filter((p): p is string => !!p));
+    if (canCaja) paths.add('/ventas');
+    const run = () => paths.forEach(prefetchRoute);
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(run, { timeout: 4000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(run, 1500);
+    return () => window.clearTimeout(id);
+    // Corre una vez, con el tablero inicial: los módulos que se agreguen después
+    // (mostrar una tarjeta oculta) igual precargan solos al pasarles el mouse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // La posición persistida ES la que ve react-grid-layout: sin traducciones en
   // render ni al persistir. El centrado de la última fila incompleta se
@@ -601,8 +628,11 @@ export function EscritorioPage() {
             key={m.key}
             to={m.path}
             onClick={e => open(e, m)}
+            onMouseEnter={() => prefetchRoute(m.path)}
+            onFocus={() => prefetchRoute(m.path)}
             onMouseDown={e => {
               pressPos.current = { x: e.clientX, y: e.clientY };
+              prefetchRoute(m.path);
             }}
             draggable={false}
             style={{ ['--ab-tile-hue' as string]: hueFor(m.key) }}

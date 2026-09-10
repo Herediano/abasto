@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
@@ -12,7 +11,7 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { Label } from '@/components/ui/label';
-import { PageHeader } from '@/components/page-header';
+import { ModuleScreen, SummaryLine } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
@@ -62,6 +61,14 @@ export function ProductsPage() {
   const [savingCategory, setSavingCategory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [referenceHint, setReferenceHint] = useState(false);
+  // Cifra de cabecera: cuántos productos están bajo su mínimo (lo mismo que
+  // muestra Reposición). Una sola llamada al montar.
+  const [bajoMinimoTotal, setBajoMinimoTotal] = useState<number | null>(null);
+  useEffect(() => {
+    api<unknown[]>('/products/low-stock', {}, token)
+      .then(r => setBajoMinimoTotal(Array.isArray(r) ? r.length : null))
+      .catch(() => {});
+  }, [token]);
 
   // Lo que está filtrado se muestra como chips: se ve de un vistazo qué está
   // acotando el listado y se saca de a uno sin abrir el panel.
@@ -256,9 +263,18 @@ export function ProductsPage() {
     }
   }
 
+  const resumen = !loading && pagination.total > 0 && (
+    <SummaryLine
+      items={[
+        { label: 'Productos', value: String(pagination.total) },
+        ...(bajoMinimoTotal ? [{ label: 'Bajo mínimo', value: String(bajoMinimoTotal), tone: 'warn' as const }] : []),
+      ]}
+    />
+  );
+
   return (
     <>
-      <PageHeader
+      <ModuleScreen
         title="Productos"
         actions={
           <>
@@ -275,7 +291,8 @@ export function ProductsPage() {
             )}
           </>
         }
-      />
+        summary={resumen || undefined}
+      >
       {catalogMessage && <Alert>{catalogMessage}</Alert>}
       {error && !open && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
@@ -346,14 +363,21 @@ export function ProductsPage() {
         )}
       </ListFilters>
 
-      <Card>
-        <CardContent className="p-0">
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={ShoppingCartSimple} title={status === 'inactive' ? 'Sin productos desactivados' : 'Sin productos'} description={search || categoryId || brand || priced || stock ? 'No hay productos que coincidan con los filtros.' : 'Creá el primer producto para empezar a manejar stock.'} />
+            <EmptyState
+              icon={ShoppingCartSimple}
+              title={status === 'inactive' ? 'Sin productos desactivados' : (search || categoryId || brand || priced || stock ? 'Sin resultados' : 'Todavía no hay productos')}
+              description={search || categoryId || brand || priced || stock ? 'No hay productos que coincidan con los filtros.' : 'Creá el primer producto para empezar a manejar stock.'}
+              action={
+                puedeCrear && !(search || categoryId || brand || priced || stock) && status !== 'inactive'
+                  ? <Button onClick={openCreate}><Plus /> Nuevo producto</Button>
+                  : undefined
+              }
+            />
           ) : (
-            <>
+            <div>
               <Table>
                 <TableHeader>
                   {/* Seis columnas, no diez. La categoría y el margen viven en
@@ -376,7 +400,7 @@ export function ProductsPage() {
                       <TableRow key={p.id}>
                         <TableCell>
                           <div className="font-medium leading-snug">{p.name}</div>
-                          <div className="mt-0.5 font-mono text-xs text-placeholder">
+                          <div className="mt-0.5 font-mono text-chico text-placeholder">
                             {p.barcode}
                             {p.internalCode && <> · #{p.internalCode}</>}
                           </div>
@@ -421,7 +445,7 @@ export function ProductsPage() {
                   })}
                 </TableBody>
               </Table>
-              <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted-foreground">
+              <div className="flex items-center justify-between border-t border-border pt-3 text-chico text-muted-foreground">
                 <span>
                   Página {page} de {pagination.totalPages || 1} · {pagination.total} productos
                 </span>
@@ -434,10 +458,9 @@ export function ProductsPage() {
                   </Button>
                 </div>
               </div>
-            </>
+            </div>
           )}
-        </CardContent>
-      </Card>
+      </ModuleScreen>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

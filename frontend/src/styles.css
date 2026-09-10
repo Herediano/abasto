@@ -30,6 +30,10 @@
   /* Texto sobre cualquier relleno sólido (primario, peligro, aviso). */
   --ab-on-solid: #ffffff;
 
+  /* La chispa del "Preguntar": un blanco cálido que se invierte por tema para
+     contrastar siempre con el fondo (tinta cálida en claro, hueso en oscuro). */
+  --ab-preguntar: #4a4038;
+
   --ab-warn: #a76322;
   --ab-warn-soft: #f7ede0;
   --ab-ok: #0d8ca8;
@@ -67,6 +71,7 @@
     --ab-primary-soft: #0e282f;
     --ab-primary-line: #204751;
     --ab-on-solid: #05222a;
+    --ab-preguntar: #f2ede3;
 
     --ab-warn: #cb8b40;
     --ab-warn-soft: #2a2118;
@@ -100,6 +105,7 @@
   --ab-primary-soft: #0e282f;
   --ab-primary-line: #204751;
   --ab-on-solid: #05222a;
+  --ab-preguntar: #f2ede3;
 
   --ab-warn: #cb8b40;
   --ab-warn-soft: #2a2118;
@@ -204,6 +210,9 @@
 }
 
 @layer base {
+  html {
+    scrollbar-gutter: stable;
+  }
   * {
     border-color: var(--color-border);
   }
@@ -273,6 +282,27 @@
       animation-iteration-count: 1 !important;
     }
   }
+}
+
+/*
+ * Radix UI (react-remove-scroll) inyecta margin-right / padding-right al <body>
+ * al abrir diálogos o la paleta de comandos ("Preguntar" / Ctrl+K). Con
+ * `scrollbar-gutter: stable`, el espacio del scroll ya está reservado, por lo que
+ * cualquier compensación externa achica el body y mueve la pantalla hacia la izquierda.
+ */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+@keyframes loader-progress {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(30%); }
+  100% { transform: translateX(200%); }
+}
+.animate-progress {
+  animation: loader-progress 1.4s ease-in-out infinite;
 }
 
 /*

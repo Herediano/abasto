@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Receipt } from '@phosphor-icons/react';
+import { CashRegister, Receipt } from '@phosphor-icons/react';
+import { Link } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
-import { PageHeader } from '@/components/page-header';
+import { ModuleScreen, SummaryLine } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
 import { VentasChart } from '@/components/ventas-chart';
 import { PageSpinner, Spinner } from '@/components/spinner';
@@ -45,6 +45,21 @@ export function SalesHistoryPage() {
   const [devolver, setDevolver] = useState<SaleDetail | null>(null);
   const [dev, setDev] = useState({ reason: '', refundMethod: 'cash', qty: {} as Record<string, string> });
   const [devSaving, setDevSaving] = useState(false);
+  const [view, setView] = useState<'comprobantes' | 'resumen'>('comprobantes');
+  const [hoy, setHoy] = useState<{ total: number; tickets: number } | null>(null);
+  const puedeVender = can('caja.operar');
+
+  // Cifras de cabecera del módulo (la línea de resumen del molde): el total y
+  // los tickets de hoy, derivados de la misma serie que alimenta el gráfico.
+  useEffect(() => {
+    api<{ fact: (number | null)[]; tick: (number | null)[] }>('/reportes/ventas?period=hoy', {}, token)
+      .then(s => {
+        const total = s.fact.reduce<number>((a, v) => a + (v ?? 0), 0);
+        const tickets = s.tick.reduce<number>((a, v) => a + (v ?? 0), 0);
+        setHoy({ total, tickets });
+      })
+      .catch(() => {});
+  }, [token]);
 
   const abrirDetalle = (id: string) => {
     api<SaleDetail>(`/sales/${id}`, {}, token).then(setDetalle).catch(e => setError(errorMessage(e)));
@@ -114,104 +129,138 @@ export function SalesHistoryPage() {
     }
   }
 
+  const ticketProm = hoy && hoy.tickets > 0 ? hoy.total / hoy.tickets : 0;
+  const resumen = hoy && (
+    <SummaryLine
+      items={[
+        { label: 'Hoy', value: money(hoy.total) },
+        { label: 'Tickets', value: String(hoy.tickets) },
+        ...(hoy.tickets > 0 ? [{ label: 'Ticket promedio', value: money(ticketProm) }] : []),
+      ]}
+    />
+  );
+
   return (
     <>
-      <PageHeader
+      <ModuleScreen
         title="Ventas"
         actions={<ExportMenu path="/sales" params={exportParams} filename="ventas" />}
-      />
-      {error && <Alert variant="destructive">{error}</Alert>}
-
-      <VentasChart />
-
-      <ListFilters
-        search={searchInput}
-        onSearch={setSearchInput}
-        searchPlaceholder="Número de comprobante o cliente"
-        searchLabel="Buscar ventas"
-        activeFilters={activeFilters}
+        summary={resumen}
+        views={[
+          { key: 'comprobantes', label: 'Comprobantes' },
+          { key: 'resumen', label: 'Resumen' },
+        ]}
+        view={view}
+        onView={k => setView(k as typeof view)}
       >
-        <Field label="Estado" htmlFor="f-status">
-          <Select id="f-status" value={filtros.status} onChange={e => setFiltros({ ...filtros, status: e.target.value })}>
-            <option value="">Todas</option>
-            <option value="confirmed">Confirmadas</option>
-            <option value="cancelled">Anuladas</option>
-          </Select>
-        </Field>
-        <Field label="Forma de pago" htmlFor="f-pay">
-          <Select id="f-pay" value={filtros.paymentMethod} onChange={e => setFiltros({ ...filtros, paymentMethod: e.target.value })}>
-            <option value="">Todas</option>
-            {Object.entries(PAGOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </Select>
-        </Field>
-        <Field label="Desde" htmlFor="f-from">
-          <Input id="f-from" type="date" value={filtros.from} onChange={e => setFiltros({ ...filtros, from: e.target.value })} />
-        </Field>
-        <Field label="Hasta" htmlFor="f-to">
-          <Input id="f-to" type="date" value={filtros.to} onChange={e => setFiltros({ ...filtros, to: e.target.value })} />
-        </Field>
-      </ListFilters>
+        {error && <Alert variant="destructive">{error}</Alert>}
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <PageSpinner />
-          ) : items.length === 0 ? (
-            <EmptyState icon={Receipt} title="Sin ventas" description="Todavía no se registró ninguna venta con estos filtros." />
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Comprobante</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Pago</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map(s => (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-mono text-xs">{comprobante(s)}</TableCell>
-                      <TableCell className="whitespace-nowrap">{fechaHora(s.occurredAt)}</TableCell>
-                      <TableCell>{s.customerName ?? <span className="text-muted-foreground">Consumidor final</span>}</TableCell>
-                      <TableCell>{PAGOS[s.paymentMethod] ?? s.paymentMethod}</TableCell>
-                      <TableCell className="text-right font-medium">{money(s.total)}</TableCell>
-                      <TableCell>
-                        {s.status === 'cancelled' ? <Badge variant="destructive">Anulada</Badge> : <Badge variant="success">Confirmada</Badge>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => abrirDetalle(s.id)}>
-                            Ver
-                          </Button>
-                          {puedeAnular && s.status !== 'cancelled' && (
-                            <Button variant="outline" size="sm" onClick={() => { setAnulando(s); setMotivo(''); }}>
-                              Anular
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+        {view === 'resumen' ? (
+          <VentasChart plain />
+        ) : (
+          <>
+            <ListFilters
+              search={searchInput}
+              onSearch={setSearchInput}
+              searchPlaceholder="Número de comprobante o cliente"
+              searchLabel="Buscar ventas"
+              activeFilters={activeFilters}
+            >
+              <Field label="Estado" htmlFor="f-status">
+                <Select id="f-status" value={filtros.status} onChange={e => setFiltros({ ...filtros, status: e.target.value })}>
+                  <option value="">Todas</option>
+                  <option value="confirmed">Confirmadas</option>
+                  <option value="cancelled">Anuladas</option>
+                </Select>
+              </Field>
+              <Field label="Forma de pago" htmlFor="f-pay">
+                <Select id="f-pay" value={filtros.paymentMethod} onChange={e => setFiltros({ ...filtros, paymentMethod: e.target.value })}>
+                  <option value="">Todas</option>
+                  {Object.entries(PAGOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </Select>
+              </Field>
+              <Field label="Desde" htmlFor="f-from">
+                <Input id="f-from" type="date" value={filtros.from} onChange={e => setFiltros({ ...filtros, from: e.target.value })} />
+              </Field>
+              <Field label="Hasta" htmlFor="f-to">
+                <Input id="f-to" type="date" value={filtros.to} onChange={e => setFiltros({ ...filtros, to: e.target.value })} />
+              </Field>
+            </ListFilters>
+
+            {loading ? (
+              <PageSpinner />
+            ) : items.length === 0 ? (
+              <EmptyState
+                icon={Receipt}
+                title={activeFilters.length > 0 ? 'Sin ventas con estos filtros' : 'Todavía no hay ventas'}
+                description={
+                  activeFilters.length > 0
+                    ? 'Probá quitando algún filtro.'
+                    : 'Las ventas se registran al cobrar en el mostrador.'
+                }
+                action={
+                  activeFilters.length === 0 && puedeVender ? (
+                    <Button asChild variant="outline">
+                      <Link to="/ventas"><CashRegister weight="fill" /> Abrir Mostrador</Link>
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Comprobante</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Pago</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between border-t p-3 text-sm">
-                  <span className="text-muted-foreground">{pagination.total} ventas</span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
-                    <Button variant="outline" size="sm" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Siguiente</Button>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map(s => (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-mono text-chico">{comprobante(s)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{fechaHora(s.occurredAt)}</TableCell>
+                        <TableCell>{s.customerName ?? <span className="text-muted-foreground">Consumidor final</span>}</TableCell>
+                        <TableCell>{PAGOS[s.paymentMethod] ?? s.paymentMethod}</TableCell>
+                        <TableCell className="text-right font-medium tabular">{money(s.total)}</TableCell>
+                        <TableCell>
+                          {s.status === 'cancelled' ? <Badge variant="destructive">Anulada</Badge> : <Badge variant="success">Confirmada</Badge>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => abrirDetalle(s.id)}>
+                              Ver
+                            </Button>
+                            {puedeAnular && s.status !== 'cancelled' && (
+                              <Button variant="outline" size="sm" onClick={() => { setAnulando(s); setMotivo(''); }}>
+                                Anular
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between border-t border-border pt-3 text-chico">
+                    <span className="text-muted-foreground">{pagination.total} ventas</span>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
+                      <Button variant="outline" size="sm" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Siguiente</Button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </ModuleScreen>
 
       <Dialog open={Boolean(detalle)} onOpenChange={o => !o && setDetalle(null)}>
         <DialogContent>

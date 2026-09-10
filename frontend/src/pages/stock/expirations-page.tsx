@@ -3,15 +3,14 @@ import { CalendarX, PencilSimple } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { Select } from '@/components/ui/select';
-import { PageHeader } from '@/components/page-header';
-import { StockNav } from '@/components/stock-nav';
+import { ModuleScreen } from '@/components/module-screen';
+import { stockViews } from '@/components/stock-nav';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type StockItem } from '@/lib/api';
@@ -112,8 +111,7 @@ export function ExpirationsPage() {
 
   return (
     <>
-      <PageHeader title="Vencimientos" />
-      <StockNav />
+      <ModuleScreen title="Stock" views={stockViews(can)}>
       {error && !editing && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
         search={search}
@@ -138,16 +136,14 @@ export function ExpirationsPage() {
           </Field>
         )}
       </ListFilters>
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <PageSpinner />
-          ) : items.length === 0 ? (
-            <EmptyState icon={CalendarX} title="Sin vencimientos próximos" description="No hay stock con fecha de vencimiento registrada." />
-          ) : visibles.length === 0 ? (
-            <EmptyState icon={CalendarX} title="Sin resultados" description="Ningún lote coincide con la búsqueda." />
-          ) : (
-            <Table>
+      {loading ? (
+        <PageSpinner />
+      ) : items.length === 0 ? (
+        <EmptyState icon={CalendarX} title="Nada por vencer" description="No hay stock con fecha de vencimiento registrada." />
+      ) : visibles.length === 0 ? (
+        <EmptyState icon={CalendarX} title="Sin resultados" description="Ningún lote coincide con la búsqueda." />
+      ) : (
+        <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Producto</TableHead>
@@ -183,11 +179,10 @@ export function ExpirationsPage() {
                     </TableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          </TableBody>
+        </Table>
+      )}
+      </ModuleScreen>
 
       <Dialog open={!!editing} onOpenChange={open => !open && setEditing(null)}>
         <DialogContent>

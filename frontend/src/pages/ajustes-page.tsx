@@ -1,23 +1,25 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, Check, LockSimple, Moon, Percent, PencilSimple, Plus, Sparkle, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router-dom';
+import { Check, LockSimple, Moon, Percent, PencilSimple, Plus, Sparkle, Storefront, Sun, Trash, UploadSimple } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
-import { Section } from '@/components/section';
+import { ModuleScreen, ModuleSection } from '@/components/module-screen';
+import { RowList, RowListItem } from '@/components/row-list';
 import { Select } from '@/components/ui/select';
-import { Spinner } from '@/components/spinner';
+import { PageSpinner, Spinner } from '@/components/spinner';
 import { AccountList } from '@/components/account-list';
 import { Avatar } from '@/components/ui/avatar';
+import { RangosPage } from '@/pages/admin/rangos-page';
+import { UsersPage } from '@/pages/admin/users-page';
 import { api, errorMessage, type Branch, type PaymentAdjustment, type PaymentMethod, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { fileToResizedDataUrl } from '@/lib/image';
-import { hueFor, moduleByKey, settingsModules } from '@/lib/modules';
+import { settingsModules } from '@/lib/modules';
 import { AVATAR_COLORS, usePreguntarLibre } from '@/lib/prefs';
 import { useTheme } from '@/lib/theme';
+import { useAsyncAction } from '@/lib/use-async';
 import { cn } from '@/lib/utils';
 
 const OWNER_RANGO = 'Dueño';
@@ -36,69 +38,55 @@ const TIMEZONES: { value: string; label: string }[] = [
   { value: 'America/Sao_Paulo', label: 'Brasil — San Pablo' },
 ];
 
-function Divider({ label }: { label: string }) {
-  return (
-    <p className="mb-3 mt-9 text-micro font-semibold text-placeholder first:mt-0">{label}</p>
-  );
-}
+export type AjustesView = 'cuenta' | 'empresa' | 'usuarios' | 'rangos';
 
-export function AjustesPage() {
+export function AjustesPage({ initialView }: { initialView?: AjustesView } = {}) {
   const { session, can, refresh } = useAuth();
   const user = session!.user;
   const esDueno = user.rangoName === OWNER_RANGO;
+  // Usuarios y Rangos son pestañas de Ajustes, no módulos aparte: `settingsModules`
+  // ya los filtra por permiso.
   const modsAjustes = settingsModules(can);
+  const [view, setView] = useState<AjustesView>(initialView ?? 'cuenta');
+
+  const views = [
+    { key: 'cuenta', label: 'Mi cuenta' },
+    ...(esDueno ? [{ key: 'empresa', label: 'La empresa' }] : []),
+    ...modsAjustes.map(m => ({ key: m.key, label: m.label })),
+  ];
 
   return (
-    <>
-      <PageHeader title="Ajustes" />
-      <div className="grid gap-4 pb-6">
-        <Divider label="Mi cuenta" />
-        <PerfilSection session={session!} onSaved={refresh} />
-        <PasswordSection token={session!.accessToken} />
-        <PreferenciasSection />
-        <Section title="Sesiones en este dispositivo" description="Podés tener varias cuentas abiertas y alternar entre ellas sin volver a escribir la contraseña.">
-          <AccountList />
-        </Section>
+    <ModuleScreen title="Ajustes" views={views} view={view} onView={k => setView(k as AjustesView)}>
+      {view === 'cuenta' && (
+        <div className="flex flex-col">
+          <PerfilSection session={session!} onSaved={refresh} />
+          <PasswordSection token={session!.accessToken} />
+          <PreferenciasSection />
+          <ModuleSection title="Sesiones" description="Las cuentas con sesión abierta en este dispositivo. Podés alternar entre ellas sin volver a escribir la contraseña.">
+            <AccountList />
+          </ModuleSection>
+        </div>
+      )}
 
-        {esDueno && (
-          <>
-            <Divider label="La empresa" />
-            <EmpresaSection session={session!} onSaved={refresh} />
-            <SucursalesSection token={session!.accessToken} />
-          </>
-        )}
+      {view === 'empresa' && esDueno && (
+        <div className="flex flex-col">
+          <EmpresaSection session={session!} onSaved={refresh} />
+          <SucursalesSection token={session!.accessToken} />
+        </div>
+      )}
 
-        {modsAjustes.length > 0 && (
-          <Section title="Administración" description="Quién entra al sistema y qué puede tocar cada rango.">
-            <div className="grid gap-2 sm:grid-cols-2">
-              {modsAjustes.map(m => <ModuleLink key={m.key} moduleKey={m.key} />)}
-            </div>
-          </Section>
-        )}
-      </div>
-    </>
-  );
-}
+      {view === 'usuarios' && can('usuarios.ver') && (
+        <div className="flex flex-col">
+          <UsersPage />
+        </div>
+      )}
 
-function ModuleLink({ moduleKey }: { moduleKey: string }) {
-  const navigate = useNavigate();
-  const m = moduleByKey(moduleKey)!;
-  return (
-    <button
-      type="button"
-      onClick={() => navigate(m.path, { viewTransition: true })}
-      style={{ ['--h' as string]: hueFor(m.key) }}
-      className="group flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2.5 text-left transition-colors hover:border-[var(--h)]"
-    >
-      <span className="flex size-8 items-center justify-center rounded-lg text-white" style={{ background: 'var(--h)' }}>
-        <m.Icon weight="fill" className="size-4" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-chico font-semibold">{m.label}</span>
-        <span className="block truncate text-micro text-muted-foreground">{m.blurb}</span>
-      </span>
-      <ArrowRight className="size-4 shrink-0 text-placeholder" />
-    </button>
+      {view === 'rangos' && can('rangos.ver') && (
+        <div className="flex flex-col">
+          <RangosPage />
+        </div>
+      )}
+    </ModuleScreen>
   );
 }
 
@@ -109,9 +97,15 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
   const [form, setForm] = useState({ name: user.name, email: user.email });
   const [color, setColor] = useState(user.preferences?.avatarColor ?? AVATAR_COLORS[0]);
   const [avatar, setAvatar] = useState<string | null>(user.preferences?.avatar ?? null);
-  const [state, setState] = useState<'idle' | 'saving' | 'ok'>('idle');
-  const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const { execute: savePerfil, saving, isOk, error, setError } = useAsyncAction(
+    async () => {
+      await api('/auth/me', { method: 'PATCH', body: JSON.stringify({ name: form.name, email: form.email, preferences: { avatarColor: color, avatar } }) }, session.accessToken);
+      await onSaved();
+    },
+    { autoResetMs: 1800 },
+  );
 
   const dirty =
     form.name.trim() !== user.name ||
@@ -129,27 +123,17 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
     }
   }
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
-    setState('saving');
-    setError('');
-    try {
-      await api('/auth/me', { method: 'PATCH', body: JSON.stringify({ name: form.name, email: form.email, preferences: { avatarColor: color, avatar } }) }, session.accessToken);
-      await onSaved();
-      setState('ok');
-      setTimeout(() => setState('idle'), 1800);
-    } catch (err) {
-      setError(errorMessage(err));
-      setState('idle');
-    }
+    void savePerfil();
   }
 
   return (
-    <Section title="Perfil" description="Cómo te ve el resto del equipo.">
+    <ModuleSection title="Perfil" description="Cómo te ve el resto del equipo.">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <div className="flex flex-wrap items-center gap-4">
-          <Avatar name={form.name || user.name} preferences={{ avatarColor: color, avatar: avatar ?? undefined }} className="size-14 text-h3" />
+          <Avatar name={form.name || user.name} preferences={{ avatarColor: color, avatar: avatar ?? undefined }} className="size-16 text-h3" />
           <div className="grid gap-2">
             <div className="flex flex-wrap gap-2">
               <input
@@ -163,7 +147,7 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
                 <UploadSimple /> {avatar ? 'Cambiar foto' : 'Subir foto'}
               </Button>
               {avatar && (
-                <Button type="button" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setAvatar(null)}>
+                <Button type="button" variant="ghost" onClick={() => setAvatar(null)}>
                   <Trash /> Quitar
                 </Button>
               )}
@@ -193,39 +177,37 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
           </Field>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={!dirty || state === 'saving'}>
-            {state === 'saving' && <Spinner />} {state === 'ok' ? <><Check /> Guardado</> : 'Guardar cambios'}
+          <Button type="submit" disabled={!dirty || saving}>
+            {saving && <Spinner />} {isOk ? <><Check /> Guardado</> : 'Guardar cambios'}
           </Button>
           <span className="text-chico text-muted-foreground">Empresa: <strong className="font-medium text-foreground">{session.tenant.name}</strong> · Rango: <strong className="font-medium text-foreground">{user.rangoName}</strong></span>
         </div>
       </form>
-    </Section>
+    </ModuleSection>
   );
 }
 
 function PasswordSection({ token }: { token: string }) {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', repeat: '' });
-  const [state, setState] = useState<'idle' | 'saving' | 'ok'>('idle');
-  const [error, setError] = useState('');
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (form.newPassword !== form.repeat) { setError('La nueva contraseña y su repetición no coinciden'); return; }
-    setState('saving');
-    setError('');
-    try {
+  const { execute: changePassword, saving, isOk, error } = useAsyncAction(
+    async () => {
+      if (form.newPassword !== form.repeat) {
+        throw new Error('La nueva contraseña y su repetición no coinciden');
+      }
       await api('/auth/me', { method: 'PATCH', body: JSON.stringify({ currentPassword: form.currentPassword, newPassword: form.newPassword }) }, token);
       setForm({ currentPassword: '', newPassword: '', repeat: '' });
-      setState('ok');
-      setTimeout(() => setState('idle'), 1800);
-    } catch (err) {
-      setError(errorMessage(err));
-      setState('idle');
-    }
+    },
+    { autoResetMs: 1800 },
+  );
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    void changePassword();
   }
 
   return (
-    <Section title="Contraseña" description="Al menos 8 caracteres. Te va a pedir la actual para confirmar.">
+    <ModuleSection title="Contraseña" description="Al menos 8 caracteres. Te va a pedir la actual para confirmar.">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid max-w-md gap-4" onSubmit={submit}>
         <Field label="Contraseña actual" htmlFor="pw-actual">
@@ -237,11 +219,11 @@ function PasswordSection({ token }: { token: string }) {
         <Field label="Repetir la nueva" htmlFor="pw-rep">
           <Input id="pw-rep" type="password" required minLength={8} autoComplete="new-password" value={form.repeat} onChange={e => setForm({ ...form, repeat: e.target.value })} />
         </Field>
-        <Button type="submit" disabled={state === 'saving'} className="justify-self-start">
-          {state === 'saving' && <Spinner />} {state === 'ok' ? <><Check /> Cambiada</> : 'Cambiar contraseña'}
+        <Button type="submit" disabled={saving} className="justify-self-start">
+          {saving && <Spinner />} {isOk ? <><Check /> Cambiada</> : 'Cambiar contraseña'}
         </Button>
       </form>
-    </Section>
+    </ModuleSection>
   );
 }
 
@@ -250,7 +232,7 @@ function PreferenciasSection() {
   const { libre, setLibre } = usePreguntarLibre();
 
   return (
-    <Section title="Preferencias" description="Se guardan en este dispositivo.">
+    <ModuleSection title="Preferencias" description="Se guardan en este dispositivo.">
       <Choice label="Tema">
         <Toggle active={theme === 'light'} onClick={() => setTheme('light')}><Sun weight="fill" className="size-4" /> Claro</Toggle>
         <Toggle active={theme === 'dark'} onClick={() => setTheme('dark')}><Moon weight="fill" className="size-4" /> Oscuro</Toggle>
@@ -264,7 +246,7 @@ function PreferenciasSection() {
           <Toggle active={libre} onClick={() => setLibre(true)}><Sparkle weight="fill" className="size-4" /> Libre</Toggle>
         </Choice>
       </div>
-    </Section>
+    </ModuleSection>
   );
 }
 
@@ -335,26 +317,26 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
   }
 
   return (
-    <Section title="Datos de la empresa" description="Sólo vos, como Dueño, ves y cambiás esto.">
+    <ModuleSection title="Datos de la empresa" description="Sólo vos, como Dueño, ves y cambiás esto.">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <div className="flex items-center gap-4">
-          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-background" style={{ borderRadius: '5px' }}>
+          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-background">
             {logo
               ? <img src={logo} alt="Logo" className="size-full object-contain" />
               : <span className="font-display text-h3 font-bold text-primary">{name.slice(0, 1).toUpperCase() || 'A'}</span>}
           </div>
           <div className="flex flex-wrap gap-2">
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => void pickLogo(e.target.files?.[0])} />
-            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+            <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
               <UploadSimple /> {logo ? 'Cambiar logo' : 'Subir logo'}
             </Button>
             {logo && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => setLogo(null)}>
+              <Button type="button" variant="ghost" onClick={() => setLogo(null)}>
                 <Trash /> Quitar
               </Button>
             )}
-            <p className="w-full text-micro text-muted-foreground">
+            <p className="w-full text-chico text-muted-foreground">
               Por ahora se muestra en el escritorio. En los comprobantes, más adelante.
             </p>
           </div>
@@ -373,7 +355,7 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
           {state === 'saving' && <Spinner />} {state === 'ok' ? <><Check /> Guardado</> : 'Guardar cambios'}
         </Button>
       </form>
-    </Section>
+    </ModuleSection>
   );
 }
 
@@ -444,56 +426,57 @@ function SucursalesSection({ token }: { token: string }) {
     accion(b.id, () => api(`/branches/${b.id}`, { method: 'DELETE' }, token));
 
   return (
-    <Section title="Sucursales" description="Cada sucursal es un local del negocio. Nace con un depósito y una caja; los depósitos extra se agregan desde el módulo Depósitos.">
+    <ModuleSection title="Sucursales" description="Cada sucursal es un local del negocio. Nace con un depósito y una caja; los depósitos extra se agregan desde el módulo Depósitos.">
       {error && !open && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       {loading ? (
-        <Spinner />
+        <PageSpinner />
       ) : (
-        <div className="grid gap-2">
-          {items.map(b => (
-            <div
-              key={b.id}
-              className={cn(
-                'flex items-center gap-3 rounded-md border px-3 py-2.5',
-                b.isActive ? 'border-border bg-background' : 'border-dashed border-border bg-muted/40',
-              )}
-            >
-              <Storefront weight="fill" className={cn('size-4 shrink-0', b.isActive ? 'text-primary' : 'text-placeholder')} />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-chico font-semibold">
-                  {b.name}
-                  {!b.isActive && <span className="rounded-md bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground">Inactiva</span>}
-                </span>
-                <span className="block text-micro text-muted-foreground">
-                  {b.code}{b.address ? ` · ${b.address}` : ''} · {b._count?.warehouses ?? 0} {b._count?.warehouses === 1 ? 'depósito' : 'depósitos'}
-                  {b._count?.users ? ` · ${b._count.users} ${b._count.users === 1 ? 'usuario' : 'usuarios'}` : ''}
-                </span>
-              </span>
-              <div className="flex shrink-0 items-center gap-1">
-                <Button variant="ghost" size="icon" onClick={() => setAjustesDe(b)} aria-label="Recargos por medio de pago" title="Recargos por medio de pago" disabled={busyId === b.id}>
-                  <Percent />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => editar(b)} aria-label="Editar sucursal" disabled={busyId === b.id}>
-                  <PencilSimple />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleActiva(b)}
-                  disabled={busyId === b.id || (b.isActive && !b.canDeactivate)}
-                  title={b.isActive && !b.canDeactivate ? 'Reasigná los usuarios y dejá otra activa primero' : undefined}
-                >
-                  {busyId === b.id ? <Spinner /> : b.isActive ? 'Desactivar' : 'Activar'}
-                </Button>
-                {b.canDelete && (
-                  <Button variant="ghost" size="icon" onClick={() => setConfirmDelete(b)} aria-label="Eliminar sucursal" disabled={busyId === b.id}>
-                    <Trash />
-                  </Button>
+        <div className="flex flex-col gap-3">
+          <RowList>
+            {items.map(b => (
+              <RowListItem
+                key={b.id}
+                icon={Storefront}
+                iconClassName={b.isActive ? 'text-primary' : 'text-placeholder'}
+                muted={!b.isActive}
+                title={b.name}
+                badge={!b.isActive && (
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground">Inactiva</span>
                 )}
-              </div>
-            </div>
-          ))}
-          <Button variant="outline" size="sm" onClick={nueva} className="mt-1 justify-self-start">
+                meta={
+                  <>
+                    {b.code}{b.address ? ` · ${b.address}` : ''} · {b._count?.warehouses ?? 0} {b._count?.warehouses === 1 ? 'depósito' : 'depósitos'}
+                    {b._count?.users ? ` · ${b._count.users} ${b._count.users === 1 ? 'usuario' : 'usuarios'}` : ''}
+                  </>
+                }
+                actions={
+                  <>
+                    <Button variant="ghost" size="icon" onClick={() => setAjustesDe(b)} aria-label="Recargos por medio de pago" title="Recargos por medio de pago" disabled={busyId === b.id}>
+                      <Percent />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => editar(b)} aria-label="Editar sucursal" disabled={busyId === b.id}>
+                      <PencilSimple />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleActiva(b)}
+                      disabled={busyId === b.id || (b.isActive && !b.canDeactivate)}
+                      title={b.isActive && !b.canDeactivate ? 'Reasigná los usuarios y dejá otra activa primero' : undefined}
+                    >
+                      {busyId === b.id ? <Spinner /> : b.isActive ? 'Desactivar' : 'Activar'}
+                    </Button>
+                    {b.canDelete && (
+                      <Button variant="ghost" size="icon" onClick={() => setConfirmDelete(b)} aria-label="Eliminar sucursal" disabled={busyId === b.id}>
+                        <Trash />
+                      </Button>
+                    )}
+                  </>
+                }
+              />
+            ))}
+          </RowList>
+          <Button variant="outline" onClick={nueva} className="self-start">
             <Plus /> Nueva sucursal
           </Button>
         </div>
@@ -503,10 +486,10 @@ function SucursalesSection({ token }: { token: string }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Eliminar {confirmDelete?.name}</DialogTitle>
+            <DialogDescription>
+              Se borra la sucursal con su depósito y su caja. No se puede deshacer. Sólo se permite porque no tiene ventas, stock ni turnos.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Se borra la sucursal con su depósito y su caja. No se puede deshacer. Sólo se permite porque no tiene ventas, stock ni turnos.
-          </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
             <Button type="button" variant="destructive" disabled={!!busyId} onClick={() => confirmDelete && eliminar(confirmDelete)}>
@@ -541,7 +524,7 @@ function SucursalesSection({ token }: { token: string }) {
       </Dialog>
 
       <AjustesPagoDialog branch={ajustesDe} token={token} onClose={() => setAjustesDe(null)} />
-    </Section>
+    </ModuleSection>
   );
 }
 
@@ -589,13 +572,13 @@ function AjustesPagoDialog({ branch, token, onClose }: { branch: Branch | null; 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Recargos por medio de pago{branch ? ` · ${branch.name}` : ''}</DialogTitle>
+          <DialogDescription>
+            Positivo recarga, negativo descuenta. Se aplica sobre la parte del total que se paga con ese medio, al cobrar en esta sucursal. La cuenta corriente nunca lleva recargo.
+          </DialogDescription>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Positivo recarga, negativo descuenta. Se aplica sobre la parte del total que se paga con ese medio, al cobrar en esta sucursal. La cuenta corriente nunca lleva recargo.
-        </p>
         {error && <Alert variant="destructive">{error}</Alert>}
         {loading ? (
-          <Spinner />
+          <PageSpinner />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {MEDIOS_PAGO.map(m => (

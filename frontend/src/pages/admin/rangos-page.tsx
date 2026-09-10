@@ -3,15 +3,15 @@ import { Copy, PencilSimple, Plus, ShieldWarning, Trash, UsersThree } from '@pho
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
+import { ModuleSection } from '@/components/module-screen';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Permission, type Rango } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
@@ -119,49 +119,59 @@ export function RangosPage() {
 
   return (
     <>
-      <PageHeader
+      <ModuleSection
         title="Rangos"
+        description="Qué puede tocar cada rango de la empresa. Los permisos sensibles van marcados."
         actions={puedeGestionar ? <Button onClick={() => { setNuevoNombre(''); setCloneFromId(''); setNuevoError(''); setNuevoOpen(true); }}><Plus /> Nuevo rango</Button> : undefined}
-      />
+      >
       {error && <Alert variant="destructive">{error}</Alert>}
-
-      <Card>
-        <CardContent className="p-0">
           {loading ? (
             <PageSpinner />
           ) : rangos.length === 0 ? (
             <EmptyState icon={UsersThree} title="Sin rangos" description="Todavía no hay rangos configurados." />
           ) : (
-            <div className="divide-y divide-border-soft">
-              {rangos.map(r => (
-                <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{r.name}</p>
-                      {r.isSystem && <Badge variant="secondary">De fábrica</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{r.permissions.length} permisos · {r.userCount} {r.userCount === 1 ? 'usuario' : 'usuarios'}</p>
-                  </div>
-                  {puedeGestionar && (
-                    <div className="flex shrink-0 gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => abrirEdicion(r)} aria-label={`Editar ${r.name}`}>
-                        <PencilSimple />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon" onClick={() => borrar(r)} disabled={r.userCount > 0}
-                        title={r.userCount > 0 ? 'Reasigná a sus usuarios antes de borrarlo' : undefined}
-                        aria-label={`Borrar ${r.name}`}
-                      >
-                        <Trash />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rango</TableHead>
+                  <TableHead>Permisos</TableHead>
+                  <TableHead>Usuarios</TableHead>
+                  {puedeGestionar && <TableHead className="text-right">Acciones</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rangos.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">
+                      <span className="flex items-center gap-2">
+                        {r.name}
+                        {r.isSystem && <Badge variant="secondary">De fábrica</Badge>}
+                      </span>
+                    </TableCell>
+                    <TableCell className="tabular text-muted-foreground">{r.permissions.length}</TableCell>
+                    <TableCell className="tabular text-muted-foreground">{r.userCount}</TableCell>
+                    {puedeGestionar && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => abrirEdicion(r)} aria-label={`Editar ${r.name}`}>
+                            <PencilSimple />
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon" onClick={() => borrar(r)} disabled={r.userCount > 0}
+                            title={r.userCount > 0 ? 'Reasigná a sus usuarios antes de borrarlo' : undefined}
+                            aria-label={`Borrar ${r.name}`}
+                          >
+                            <Trash />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
-        </CardContent>
-      </Card>
+      </ModuleSection>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
@@ -177,7 +187,7 @@ export function RangosPage() {
             <div className="flex max-h-[50vh] flex-col gap-4 overflow-y-auto pr-1">
               {areas.map(([area, perms]) => (
                 <div key={area} className="rounded-md border border-border">
-                  <p className="border-b border-border-soft bg-subtle px-3 py-1.5 text-xs font-semibold text-placeholder">{area}</p>
+                  <p className="border-b border-border-soft bg-subtle px-3 py-1.5 text-micro font-semibold text-placeholder">{area}</p>
                   <div className="divide-y divide-border-soft">
                     {perms.map(p => (
                       <label key={p.key} className="flex items-center gap-2.5 px-3 py-2 text-sm">
@@ -219,7 +229,7 @@ export function RangosPage() {
                 {rangos.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </Select>
             </Field>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-micro text-muted-foreground">
               <Copy className="size-3.5 shrink-0" /> Después de crearlo se abre para terminar de marcar los permisos.
             </p>
             <DialogFooter>

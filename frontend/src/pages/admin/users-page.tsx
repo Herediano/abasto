@@ -3,14 +3,13 @@ import { PencilSimple, Plus, UsersThree as UsersIcon } from '@phosphor-icons/rea
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PageHeader } from '@/components/page-header';
+import { ModuleSection } from '@/components/module-screen';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -93,21 +92,25 @@ export function UsersPage() {
 
   return (
     <>
-      <PageHeader
+      <ModuleSection
         title="Usuarios"
+        description="Quién entra al sistema y con qué rango."
         actions={
           <Button onClick={openCreate}>
             <Plus /> Nuevo usuario
           </Button>
         }
-      />
+      >
       {error && !createOpen && !editing && <Alert variant="destructive">{error}</Alert>}
-      <Card>
-        <CardContent className="p-0">
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={UsersIcon} title="Sin usuarios" description="Todavía no hay nadie más en el equipo." />
+            <EmptyState
+              icon={UsersIcon}
+              title="Sos el único por ahora"
+              description="Sumá a tu equipo para que cada uno entre con su rango."
+              action={<Button onClick={openCreate}><Plus /> Nuevo usuario</Button>}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -142,8 +145,7 @@ export function UsersPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+      </ModuleSection>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>

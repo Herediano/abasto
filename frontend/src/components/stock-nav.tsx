@@ -1,44 +1,24 @@
-import { NavLink } from 'react-router-dom';
-import { useAuth } from '@/lib/auth-context';
-import { cn } from '@/lib/utils';
-
-const TABS: { to: string; label: string; end?: boolean; permission: string }[] = [
-  { to: '/stock', label: 'Actual', end: true, permission: 'stock.ver' },
-  { to: '/stock/in', label: 'Ingreso', permission: 'stock.mover' },
-  { to: '/stock/out', label: 'Egreso', permission: 'stock.mover' },
-  { to: '/stock/transfer', label: 'Transferir', permission: 'stock.transferir' },
-  { to: '/stock/history', label: 'Historial', permission: 'stock.ver' },
-  { to: '/stock/expirations', label: 'Vencimientos', permission: 'stock.ver' },
-  { to: '/stock/restock', label: 'Reposición', permission: 'stock.ver' },
-];
+import type { ModuleView } from '@/components/module-screen';
 
 /**
- * Navegación interna del módulo Stock: Ingreso, Egreso e Historial son vistas de
- * Stock, no módulos aparte del escritorio (ver docs/diseno.md).
+ * Las vistas del módulo Stock: cada una es su propia ruta. Reposición y
+ * Vencimientos también son vistas de Stock —no módulos del escritorio—; sus
+ * alertas salen en la tarjeta de Stock (ver docs/diseno.md). El escritorio
+ * tiene una sola tarjeta para todo esto: Stock.
  */
-export function StockNav() {
-  const { can } = useAuth();
-  const tabs = TABS.filter(t => can(t.permission));
-  return (
-    <div className="-mt-1 flex flex-wrap gap-1.5">
-      {tabs.map(t => (
-        <NavLink
-          key={t.to}
-          to={t.to}
-          end={t.end}
-          viewTransition
-          className={({ isActive }) =>
-            cn(
-              'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
-              isActive
-                ? 'bg-accent text-accent-foreground'
-                : 'text-muted-foreground hover:bg-card hover:text-foreground',
-            )
-          }
-        >
-          {t.label}
-        </NavLink>
-      ))}
-    </div>
-  );
+type StockView = ModuleView & { permission: string };
+
+const STOCK_VIEWS: StockView[] = [
+  { key: 'actual', label: 'Actual', to: '/stock', end: true, permission: 'stock.ver' },
+  { key: 'restock', label: 'Reposición', to: '/stock/restock', permission: 'stock.ver' },
+  { key: 'expirations', label: 'Vencimientos', to: '/stock/expirations', permission: 'stock.ver' },
+  { key: 'in', label: 'Ingreso', to: '/stock/in', permission: 'stock.mover' },
+  { key: 'out', label: 'Egreso', to: '/stock/out', permission: 'stock.mover' },
+  { key: 'transfer', label: 'Transferir', to: '/stock/transfer', permission: 'stock.transferir' },
+  { key: 'history', label: 'Historial', to: '/stock/history', permission: 'stock.ver' },
+];
+
+/** Las vistas de Stock que este rango puede ver, para el `views` de ModuleScreen. */
+export function stockViews(can: (permission: string) => boolean): ModuleView[] {
+  return STOCK_VIEWS.filter(v => can(v.permission)).map(({ permission: _permission, ...v }) => v);
 }

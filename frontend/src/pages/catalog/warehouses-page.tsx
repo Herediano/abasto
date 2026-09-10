@@ -2,13 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { CashRegister as RegisterIcon, PencilSimple, Plus, Warehouse as WarehouseIcon } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ExportMenu } from '@/components/export-menu';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
+import { ModuleScreen, SummaryLine } from '@/components/module-screen';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -97,9 +96,19 @@ export function WarehousesPage() {
     }
   }
 
+  const sinCaja = items.filter(w => !registers.some(r => r.warehouseId === w.id)).length;
+  const resumen = !loading && items.length > 0 && (
+    <SummaryLine
+      items={[
+        { label: 'Depósitos', value: String(items.length) },
+        ...(sinCaja > 0 ? [{ label: 'Sin caja', value: String(sinCaja), tone: 'warn' as const }] : []),
+      ]}
+    />
+  );
+
   return (
     <>
-      <PageHeader
+      <ModuleScreen
         title="Depósitos"
         actions={
           <div className="flex gap-2">
@@ -111,13 +120,22 @@ export function WarehousesPage() {
             )}
           </div>
         }
-      />
-      <Card>
-        <CardContent className="p-0">
+        summary={resumen || undefined}
+      >
+          {error && <Alert variant="destructive">{error}</Alert>}
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
-            <EmptyState icon={WarehouseIcon} title="Sin depósitos" description="Creá al menos un depósito antes de registrar stock." />
+            <EmptyState
+              icon={WarehouseIcon}
+              title="Todavía no hay depósitos"
+              description="Creá al menos un depósito antes de registrar stock."
+              action={
+                can('depositos.crear') ? (
+                  <Button onClick={openCreate}><Plus /> Nuevo depósito</Button>
+                ) : undefined
+              }
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -136,7 +154,7 @@ export function WarehousesPage() {
                   <TableRow key={w.id}>
                     <TableCell className="text-muted-foreground">{w.branch?.name ?? '—'}</TableCell>
                     <TableCell className="font-medium">{w.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{w.code}</TableCell>
+                    <TableCell className="font-mono text-chico">{w.code}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {cajas.length ? cajas.map(c => c.name).join(', ') : <span className="text-destructive">sin cajas</span>}
                     </TableCell>
@@ -162,8 +180,7 @@ export function WarehousesPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+      </ModuleScreen>
 
       <Dialog open={cajaOpen} onOpenChange={setCajaOpen}>
         <DialogContent>

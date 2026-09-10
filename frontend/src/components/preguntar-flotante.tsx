@@ -138,14 +138,15 @@ export function PreguntarFlotante({ onClick }: { onClick: () => void }) {
       title="Preguntar (Ctrl K)"
       style={style}
       className={cn(
-        `group fixed z-40 flex size-12 items-center justify-center ${libre ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`,
-        'rounded-[5px] border backdrop-blur-sm transition-[box-shadow,background-color,border-color,transform] duration-200 ease-out',
-        'border-uiverse bg-card/70 shadow-[3px_3px_2px_1px_rgba(128,212,238,0.38)] text-primary',
-        'hover:border-uiverse hover:bg-card hover:shadow-[6px_6px_2px_1px_rgba(128,212,238,0.45)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
+        `group fixed z-40 flex size-12 items-center justify-center rounded-full ${libre ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`,
+        'text-[var(--ab-preguntar)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2',
       )}
     >
-      <Sparkle weight="fill" className="size-5 transition-[transform,color] duration-200 group-hover:scale-110" />
+      {/* Solo la chispa: sin caja ni borde. Crece un poco al pasar el mouse. */}
+      <Sparkle
+        weight="fill"
+        className="size-6 transition-transform duration-200 group-hover:scale-110"
+      />
       <span
         className={cn(
           'pointer-events-none absolute flex items-center gap-1.5 whitespace-nowrap rounded-[5px] border border-border bg-card px-2 py-1 text-chico font-medium text-foreground opacity-0 shadow-float transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100',

@@ -1,7 +1,9 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Suspense, createContext, useContext, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useOutlet } from 'react-router-dom';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { CommandPalette } from '@/components/command-palette';
 import { PreguntarFlotante } from '@/components/preguntar-flotante';
+import { PageSpinner } from '@/components/spinner';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { usePreguntarLibre } from '@/lib/prefs';
@@ -33,6 +35,7 @@ export function EscritorioShell() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const outlet = useOutlet();
   const enEscritorio = pathname === '/';
   const { libre } = usePreguntarLibre();
   const [palette, setPalette] = useState(false);
@@ -82,11 +85,30 @@ export function EscritorioShell() {
   return (
     <PaletteContext.Provider value={() => setPalette(true)}>
       <SummaryContext.Provider value={summary}>
+       <MotionConfig reducedMotion="user">
         <div className="min-h-screen overflow-x-clip">
           {enEscritorio && <AppHeader summary={summary} />}
           <Sidebar />
           <div className={`mx-auto flex flex-col gap-5 px-6 pb-16 ${enEscritorio ? 'max-w-7xl' : 'max-w-5xl'}`}>
-            <Outlet />
+            {/* Transición entre pantallas: lo MÁS suave posible. La pantalla que
+                sale desaparece de una (sin `exit`, así no hay dos cosas
+                superpuestas ni salto de alto), y la que entra aparece con un
+                fundido corto — SOLO opacidad, cero desplazamiento, así ningún
+                componente "se mueve". `initial={false}` corta la animación en la
+                primera carga. Ver docs/diseno.md. */}
+            <AnimatePresence initial={false}>
+              <motion.div
+                key={pathname}
+                className="flex w-full flex-1 flex-col gap-5"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.11, ease: 'linear' }}
+              >
+                <Suspense fallback={<PageSpinner />}>
+                  {outlet}
+                </Suspense>
+              </motion.div>
+            </AnimatePresence>
           </div>
           <footer className={`mx-auto flex justify-end px-6 pb-10 ${enEscritorio ? 'max-w-7xl' : 'max-w-5xl'}`}>
             <p className="font-display text-h3 font-semibold tracking-tight text-muted-foreground">
@@ -96,6 +118,7 @@ export function EscritorioShell() {
           {libre && <PreguntarFlotante onClick={() => setPalette(true)} />}
           <CommandPalette open={palette} onOpenChange={setPalette} />
         </div>
+       </MotionConfig>
       </SummaryContext.Provider>
     </PaletteContext.Provider>
   );

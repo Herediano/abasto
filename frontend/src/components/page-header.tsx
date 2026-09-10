@@ -25,24 +25,21 @@ export function PageHeader({ title, actions }: { title: string; actions?: ReactN
   const otraSucursal = b?.branch && b?.homeBranch && b.branch.id !== b.homeBranch.id ? b.branch.name : null;
 
   return (
-    <div className="module-header sticky top-0 z-20 mb-1 border-b border-border bg-background/85 backdrop-blur">
-    <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3">
-      {/* El botón de la barra lateral vive en el header del módulo, con el mismo
-          tamaño y alineación que en el escritorio; el riel cuelga de él. En
-          Ajustes no hay barra lateral. */}
+    <div className="module-header relative sticky top-0 z-20 mb-1 border-b border-border bg-background/85 backdrop-blur">
+      {/* El botón que abre el riel: absoluto contra el borde IZQUIERDO REAL de
+          la pantalla (ancla en `.module-header`, que va a todo el ancho), como
+          si fuera la cabecera de una barra lateral. Fuera del flujo: moverlo no
+          corre nada del resto. En Ajustes no va. */}
       {pathname !== '/ajustes' && (
-        <div className="relative">
-          <SidebarToggle className="hidden md:grid" />
+        <div className="absolute left-3 top-3 z-10 hidden md:block">
+          <SidebarToggle />
           <Sidebar inHeader />
         </div>
       )}
-
-      {/* El contenido del header queda acotado al ancho del body (5xl): por la
-          izquierda arranca en su margen (sangría [64px] = toggle 48px + gap
-          16px, o [128px] en Ajustes sin toggle) y por la derecha termina en el
-          mismo punto con el mismo offset (pr-[128px]). El toggle de la barra
-          lateral queda en el borde del header, fuera de este bloque. */}
-      <div className={`flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2 max-md:pl-0 max-md:pr-0 ${pathname === '/ajustes' ? 'pl-[128px]' : 'pl-16'} pr-[128px]`}>
+    <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3">
+      {/* El contenido del header queda alineado con el cuerpo (5xl): sangría
+          [128px] a cada lado. El toggle no está en este bloque ni en el flujo. */}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2 pl-[128px] pr-[128px] max-md:pl-0 max-md:pr-0">
 
       <button
         type="button"

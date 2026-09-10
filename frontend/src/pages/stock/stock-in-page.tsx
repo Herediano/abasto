@@ -12,8 +12,8 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
 import { Label } from '@/components/ui/label';
-import { PageHeader } from '@/components/page-header';
-import { StockNav } from '@/components/stock-nav';
+import { ModuleScreen, ModuleSection } from '@/components/module-screen';
+import { stockViews } from '@/components/stock-nav';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -325,13 +325,11 @@ export function StockInPage() {
 
   return (
     <>
-      <PageHeader title={editingInvoice ? 'Corregir factura' : 'Ingreso por factura'} />
-      <StockNav />
+      <ModuleScreen title="Stock" views={stockViews(can)}>
       {error && <Alert variant="destructive">{error}</Alert>}
       {editingInvoice && <Alert>Estás corrigiendo una factura confirmada. La original queda registrada en el historial.</Alert>}
 
-      <Card>
-        <CardContent>
+      <ModuleSection title={editingInvoice ? 'Corregir factura' : 'Ingreso por factura'}>
           <form className="grid gap-6" onSubmit={submit}>
             <Field label="Proveedor" htmlFor="supplierId">
               <Select id="supplierId" required value={header.supplierId} onChange={e => setHeader({ ...header, supplierId: e.target.value })}>
@@ -556,14 +554,9 @@ export function StockInPage() {
               )}
             </div>
           </form>
-        </CardContent>
-      </Card>
+      </ModuleSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Facturas cargadas</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+      <ModuleSection title="Facturas cargadas">
           <Table>
             <TableHeader>
               <TableRow>
@@ -603,8 +596,8 @@ export function StockInPage() {
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+      </ModuleSection>
+      </ModuleScreen>
 
       <Dialog open={!!cancellingInvoice} onOpenChange={open => !open && setCancellingInvoice(null)}>
         <DialogContent>

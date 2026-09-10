@@ -1,34 +1,19 @@
+import { Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { PermissionRoute } from '@/components/layout/admin-route';
 import { FullScreenRoute, ProtectedRoute } from '@/components/layout/protected-route';
-import { EscritorioPage } from '@/pages/escritorio-page';
-import { AjustesPage } from '@/pages/ajustes-page';
-import { UsersPage } from '@/pages/admin/users-page';
-import { LoginPage } from '@/pages/auth/login-page';
-import { SignupPage } from '@/pages/auth/signup-page';
-import { StockPage } from '@/pages/stock/stock-page';
-import { StockInPage } from '@/pages/stock/stock-in-page';
-import { StockOutPage } from '@/pages/stock/stock-out-page';
-import { StockTransferPage } from '@/pages/stock/stock-transfer-page';
-import { StockHistoryPage } from '@/pages/stock/stock-history-page';
-import { ExpirationsPage } from '@/pages/stock/expirations-page';
-import { RestockPage } from '@/pages/stock/restock-page';
-import { ProductsPage } from '@/pages/catalog/products-page';
-import { ProductDetailPage } from '@/pages/catalog/product-detail-page';
-import { CategoriesPage } from '@/pages/catalog/categories-page';
-import { WarehousesPage } from '@/pages/catalog/warehouses-page';
-import { SuppliersPage } from '@/pages/catalog/suppliers-page';
-import { CustomersPage } from '@/pages/catalog/customers-page';
-import { PosPage } from '@/pages/sales/pos-page';
-import { SalesHistoryPage } from '@/pages/sales/sales-history-page';
-import { ShiftsHistoryPage } from '@/pages/sales/shifts-history-page';
-import { PricesPage } from '@/pages/prices/prices-page';
-import { ReportesPage } from '@/pages/reportes-page';
-import { RangosPage } from '@/pages/admin/rangos-page';
+import { FullPageLoading } from '@/components/spinner';
+import {
+  AjustesPage, CategoriesPage, CustomersPage, EscritorioPage, ExpirationsPage, LoginPage,
+  PosPage, PricesPage, ProductDetailPage, ProductsPage, ReportesPage, RestockPage,
+  SalesHistoryPage, ShiftsHistoryPage, SignupPage, StockHistoryPage, StockInPage, StockOutPage,
+  StockPage, StockTransferPage, SuppliersPage, WarehousesPage,
+} from '@/lib/lazy-pages';
 
 function App() {
   return (
-    <Routes>
+    <Suspense fallback={<FullPageLoading />}>
+      <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       {/* La caja va afuera del escritorio: pantalla completa, su propio mundo. */}
@@ -84,15 +69,18 @@ function App() {
         <Route element={<PermissionRoute permission="reportes.ver" />}>
           <Route path="/reportes" element={<ReportesPage />} />
         </Route>
+        {/* Usuarios y Rangos son pestañas de Ajustes; estas rutas abren Ajustes
+            en la pestaña correspondiente (compat con enlaces y `settingsModules`). */}
         <Route element={<PermissionRoute permission="usuarios.ver" />}>
-          <Route path="/admin/users" element={<UsersPage />} />
+          <Route path="/admin/users" element={<AjustesPage initialView="usuarios" />} />
         </Route>
         <Route element={<PermissionRoute permission="rangos.ver" />}>
-          <Route path="/admin/rangos" element={<RangosPage />} />
+          <Route path="/admin/rangos" element={<AjustesPage initialView="rangos" />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 

@@ -3,13 +3,12 @@ import { Calculator, DownloadSimple, Eye, PencilSimple, Play, Plus, FloppyDisk, 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ExportMenu } from '@/components/export-menu';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
+import { ModuleScreen, ModuleSection } from '@/components/module-screen';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,6 +16,7 @@ import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceL
 import { fecha, fechaHora, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
+type View = 'listas' | 'actualizar' | 'promociones' | 'historial';
 type ScopeType = 'all' | 'category' | 'brand';
 type Target = 'salePrice' | 'costPrice';
 type OperationType = 'percent' | 'margin' | 'round';
@@ -53,6 +53,7 @@ export function PricesPage() {
   const token = session?.accessToken ?? '';
   const [error, setError] = useState('');
   const [toolsMessage, setToolsMessage] = useState('');
+  const [view, setView] = useState<View>('listas');
 
   // herramientas de catalogo
   const [categories, setCategories] = useState<Category[]>([]);
@@ -437,28 +438,34 @@ export function PricesPage() {
 
   return (
     <>
-      <PageHeader title="Precios" />
-
+      <ModuleScreen
+        title="Precios"
+        views={[
+          { key: 'listas', label: 'Listas' },
+          { key: 'actualizar', label: 'Actualizar' },
+          { key: 'promociones', label: 'Promociones' },
+          { key: 'historial', label: 'Historial' },
+        ]}
+        view={view}
+        onView={k => setView(k as View)}
+      >
       {toolsMessage && <Alert>{toolsMessage}</Alert>}
       {error && <Alert variant="destructive">{error}</Alert>}
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-display text-grande font-semibold">Listas de precios</h2>
-              <p className="text-sm text-muted-foreground">
-                Una lista puede tener precios propios o calcularse desde otra con un recargo.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <ExportMenu path="/price-lists" filename="listas-de-precios" />
-              <Button variant="outline" size="sm" onClick={() => openListDialog(null)}>
-                <Plus /> Nueva lista
-              </Button>
-            </div>
-          </div>
-
+      {view === 'listas' && (
+        <div className="flex flex-col">
+          <ModuleSection
+            title="Listas de precios"
+            description="Una lista puede tener precios propios o calcularse desde otra con un recargo."
+            actions={
+              <>
+                <ExportMenu path="/price-lists" filename="listas-de-precios" />
+                <Button variant="outline" size="sm" onClick={() => openListDialog(null)}>
+                  <Plus /> Nueva lista
+                </Button>
+              </>
+            }
+          >
           <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
@@ -496,15 +503,12 @@ export function PricesPage() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+          </ModuleSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div>
-            <h2 className="font-display text-grande font-semibold">Planillas de precios</h2>
-            <p className="text-sm text-muted-foreground">Exportá el listado o actualizá precios desde un Excel.</p>
-          </div>
+          <ModuleSection
+            title="Planillas de precios"
+            description="Exportá el listado o actualizá precios desde un Excel."
+          >
           <div className="flex flex-wrap gap-2">
             <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && importPrices(e.target.files[0])} />
             <Button variant="outline" onClick={exportPrices} disabled={exportingPrices}>
@@ -514,16 +518,16 @@ export function PricesPage() {
               {importingPrices ? <Spinner /> : <UploadSimple />} Importar precios
             </Button>
           </div>
-        </CardContent>
-      </Card>
+          </ModuleSection>
+        </div>
+      )}
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div>
-            <h2 className="font-display text-grande font-semibold">Actualización masiva</h2>
-            <p className="text-sm text-muted-foreground">Calculá primero para ver qué cambia. Nada se guarda hasta que apliques.</p>
-          </div>
-
+      {view === 'actualizar' && (
+        <div className="flex flex-col">
+          <ModuleSection
+            title="Actualización masiva"
+            description="Calculá primero para ver qué cambia. Nada se guarda hasta que apliques."
+          >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Lista de precios" htmlFor="priceList">
               <Select id="priceList" value={priceListId} onChange={e => setPriceListId(e.target.value)}>
@@ -672,18 +676,13 @@ export function PricesPage() {
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+          </ModuleSection>
 
       {scheduled.length > 0 && (
-        <Card>
-          <CardContent className="flex flex-col gap-3">
-            <div>
-              <h2 className="font-display text-grande font-semibold">Cambios programados</h2>
-              <p className="text-sm text-muted-foreground">
-                Todavía no rigen. Entran solos en la fecha indicada; hasta entonces se pueden cancelar.
-              </p>
-            </div>
+          <ModuleSection
+            title="Cambios programados"
+            description="Todavía no rigen. Entran solos en la fecha indicada; hasta entonces se pueden cancelar."
+          >
             <div className="overflow-hidden rounded-md border">
               <Table>
                 <TableHeader>
@@ -710,18 +709,13 @@ export function PricesPage() {
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
+          </ModuleSection>
       )}
 
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <div>
-            <h2 className="font-display text-grande font-semibold">Criterios guardados</h2>
-            <p className="text-sm text-muted-foreground">
-              Configuraciones que se vuelven a aplicar con un clic. Recalculan con los valores del momento, no repiten los precios de la vez pasada.
-            </p>
-          </div>
+          <ModuleSection
+            title="Criterios guardados"
+            description="Configuraciones que se vuelven a aplicar con un clic. Recalculan con los valores del momento, no repiten los precios de la vez pasada."
+          >
           {rules.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Todavía no guardaste ninguno. Configurá una actualización arriba y ponele nombre.
@@ -765,18 +759,12 @@ export function PricesPage() {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+          </ModuleSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <div>
-            <h2 className="font-display text-grande font-semibold">Política de redondeo</h2>
-            <p className="text-sm text-muted-foreground">
-              Tramos por monto: un producto de $500 y otro de $50.000 no se redondean igual. Se usan al elegir «Según los tramos configurados».
-            </p>
-          </div>
-
+          <ModuleSection
+            title="Política de redondeo"
+            description="Tramos por monto: un producto de $500 y otro de $50.000 no se redondean igual. Se usan al elegir «Según los tramos configurados»."
+          >
           {roundingRules.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {roundingRules.map(t => (
@@ -807,27 +795,24 @@ export function PricesPage() {
               <Plus /> Agregar tramo
             </Button>
           </form>
-        </CardContent>
-      </Card>
+          </ModuleSection>
+        </div>
+      )}
 
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-display text-grande font-semibold">Promociones</h2>
-              <p className="text-sm text-muted-foreground">
-                Se configuran acá y quedan listas. <strong>Todavía no se aplican</strong>: hace falta el módulo de ventas para que
-                se descuenten al cobrar.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <ExportMenu path="/promotions" filename="promociones" />
-              <Button variant="outline" size="sm" onClick={() => setPromoOpen(true)}>
-                <Plus /> Nueva promoción
-              </Button>
-            </div>
-          </div>
-
+      {view === 'promociones' && (
+        <div className="flex flex-col">
+          <ModuleSection
+            title="Promociones"
+            description={<>Se configuran acá y quedan listas. <strong>Todavía no se aplican</strong>: hace falta el módulo de ventas para que se descuenten al cobrar.</>}
+            actions={
+              <>
+                <ExportMenu path="/promotions" filename="promociones" />
+                <Button variant="outline" size="sm" onClick={() => setPromoOpen(true)}>
+                  <Plus /> Nueva promoción
+                </Button>
+              </>
+            }
+          >
           {promotions.length === 0 ? (
             <p className="text-sm text-muted-foreground">Todavía no cargaste ninguna.</p>
           ) : (
@@ -863,18 +848,16 @@ export function PricesPage() {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+          </ModuleSection>
+        </div>
+      )}
 
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <div>
-            <h2 className="font-display text-grande font-semibold">Auditoría de precios</h2>
-            <p className="text-sm text-muted-foreground">
-              Cada cambio de precio, con su origen y quién lo hizo. Es sólo lectura: nada de esto se edita ni se borra.
-            </p>
-          </div>
-
+      {view === 'historial' && (
+        <div className="flex flex-col">
+          <ModuleSection
+            title="Auditoría de precios"
+            description="Cada cambio de precio, con su origen y quién lo hizo. Es sólo lectura: nada de esto se edita ni se borra."
+          >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Precio" htmlFor="audit-field">
               <Select id="audit-field" value={auditFiltro.field} onChange={e => setAuditFiltro({ ...auditFiltro, field: e.target.value })}>
@@ -937,8 +920,10 @@ export function PricesPage() {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+          </ModuleSection>
+        </div>
+      )}
+      </ModuleScreen>
 
       <Dialog open={promoOpen} onOpenChange={setPromoOpen}>
         <DialogContent>

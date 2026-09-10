@@ -1,5 +1,5 @@
 import {
-  ArrowsClockwise, Barcode, CashRegister, ChartBar, Gear, GearSix, Hourglass, Package, Receipt,
+  Barcode, CashRegister, ChartBar, Gear, GearSix, Package, Receipt,
   ShieldCheck, Tag, Truck, UsersThree, Vault, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
@@ -55,16 +55,6 @@ export const MODULES: ModuleDef[] = [
     key: 'stock', label: 'Stock', path: '/stock', permission: 'stock.ver', Icon: Package,
     blurb: 'Existencias por producto, depósito y lote.', crumb: 'Escritorio /',
     motif: '<path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8M12 12v8"/>',
-  },
-  {
-    key: 'vencimientos', label: 'Vencimientos', path: '/stock/expirations', permission: 'stock.ver', Icon: Hourglass,
-    blurb: 'Lotes por vencer y mermas a registrar.', crumb: 'Escritorio /',
-    motif: '<rect x="4" y="4" width="16" height="17" rx="1.5"/><path d="M4 9h16M9 3v4M15 3v4M14 14l4 4M18 14l-4 4"/>',
-  },
-  {
-    key: 'reposicion', label: 'Reposición', path: '/stock/restock', permission: 'stock.ver', Icon: ArrowsClockwise,
-    blurb: 'Qué está bajo el mínimo y qué pedir.', crumb: 'Escritorio /',
-    motif: '<path d="M4 12a8 8 0 018-8c3 0 5.6 1.7 7 4M20 4v4h-4"/><path d="M20 12a8 8 0 01-8 8c-3 0-5.6-1.7-7-4M4 20v-4h4"/>',
   },
   {
     key: 'productos', label: 'Productos', path: '/catalog/products', permission: 'productos.ver', Icon: Barcode,
@@ -128,8 +118,6 @@ export const moduleByKey = (key: string) => BY_KEY.get(key);
 const OP = (h: number) => `oklch(0.60 0.20 ${h})`;
 const HUES: Record<string, string> = {
   stock: OP(20), // rojo carmín
-  reposicion: OP(50), // naranja
-  vencimientos: OP(85), // oro
   precios: OP(125), // lima
   productos: OP(160), // esmeralda
   proveedores: OP(195), // cian
