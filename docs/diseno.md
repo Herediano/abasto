@@ -241,8 +241,8 @@ está para reconocer, no para decorar: si no ayuda a identificar algo, no va.
   **única** acción sólida de la pantalla, una sola, arriba a la derecha de la
   cabecera (`Nuevo <cosa>`, `Cargar factura`). `outline`: lo secundario
   (Editar, Exportar, Filtros, Activar/Desactivar, paginación). `ghost` /
-  `size="icon"`: lo terciario e inline (el lápiz de una fila, quitar un chip) —
-  siempre con `aria-label`. `destructive`: **solo** lo irreversible, nunca al
+  `size="icon"`: lo terciario e inline (quitar un chip, el lápiz de fila de un
+  módulo sin detalle) — siempre con `aria-label`. `destructive`: **solo** lo irreversible, nunca al
   lado del `primary` (va al final, separado, o en el detalle), y siempre detrás
   de una confirmación que nombra el ítem. Tamaños: `icon` inline en filas, `sm`
   en barras densas y paginación, default en cabeceras y diálogos. Hover: solo
@@ -497,25 +497,31 @@ enumeran las superficies donde ya podría estar —fila, barra de selección,
 cabecera del detalle, cabecera de la pantalla— y se elige una. Repetir una
 acción en dos lugares (y peor, una destructiva) es el error a no cometer.
 
-- **La fila abre el ítem.** Si el módulo tiene pantalla de detalle (hoy solo
-  Productos), **la fila entera es el destino**: click —o Enter con foco— abre el
-  detalle. Cursor de manito, fondo `hover:bg-subtle` (ya en `TableRow`). Sin
-  columna «Acciones» con ojo/activar/borrar.
-- **Un solo atajo en la fila: el lápiz.** Un `ghost`+`size="icon"` con
-  `aria-label`, alineado a la derecha, que abre el diálogo de edición directo.
-  Es el único control de la fila. Su celda y la del checkbox hacen
-  `stopPropagation` para no disparar la navegación.
-- **Las acciones de UN ítem viven en la cabecera de su detalle**, una sola vez:
-  `Editar` (`outline`) · `Activar/Desactivar` (`outline`) · `Eliminar` (`ghost`,
-  ícono + texto, hover a rojo, al final y separado). El módulo sin detalle mete
-  esas acciones en el diálogo de edición, no sueltas en la fila.
+- **La fila abre el ítem, y no tiene nada más.** Si el módulo tiene pantalla de
+  detalle (hoy solo Productos), **toda la fila es el destino**: click —o Enter
+  con foco— abre el detalle. Cursor de manito, `hover:bg-subtle` (ya en
+  `TableRow`). **Cero controles en la fila** —ni ojo, ni lápiz, ni activar, ni
+  borrar—; solo el checkbox en la canaleta izquierda, cuya celda hace
+  `stopPropagation` para no navegar. El módulo sin detalle sí lleva un `ghost`
+  `size="icon"` de lápiz que abre su diálogo de edición.
+- **El detalle es la única casa del ítem, y se edita en el lugar.** Nada de
+  diálogo modal para editar: los campos son editables directo en la pantalla y
+  una **barra pegajosa bajo las pestañas** («Tenés cambios sin guardar» ·
+  `Descartar` · `Guardar cambios`) aparece cuando algo cambió. El alta usa la
+  misma pantalla en modo nuevo (`/<recurso>/new`): sin pestañas, la barra dice
+  `Crear`. Cabecera del detalle: solo `Activar/Desactivar` (`outline`) y
+  `Eliminar` (`ghost`, ícono + texto, hover a rojo, al final).
+- **El detalle se ordena en pestañas** (`ModuleScreen` con `views`): agrupan por
+  tema, una a la vez. Productos: `General` (datos + códigos de barras) · `Stock`
+  (existencias por depósito + proveedores) · `Precios` (costo/venta, escalas,
+  historial). El resumen (`SummaryLine` + un renglón de contexto) va arriba de
+  las pestañas.
 - **Selección + barra de lote — la única acción de la lista.** Solo donde el
-  volumen lo pide (Productos). Un checkbox en la canaleta izquierda (no navega).
-  Con ≥ 1 marcado aparece una **barra pegajosa bajo el `PageHeader`**
-  (superficie `accent`, botones `size="sm"`, selects `h-8`): `N seleccionados`,
-  las operaciones en lote (categoría, IVA, activar, desactivar, eliminar) y
-  `Limpiar`. Cubre 1 a N: «desactivar este» = marcarlo y usar la barra. Se
-  limpia sola al cambiar filtro o página.
+  volumen lo pide (Productos). **Barra pegajosa bajo el `PageHeader`**
+  (superficie `accent`, `size="sm"`, selects `h-8`), agrupada: `N seleccionados`
+  · `Cambiar:` [categoría] [marca] [IVA] · `|` · `Activar` `Desactivar`
+  `Eliminar` · `Limpiar selección`. Cubre 1 a N: «desactivar este» = marcarlo y
+  usar la barra. Se limpia sola al cambiar filtro, página o tras aplicar.
 - **Destructivo siempre con confirmación** cuyo título nombra el ítem («Eliminar
   «Yerba La Merced»» / «Eliminar 12 productos») y cuyo cuerpo dice qué pasa y si
   se puede deshacer. `Eliminar` es borrado real solo si el ítem no tiene
@@ -676,15 +682,14 @@ datos a alguien de afuera.**
   negativo ni pasos fuera de escala (`gap-5`). Botones en voz activa: «Guardar
   cambios» al editar, «Crear <cosa>» al alta. El formulario de Productos pasó de
   lista plana de ~13 campos a cuatro grupos (identificación · unidades ·
-  impuestos · reposición). El diálogo vive en un componente compartido
-  (`components/product-form-dialog.tsx`): mismo alta/edición desde el listado y
-  desde el detalle.
-- **Productos, más completo** — y con el molde de listado estandarizado (ver
-  «El módulo → 4 · El listado»): la fila abre el detalle, único atajo el lápiz;
-  las acciones de un producto viven en la cabecera del detalle (`ModuleScreen` +
-  `ModuleSection`, sin `Card`); la barra de selección es la única acción de la
-  lista. **Acciones en lote** (`PATCH /products/bulk`, `POST
-  /products/bulk-delete`): categoría, IVA, activar/desactivar, eliminar.
+  impuestos · reposición).
+- **Productos, el módulo de referencia del molde de listado** (ver «El módulo →
+  4 · El listado»): la fila abre el detalle y no tiene ningún control; el
+  detalle es la única casa del producto y **se edita en el lugar** (sin modal,
+  con barra «Guardar cambios»), ordenado en pestañas `General · Stock · Precios`;
+  el alta usa la misma pantalla en `/catalog/products/new`. **Selección + barra
+  de lote** agrupada = única acción de la lista (`PATCH /products/bulk`, `POST
+  /products/bulk-delete`): categoría, marca, IVA, activar/desactivar, eliminar.
   **Eliminar producto** (`DELETE /products/:id`, permiso `productos.eliminar`):
   borrado real si nunca tuvo movimientos, si no se desactiva.
 - **Margen en el gráfico de Ventas**: `SaleLine.unitCost` congela el costo del

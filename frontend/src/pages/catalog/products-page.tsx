@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShoppingCartSimple, Package, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { ShoppingCartSimple, Package, Plus, Trash } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -8,11 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
-import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen, SummaryLine } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
-import { ProductFormDialog } from '@/components/product-form-dialog';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -53,11 +51,8 @@ export function ProductsPage() {
   const [priceListId, setPriceListId] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<Pagination>({ total: 0, totalPages: 0, pageSize: 20, page: 1 });
-  // Edición: el lápiz de la fila abre este diálogo directo (atajo); las demás
-  // acciones de UN producto (activar, eliminar) viven en su pantalla de detalle.
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Product | null>(null);
-  // Selección para acciones en lote — la única forma de actuar desde la lista.
+  // La fila abre la pantalla del producto; ahí se ve y se edita todo. Desde la
+  // lista solo se explora y se actúa en lote sobre lo seleccionado.
   // Se limpia sola cuando cambia el filtro o la página.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -168,8 +163,7 @@ export function ProductsPage() {
     }
   }
 
-  const openCreate = () => { setEditing(null); setError(''); setDialogOpen(true); };
-  const openEdit = (p: Product) => { setEditing(p); setError(''); setDialogOpen(true); };
+  const nuevoProducto = () => navigate('/catalog/products/new');
 
   // --- Selección + acciones en lote ------------------------------------------
   const pageIds = items.map(p => p.id);
@@ -248,7 +242,7 @@ export function ProductsPage() {
             )}
             <ExportMenu path="/products" params={filterParams()} filename="productos" />
             {puedeCrear && (
-              <Button onClick={openCreate}>
+              <Button onClick={nuevoProducto}>
                 <Plus /> Nuevo producto
               </Button>
             )}
@@ -257,7 +251,7 @@ export function ProductsPage() {
         summary={resumen || undefined}
       >
       {catalogMessage && <Alert>{catalogMessage}</Alert>}
-      {error && !dialogOpen && <Alert variant="destructive">{error}</Alert>}
+      {error && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
         search={searchInput}
         onSearch={setSearchInput}
@@ -327,30 +321,39 @@ export function ProductsPage() {
       </ListFilters>
 
           {!loading && selected.size > 0 && (puedeEditar || puedeEliminar) && (
-            <div className="sticky top-[57px] z-10 flex flex-wrap items-center gap-2 rounded-md border border-accent-border bg-accent/60 px-3 py-2 text-chico backdrop-blur">
+            <div className="sticky top-[57px] z-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-accent-border bg-accent/60 px-3 py-2 text-chico backdrop-blur">
               <span className="font-semibold text-accent-foreground">
                 {selected.size} {selected.size === 1 ? 'seleccionado' : 'seleccionados'}
               </span>
-              <button type="button" className="text-muted-foreground hover:text-foreground hover:underline" onClick={() => setSelected(new Set())}>
-                Limpiar
-              </button>
-              <span className="mx-1 h-4 w-px bg-border" />
+
               {puedeEditar && (
-                <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-muted-foreground">Cambiar:</span>
                   <Select
                     aria-label="Cambiar categoría"
-                    className="h-8 w-auto min-w-40 text-chico"
+                    className="h-8 w-auto min-w-36 text-chico"
                     value=""
                     disabled={bulkBusy}
                     onChange={e => { if (e.target.value) void bulkSet({ categoryId: e.target.value === '__none__' ? null : e.target.value }); }}
                   >
-                    <option value="">Categoría…</option>
+                    <option value="">categoría…</option>
                     <option value="__none__">Sin categoría</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </Select>
                   <Select
+                    aria-label="Cambiar marca"
+                    className="h-8 w-auto min-w-28 text-chico"
+                    value=""
+                    disabled={bulkBusy}
+                    onChange={e => { if (e.target.value) void bulkSet({ brand: e.target.value === '__none__' ? null : e.target.value }); }}
+                  >
+                    <option value="">marca…</option>
+                    <option value="__none__">Sin marca</option>
+                    {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                  </Select>
+                  <Select
                     aria-label="Cambiar IVA"
-                    className="h-8 w-auto min-w-24 text-chico"
+                    className="h-8 w-auto min-w-20 text-chico"
                     value=""
                     disabled={bulkBusy}
                     onChange={e => { if (e.target.value) void bulkSet({ taxRate: e.target.value }); }}
@@ -358,15 +361,27 @@ export function ProductsPage() {
                     <option value="">IVA…</option>
                     {TAX_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
                   </Select>
-                  <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => void bulkSet({ isActive: true })}>Activar</Button>
-                  <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => void bulkSet({ isActive: false })}>Desactivar</Button>
-                </>
+                </div>
               )}
-              {puedeEliminar && (
-                <Button variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setConfirmDelete(true)}>
-                  <Trash /> Eliminar
-                </Button>
-              )}
+
+              <div className="flex flex-wrap items-center gap-2">
+                {puedeEditar && (
+                  <>
+                    <span className="h-4 w-px bg-border" />
+                    <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => void bulkSet({ isActive: true })}>Activar</Button>
+                    <Button variant="outline" size="sm" disabled={bulkBusy} onClick={() => void bulkSet({ isActive: false })}>Desactivar</Button>
+                  </>
+                )}
+                {puedeEliminar && (
+                  <Button variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setConfirmDelete(true)}>
+                    <Trash /> Eliminar
+                  </Button>
+                )}
+              </div>
+
+              <button type="button" className="ml-auto text-muted-foreground hover:text-foreground hover:underline" onClick={() => setSelected(new Set())}>
+                Limpiar selección
+              </button>
               {bulkBusy && <Spinner />}
             </div>
           )}
@@ -380,7 +395,7 @@ export function ProductsPage() {
               description={search || categoryId || brand || priced || stock ? 'No hay productos que coincidan con los filtros.' : 'Creá el primer producto para empezar a manejar stock.'}
               action={
                 puedeCrear && !(search || categoryId || brand || priced || stock) && status !== 'inactive'
-                  ? <Button onClick={openCreate}><Plus /> Nuevo producto</Button>
+                  ? <Button onClick={nuevoProducto}><Plus /> Nuevo producto</Button>
                   : undefined
               }
             />
@@ -407,7 +422,6 @@ export function ProductsPage() {
                     <TableHead className="text-right">Precio</TableHead>
                     <TableHead className="text-right">Stock</TableHead>
                     <TableHead>Estado</TableHead>
-                    {puedeEditar && <TableHead className="w-10" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -456,13 +470,6 @@ export function ProductsPage() {
                               ? <Badge variant="destructive">Bajo mínimo</Badge>
                               : <Badge variant="success">Activo</Badge>}
                         </TableCell>
-                        {puedeEditar && (
-                          <TableCell className="w-10 text-right" onClick={e => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" aria-label={`Editar ${p.name}`} onClick={() => openEdit(p)}>
-                              <PencilSimple />
-                            </Button>
-                          </TableCell>
-                        )}
                       </TableRow>
                     );
                   })}
@@ -484,13 +491,6 @@ export function ProductsPage() {
             </div>
           )}
       </ModuleScreen>
-
-      <ProductFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        product={editing}
-        onSaved={() => { void load(); void loadCategories(); void loadBrands(); }}
-      />
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
