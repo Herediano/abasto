@@ -514,8 +514,10 @@ acción en dos lugares (y peor, una destructiva) es el error a no cometer.
   `Activar/Desactivar` (`outline`) y `Eliminar` (`ghost`, ícono + texto, hover a
   rojo, al final).
 - **El detalle se ordena en pestañas** (`ModuleScreen` con `views`): agrupan por
-  tema, una a la vez. Productos: `General` (identificación, unidades, impuestos,
-  reposición, tipo + códigos de barras) · `Stock` (reposición de la sucursal,
+  tema, una a la vez, **sin repetir un campo entre pestañas**. Productos:
+  `General` (identificación · **códigos de barras** —principal, del bulto y
+  alternativos, todos en un solo bloque— · unidades · impuestos · tipo) ·
+  `Stock` (**reposición** —mínimo + reponer hasta, acá y en ningún otro lado—,
   existencias por depósito, proveedores) · `Precios` (costo/venta, escalas,
   historial). El resumen (`SummaryLine` + un renglón de contexto) va arriba de
   las pestañas.
@@ -698,11 +700,14 @@ datos a alguien de afuera.**
 - **Unidades, impuestos y reposición del producto, rediseñados** (mirando cómo lo
   resuelven Odoo y SAP Business One): «se vende por» es una lista cerrada
   (unidad, kg, litro…), no texto libre; «se compra» es igual-que-la-venta o por
-  bulto cerrado (nombre + unidades + código de barras propio del bulto, que al
-  recibir carga por bulto solo); el IVA es una situación (con `exento` y
-  `no gravado`, que no son 0 %) en un bloque que arranca plegado; la reposición
-  es mínimo + «reponer hasta», con override por sucursal (`ProductStockRule`) y
-  Reposición sugiere cuánto pedir redondeado al bulto.
+  bulto cerrado (nombre + unidades); el código del bulto se carga en el bloque
+  «Códigos de barras» junto al principal y los alternativos —un solo lugar para
+  cualquier código— y al recibir carga por bulto solo; el IVA es una situación
+  (con `exento` y `no gravado`, que no son 0 %) en un bloque que arranca plegado;
+  la reposición vive solo en la pestaña Stock —mínimo + «reponer hasta»—, con
+  override por sucursal (`ProductStockRule`) que **solo aparece si el negocio
+  tiene más de una sucursal**, y Reposición sugiere cuánto pedir redondeado al
+  bulto.
 - **Margen en el gráfico de Ventas**: `SaleLine.unitCost` congela el costo del
   producto (`Product.costPrice`) al vender; el gráfico suma una métrica «Margen»
   (subtotal neto de promos − costo, comparada con el período anterior). Las

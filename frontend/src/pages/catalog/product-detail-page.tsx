@@ -14,7 +14,7 @@ import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-sc
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ApiError, api, errorMessage, type Category, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
+import { ApiError, api, errorMessage, type Branch, type Category, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
 import { fecha, money, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -110,6 +110,7 @@ export function ProductDetailPage() {
   const [tiers, setTiers] = useState<PriceTier[]>([]);
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(!creando);
   const [error, setError] = useState('');
   const [view, setView] = useState<View>('general');
@@ -125,8 +126,9 @@ export function ProductDetailPage() {
   const [savingBarcode, setSavingBarcode] = useState(false);
   const [tierForm, setTierForm] = useState({ minQty: '', price: '', priceListId: '' });
   const [savingTier, setSavingTier] = useState(false);
-  // Regla de reposición de la sucursal activa (pisa el valor general). Se guarda
-  // junto con el resto del producto, desde la misma barra "Guardar cambios".
+  // Reposición por sucursal (solo si el negocio tiene más de una): pisa el valor
+  // general del producto. Se guarda con la misma barra "Guardar cambios".
+  const [ruleBranchId, setRuleBranchId] = useState('');
   const [branchRule, setBranchRule] = useState({ minStock: '', maxStock: '' });
   const [branchRuleBase, setBranchRuleBase] = useState({ minStock: '', maxStock: '' });
 
@@ -145,16 +147,27 @@ export function ProductDetailPage() {
   // "Se compra por bulto cerrado" está activo cuando hay nombre de bulto.
   const comprado = form.purchaseUnit.trim() !== '';
   const packInvalido = comprado && !(Number(form.unitsPerPurchase) > 1);
+  const multiSucursal = branches.length > 1;
 
-  const branchRuleOf = (p: Product) => {
-    const r = (p.stockRules ?? []).find(x => x.branchId === p.activeBranchId);
+  const ruleFor = (p: Product, branchId: string) => {
+    const r = (p.stockRules ?? []).find(x => x.branchId === branchId);
     return { minStock: r?.minStock ?? '', maxStock: r?.maxStock ?? '' };
   };
+  // Cuando cambia la sucursal elegida en el editor por-sucursal, cargar su regla.
+  useEffect(() => {
+    if (!product || !ruleBranchId) return;
+    const r = ruleFor(product, ruleBranchId);
+    setBranchRule(r);
+    setBranchRuleBase(r);
+  }, [ruleBranchId, product]);
+
   const loadProduct = () => api<Product>(`/products/${id}`, {}, token).then(p => {
     setProduct(p);
     setForm(formOf(p));
     setBaseline(formOf(p));
-    const br = branchRuleOf(p);
+    const bid = p.activeBranchId ?? '';
+    setRuleBranchId(bid);
+    const br = ruleFor(p, bid);
     setBranchRule(br);
     setBranchRuleBase(br);
   });
@@ -163,6 +176,7 @@ export function ProductDetailPage() {
   useEffect(() => {
     api<Category[]>('/categories', {}, token).then(setCategories).catch(() => {});
     api<PriceList[]>('/price-lists', {}, token).then(setPriceLists).catch(() => {});
+    api<Branch[]>('/branches', {}, token).then(setBranches).catch(() => {});
   }, [token]);
 
   useEffect(() => {
@@ -184,7 +198,9 @@ export function ProductDetailPage() {
         setProduct(p);
         setForm(formOf(p));
         setBaseline(formOf(p));
-        const br = branchRuleOf(p);
+        const bid = p.activeBranchId ?? '';
+        setRuleBranchId(bid);
+        const br = ruleFor(p, bid);
         setBranchRule(br);
         setBranchRuleBase(br);
         setStock(s.items);
@@ -235,10 +251,10 @@ export function ProductDetailPage() {
         navigate(`/catalog/products/${created.id}`, { replace: true });
       } else {
         await api(`/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token);
-        if (branchRuleDirty) {
+        if (branchRuleDirty && ruleBranchId) {
           await api(`/products/${id}/stock-rule`, {
             method: 'PUT',
-            body: JSON.stringify({ minStock: branchRule.minStock || null, maxStock: branchRule.maxStock || null }),
+            body: JSON.stringify({ branchId: ruleBranchId, minStock: branchRule.minStock || null, maxStock: branchRule.maxStock || null }),
           }, token);
         }
         await loadProduct();
@@ -350,24 +366,61 @@ export function ProductDetailPage() {
     <div className="flex flex-col gap-6">
       <div className="grid gap-3">
         <p className="text-chico font-semibold text-muted-foreground">Identificación</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Código de barras" htmlFor="p-barcode">
-            <Input id="p-barcode" value={form.barcode} disabled={soloLectura} onChange={e => set('barcode', e.target.value)} />
-          </Field>
-          <Field label="Marca" htmlFor="p-brand" hint="(opcional)">
-            <Input id="p-brand" value={form.brand} disabled={soloLectura} onChange={e => set('brand', e.target.value)} />
-          </Field>
-        </div>
         <Field label="Nombre" htmlFor="p-name">
           <Input id="p-name" value={form.name} disabled={soloLectura} onChange={e => set('name', e.target.value)} />
         </Field>
         {referenceHint && creando && <p className="text-xs text-muted-foreground">Nombre y marca autocompletados desde la base de referencia. Revisalos antes de guardar.</p>}
-        <Field label="Categoría" htmlFor="p-category" hint="(opcional)">
-          <Select id="p-category" value={form.categoryId} disabled={soloLectura} onChange={e => set('categoryId', e.target.value)}>
-            <option value="">Sin categoría</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Marca" htmlFor="p-brand" hint="(opcional)">
+            <Input id="p-brand" value={form.brand} disabled={soloLectura} onChange={e => set('brand', e.target.value)} />
+          </Field>
+          <Field label="Categoría" htmlFor="p-category" hint="(opcional)">
+            <Select id="p-category" value={form.categoryId} disabled={soloLectura} onChange={e => set('categoryId', e.target.value)}>
+              <option value="">Sin categoría</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+          </Field>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        <p className="text-chico font-semibold text-muted-foreground">Códigos de barras</p>
+        <Field label="Principal" htmlFor="p-barcode">
+          <Input id="p-barcode" value={form.barcode} disabled={soloLectura} onChange={e => set('barcode', e.target.value)} />
         </Field>
+        {comprado && (
+          <Field label="Del bulto" htmlFor="p-packbc" hint="(opcional · para escanear la caja cerrada al recibir)">
+            <Input id="p-packbc" value={form.packBarcode} disabled={soloLectura} onChange={e => set('packBarcode', e.target.value)} />
+          </Field>
+        )}
+        {!creando && product && (
+          <div className="flex flex-col gap-2">
+            {(product.extraBarcodes ?? []).length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">Alternativos:</span>
+                {(product.extraBarcodes ?? []).map(b => (
+                  <span key={b.id} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 font-mono text-xs">
+                    {b.barcode}
+                    {puedeEditar && (
+                      <button type="button" onClick={() => removeBarcode(b.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${b.barcode}`}>
+                        <Trash className="size-3.5" />
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+            {puedeEditar && (
+              <form className="flex flex-wrap items-end gap-2" onSubmit={e => { e.preventDefault(); void addBarcode(); }}>
+                <Input value={newBarcode} onChange={e => setNewBarcode(e.target.value)} placeholder="Agregar código alternativo" className="max-w-xs" />
+                <Button type="submit" variant="outline" size="sm" disabled={savingBarcode || !newBarcode.trim()}>
+                  {savingBarcode ? <Spinner /> : <Plus />} Agregar
+                </Button>
+              </form>
+            )}
+            <p className="text-xs text-muted-foreground">El principal se edita arriba. Los alternativos son otros EAN del mismo producto (packs, cambios de proveedor).</p>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3">
@@ -402,9 +455,6 @@ export function ProductDetailPage() {
             </Field>
             <Field label={`Unidades por ${form.purchaseUnit.trim() || 'bulto'}`} htmlFor="p-upp">
               <Input id="p-upp" type="number" min="2" step="1" value={form.unitsPerPurchase} disabled={soloLectura} onChange={e => set('unitsPerPurchase', e.target.value)} />
-            </Field>
-            <Field label="Código de barras del bulto" htmlFor="p-packbc" hint="(opcional · para escanear la caja al recibir)" className="sm:col-span-2">
-              <Input id="p-packbc" value={form.packBarcode} disabled={soloLectura} onChange={e => set('packBarcode', e.target.value)} />
             </Field>
             {Number(form.unitsPerPurchase) > 1 ? (
               <p className="text-xs text-muted-foreground sm:col-span-2">
@@ -456,19 +506,6 @@ export function ProductDetailPage() {
       </div>
 
       <div className="grid gap-3">
-        <p className="text-chico font-semibold text-muted-foreground">Reposición</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Stock mínimo" htmlFor="p-min" hint="(dispara la alerta de reposición)">
-            <Input id="p-min" type="number" min="0" step="0.001" value={form.minStock} disabled={soloLectura} onChange={e => set('minStock', e.target.value)} />
-          </Field>
-          <Field label="Reponer hasta" htmlFor="p-max" hint="(opcional · objetivo al comprar)">
-            <Input id="p-max" type="number" min="0" step="0.001" value={form.maxStock} disabled={soloLectura} onChange={e => set('maxStock', e.target.value)} />
-          </Field>
-        </div>
-        {!creando && <p className="text-xs text-muted-foreground">Es el valor para todas las sucursales. Cada sucursal puede fijar el suyo en la pestaña Stock.</p>}
-      </div>
-
-      <div className="grid gap-3">
         <p className="text-chico font-semibold text-muted-foreground">Tipo de producto</p>
         <div className="flex items-center gap-2">
           <Checkbox id="p-venc" checked={form.manejaVencimiento} disabled={soloLectura} onCheckedChange={c => set('manejaVencimiento', c === true)} />
@@ -480,61 +517,47 @@ export function ProductDetailPage() {
         </div>
       </div>
 
-      {!creando && product && (
-        <ModuleSection title="Códigos de barras" description="El principal se edita arriba. Acá se agregan los alternativos (packs, cambios de proveedor).">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="font-mono">{product.barcode}</Badge>
-            <span className="text-xs text-muted-foreground">principal</span>
-            {(product.extraBarcodes ?? []).map(b => (
-              <span key={b.id} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 font-mono text-xs">
-                {b.barcode}
-                {puedeEditar && (
-                  <button type="button" onClick={() => removeBarcode(b.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${b.barcode}`}>
-                    <Trash className="size-3.5" />
-                  </button>
-                )}
-              </span>
-            ))}
-          </div>
-          {puedeEditar && (
-            <form className="flex flex-wrap items-end gap-2" onSubmit={e => { e.preventDefault(); void addBarcode(); }}>
-              <Input value={newBarcode} onChange={e => setNewBarcode(e.target.value)} placeholder="Agregar otro código" className="max-w-xs" />
-              <Button type="submit" variant="outline" size="sm" disabled={savingBarcode || !newBarcode.trim()}>
-                {savingBarcode ? <Spinner /> : <Plus />} Agregar
-              </Button>
-            </form>
-          )}
-        </ModuleSection>
-      )}
     </div>
   );
 
   const stockTab = (
     <div className="flex flex-col gap-6">
-      {product?.activeBranchId && (
-        <ModuleSection title="Reposición de esta sucursal" description="Pisa el mínimo y el «reponer hasta» generales del producto, solo para la sucursal en la que estás. Se guarda con «Guardar cambios».">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Stock mínimo" htmlFor="br-min" hint={product.minStock ? `(general: ${product.minStock})` : '(sin valor general)'}>
-              <Input id="br-min" type="number" min="0" step="0.001" value={branchRule.minStock} disabled={soloLectura}
-                onChange={e => setBranchRule(r => ({ ...r, minStock: e.target.value }))} />
-            </Field>
-            <Field label="Reponer hasta" htmlFor="br-max" hint={product.maxStock ? `(general: ${product.maxStock})` : '(sin valor general)'}>
-              <Input id="br-max" type="number" min="0" step="0.001" value={branchRule.maxStock} disabled={soloLectura}
-                onChange={e => setBranchRule(r => ({ ...r, maxStock: e.target.value }))} />
-            </Field>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Vigente en esta sucursal: mínimo <span className="font-medium text-foreground">{branchRule.minStock || product.minStock || '—'}</span>
-            {' · '}reponer hasta <span className="font-medium text-foreground">{branchRule.maxStock || product.maxStock || '—'}</span>.
-          </p>
-          {!soloLectura && (branchRule.minStock || branchRule.maxStock) && (
-            <button type="button" className="w-fit text-chico text-muted-foreground hover:text-foreground hover:underline"
-              onClick={() => setBranchRule({ minStock: '', maxStock: '' })}>
-              Usar el valor general del producto en esta sucursal
-            </button>
-          )}
-        </ModuleSection>
-      )}
+      <ModuleSection title="Reposición" description="Cuando el stock cae por debajo del mínimo, el producto aparece en la lista de Reposición.">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Stock mínimo" htmlFor="s-min">
+            <Input id="s-min" type="number" min="0" step="0.001" value={form.minStock} disabled={soloLectura} onChange={e => set('minStock', e.target.value)} />
+          </Field>
+          <Field label="Reponer hasta" htmlFor="s-max" hint="(opcional · cuánto pedir para volver a este nivel)">
+            <Input id="s-max" type="number" min="0" step="0.001" value={form.maxStock} disabled={soloLectura} onChange={e => set('maxStock', e.target.value)} />
+          </Field>
+        </div>
+
+        {multiSucursal && (
+          <details className="mt-1">
+            <summary className="w-fit cursor-pointer text-chico text-muted-foreground hover:text-foreground">
+              Fijar un valor distinto para una sucursal
+            </summary>
+            <div className="mt-3 grid gap-3 rounded-md border border-border p-3">
+              <Field label="Sucursal" htmlFor="s-branch">
+                <Select id="s-branch" value={ruleBranchId} disabled={soloLectura} onChange={e => setRuleBranchId(e.target.value)}>
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </Select>
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Stock mínimo" htmlFor="br-min" hint={form.minStock ? `(general: ${form.minStock})` : undefined}>
+                  <Input id="br-min" type="number" min="0" step="0.001" value={branchRule.minStock} disabled={soloLectura}
+                    onChange={e => setBranchRule(r => ({ ...r, minStock: e.target.value }))} />
+                </Field>
+                <Field label="Reponer hasta" htmlFor="br-max" hint={form.maxStock ? `(general: ${form.maxStock})` : undefined}>
+                  <Input id="br-max" type="number" min="0" step="0.001" value={branchRule.maxStock} disabled={soloLectura}
+                    onChange={e => setBranchRule(r => ({ ...r, maxStock: e.target.value }))} />
+                </Field>
+              </div>
+              <p className="text-xs text-muted-foreground">Vacío = esta sucursal usa el valor general de arriba.</p>
+            </div>
+          </details>
+        )}
+      </ModuleSection>
 
       <ModuleSection title="Stock por depósito">
         {stock.length === 0 ? (
