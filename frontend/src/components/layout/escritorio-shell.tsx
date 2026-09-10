@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { CommandPalette } from '@/components/command-palette';
 import { PreguntarFlotante } from '@/components/preguntar-flotante';
-import { PageSpinner } from '@/components/spinner';
+import { ModuleSkeleton } from '@/components/skeleton';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { usePreguntarLibre } from '@/lib/prefs';
@@ -104,7 +104,7 @@ export function EscritorioShell() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.11, ease: 'linear' }}
               >
-                <Suspense fallback={<PageSpinner />}>
+                <Suspense fallback={<ModuleSkeleton />}>
                   {outlet}
                 </Suspense>
               </motion.div>

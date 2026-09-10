@@ -296,13 +296,15 @@ html body[data-scroll-locked] {
   --removed-body-scroll-bar-size: 0px !important;
 }
 
-@keyframes loader-progress {
+/* Arranque en frío: un segmento corto que barre la pista de lado a lado, a
+ * ritmo parejo (sin el waypoint que hacía un tironcito). Solo lo usa
+ * `FullPageLoading`; la regla global de `prefers-reduced-motion` lo frena. */
+@keyframes loader-sweep {
   0% { transform: translateX(-100%); }
-  50% { transform: translateX(30%); }
-  100% { transform: translateX(200%); }
+  100% { transform: translateX(320%); }
 }
-.animate-progress {
-  animation: loader-progress 1.4s ease-in-out infinite;
+.animate-loader-sweep {
+  animation: loader-sweep 1.1s linear infinite;
 }
 
 /*

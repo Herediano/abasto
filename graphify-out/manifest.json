@@ -570,9 +570,9 @@
     "semantic_hash": "86bbc6bf8b717d6abaa729e6e99b8b0d"
   },
   "frontend/src/components/spinner.tsx": {
-    "mtime": 1789021232.6549153,
-    "seen": 1789021272.1658008,
-    "ast_hash": "479e67144d3f273fee1cb55eb76cfe7e",
+    "mtime": 1789023110.621574,
+    "seen": 1789023290.8888097,
+    "ast_hash": "3bad231e68dfe7f86b48f31cd2688fe9",
     "semantic_hash": ""
   },
   "frontend/src/components/supervisor-auth-dialog.tsx": {
@@ -1038,9 +1038,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/layout/escritorio-shell.tsx": {
-    "mtime": 1789020822.8418882,
-    "seen": 1789020903.5642045,
-    "ast_hash": "414bfb098f856841f8f1ca559a0b72f5",
+    "mtime": 1789023122.8707268,
+    "seen": 1789023290.8868349,
+    "ast_hash": "c193b63d988e96877fbd19322c8c4f63",
     "semantic_hash": ""
   },
   "frontend/src/lib/modules.tsx": {
@@ -1545,6 +1545,12 @@
     "mtime": 1789022181.5818594,
     "seen": 1789022723.3033113,
     "ast_hash": "25401fdf2c554fc6ee432eed351b5884",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/skeleton.tsx": {
+    "mtime": 1789023132.794442,
+    "seen": 1789023290.8888068,
+    "ast_hash": "6cf47a44c00d78c9a6e00190776a1a05",
     "semantic_hash": ""
   }
 }
