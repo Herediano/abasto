@@ -117,6 +117,7 @@ export type Product = {
   brand?: string | null;
   costPrice?: string | null;
   salePrice?: string | null;
+  ivaSituacion: string;
   taxRate: string;
   internalTaxRate?: string | null;
   minStock?: string | null;

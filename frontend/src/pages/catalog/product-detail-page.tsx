@@ -24,8 +24,19 @@ const PRICE_SOURCES: Record<string, string> = {
   bulk: 'Acción masiva',
   invoice: 'Factura de compra',
 };
-// Alícuotas vigentes en Argentina; el backend valida contra la misma lista.
-const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
+// Situación frente al IVA, ordenada por frecuencia. Coincide con IVA_SITUACIONES
+// del backend. 'exento' y 'no gravado' no son 0% (se facturan distinto).
+const IVA_OPCIONES: { value: string; label: string }[] = [
+  { value: '21', label: '21% (general)' },
+  { value: '10.5', label: '10,5% (reducido)' },
+  { value: '27', label: '27% (aumentado)' },
+  { value: 'exento', label: 'Exento' },
+  { value: 'no_gravado', label: 'No gravado' },
+  { value: '0', label: '0%' },
+  { value: '2.5', label: '2,5%' },
+  { value: '5', label: '5%' },
+];
+const ivaLabel = (v: string) => IVA_OPCIONES.find(o => o.value === v)?.label ?? `${v}%`;
 
 // Unidad de venta: lista cerrada, misma que valida el backend (SALE_UNITS).
 const SALE_UNITS: { value: string; label: string }[] = [
@@ -43,7 +54,7 @@ const unitPlural = (u: string) => (u === 'unidad' ? 'unidades' : unitLabel(u));
 
 const EMPTY_FORM = {
   barcode: '', name: '', brand: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', packBarcode: '',
-  taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false, isWeighed: false,
+  ivaSituacion: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false, isWeighed: false,
 };
 type FormState = typeof EMPTY_FORM;
 
@@ -57,7 +68,7 @@ function formOf(p: Product): FormState {
     purchaseUnit: p.purchaseUnit ?? '',
     unitsPerPurchase: p.unitsPerPurchase ?? '1',
     packBarcode: p.packBarcode ?? '',
-    taxRate: p.taxRate,
+    ivaSituacion: p.ivaSituacion ?? '21',
     internalTaxRate: p.internalTaxRate ?? '0',
     minStock: p.minStock ?? '',
     manejaVencimiento: p.manejaVencimiento,
@@ -106,6 +117,8 @@ export function ProductDetailPage() {
   const [baseline, setBaseline] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [referenceHint, setReferenceHint] = useState(false);
+  const [impuestosAbierto, setImpuestosAbierto] = useState(false);
+  const [internoManual, setInternoManual] = useState(false);
 
   const [newBarcode, setNewBarcode] = useState('');
   const [savingBarcode, setSavingBarcode] = useState(false);
@@ -379,18 +392,41 @@ export function ProductDetailPage() {
       </div>
 
       <div className="grid gap-3">
-        <p className="text-chico font-semibold text-muted-foreground">Impuestos</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="IVA %" htmlFor="p-iva">
-            <Select id="p-iva" value={form.taxRate} disabled={soloLectura} onChange={e => set('taxRate', e.target.value)}>
-              {TAX_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
-            </Select>
-          </Field>
-          <Field label="Impuestos internos %" htmlFor="p-int" hint="(opcional · alcohol, cigarrillos)">
-            <Input id="p-int" type="number" min="0" step="0.01" value={form.internalTaxRate} disabled={soloLectura} onChange={e => set('internalTaxRate', e.target.value)} />
-          </Field>
+        <div className="flex items-center justify-between">
+          <p className="text-chico font-semibold text-muted-foreground">Impuestos</p>
+          {!impuestosAbierto && (
+            <button type="button" className="text-chico text-muted-foreground hover:text-foreground hover:underline" onClick={() => setImpuestosAbierto(true)}>
+              Editar
+            </button>
+          )}
         </div>
-        <p className="text-xs text-muted-foreground">El precio de costo y el de venta se cargan desde el módulo de Precios.</p>
+        {!impuestosAbierto ? (
+          <p className="text-sm text-muted-foreground">
+            IVA {ivaLabel(form.ivaSituacion)}
+            {Number(form.internalTaxRate) > 0 ? ` · Impuestos internos ${form.internalTaxRate}%` : ''}
+          </p>
+        ) : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="IVA" htmlFor="p-iva">
+                <Select id="p-iva" value={form.ivaSituacion} disabled={soloLectura} onChange={e => set('ivaSituacion', e.target.value)}>
+                  {IVA_OPCIONES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </Select>
+              </Field>
+              {(internoManual || Number(form.internalTaxRate) > 0) ? (
+                <Field label="Impuestos internos %" htmlFor="p-int" hint="(alcohol, cigarrillos, bebidas)">
+                  <Input id="p-int" type="number" min="0" step="0.01" value={form.internalTaxRate} disabled={soloLectura} onChange={e => set('internalTaxRate', e.target.value)} />
+                </Field>
+              ) : !soloLectura && (
+                <div className="flex items-end">
+                  <button type="button" className="text-chico text-primary hover:underline" onClick={() => setInternoManual(true)}>
+                    + Impuesto interno
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid gap-3">

@@ -715,6 +715,11 @@ model Product {
   // precio sin resolver la vigencia fila por fila. Lo escribe unicamente
   // price-resolver.util.ts (al guardar un precio y al activar uno programado).
   salePrice            Decimal?              @map("sale_price") @db.Decimal(14, 2)
+  // Situación del producto frente al IVA. 'exento' y 'no_gravado' NO son 0% —
+  // se facturan distinto—; se guardan como tales y taxRate queda en 0. El resto
+  // ('21','10.5','27','0','2.5','5') es la alícuota como texto. taxRate es el
+  // número derivado que usan la venta y la compra (SaleLine/PurchaseInvoiceLine).
+  ivaSituacion         String                @default("21") @map("iva_situacion")
   taxRate              Decimal               @default(21) @map("tax_rate") @db.Decimal(5, 2)
   internalTaxRate      Decimal               @default(0) @map("internal_tax_rate") @db.Decimal(5, 2)
   minStock             Decimal?              @map("min_stock") @db.Decimal(14, 3)

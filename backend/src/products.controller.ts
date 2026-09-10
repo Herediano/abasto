@@ -55,6 +55,30 @@ function assertTaxRate(value: number | null | undefined) {
   if (!TAX_RATES.includes(value)) throw new UnprocessableEntityException(`La alícuota de IVA debe ser una de: ${TAX_RATES.join(', ')}`);
 }
 
+// Situación frente al IVA -> alícuota efectiva. 'exento' y 'no_gravado' se
+// facturan distinto de "0%" pero para el cálculo su tasa es 0.
+export const IVA_SITUACIONES = ['21', '10.5', '27', '0', '2.5', '5', 'exento', 'no_gravado'];
+const IVA_RATE: Record<string, number> = { '21': 21, '10.5': 10.5, '27': 27, '0': 0, '2.5': 2.5, '5': 5, exento: 0, no_gravado: 0 };
+
+/**
+ * Devuelve { ivaSituacion, taxRate } coherentes. Acepta `ivaSituacion` (nuevo) o
+ * `taxRate` suelto (import viejo, acciones que solo mandan el número). undefined
+ * en ambos = no tocar (para PUT parcial).
+ */
+function parseIva(body: Record<string, unknown>): { ivaSituacion: string; taxRate: number } | undefined {
+  if (body.ivaSituacion !== undefined) {
+    const s = String(body.ivaSituacion);
+    if (!IVA_SITUACIONES.includes(s)) throw new UnprocessableEntityException(`La situación de IVA debe ser una de: ${IVA_SITUACIONES.join(', ')}`);
+    return { ivaSituacion: s, taxRate: IVA_RATE[s] };
+  }
+  if (body.taxRate !== undefined) {
+    const n = Number(body.taxRate);
+    assertTaxRate(Number.isFinite(n) ? n : undefined);
+    return { ivaSituacion: String(n), taxRate: n };
+  }
+  return undefined;
+}
+
 @Controller('products')
 @UseGuards(JwtAuthGuard, PermissionGuard)
 export class ProductsController {
@@ -714,8 +738,7 @@ export class ProductsController {
     for (const field of ['barcode', 'name', 'unit']) if (typeof body[field] !== 'string' || !(body[field] as string).trim()) throw new BadRequestException(`${field} es obligatorio`);
     // Los precios (costo y venta) se cargan solo desde el módulo de Precios.
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
-    const taxRate = body.taxRate === undefined ? undefined : parseOptionalDecimal(body.taxRate, 'taxRate') ?? undefined;
-    assertTaxRate(taxRate);
+    const iva = parseIva(body);
     const internalTaxRate = parseOptionalDecimal(body.internalTaxRate, 'internalTaxRate');
     const isWeighed = body.isWeighed === true;
     const unit = normalizeSaleUnit(body.unit, 'unidad', isWeighed);
@@ -742,7 +765,9 @@ export class ProductsController {
         unitsPerPurchase: pack.unitsPerPurchase,
         packBarcode: pack.packBarcode ?? undefined,
         internalTaxRate: internalTaxRate ?? undefined,
-        taxRate, minStock: minStock ?? undefined,
+        ivaSituacion: iva?.ivaSituacion ?? undefined,
+        taxRate: iva?.taxRate ?? undefined,
+        minStock: minStock ?? undefined,
       } });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ya existe un producto con ese código de barras');
@@ -761,8 +786,7 @@ export class ProductsController {
     if (!barcode || !name) throw new BadRequestException('barcode y name son obligatorios');
     // Los precios (costo y venta) se cargan solo desde el módulo de Precios.
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
-    const taxRate = parseOptionalDecimal(body.taxRate, 'taxRate');
-    assertTaxRate(taxRate);
+    const iva = parseIva(body);
     const internalTaxRate = parseOptionalDecimal(body.internalTaxRate, 'internalTaxRate');
     const isWeighed = typeof body.isWeighed === 'boolean' ? body.isWeighed : current.isWeighed;
     const unit = body.unit === undefined && !isWeighed ? current.unit : normalizeSaleUnit(body.unit, current.unit, isWeighed);
@@ -792,7 +816,8 @@ export class ProductsController {
         packBarcode: pack.packBarcode,
         internalTaxRate: internalTaxRate === undefined || internalTaxRate === null ? current.internalTaxRate : internalTaxRate,
         minStock: minStock === undefined ? current.minStock : minStock,
-        taxRate: taxRate === undefined ? current.taxRate : (taxRate ?? current.taxRate),
+        ivaSituacion: iva?.ivaSituacion ?? current.ivaSituacion,
+        taxRate: iva?.taxRate ?? current.taxRate,
       } });
     }
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El barcode ya existe'); throw error; }
