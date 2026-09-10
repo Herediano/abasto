@@ -73,7 +73,8 @@ export function RestockPage() {
                 <TableRow>
                   <TableHead>Producto</TableHead>
                   <TableHead className="text-right">Stock actual</TableHead>
-                  <TableHead className="text-right">Stock mínimo</TableHead>
+                  <TableHead className="text-right">Mínimo</TableHead>
+                  <TableHead className="text-right">Pedir</TableHead>
                   <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
@@ -87,9 +88,15 @@ export function RestockPage() {
                         <Link to={`/catalog/products/${p.id}`} className="hover:underline">
                           {p.name}
                         </Link>
+                        {p.branchOverride && <span className="ml-2 text-micro text-placeholder">(mínimo propio de la sucursal)</span>}
                       </TableCell>
                       <TableCell className="text-right tabular">{quantity(p.currentStock)}</TableCell>
                       <TableCell className="text-right tabular">{quantity(min)}</TableCell>
+                      <TableCell className="text-right tabular">
+                        {p.suggestedOrder != null
+                          ? <span className="font-semibold">{quantity(p.suggestedOrder)}{p.purchaseUnit ? ` (${p.suggestedOrder / Number(p.unitsPerPurchase)} ${p.purchaseUnit.toLowerCase()})` : ''}</span>
+                          : <span className="text-placeholder">—</span>}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={urgent ? 'destructive' : 'warning'}>{urgent ? 'Sin stock' : 'Por debajo del mínimo'}</Badge>
                       </TableCell>

@@ -120,7 +120,10 @@ export type Product = {
   ivaSituacion: string;
   taxRate: string;
   internalTaxRate?: string | null;
+  // Reposición: ya resueltos para la sucursal activa en el listado; el valor
+  // general del producto en el detalle.
   minStock?: string | null;
+  maxStock?: string | null;
   manejaVencimiento: boolean;
   isWeighed: boolean;
   isActive: boolean;
@@ -129,6 +132,15 @@ export type Product = {
   extraBarcodes?: ProductBarcode[];
   suppliers?: ProductSupplierLink[];
   priceHistory?: PriceHistoryRow[];
+  stockRules?: ProductStockRule[];
+  activeBranchId?: string | null;
+};
+
+export type ProductStockRule = {
+  branchId: string;
+  branchName: string;
+  minStock: string | null;
+  maxStock: string | null;
 };
 
 export type PriceHistoryRow = {
@@ -151,7 +163,13 @@ export type ProductSupplierLink = {
   lastPurchaseAt?: string | null;
 };
 
-export type LowStockProduct = Product & { currentStock: number };
+export type LowStockProduct = Product & {
+  currentStock: number;
+  /** Cuánto pedir para volver al máximo (redondeado al bulto). null si no hay "reponer hasta". */
+  suggestedOrder: number | null;
+  /** true si la sucursal activa tiene su propio mín/máx. */
+  branchOverride?: boolean;
+};
 
 export type Category = { id: string; name: string; productCount?: number };
 

@@ -54,7 +54,7 @@ const unitPlural = (u: string) => (u === 'unidad' ? 'unidades' : unitLabel(u));
 
 const EMPTY_FORM = {
   barcode: '', name: '', brand: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', packBarcode: '',
-  ivaSituacion: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false, isWeighed: false,
+  ivaSituacion: '21', internalTaxRate: '0', minStock: '', maxStock: '', manejaVencimiento: false, isWeighed: false,
 };
 type FormState = typeof EMPTY_FORM;
 
@@ -71,6 +71,7 @@ function formOf(p: Product): FormState {
     ivaSituacion: p.ivaSituacion ?? '21',
     internalTaxRate: p.internalTaxRate ?? '0',
     minStock: p.minStock ?? '',
+    maxStock: p.maxStock ?? '',
     manejaVencimiento: p.manejaVencimiento,
     isWeighed: p.isWeighed,
   };
@@ -124,6 +125,10 @@ export function ProductDetailPage() {
   const [savingBarcode, setSavingBarcode] = useState(false);
   const [tierForm, setTierForm] = useState({ minQty: '', price: '', priceListId: '' });
   const [savingTier, setSavingTier] = useState(false);
+  // Regla de reposición de la sucursal activa (pisa el valor general). Se guarda
+  // junto con el resto del producto, desde la misma barra "Guardar cambios".
+  const [branchRule, setBranchRule] = useState({ minStock: '', maxStock: '' });
+  const [branchRuleBase, setBranchRuleBase] = useState({ minStock: '', maxStock: '' });
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deactivatePrompt, setDeactivatePrompt] = useState(false);
@@ -131,16 +136,27 @@ export function ProductDetailPage() {
   // `lots` se carga para futuros usos (edición de lote); hoy no se lista suelto.
   void lots;
 
-  const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(baseline), [form, baseline]);
+  const branchRuleDirty = JSON.stringify(branchRule) !== JSON.stringify(branchRuleBase);
+  const dirty = useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(baseline) || branchRuleDirty,
+    [form, baseline, branchRuleDirty],
+  );
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
   // "Se compra por bulto cerrado" está activo cuando hay nombre de bulto.
   const comprado = form.purchaseUnit.trim() !== '';
   const packInvalido = comprado && !(Number(form.unitsPerPurchase) > 1);
 
+  const branchRuleOf = (p: Product) => {
+    const r = (p.stockRules ?? []).find(x => x.branchId === p.activeBranchId);
+    return { minStock: r?.minStock ?? '', maxStock: r?.maxStock ?? '' };
+  };
   const loadProduct = () => api<Product>(`/products/${id}`, {}, token).then(p => {
     setProduct(p);
     setForm(formOf(p));
     setBaseline(formOf(p));
+    const br = branchRuleOf(p);
+    setBranchRule(br);
+    setBranchRuleBase(br);
   });
   const loadTiers = () => api<PriceTier[]>(`/products/${id}/tiers`, {}, token).then(setTiers).catch(() => {});
 
@@ -168,6 +184,9 @@ export function ProductDetailPage() {
         setProduct(p);
         setForm(formOf(p));
         setBaseline(formOf(p));
+        const br = branchRuleOf(p);
+        setBranchRule(br);
+        setBranchRuleBase(br);
         setStock(s.items);
         setLots(l);
         setTiers(t);
@@ -207,6 +226,7 @@ export function ProductDetailPage() {
         ...form,
         categoryId: form.categoryId || null,
         minStock: form.minStock || null,
+        maxStock: form.maxStock || null,
         purchaseUnit: comprado ? form.purchaseUnit.trim() : '',
         packBarcode: comprado ? form.packBarcode.trim() : '',
       };
@@ -215,6 +235,12 @@ export function ProductDetailPage() {
         navigate(`/catalog/products/${created.id}`, { replace: true });
       } else {
         await api(`/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token);
+        if (branchRuleDirty) {
+          await api(`/products/${id}/stock-rule`, {
+            method: 'PUT',
+            body: JSON.stringify({ minStock: branchRule.minStock || null, maxStock: branchRule.maxStock || null }),
+          }, token);
+        }
         await loadProduct();
       }
     } catch (err) {
@@ -430,10 +456,20 @@ export function ProductDetailPage() {
       </div>
 
       <div className="grid gap-3">
-        <p className="text-chico font-semibold text-muted-foreground">Reposición y tipo</p>
-        <Field label="Stock mínimo" htmlFor="p-min" hint="(opcional · alerta de reposición cuando el stock total caiga por debajo)">
-          <Input id="p-min" type="number" min="0" step="0.001" value={form.minStock} disabled={soloLectura} onChange={e => set('minStock', e.target.value)} />
-        </Field>
+        <p className="text-chico font-semibold text-muted-foreground">Reposición</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Stock mínimo" htmlFor="p-min" hint="(dispara la alerta de reposición)">
+            <Input id="p-min" type="number" min="0" step="0.001" value={form.minStock} disabled={soloLectura} onChange={e => set('minStock', e.target.value)} />
+          </Field>
+          <Field label="Reponer hasta" htmlFor="p-max" hint="(opcional · objetivo al comprar)">
+            <Input id="p-max" type="number" min="0" step="0.001" value={form.maxStock} disabled={soloLectura} onChange={e => set('maxStock', e.target.value)} />
+          </Field>
+        </div>
+        {!creando && <p className="text-xs text-muted-foreground">Es el valor para todas las sucursales. Cada sucursal puede fijar el suyo en la pestaña Stock.</p>}
+      </div>
+
+      <div className="grid gap-3">
+        <p className="text-chico font-semibold text-muted-foreground">Tipo de producto</p>
         <div className="flex items-center gap-2">
           <Checkbox id="p-venc" checked={form.manejaVencimiento} disabled={soloLectura} onCheckedChange={c => set('manejaVencimiento', c === true)} />
           <Label htmlFor="p-venc" className="font-normal">Maneja vencimiento</Label>
@@ -475,6 +511,31 @@ export function ProductDetailPage() {
 
   const stockTab = (
     <div className="flex flex-col gap-6">
+      {product?.activeBranchId && (
+        <ModuleSection title="Reposición de esta sucursal" description="Pisa el mínimo y el «reponer hasta» generales del producto, solo para la sucursal en la que estás. Se guarda con «Guardar cambios».">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Stock mínimo" htmlFor="br-min" hint={product.minStock ? `(general: ${product.minStock})` : '(sin valor general)'}>
+              <Input id="br-min" type="number" min="0" step="0.001" value={branchRule.minStock} disabled={soloLectura}
+                onChange={e => setBranchRule(r => ({ ...r, minStock: e.target.value }))} />
+            </Field>
+            <Field label="Reponer hasta" htmlFor="br-max" hint={product.maxStock ? `(general: ${product.maxStock})` : '(sin valor general)'}>
+              <Input id="br-max" type="number" min="0" step="0.001" value={branchRule.maxStock} disabled={soloLectura}
+                onChange={e => setBranchRule(r => ({ ...r, maxStock: e.target.value }))} />
+            </Field>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Vigente en esta sucursal: mínimo <span className="font-medium text-foreground">{branchRule.minStock || product.minStock || '—'}</span>
+            {' · '}reponer hasta <span className="font-medium text-foreground">{branchRule.maxStock || product.maxStock || '—'}</span>.
+          </p>
+          {!soloLectura && (branchRule.minStock || branchRule.maxStock) && (
+            <button type="button" className="w-fit text-chico text-muted-foreground hover:text-foreground hover:underline"
+              onClick={() => setBranchRule({ minStock: '', maxStock: '' })}>
+              Usar el valor general del producto en esta sucursal
+            </button>
+          )}
+        </ModuleSection>
+      )}
+
       <ModuleSection title="Stock por depósito">
         {stock.length === 0 ? (
           <EmptyState icon={Package} title="Sin stock" description="Este producto todavía no tiene existencias registradas." />
@@ -665,7 +726,7 @@ export function ProductDetailPage() {
             </span>
             <div className="flex gap-2">
               {!creando && (
-                <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => setForm(baseline)}>Descartar</Button>
+                <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => { setForm(baseline); setBranchRule(branchRuleBase); }}>Descartar</Button>
               )}
               {creando && (
                 <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => navigate('/catalog/products')}>Cancelar</Button>

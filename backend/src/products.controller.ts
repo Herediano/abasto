@@ -14,6 +14,7 @@ import { sendExport } from './export.util';
 import { priceChange, type PriceHistoryEntry } from './price-history.util';
 import { guardarPrecio, resolverPrecios } from './price-resolver.util';
 import { buscarProductoIds } from './product-search.util';
+import { effectiveStockRule, suggestedOrder } from './stock-rules.util';
 
 // Alicuotas de IVA vigentes en Argentina. El campo era decimal libre, lo que
 // habilitaba cargar valores que despues rompen la facturacion.
@@ -129,11 +130,23 @@ export class ProductsController {
   }
 
   // Stock actual = SUM(quantity) del ledger. Una sola consulta agrupada para todo
-  // el conjunto de ids que se pida.
-  private async stockMap(tenantId: string, productIds: string[]): Promise<Map<string, number>> {
+  // el conjunto de ids que se pida. Con `warehouseIds` se acota a los depósitos
+  // de la sucursal activa (para "bajo mínimo" y la columna Stock del listado).
+  private async stockMap(tenantId: string, productIds: string[], warehouseIds?: string[]): Promise<Map<string, number>> {
     if (!productIds.length) return new Map();
-    const sums = await this.prisma.stockMovement.groupBy({ by: ['productId'], where: { tenantId, productId: { in: productIds } }, _sum: { quantity: true } });
+    const sums = await this.prisma.stockMovement.groupBy({
+      by: ['productId'],
+      where: { tenantId, productId: { in: productIds }, ...(warehouseIds?.length ? { warehouseId: { in: warehouseIds } } : {}) },
+      _sum: { quantity: true },
+    });
     return new Map(sums.map(s => [s.productId, Number(s._sum.quantity ?? 0)]));
+  }
+
+  /** Reglas de mín/máx de la sucursal `branchId` para un conjunto de productos. */
+  private async branchRuleMap(tenantId: string, branchId: string | null | undefined, productIds: string[]) {
+    if (!branchId || !productIds.length) return new Map<string, { minStock: Prisma.Decimal | null; maxStock: Prisma.Decimal | null }>();
+    const rows = await this.prisma.productStockRule.findMany({ where: { tenantId, branchId, productId: { in: productIds } }, select: { productId: true, minStock: true, maxStock: true } });
+    return new Map(rows.map(r => [r.productId, { minStock: r.minStock, maxStock: r.maxStock }]));
   }
 
   /**
@@ -208,6 +221,9 @@ export class ProductsController {
     const where = this.listWhere(tenantId, query, searchIds);
     const orderBy = this.listOrderBy(query.sort);
     const stockFilter = query.stock === 'low' || query.stock === 'out' ? query.stock : undefined;
+    // La columna Stock y "bajo mínimo" son de la sucursal activa.
+    const branchId = request.user.branchId ?? null;
+    const whIds = request.user.branchWarehouseIds;
 
     // Con priceListId se muestra el precio de esa lista (resuelto, incluida la
     // derivacion) en vez del de la lista base que cachea Product.salePrice.
@@ -216,18 +232,29 @@ export class ProductsController {
       : null;
     if (query.priceListId && !listaPedida) throw new BadRequestException('Lista de precios no encontrada');
 
-    const shape = async (items: Array<{ id: string; category?: { name: string } | null }>, stock: Map<string, number>, total: number) => {
+    const shape = async (
+      items: Array<{ id: string; category?: { name: string } | null; minStock?: Prisma.Decimal | null; maxStock?: Prisma.Decimal | null }>,
+      stock: Map<string, number>,
+      total: number,
+    ) => {
       const deLista = listaPedida && !listaPedida.isDefault
         ? await resolverPrecios(this.prisma, tenantId, items.map(i => i.id), listaPedida.id)
         : null;
+      const rules = await this.branchRuleMap(tenantId, branchId, items.map(i => i.id));
       return {
-        items: items.map(p => ({
-          ...p,
-          categoryName: p.category?.name ?? null,
-          category: undefined,
-          currentStock: stock.get(p.id) ?? 0,
-          ...(deLista ? { salePrice: deLista.get(p.id) ?? null } : {}),
-        })),
+        items: items.map(p => {
+          const eff = effectiveStockRule({ minStock: p.minStock, maxStock: p.maxStock }, rules.get(p.id));
+          return {
+            ...p,
+            categoryName: p.category?.name ?? null,
+            category: undefined,
+            currentStock: stock.get(p.id) ?? 0,
+            // minStock/maxStock ya resueltos para la sucursal activa.
+            minStock: eff.minStock == null ? null : String(eff.minStock),
+            maxStock: eff.maxStock == null ? null : String(eff.maxStock),
+            ...(deLista ? { salePrice: deLista.get(p.id) ?? null } : {}),
+          };
+        }),
         pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
       };
     };
@@ -235,12 +262,15 @@ export class ProductsController {
     // "Stock bajo" / "Sin stock" dependen de un SUM que no vive en la tabla, asi
     // que se resuelve el universo completo, se filtra en memoria y recien ahi se pagina.
     if (stockFilter) {
-      const candidates = await this.prisma.product.findMany({ where, select: { id: true, minStock: true } });
-      const stockAll = await this.stockMap(tenantId, candidates.map(c => c.id));
+      const candidates = await this.prisma.product.findMany({ where, select: { id: true, minStock: true, maxStock: true } });
+      const stockAll = await this.stockMap(tenantId, candidates.map(c => c.id), whIds);
+      const rules = await this.branchRuleMap(tenantId, branchId, candidates.map(c => c.id));
       const matchIds = candidates
         .filter(c => {
           const s = stockAll.get(c.id) ?? 0;
-          return stockFilter === 'out' ? s <= 0 : c.minStock != null && s < Number(c.minStock);
+          if (stockFilter === 'out') return s <= 0;
+          const min = effectiveStockRule(c, rules.get(c.id)).minStock;
+          return min != null && s < min;
         })
         .map(c => c.id);
       const items = await this.prisma.product.findMany({ where: { id: { in: matchIds } }, include: { category: { select: { name: true } } }, orderBy, skip: (page - 1) * pageSize, take: pageSize });
@@ -257,14 +287,14 @@ export class ProductsController {
       const filas = await this.prisma.product.findMany({ where: { id: { in: pagina } }, include: { category: { select: { name: true } } } });
       const porId = new Map(filas.map(f => [f.id, f]));
       const items = pagina.map(id => porId.get(id)).filter((f): f is (typeof filas)[number] => !!f);
-      return await shape(items, await this.stockMap(tenantId, pagina), ordenados.length);
+      return await shape(items, await this.stockMap(tenantId, pagina, whIds), ordenados.length);
     }
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({ where, include: { category: { select: { name: true } } }, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
       this.prisma.product.count({ where }),
     ]);
-    return await shape(items, await this.stockMap(tenantId, items.map(i => i.id)), total);
+    return await shape(items, await this.stockMap(tenantId, items.map(i => i.id), whIds), total);
   }
 
   @Get('brands') @RequirePermission('productos.ver')
@@ -281,14 +311,42 @@ export class ProductsController {
   @Get('low-stock') @RequirePermission('productos.ver')
   async lowStock(@Req() request: AuthRequest) {
     const tenantId = request.user.tenantId;
-    const products = await this.prisma.product.findMany({ where: { tenantId, isActive: true, minStock: { not: null } } });
+    const branchId = request.user.branchId ?? null;
+    // Candidatos: los que tienen mínimo general, más los que tienen una regla
+    // propia con mínimo en la sucursal activa.
+    const products = await this.prisma.product.findMany({
+      where: {
+        tenantId, isActive: true,
+        OR: [
+          { minStock: { not: null } },
+          ...(branchId ? [{ stockRules: { some: { branchId, minStock: { not: null } } } }] : []),
+        ],
+      },
+    });
     if (!products.length) return [];
-    const sums = await this.prisma.stockMovement.groupBy({ by: ['productId'], where: { tenantId, productId: { in: products.map(p => p.id) } }, _sum: { quantity: true } });
-    const sumMap = new Map(sums.map(s => [s.productId, Number(s._sum.quantity ?? 0)]));
+    const ids = products.map(p => p.id);
+    const [sumMap, ruleMap] = await Promise.all([
+      this.stockMap(tenantId, ids, request.user.branchWarehouseIds),
+      this.branchRuleMap(tenantId, branchId, ids),
+    ]);
     return products
-      .map(p => ({ ...p, currentStock: sumMap.get(p.id) ?? 0 }))
-      .filter(p => p.currentStock < Number(p.minStock))
-      .sort((a, b) => a.currentStock / Number(a.minStock) - b.currentStock / Number(b.minStock));
+      .map(p => {
+        const eff = effectiveStockRule(p, ruleMap.get(p.id));
+        const currentStock = sumMap.get(p.id) ?? 0;
+        const packSize = p.purchaseUnit ? Number(p.unitsPerPurchase) : 1;
+        return {
+          ...p,
+          currentStock,
+          minStock: eff.minStock == null ? null : String(eff.minStock),
+          maxStock: eff.maxStock == null ? null : String(eff.maxStock),
+          branchOverride: eff.branchOverride,
+          suggestedOrder: suggestedOrder(currentStock, eff.maxStock, packSize),
+          _min: eff.minStock,
+        };
+      })
+      .filter(p => p._min != null && p.currentStock < p._min)
+      .sort((a, b) => a.currentStock / (a._min || 1) - b.currentStock / (b._min || 1))
+      .map(({ _min, ...p }) => { void _min; return p; });
   }
 
   @Post('import-reference')
@@ -590,6 +648,7 @@ export class ProductsController {
         extraBarcodes: { orderBy: { createdAt: 'asc' } },
         suppliers: { include: { supplier: { select: { name: true } } }, orderBy: { lastPurchaseAt: 'desc' } },
         priceHistory: { orderBy: { createdAt: 'desc' }, take: 50 },
+        stockRules: { include: { branch: { select: { id: true, name: true } } } },
       },
     });
     return {
@@ -597,7 +656,37 @@ export class ProductsController {
       categoryName: product.category?.name ?? null,
       category: undefined,
       suppliers: product.suppliers.map(s => ({ id: s.id, supplierId: s.supplierId, supplierName: s.supplier.name, supplierCode: s.supplierCode, lastCost: s.lastCost, lastPurchaseAt: s.lastPurchaseAt })),
+      stockRules: product.stockRules.map(r => ({ branchId: r.branchId, branchName: r.branch.name, minStock: r.minStock, maxStock: r.maxStock })),
+      activeBranchId: request.user.branchId ?? null,
     };
+  }
+
+  /**
+   * Fija (o borra) el mín/máx de reposición de un producto EN UNA SUCURSAL.
+   * Sin branchId toma la sucursal activa. min y max en null borran la regla:
+   * la sucursal vuelve a usar el valor general del producto.
+   */
+  @Put(':id/stock-rule')
+  @RequirePermission('productos.editar')
+  async setStockRule(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: { branchId?: unknown; minStock?: unknown; maxStock?: unknown }) {
+    const tenantId = request.user.tenantId;
+    const branchId = typeof body.branchId === 'string' && body.branchId ? body.branchId : request.user.branchId;
+    if (!branchId) throw new BadRequestException('No hay una sucursal activa para la regla de reposición');
+    if (!(await this.prisma.product.findFirst({ where: { id, tenantId }, select: { id: true } }))) throw new BadRequestException('Producto no encontrado');
+    if (!(await this.prisma.branch.findFirst({ where: { id: branchId, tenantId }, select: { id: true } }))) throw new BadRequestException('Sucursal no encontrada');
+    const minStock = parseOptionalDecimal(body.minStock, 'minStock') ?? null;
+    const maxStock = parseOptionalDecimal(body.maxStock, 'maxStock') ?? null;
+    if (minStock != null && maxStock != null && maxStock < minStock) throw new UnprocessableEntityException('"Reponer hasta" no puede ser menor que el mínimo');
+    if (minStock == null && maxStock == null) {
+      await this.prisma.productStockRule.deleteMany({ where: { tenantId, productId: id, branchId } });
+      return { cleared: true };
+    }
+    return this.prisma.productStockRule.upsert({
+      where: { productId_branchId: { productId: id, branchId } },
+      create: { tenantId, productId: id, branchId, minStock, maxStock },
+      update: { minStock, maxStock },
+      select: { branchId: true, minStock: true, maxStock: true },
+    });
   }
 
   @Post(':id/barcodes')
@@ -738,6 +827,7 @@ export class ProductsController {
     for (const field of ['barcode', 'name', 'unit']) if (typeof body[field] !== 'string' || !(body[field] as string).trim()) throw new BadRequestException(`${field} es obligatorio`);
     // Los precios (costo y venta) se cargan solo desde el módulo de Precios.
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
+    const maxStock = parseOptionalDecimal(body.maxStock, 'maxStock');
     const iva = parseIva(body);
     const internalTaxRate = parseOptionalDecimal(body.internalTaxRate, 'internalTaxRate');
     const isWeighed = body.isWeighed === true;
@@ -768,6 +858,7 @@ export class ProductsController {
         ivaSituacion: iva?.ivaSituacion ?? undefined,
         taxRate: iva?.taxRate ?? undefined,
         minStock: minStock ?? undefined,
+        maxStock: maxStock ?? undefined,
       } });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ya existe un producto con ese código de barras');
@@ -786,6 +877,7 @@ export class ProductsController {
     if (!barcode || !name) throw new BadRequestException('barcode y name son obligatorios');
     // Los precios (costo y venta) se cargan solo desde el módulo de Precios.
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
+    const maxStock = parseOptionalDecimal(body.maxStock, 'maxStock');
     const iva = parseIva(body);
     const internalTaxRate = parseOptionalDecimal(body.internalTaxRate, 'internalTaxRate');
     const isWeighed = typeof body.isWeighed === 'boolean' ? body.isWeighed : current.isWeighed;
@@ -816,6 +908,7 @@ export class ProductsController {
         packBarcode: pack.packBarcode,
         internalTaxRate: internalTaxRate === undefined || internalTaxRate === null ? current.internalTaxRate : internalTaxRate,
         minStock: minStock === undefined ? current.minStock : minStock,
+        maxStock: maxStock === undefined ? current.maxStock : maxStock,
         ivaSituacion: iva?.ivaSituacion ?? current.ivaSituacion,
         taxRate: iva?.taxRate ?? current.taxRate,
       } });

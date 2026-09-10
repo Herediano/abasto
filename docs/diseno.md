@@ -500,32 +500,37 @@ acción en dos lugares (y peor, una destructiva) es el error a no cometer.
 - **La fila abre el ítem, y no tiene nada más.** Si el módulo tiene pantalla de
   detalle (hoy solo Productos), **toda la fila es el destino**: click —o Enter
   con foco— abre el detalle. Cursor de manito, `hover:bg-subtle` (ya en
-  `TableRow`). **Cero controles en la fila** —ni ojo, ni lápiz, ni activar, ni
-  borrar—; solo el checkbox en la canaleta izquierda, cuya celda hace
-  `stopPropagation` para no navegar. El módulo sin detalle sí lleva un `ghost`
-  `size="icon"` de lápiz que abre su diálogo de edición.
+  `TableRow`). **Cero controles en la fila** —ni ojo, ni lápiz, ni checkbox, ni
+  activar, ni borrar—. El módulo sin detalle sí lleva un `ghost` `size="icon"`
+  de lápiz que abre su diálogo de edición.
 - **El detalle es la única casa del ítem, y se edita en el lugar.** Nada de
   diálogo modal para editar: los campos son editables directo en la pantalla y
   una **barra pegajosa bajo las pestañas** («Tenés cambios sin guardar» ·
-  `Descartar` · `Guardar cambios`) aparece cuando algo cambió. El alta usa la
-  misma pantalla en modo nuevo (`/<recurso>/new`): sin pestañas, la barra dice
-  `Crear`. Cabecera del detalle: solo `Activar/Desactivar` (`outline`) y
-  `Eliminar` (`ghost`, ícono + texto, hover a rojo, al final).
+  `Descartar` · `Guardar cambios`) aparece cuando algo cambió. Un botón `Guardar`
+  por pantalla: los cambios de todas las pestañas y los de otras entidades que
+  se editan ahí (p. ej. la regla de reposición de la sucursal) viajan juntos en
+  esa barra. El alta usa la misma pantalla en modo nuevo (`/<recurso>/new`): sin
+  pestañas, la barra dice `Crear`. Cabecera del detalle: solo
+  `Activar/Desactivar` (`outline`) y `Eliminar` (`ghost`, ícono + texto, hover a
+  rojo, al final).
 - **El detalle se ordena en pestañas** (`ModuleScreen` con `views`): agrupan por
-  tema, una a la vez. Productos: `General` (datos + códigos de barras) · `Stock`
-  (existencias por depósito + proveedores) · `Precios` (costo/venta, escalas,
+  tema, una a la vez. Productos: `General` (identificación, unidades, impuestos,
+  reposición, tipo + códigos de barras) · `Stock` (reposición de la sucursal,
+  existencias por depósito, proveedores) · `Precios` (costo/venta, escalas,
   historial). El resumen (`SummaryLine` + un renglón de contexto) va arriba de
   las pestañas.
-- **Selección + barra de lote — la única acción de la lista.** Solo donde el
-  volumen lo pide (Productos). **Barra pegajosa bajo el `PageHeader`**
-  (superficie `accent`, `size="sm"`, selects `h-8`), agrupada: `N seleccionados`
-  · `Cambiar:` [categoría] [marca] [IVA] · `|` · `Activar` `Desactivar`
-  `Eliminar` · `Limpiar selección`. Cubre 1 a N: «desactivar este» = marcarlo y
-  usar la barra. Se limpia sola al cambiar filtro, página o tras aplicar.
+- **Los cambios masivos son por Excel, no con checkbox.** Exportar filtrado →
+  editar en la planilla → reimportar. No hay selección múltiple en las filas: el
+  volumen de un catálogo mayorista se edita mejor en Excel, y evita repetir en
+  una barra de lote lo que ya vive en el detalle. (El importador de productos se
+  construye junto con el de Precios.)
+- **Grupos plegados cuando el caso simple no los necesita.** En el detalle,
+  bloques que la mayoría no vuelve a tocar tras el alta (Impuestos: «IVA 21 %»)
+  arrancan colapsados con un resumen de una línea y un `Editar` que los abre.
 - **Destructivo siempre con confirmación** cuyo título nombra el ítem («Eliminar
-  «Yerba La Merced»» / «Eliminar 12 productos») y cuyo cuerpo dice qué pasa y si
-  se puede deshacer. `Eliminar` es borrado real solo si el ítem no tiene
-  historia; si la tiene, se desactiva (y se avisa).
+  «Yerba La Merced»») y cuyo cuerpo dice qué pasa y si se puede deshacer.
+  `Eliminar` es borrado real solo si el ítem no tiene historia; si la tiene, se
+  desactiva (y se avisa).
 
 ### Lo que el molde deja afuera
 
@@ -680,18 +685,24 @@ datos a alguien de afuera.**
   fuera del `<form>`, aviso de error debajo, `grid`), campos en grupos con 24 px
   entre grupos y 12 px adentro (`gap-6` / `gap-3`), sin parches de margen
   negativo ni pasos fuera de escala (`gap-5`). Botones en voz activa: «Guardar
-  cambios» al editar, «Crear <cosa>» al alta. El formulario de Productos pasó de
-  lista plana de ~13 campos a cuatro grupos (identificación · unidades ·
-  impuestos · reposición).
+  cambios» al editar, «Crear <cosa>» al alta.
 - **Productos, el módulo de referencia del molde de listado** (ver «El módulo →
-  4 · El listado»): la fila abre el detalle y no tiene ningún control; el
-  detalle es la única casa del producto y **se edita en el lugar** (sin modal,
-  con barra «Guardar cambios»), ordenado en pestañas `General · Stock · Precios`;
-  el alta usa la misma pantalla en `/catalog/products/new`. **Selección + barra
-  de lote** agrupada = única acción de la lista (`PATCH /products/bulk`, `POST
-  /products/bulk-delete`): categoría, marca, IVA, activar/desactivar, eliminar.
-  **Eliminar producto** (`DELETE /products/:id`, permiso `productos.eliminar`):
-  borrado real si nunca tuvo movimientos, si no se desactiva.
+  4 · El listado»): la fila abre el detalle y no tiene ningún control (ni
+  checkbox); el detalle es la única casa del producto y **se edita en el lugar**
+  (sin modal, con barra «Guardar cambios»), ordenado en pestañas
+  `General · Stock · Precios`; el alta usa la misma pantalla en
+  `/catalog/products/new`. No hay selección múltiple: los cambios masivos van a
+  ser por Excel. **Eliminar producto** (`DELETE /products/:id`, permiso
+  `productos.eliminar`): borrado real si nunca tuvo movimientos, si no se
+  desactiva.
+- **Unidades, impuestos y reposición del producto, rediseñados** (mirando cómo lo
+  resuelven Odoo y SAP Business One): «se vende por» es una lista cerrada
+  (unidad, kg, litro…), no texto libre; «se compra» es igual-que-la-venta o por
+  bulto cerrado (nombre + unidades + código de barras propio del bulto, que al
+  recibir carga por bulto solo); el IVA es una situación (con `exento` y
+  `no gravado`, que no son 0 %) en un bloque que arranca plegado; la reposición
+  es mínimo + «reponer hasta», con override por sucursal (`ProductStockRule`) y
+  Reposición sugiere cuánto pedir redondeado al bulto.
 - **Margen en el gráfico de Ventas**: `SaleLine.unitCost` congela el costo del
   producto (`Product.costPrice`) al vender; el gráfico suma una métrica «Margen»
   (subtotal neto de promos − costo, comparada con el período anterior). Las
@@ -777,8 +788,13 @@ por módulo, personalización profunda del escritorio.
 - **Molde de listado — falta la pasada de consistencia.** Productos ya lo sigue
   (ver «El módulo → 4 · El listado»). Falta alinear el resto: Clientes tiene un
   botón `Desactivar` suelto en la fila (va al diálogo de edición); Depósitos
-  mezcla «Ver cajas» + lápiz; ninguno fuera de Productos tiene selección en
-  lote todavía —se suma donde el volumen lo pida—.
+  mezcla «Ver cajas» + lápiz. Ningún módulo salvo Productos tiene pantalla de
+  detalle propia todavía —los demás siguen con diálogo de edición y su lápiz—.
+- **Importador de productos por Excel — falta.** Los cambios masivos del catálogo
+  (categoría, marca, IVA, mín/máx a cientos de productos) se van a hacer
+  exportando filtrado, editando la planilla y reimportando, junto con el
+  importador del módulo Precios. Hasta que exista, esos cambios son de a uno
+  desde la pantalla del producto.
 - **`CLAUDE.md` decía «single App.tsx, no router»** — quedó viejo: hay
   `react-router-dom`, `page-header.tsx`, `protected-route.tsx`, `admin-route.tsx`
   (`PermissionRoute`) y un árbol `pages/`.

@@ -1,36 +1,36 @@
 # Graph Report - abasto  (2026-09-10)
 
 ## Corpus Check
-- 258 files · ~165,348 words
+- 260 files · ~166,958 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1840 nodes · 5060 edges · 104 communities (96 shown, 6 thin omitted)
+- 1848 nodes · 5085 edges · 105 communities (97 shown, 6 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 175 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `15965b9f`
+- Built from commit: `b1dc2260`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - sidebar.ts
 - escritorio.ts
-- app.module.ts
+- AuthRequest
 - devDependencies
 - AuthService
-- stock-transfer-page.tsx
-- useAuth
+- stock-in-page.tsx
+- ajustes-page.tsx
 - 3. Diseño — adherencia al sistema visual
 - graphify Skill Pipeline (Claude Code)
 - StockService
 - escritorio-page.tsx
-- promotions.controller.ts
+- PromotionsController
 - compilerOptions
 - PriceRulesController
-- money
-- .token
+- PosPage
+- errorMessage
 - auth-background.tsx
 - dependencies
 - escritorio-shell.tsx
@@ -38,31 +38,31 @@
 - CajaService
 - registrarMovimientoCuenta
 - PriceListsController
-- pos-page.tsx
+- RequirePermission
 - SalesService
 - CustomersController
 - i18n/utils.ts
 - StockInPage
-- prices.service.ts
+- products.controller.ts
 - ventas-chart.tsx
 - seed-demo.ts
 - compilerOptions
 - devDependencies
 - lazy-pages.ts
-- credit-notes.service.ts
+- CreditNotesService
 - enrich-reference-categories.ts
 - price-import.util.ts
 - cn
 - Tenants Controller
 - BranchesController
-- products.controller.ts
+- .update
 - compilerOptions
 - scripts
-- PriceActivationService
+- price-activation.service.ts
 - .constructor
 - useTheme
 - Product Definition (Abasto Vision)
-- stock-history-page.tsx
+- useAuth
 - allowScripts
 - RangosPage
 - modules.tsx
@@ -73,36 +73,38 @@
 - CategoriesController
 - ReportesController
 - ProductSearchDialog
-- RangosService
+- product-detail-page.tsx
 - import-reference-from-xlsx.ts
 - SuppliersController
-- PricesService
+- alert.tsx
 - SupervisorAuthDialog
 - graphify.js
-- CustomersPage
-- ProductReferenceController
+- rangos.service.ts
+- PrismaService
+- Mayorista ERP README Overview
 - WarehousesPage
 - @prisma/client
+- stock-rules.util.ts
 - PurchasesService
 - ProductsController
 - TasksController
 - downloadFile
 - CategoriesPage
+- UsersPage
 - vite.config.ts
-- HealthController
-- BootstrapService
+- SucursalesSection
 - branch.ts
 - PrismaModule
 - scripts
 - api.ts
 - dependencies
 - Abasto — landing
-- AuthRequest
+- RangosService
 - WarehousesController
 - landing/tsconfig.json
 - Diseño — Abasto
 - sales-history-page.tsx
-- errorMessage
+- use-async.ts
 - frontend/package.json
 - api
 - rules/graphify.md
@@ -116,11 +118,10 @@
 - Web Interface Guidelines
 - Rangos Permission System (RBAC)
 - Purchases/Reception/Stock Research
-- price-resolver.util.ts
 
 ## God Nodes (most connected - your core abstractions)
-1. `AuthRequest` - 150 edges
-2. `RequirePermission()` - 116 edges
+1. `AuthRequest` - 151 edges
+2. `RequirePermission()` - 117 edges
 3. `errorMessage()` - 115 edges
 4. `api` - 106 edges
 5. `cn()` - 99 edges
@@ -133,14 +134,14 @@
 ## Surprising Connections (you probably didn't know these)
 - `Mayorista ERP README Overview` --semantically_similar_to--> `Mayorista ERP Project Overview`  [INFERRED] [semantically similar]
   README.md → CLAUDE.md
-- `Auth Architecture (JWT, Guards, Argon2id)` --references--> `AuthService`  [EXTRACTED]
-  CLAUDE.md → backend/src/auth.service.ts
+- `AdminGuard (admin-only write gate)` --references--> `JwtAuthGuard`  [EXTRACTED]
+  CLAUDE.md → backend/src/auth.guard.ts
+- `Auth Architecture (JWT, Guards, Argon2id)` --references--> `JwtAuthGuard`  [EXTRACTED]
+  CLAUDE.md → backend/src/auth.guard.ts
 - `Manual Validation Style (no DTOs)` --references--> `AuthService`  [EXTRACTED]
   CLAUDE.md → backend/src/auth.service.ts
 - `Auth Architecture (JWT, Guards, Argon2id)` --references--> `AuthRequest`  [EXTRACTED]
   CLAUDE.md → backend/src/auth.types.ts
-- `Manual Validation Style (no DTOs)` --references--> `ProductsController`  [EXTRACTED]
-  CLAUDE.md → backend/src/products.controller.ts
 
 ## Import Cycles
 - None detected.
@@ -151,7 +152,7 @@
 - **Multi-Tenant Data Isolation Pattern** — claude_multi_tenancy, docs_modelo_datos_base_overview, backend_prisma_schema_schema, docs_producto_empresa_sucursal_usuario [INFERRED 0.85]
 - **Purchase Invoice Confirmation Flow** — claude_purchase_invoice_lifecycle, docs_investigacion_compras_flow, docs_api_purchases_endpoints, backend_src_purchases_service_purchasesservice, docs_modelo_datos_base_stock_movements [INFERRED 0.85]
 
-## Communities (104 total, 6 thin omitted)
+## Communities (105 total, 6 thin omitted)
 
 ### Community 0 - "sidebar.ts"
 Cohesion: 0.36
@@ -161,25 +162,25 @@ Nodes (7): emit(), listeners, open, setSidebarOpen(), subscribe(), toggleSidebar
 Cohesion: 0.21
 Nodes (13): compact(), DIA_INI, ejemplos(), lc(), Pendiente, plural(), serieBars(), statFor() (+5 more)
 
-### Community 2 - "app.module.ts"
+### Community 2 - "AuthRequest"
 Cohesion: 0.17
-Nodes (19): JwtAuthGuard, Injectable, TIMEZONES, AuthUser, METODOS_PAGO, Usuario, PermissionGuard, Injectable (+11 more)
+Nodes (24): JwtAuthGuard, Injectable, AuthRequest, METODOS_PAGO, TIPOS_MOVIMIENTO, Usuario, csvCell(), ExportColumn (+16 more)
 
 ### Community 3 - "devDependencies"
 Cohesion: 0.22
 Nodes (9): devDependencies, tailwindcss, tailwindcss-animate, @tailwindcss/vite, @types/react, @types/react-dom, typescript, vite (+1 more)
 
 ### Community 4 - "AuthService"
-Cohesion: 0.05
-Nodes (34): AuthController, Body, Controller, Get, Inject, Patch, Post, Req (+26 more)
+Cohesion: 0.10
+Nodes (19): AuthController, Body, Controller, Get, Inject, Patch, Post, Req (+11 more)
 
-### Community 5 - "stock-transfer-page.tsx"
-Cohesion: 0.23
-Nodes (12): ProductPicker(), Spinner(), Alert(), alertVariants, Input, Textarea, Product, Session (+4 more)
+### Community 5 - "stock-in-page.tsx"
+Cohesion: 0.11
+Nodes (25): ModuleView, ProductPicker(), STOCK_VIEWS, StockView, Input, Select, Textarea, Lot (+17 more)
 
-### Community 6 - "useAuth"
+### Community 6 - "ajustes-page.tsx"
 Cohesion: 0.09
-Nodes (28): AccountList(), ExportButton(), PermissionRoute(), RowList(), RowListItem(), Avatar(), DialogDescription, PaymentAdjustment (+20 more)
+Nodes (33): AccountList(), Task, Sidebar(), SidebarToggle(), SidebarItem(), SidebarItemProps, PageHeader(), RowList() (+25 more)
 
 ### Community 7 - "3. Diseño — adherencia al sistema visual"
 Cohesion: 0.07
@@ -190,16 +191,16 @@ Cohesion: 0.07
 Nodes (39): CLAUDE.md graphify Pointer, Add URL & Watch Folder Reference, Extra Exports & Benchmark Reference, Confidence Score Rubric, Extraction Subagent Prompt Spec, Node ID Format Rule, GitHub Clone & Cross-Repo Merge Reference, Commit Hook & CLAUDE.md Integration Reference (+31 more)
 
 ### Community 9 - "StockService"
-Cohesion: 0.13
-Nodes (13): StockController, Body, Controller, Inject, Param, Post, Query, Req (+5 more)
+Cohesion: 0.12
+Nodes (15): StockController, Body, Controller, Get, Inject, Param, Post, Query (+7 more)
 
 ### Community 10 - "escritorio-page.tsx"
-Cohesion: 0.16
-Nodes (21): useEscritorioSummary(), hora(), prefetchRoute(), AbrirMostrador(), aSize(), Caja, cap(), centrarTablero() (+13 more)
+Cohesion: 0.17
+Nodes (20): hora(), prefetchRoute(), AbrirMostrador(), aSize(), Caja, cap(), centrarTablero(), computeLayout() (+12 more)
 
-### Community 11 - "promotions.controller.ts"
-Cohesion: 0.10
-Nodes (21): describirPromo(), entero(), monto(), parseConfig(), PromotionsController, SCOPES, Tipo, TIPO_LABEL (+13 more)
+### Community 11 - "PromotionsController"
+Cohesion: 0.12
+Nodes (17): describirPromo(), entero(), monto(), parseConfig(), PromotionsController, Body, Controller, Delete (+9 more)
 
 ### Community 12 - "compilerOptions"
 Cohesion: 0.11
@@ -209,13 +210,13 @@ Nodes (18): compilerOptions, allowJs, allowSyntheticDefaultImports, esModuleInte
 Cohesion: 0.21
 Nodes (10): PriceRulesController, Body, Controller, Delete, Get, Param, Post, Put (+2 more)
 
-### Community 14 - "money"
-Cohesion: 0.11
-Nodes (15): money(), parseWeighedBarcode(), ReportesPage(), describirPromo(), PosPage(), abrirTurno(), agregarMovimiento(), cambiarCantidad() (+7 more)
+### Community 14 - "PosPage"
+Cohesion: 0.12
+Nodes (11): parseWeighedBarcode(), PosPage(), abrirTurno(), agregarMovimiento(), cambiarCantidad(), cerrarTurno(), cobrar(), onKey() (+3 more)
 
-### Community 15 - ".token"
-Cohesion: 0.18
-Nodes (17): PricesPage(), addTramo(), apply(), buildBody(), calculate(), cancelScheduled(), deleteList(), deletePromo() (+9 more)
+### Community 15 - "errorMessage"
+Cohesion: 0.14
+Nodes (29): errorMessage(), submit(), submit(), CustomersPage(), openCuenta(), registrarPago(), submit(), toggleActive() (+21 more)
 
 ### Community 16 - "auth-background.tsx"
 Cohesion: 0.16
@@ -226,32 +227,32 @@ Cohesion: 0.14
 Nodes (14): dependencies, argon2, class-transformer, class-validator, exceljs, jsonwebtoken, @nestjs/common, @nestjs/core (+6 more)
 
 ### Community 18 - "escritorio-shell.tsx"
-Cohesion: 0.15
-Nodes (19): AppHeader(), EscritorioShell(), onKey(), PaletteContext, SummaryContext, usePalette(), pctDePx(), PreguntarFlotante() (+11 more)
+Cohesion: 0.11
+Nodes (24): AppHeader(), EscritorioShell(), onKey(), PaletteContext, SummaryContext, useEscritorioSummary(), usePalette(), pctDePx() (+16 more)
 
 ### Community 19 - "EscritorioController"
 Cohesion: 0.25
 Nodes (6): EscritorioController, Controller, Get, Inject, Req, UseGuards
 
 ### Community 20 - "CajaService"
-Cohesion: 0.10
-Nodes (19): CashRegistersController, CashShiftsController, Body, Controller, Get, Inject, Param, Post (+11 more)
+Cohesion: 0.11
+Nodes (17): CashRegistersController, CashShiftsController, Body, Controller, Get, Inject, Param, Post (+9 more)
 
 ### Community 21 - "registrarMovimientoCuenta"
-Cohesion: 0.14
-Nodes (13): registrarMovimientoCuenta(), CuentasCorrientesController, Body, Controller, Get, Inject, Param, Post (+5 more)
+Cohesion: 0.13
+Nodes (14): registrarMovimientoCuenta(), CuentasCorrientesController, Body, Controller, Get, Inject, Param, Post (+6 more)
 
 ### Community 22 - "PriceListsController"
 Cohesion: 0.15
 Nodes (13): PriceListsController, Body, Controller, Delete, Get, Inject, Param, Post (+5 more)
 
-### Community 23 - "pos-page.tsx"
-Cohesion: 0.15
-Nodes (23): ExportParams, ActiveFilter, LineaCotizada, Button, ButtonProps, buttonVariants, Dialog, DialogContent (+15 more)
+### Community 23 - "RequirePermission"
+Cohesion: 0.21
+Nodes (11): assertTaxRate(), normalizeSaleUnit(), parseIva(), parseOptionalDecimal(), Body, Param, Post, Put (+3 more)
 
 ### Community 24 - "SalesService"
-Cohesion: 0.23
-Nodes (4): r2(), SalesService, Inject, Injectable
+Cohesion: 0.11
+Nodes (15): SalesController, Body, Controller, Get, Inject, Param, Post, Query (+7 more)
 
 ### Community 25 - "CustomersController"
 Cohesion: 0.16
@@ -265,9 +266,9 @@ Nodes (35): lang, t, year, home, lang, links, t, enHref (+27 more)
 Cohesion: 0.16
 Nodes (9): draftKey(), readDraft(), StockInPage(), addLine(), cancelCorrection(), createProductInline(), startCorrection(), submit() (+1 more)
 
-### Community 28 - "prices.service.ts"
-Cohesion: 0.13
-Nodes (19): Decimalish, priceChange(), PriceField, PriceHistoryEntry, PriceSource, toNumber(), guardarPrecio(), aplicarModo() (+11 more)
+### Community 28 - "products.controller.ts"
+Cohesion: 0.08
+Nodes (37): Decimalish, priceChange(), PriceField, PriceHistoryEntry, PriceSource, toNumber(), Db, guardarPrecio() (+29 more)
 
 ### Community 29 - "ventas-chart.tsx"
 Cohesion: 0.21
@@ -289,9 +290,9 @@ Nodes (7): devDependencies, prisma, tsx, @types/express, @types/multer, @types/n
 Cohesion: 0.10
 Nodes (33): FullScreenRoute(), ProtectedRoute(), FullPageLoading(), clearGuard(), guardTripped(), lazyPage(), loadOrReloadOnce(), noop() (+25 more)
 
-### Community 34 - "credit-notes.service.ts"
-Cohesion: 0.11
-Nodes (17): CreditNotesController, Body, Controller, Get, Inject, Param, Post, Query (+9 more)
+### Community 34 - "CreditNotesService"
+Cohesion: 0.13
+Nodes (15): CreditNotesController, Body, Controller, Get, Inject, Param, Post, Query (+7 more)
 
 ### Community 35 - "enrich-reference-categories.ts"
 Cohesion: 0.27
@@ -302,8 +303,8 @@ Cohesion: 0.20
 Nodes (14): BARCODE_ALIASES, COST_ALIASES, detectDelimiter(), findColumn(), matrixFromCsv(), matrixFromXlsx(), NAME_ALIASES, normalizeHeader() (+6 more)
 
 ### Community 37 - "cn"
-Cohesion: 0.11
-Nodes (32): Task, Sidebar(), SidebarToggle(), SidebarItem(), SidebarItemProps, PageHeader(), Skeleton(), TableSkeleton() (+24 more)
+Cohesion: 0.20
+Nodes (22): ModuleSection(), Skeleton(), TableSkeleton(), PageSpinner(), Card, CardContent, CardDescription, CardHeader (+14 more)
 
 ### Community 38 - "Tenants Controller"
 Cohesion: 0.24
@@ -313,9 +314,9 @@ Nodes (7): TenantsController, Controller, Get, Inject, Param, Req, UseGuards
 Cohesion: 0.18
 Nodes (12): BranchesController, Body, Controller, Delete, Get, Inject, Param, Post (+4 more)
 
-### Community 40 - "products.controller.ts"
-Cohesion: 0.14
-Nodes (16): csvCell(), ExportColumn, sendExport(), buscarProductoIds(), condicionTermino(), normalizar(), IVA_RATE, IVA_SITUACIONES (+8 more)
+### Community 40 - ".update"
+Cohesion: 0.16
+Nodes (10): Body, Controller, Get, Inject, Param, Post, Put, Req (+2 more)
 
 ### Community 41 - "compilerOptions"
 Cohesion: 0.25
@@ -325,21 +326,21 @@ Nodes (7): compilerOptions, allowSyntheticDefaultImports, composite, module, mod
 Cohesion: 0.22
 Nodes (9): scripts, db:enrich-categories, db:generate, db:import-reference, db:migrate, db:seed, db:seed-demo, start (+1 more)
 
-### Community 43 - "PriceActivationService"
-Cohesion: 0.32
-Nodes (4): PriceActivationService, Inject, Injectable, Cron
+### Community 43 - "price-activation.service.ts"
+Cohesion: 0.24
+Nodes (6): PriceActivationService, Inject, Injectable, activarPreciosVigentes(), Cron, @nestjs/schedule
 
 ### Community 45 - "useTheme"
 Cohesion: 0.43
 Nodes (7): aplicar(), elegido(), media(), sistema(), Theme, useTheme(), PreferenciasSection()
 
 ### Community 46 - "Product Definition (Abasto Vision)"
-Cohesion: 0.15
-Nodes (13): Integración con ARCA (sin definir), Caja / Arqueo, CashMovement Model, CashRegister Model, CashShift Model, Cuenta Corriente de Clientes, CustomerAccountMovement Model, Empresa → Sucursal → Usuario Structure (+5 more)
+Cohesion: 0.17
+Nodes (12): Integración con ARCA (sin definir), Caja / Arqueo, CashMovement Model, CashRegister Model, CashShift Model, Cuenta Corriente de Clientes, CustomerAccountMovement Model, Empresa → Sucursal → Usuario Structure (+4 more)
 
-### Community 47 - "stock-history-page.tsx"
-Cohesion: 0.13
-Nodes (26): ModuleSection(), ModuleView, STOCK_VIEWS, StockView, stockViews(), Movement, Supplier, ARS (+18 more)
+### Community 47 - "useAuth"
+Cohesion: 0.17
+Nodes (23): ExportButton(), PermissionRoute(), stockViews(), StockItem, useAuth(), ARS, esD, esT (+15 more)
 
 ### Community 48 - "allowScripts"
 Cohesion: 0.33
@@ -381,9 +382,9 @@ Nodes (8): ReportesController, Controller, Get, Inject, Query, Req, Res, UseGuar
 Cohesion: 0.83
 Nodes (4): ProductSearchDialog(), alTeclear(), elegible(), elegir()
 
-### Community 58 - "RangosService"
-Cohesion: 0.27
-Nodes (4): Inject, RangosService, Inject, Injectable
+### Community 58 - "product-detail-page.tsx"
+Cohesion: 0.16
+Nodes (12): Badge(), badgeVariants, Category, PriceTier, EMPTY_FORM, FormState, IVA_OPCIONES, PACK_NAMES (+4 more)
 
 ### Community 59 - "import-reference-from-xlsx.ts"
 Cohesion: 0.47
@@ -393,37 +394,45 @@ Nodes (5): cellText(), findColumn(), HEADERS, main(), prisma
 Cohesion: 0.15
 Nodes (12): SuppliersController, Body, Controller, Get, Inject, Param, Post, Put (+4 more)
 
-### Community 61 - "PricesService"
-Cohesion: 0.25
-Nodes (5): Inject, Inject, PricesService, Inject, Injectable
+### Community 61 - "alert.tsx"
+Cohesion: 0.26
+Nodes (9): Field(), TEMAS, ThemeToggle(), Alert(), alertVariants, Session, AuthLayout(), LoginPage() (+1 more)
 
 ### Community 62 - "SupervisorAuthDialog"
 Cohesion: 1.00
 Nodes (3): SupervisorAuthDialog(), reset(), submit()
 
-### Community 64 - "CustomersPage"
-Cohesion: 0.33
-Nodes (5): CustomersPage(), openCuenta(), registrarPago(), submit(), toggleActive()
+### Community 64 - "rangos.service.ts"
+Cohesion: 0.24
+Nodes (8): ALL, DEFAULT_RANGOS, PERMISSION_KEYS, PermissionDef, PermissionKey, PERMISSIONS, SYSTEM_RANGO_NAMES, Db
 
-### Community 65 - "ProductReferenceController"
-Cohesion: 0.25
-Nodes (6): ProductReferenceController, Controller, Get, Inject, Param, UseGuards
+### Community 65 - "PrismaService"
+Cohesion: 0.06
+Nodes (23): Inject, BootstrapService, Inject, Injectable, HealthController, Controller, Get, Inject (+15 more)
+
+### Community 66 - "Mayorista ERP README Overview"
+Cohesion: 0.20
+Nodes (9): classify-reference-categories.ts script, enrich-reference-categories.ts script, Auth Endpoints (signup/login/users), API Base Reference, Products Endpoints, Brand/Keyword Offline Classifier, Reference Catalog Category Classification, Precios Claros API (category tree) (+1 more)
 
 ### Community 67 - "WarehousesPage"
 Cohesion: 0.33
 Nodes (3): WarehousesPage(), submit(), submitCaja()
 
 ### Community 68 - "@prisma/client"
-Cohesion: 0.11
-Nodes (13): prisma, Db, CORRECTABLE_STATUSES, InvoiceLineInput, OtherTax, OtherTaxInput, FORMAS_PAGO, PagoPedido (+5 more)
+Cohesion: 0.09
+Nodes (20): prisma, REFUND_METHODS, Usuario, Db, alcanza(), cotizar(), Db, descuentoPromo() (+12 more)
+
+### Community 69 - "stock-rules.util.ts"
+Cohesion: 0.50
+Nodes (4): Decish, effectiveStockRule, num(), suggestedOrder()
 
 ### Community 70 - "PurchasesService"
-Cohesion: 0.22
-Nodes (4): Inject, PurchasesService, Inject, Injectable
+Cohesion: 0.13
+Nodes (14): main.ts Bootstrap (ValidationPipe), PurchasesController, Body, Controller, Get, Inject, Param, Post (+6 more)
 
 ### Community 71 - "ProductsController"
-Cohesion: 0.11
-Nodes (19): assertTaxRate(), normalizeSaleUnit(), parseIva(), parseOptionalDecimal(), ProductsController, Body, Controller, Delete (+11 more)
+Cohesion: 0.17
+Nodes (9): ProductsController, Controller, Delete, Get, Inject, Query, Req, Res (+1 more)
 
 ### Community 72 - "TasksController"
 Cohesion: 0.17
@@ -437,13 +446,13 @@ Nodes (10): go(), copy(), download(), toQs(), ApiError, branchHeaders(), downloa
 Cohesion: 0.33
 Nodes (3): CategoriesPage(), confirmDelete(), submit()
 
-### Community 77 - "HealthController"
-Cohesion: 0.33
-Nodes (4): HealthController, Controller, Get, Inject
-
-### Community 78 - "BootstrapService"
+### Community 75 - "UsersPage"
 Cohesion: 0.40
-Nodes (3): BootstrapService, Inject, Injectable
+Nodes (3): UsersPage(), submitCreate(), submitEdit()
+
+### Community 77 - "SucursalesSection"
+Cohesion: 0.40
+Nodes (3): SucursalesSection(), accion(), submit()
 
 ### Community 79 - "branch.ts"
 Cohesion: 0.50
@@ -458,8 +467,8 @@ Cohesion: 0.50
 Nodes (4): scripts, build, dev, preview
 
 ### Community 88 - "api.ts"
-Cohesion: 0.07
-Nodes (33): CashMovement, Category, CreditNoteLine, CustomerAccountMovement, LowStockProduct, Permission, PriceAuditRow, PriceHistoryRow (+25 more)
+Cohesion: 0.06
+Nodes (36): CashMovement, CashShift, CreditNoteLine, Customer, CustomerAccount, CustomerAccountMovement, LowStockProduct, Permission (+28 more)
 
 ### Community 90 - "dependencies"
 Cohesion: 0.13
@@ -469,9 +478,9 @@ Nodes (15): dependencies, class-variance-authority, clsx, motion, @phosphor-icon
 Cohesion: 0.25
 Nodes (7): Abasto — landing, Correr, Cómo está armado, Deploy en Cloudflare Pages, El fondo, Pendientes (TO-DO), Sincronizar el tema con la app
 
-### Community 92 - "AuthRequest"
-Cohesion: 0.08
-Nodes (33): AuthRequest, PurchasesController, Body, Controller, Get, Param, Post, Req (+25 more)
+### Community 92 - "RangosService"
+Cohesion: 0.11
+Nodes (14): RangosController, Body, Controller, Delete, Get, Inject, Param, Post (+6 more)
 
 ### Community 93 - "WarehousesController"
 Cohesion: 0.15
@@ -486,20 +495,20 @@ Cohesion: 0.05
 Nodes (44): 1 · La cabecera — `PageHeader`, pegajosa, 2 · Línea de resumen — las cifras que importan, 3 · Vistas — una a la vez, 4 · El listado — filas, selección y acciones, Base y semántica, Color, Color por módulo — identidad, no estado, Configurable (+36 more)
 
 ### Community 97 - "sales-history-page.tsx"
-Cohesion: 0.18
-Nodes (35): EmptyState(), ExportMenu(), Field(), ListFilters(), ModuleScreen(), SummaryLine(), PageSpinner(), Badge() (+27 more)
+Cohesion: 0.17
+Nodes (30): EmptyState(), ExportMenu(), ExportParams, ActiveFilter, ListFilters(), ModuleScreen(), SummaryLine(), LineaCotizada (+22 more)
 
-### Community 101 - "errorMessage"
-Cohesion: 0.10
-Nodes (24): errorMessage(), fileToResizedDataUrl(), ActionStatus, useAsyncAction(), UseAsyncActionOptions, useDataLoader(), UseDataLoaderOptions, AjustesPagoDialog() (+16 more)
+### Community 101 - "use-async.ts"
+Cohesion: 0.14
+Nodes (12): fileToResizedDataUrl(), ActionStatus, useAsyncAction(), UseAsyncActionOptions, useDataLoader(), UseDataLoaderOptions, EmpresaSection(), pickLogo() (+4 more)
 
 ### Community 103 - "frontend/package.json"
 Cohesion: 0.11
 Nodes (18): tailwindcss, @tailwindcss/vite, typescript, name, private, type, version, clsx (+10 more)
 
 ### Community 105 - "api"
-Cohesion: 0.09
-Nodes (27): api, UsersPage(), submitCreate(), submitEdit(), formOf(), ivaLabel(), margin(), ProductDetailPage() (+19 more)
+Cohesion: 0.11
+Nodes (26): api, AjustesPagoDialog(), guardar(), formOf(), ivaLabel(), margin(), ProductDetailPage(), addBarcode() (+18 more)
 
 ### Community 113 - "PricesController"
 Cohesion: 0.20
@@ -510,16 +519,16 @@ Cohesion: 0.29
 Nodes (6): Design principles, Frontend Design, Ground your designs in the subject matter, More on writing in design, Process: plan, review against the brief, build, critique, Restraint and self-critique
 
 ### Community 116 - "Mayorista ERP Project Overview"
-Cohesion: 0.18
-Nodes (13): Graphify Knowledge Graph Workflow (AGENTS.md), main.ts Bootstrap (ValidationPipe), Frontend Architecture (single App.tsx, no router), Graphify Knowledge Graph Workflow (CLAUDE.md), Mayorista ERP Project Overview, Purchase Invoice Lifecycle (draft/confirm/corrected), Append-only Stock Ledger, Manual Validation Style (no DTOs) (+5 more)
+Cohesion: 0.22
+Nodes (11): Graphify Knowledge Graph Workflow (AGENTS.md), Frontend Architecture (single App.tsx, no router), Graphify Knowledge Graph Workflow (CLAUDE.md), Mayorista ERP Project Overview, Purchase Invoice Lifecycle (draft/confirm/corrected), Append-only Stock Ledger, Purchase Invoices Endpoints, Recommended Purchase Confirmation Flow (+3 more)
 
 ### Community 117 - "products table"
-Cohesion: 0.20
-Nodes (11): classify-reference-categories.ts script, enrich-reference-categories.ts script, Category Model (per-tenant), POST /products/import-reference, product_reference Global Table, GET /product-reference/:ean, Brand/Keyword Offline Classifier, Reference Catalog Category Classification (+3 more)
+Cohesion: 0.33
+Nodes (7): Category Model (per-tenant), POST /products/import-reference, product_reference Global Table, GET /product-reference/:ean, SEPA Open Data Source, products table, Productos por Peso (Pesables)
 
 ### Community 118 - "Base Data Model"
-Cohesion: 0.26
-Nodes (12): Auth Endpoints (signup/login/users), Catalog Endpoints (Warehouses/Suppliers/Lots), API Base Reference, Products Endpoints, customers table, Base Data Model, product_lots table, stock_movements table (+4 more)
+Cohesion: 0.50
+Nodes (8): Catalog Endpoints (Warehouses/Suppliers/Lots), customers table, Base Data Model, product_lots table, stock_movements table, suppliers table, tenants table, warehouses table
 
 ### Community 125 - "Web Interface Guidelines"
 Cohesion: 0.40
@@ -533,29 +542,25 @@ Nodes (7): Prisma schema.prisma, Multi-Tenancy Strategy, GET /auth/me Endpoint, 
 Cohesion: 0.33
 Nodes (6): ARCA: Emisión y Autorización de Factura Electrónica, ARCA: Régimen General y Clases de Comprobantes, GS1 Global Traceability Standard, Oracle Procurement Three-Way Match Docs, Purchases/Reception/Stock Research, Three-Way Match Concept
 
-### Community 139 - "price-resolver.util.ts"
-Cohesion: 0.17
-Nodes (16): Db, ListaResuelta, precioExplicito(), PriceSource, redondear2(), resolverPrecio(), resolverPrecios(), alcanza() (+8 more)
-
 ## Knowledge Gaps
-- **449 isolated node(s):** `$schema`, `plugin`, `name`, `private`, `start:dev` (+444 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 692 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **451 isolated node(s):** `$schema`, `plugin`, `name`, `private`, `start:dev` (+446 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 694 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AuthService` connect `AuthService` to `app.module.ts`, `Mayorista ERP Project Overview`, `.token`?**
-  _High betweenness centrality (0.333) - this node is a cross-community bridge._
-- **Why does `AuthRequest` connect `AuthRequest` to `app.module.ts`, `AuthService`, `StockService`, `promotions.controller.ts`, `PriceRulesController`, `EscritorioController`, `CajaService`, `registrarMovimientoCuenta`, `PriceListsController`, `CustomersController`, `credit-notes.service.ts`, `Tenants Controller`, `BranchesController`, `products.controller.ts`, `CategoriesController`, `ReportesController`, `SuppliersController`, `ProductsController`, `TasksController`, `WarehousesController`, `PricesController`?**
-  _High betweenness centrality (0.215) - this node is a cross-community bridge._
-- **Why does `api` connect `api` to `stock-transfer-page.tsx`, `useAuth`, `money`, `.token`, `escritorio-shell.tsx`, `pos-page.tsx`, `StockInPage`, `ventas-chart.tsx`, `cn`, `stock-history-page.tsx`, `RangosPage`, `user-menu.tsx`, `CustomersPage`, `WarehousesPage`, `downloadFile`, `CategoriesPage`, `api.ts`, `sales-history-page.tsx`, `errorMessage`?**
-  _High betweenness centrality (0.126) - this node is a cross-community bridge._
+- **Why does `AuthService` connect `AuthService` to `PrismaService`, `AuthRequest`, `PurchasesService`, `.update`, `errorMessage`?**
+  _High betweenness centrality (0.321) - this node is a cross-community bridge._
+- **Why does `AuthRequest` connect `AuthRequest` to `AuthService`, `StockService`, `PromotionsController`, `PriceRulesController`, `EscritorioController`, `CajaService`, `registrarMovimientoCuenta`, `PriceListsController`, `RequirePermission`, `SalesService`, `CustomersController`, `products.controller.ts`, `CreditNotesService`, `Tenants Controller`, `BranchesController`, `.update`, `CategoriesController`, `ReportesController`, `SuppliersController`, `PurchasesService`, `ProductsController`, `TasksController`, `RangosService`, `WarehousesController`, `PricesController`?**
+  _High betweenness centrality (0.181) - this node is a cross-community bridge._
+- **Why does `api` connect `api` to `stock-in-page.tsx`, `ajustes-page.tsx`, `PosPage`, `errorMessage`, `escritorio-shell.tsx`, `StockInPage`, `ventas-chart.tsx`, `cn`, `useAuth`, `RangosPage`, `user-menu.tsx`, `product-detail-page.tsx`, `alert.tsx`, `WarehousesPage`, `downloadFile`, `CategoriesPage`, `UsersPage`, `SucursalesSection`, `api.ts`, `sales-history-page.tsx`, `use-async.ts`?**
+  _High betweenness centrality (0.115) - this node is a cross-community bridge._
 - **What connects `$schema`, `plugin`, `name` to the rest of the system?**
-  _449 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _451 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `AuthService` be split into smaller, more focused modules?**
-  _Cohesion score 0.054098360655737705 - nodes in this community are weakly interconnected._
-- **Should `useAuth` be split into smaller, more focused modules?**
-  _Cohesion score 0.09047619047619047 - nodes in this community are weakly interconnected._
-- **Should `3. Diseño — adherencia al sistema visual` be split into smaller, more focused modules?**
-  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09986504723346828 - nodes in this community are weakly interconnected._
+- **Should `stock-in-page.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.1126984126984127 - nodes in this community are weakly interconnected._
+- **Should `ajustes-page.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.08788159111933395 - nodes in this community are weakly interconnected._
