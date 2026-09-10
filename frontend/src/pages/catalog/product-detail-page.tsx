@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Package, Plus, Trash } from '@phosphor-icons/react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Package, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
+import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-screen';
+import { ProductFormDialog } from '@/components/product-form-dialog';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
+import { ApiError, api, errorMessage, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
 import { fecha, money, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -45,8 +47,15 @@ export function ProductDetailPage() {
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [tierForm, setTierForm] = useState({ minQty: '', price: '', priceListId: '' });
   const [savingTier, setSavingTier] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deactivatePrompt, setDeactivatePrompt] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const puedeEditarProducto = can('productos.editar');
+  const puedeEliminar = can('productos.eliminar');
   const puedeEditarPrecios = can('precios.editar');
+  // `lots` se carga para futuros usos (edición de lote); hoy no se lista acá.
+  void lots;
 
   const loadProduct = () => api<Product>(`/products/${id}`, {}, token).then(setProduct);
 
@@ -129,8 +138,42 @@ export function ProductDetailPage() {
     }
   }
 
+  async function doDelete() {
+    if (!product) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await api(`/products/${product.id}`, { method: 'DELETE' }, token);
+      navigate('/catalog/products');
+    } catch (err) {
+      if (err instanceof ApiError && err.data.code === 'PRODUCT_HAS_ACTIVITY') {
+        setConfirmDelete(false);
+        setDeactivatePrompt(true);
+      } else {
+        setError(errorMessage(err));
+        setConfirmDelete(false);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function doDeactivate() {
+    if (!product) return;
+    setDeleting(true);
+    try {
+      await api(`/products/${product.id}`, { method: 'PUT', body: JSON.stringify({ isActive: false }) }, token);
+      setDeactivatePrompt(false);
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (loading) return <PageSpinner />;
-  if (error) return <Alert variant="destructive">{error}</Alert>;
+  if (error && !product) return <Alert variant="destructive">{error}</Alert>;
   if (!product) return null;
 
   const totalStock = stock.reduce((sum, s) => sum + Number(s.quantity), 0);
@@ -138,57 +181,51 @@ export function ProductDetailPage() {
 
   return (
     <>
-      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate('/catalog/products')}>
-        <ArrowLeft /> Volver a Productos
-      </Button>
+      <ModuleScreen
+        title={product.name}
+        actions={
+          <>
+            {puedeEditarProducto && (
+              <Button variant="outline" onClick={() => setEditOpen(true)}>
+                <PencilSimple /> Editar
+              </Button>
+            )}
+            {puedeEditarProducto && (
+              <Button variant="outline" onClick={() => void api(`/products/${product.id}`, { method: 'PUT', body: JSON.stringify({ isActive: !product.isActive }) }, token).then(loadProduct)}>
+                {product.isActive ? 'Desactivar' : 'Activar'}
+              </Button>
+            )}
+            {puedeEliminar && (
+              <Button variant="ghost" size="icon" aria-label="Eliminar producto" onClick={() => setConfirmDelete(true)}>
+                <Trash />
+              </Button>
+            )}
+          </>
+        }
+        summary={
+          <div className="flex flex-col gap-2">
+            <SummaryLine
+              items={[
+                { label: 'Stock total', value: quantity(totalStock) },
+                { label: 'Costo', value: product.costPrice ? money(Number(product.costPrice)) : '—' },
+                { label: 'Precio de venta', value: product.salePrice ? money(Number(product.salePrice)) : '—' },
+                { label: 'Margen', value: m === null ? '—' : `${m.toFixed(0)}%` },
+              ]}
+            />
+            <p className="text-micro text-placeholder">
+              <span className="font-mono">{product.barcode}</span>
+              {product.internalCode ? <> · Código interno <span className="font-mono">{product.internalCode}</span></> : null}
+              {product.categoryName ? ` · ${product.categoryName}` : ''}
+              {!product.isActive ? ' · Desactivado' : ''}
+              {product.manejaVencimiento ? ' · Maneja vencimiento' : ''}
+              {product.isWeighed ? ' · Pesable' : ''}
+            </p>
+          </div>
+        }
+      >
+        {error && <Alert variant="destructive">{error}</Alert>}
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-h2 font-semibold tracking-tight">{product.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {product.barcode}
-            {product.internalCode ? ` · Código interno ${product.internalCode}` : ''}
-            {product.categoryName ? ` · ${product.categoryName}` : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {!product.isActive && <Badge variant="destructive">Desactivado</Badge>}
-          {product.manejaVencimiento && <Badge variant="secondary">Maneja vencimiento</Badge>}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-micro font-semibold text-placeholder">Stock total</p>
-            <p className="mt-1 font-display text-h3 font-semibold tabular">{totalStock.toFixed(3)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-micro font-semibold text-placeholder">Costo</p>
-            <p className="mt-1 font-display text-h3 font-semibold tabular">{product.costPrice ? money(Number(product.costPrice)) : '—'}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-micro font-semibold text-placeholder">Precio de venta</p>
-            <p className="mt-1 font-display text-h3 font-semibold tabular">{product.salePrice ? money(Number(product.salePrice)) : '—'}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-micro font-semibold text-placeholder">Margen</p>
-            <p className="mt-1 font-display text-h3 font-semibold tabular">{m === null ? '—' : `${m.toFixed(0)}%`}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Stock por depósito</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+        <ModuleSection title="Stock por depósito">
           {stock.length === 0 ? (
             <EmptyState icon={Package} title="Sin stock" description="Este producto todavía no tiene existencias registradas." />
           ) : (
@@ -215,43 +252,27 @@ export function ProductDetailPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+        </ModuleSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Códigos de barras</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+        <ModuleSection title="Códigos de barras" description="El principal se cambia desde «Editar». Acá se agregan los alternativos (packs, cambios de proveedor).">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="font-mono">
-              {product.barcode}
-            </Badge>
+            <Badge variant="secondary" className="font-mono">{product.barcode}</Badge>
             <span className="text-xs text-muted-foreground">principal</span>
+            {(product.extraBarcodes ?? []).map(b => (
+              <span key={b.id} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 font-mono text-xs">
+                {b.barcode}
+                {puedeEditarProducto && (
+                  <button type="button" onClick={() => removeBarcode(b.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${b.barcode}`}>
+                    <Trash className="size-3.5" />
+                  </button>
+                )}
+              </span>
+            ))}
           </div>
-
-          {(product.extraBarcodes ?? []).length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {(product.extraBarcodes ?? []).map(b => (
-                <span key={b.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-xs">
-                  {b.barcode}
-                  {puedeEditarProducto && (
-                    <button type="button" onClick={() => removeBarcode(b.id)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${b.barcode}`}>
-                      <Trash className="size-3.5" />
-                    </button>
-                  )}
-                </span>
-              ))}
-            </div>
-          )}
-
           {puedeEditarProducto && (
             <form
               className="flex flex-wrap items-end gap-2"
-              onSubmit={e => {
-                e.preventDefault();
-                void addBarcode();
-              }}
+              onSubmit={e => { e.preventDefault(); void addBarcode(); }}
             >
               <Input value={newBarcode} onChange={e => setNewBarcode(e.target.value)} placeholder="Agregar otro código" className="max-w-xs" />
               <Button type="submit" variant="outline" size="sm" disabled={savingBarcode || !newBarcode.trim()}>
@@ -259,16 +280,11 @@ export function ProductDetailPage() {
               </Button>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </ModuleSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Proveedores</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+        <ModuleSection title="Proveedores" description="Se arma solo con las compras registradas de este producto.">
           {(product.suppliers ?? []).length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">Todavía no se registraron compras de este producto.</p>
+            <p className="text-sm text-muted-foreground">Todavía no se registraron compras de este producto.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -289,22 +305,13 @@ export function ProductDetailPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+        </ModuleSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Escalas por cantidad</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <p className="text-sm text-muted-foreground">
-            A partir de cierta cantidad rige otro precio. <strong>Todavía no se aplican</strong>: las va a usar el módulo de ventas.
-          </p>
-
+        <ModuleSection title="Escalas por cantidad" description="A partir de cierta cantidad rige otro precio. Todavía no se aplican: las va a usar el módulo de ventas.">
           {tiers.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {tiers.map(t => (
-                <span key={t.id} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
+                <span key={t.id} className="inline-flex items-center gap-2 rounded-md border border-border px-2 py-1 text-sm">
                   Desde {Number(t.minQty)} u. → {money(Number(t.price))}
                   <Badge variant="outline">{t.priceListName}</Badge>
                   {puedeEditarPrecios && (
@@ -316,14 +323,10 @@ export function ProductDetailPage() {
               ))}
             </div>
           )}
-
           {puedeEditarPrecios && (
             <form
               className="flex flex-wrap items-end gap-2"
-              onSubmit={e => {
-                e.preventDefault();
-                void addTier();
-              }}
+              onSubmit={e => { e.preventDefault(); void addTier(); }}
             >
               <Field label="Desde cantidad" htmlFor="tier-qty" className="max-w-36">
                 <Input id="tier-qty" required type="number" min="2" step="0.001" value={tierForm.minQty} onChange={e => setTierForm({ ...tierForm, minQty: e.target.value })} />
@@ -341,16 +344,11 @@ export function ProductDetailPage() {
               </Button>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </ModuleSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Historial de precios</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+        <ModuleSection title="Historial de precios">
           {(product.priceHistory ?? []).length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">Todavía no hubo cambios de precio registrados.</p>
+            <p className="text-sm text-muted-foreground">Todavía no hubo cambios de precio registrados.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -369,24 +367,50 @@ export function ProductDetailPage() {
                     <TableCell>{h.field === 'cost' ? 'Costo' : 'Venta'}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{h.oldValue ? money(Number(h.oldValue)) : '—'}</TableCell>
                     <TableCell className="text-right font-medium">{money(Number(h.newValue))}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{PRICE_SOURCES[h.source] ?? h.source}</Badge>
-                    </TableCell>
+                    <TableCell><Badge variant="outline">{PRICE_SOURCES[h.source] ?? h.source}</Badge></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+        </ModuleSection>
+      </ModuleScreen>
 
-      <p className="text-sm text-muted-foreground">
-        ¿Necesitás editar los datos de este producto? Hacelo desde{' '}
-        <Link to="/catalog/products" className="font-medium text-primary hover:underline">
-          Productos
-        </Link>
-        .
-      </p>
+      <ProductFormDialog open={editOpen} onOpenChange={setEditOpen} product={product} onSaved={() => { void loadProduct(); }} />
+
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar «{product.name}»</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Se borra de verdad si nunca tuvo movimientos. Si ya se usó (stock, ventas o compras), te vamos a ofrecer desactivarlo. Esto no se puede deshacer.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}>Cancelar</Button>
+            <Button type="button" variant="destructive" onClick={doDelete} disabled={deleting}>
+              {deleting ? <Spinner /> : <Trash />} Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deactivatePrompt} onOpenChange={setDeactivatePrompt}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>No se puede borrar</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            «{product.name}» ya tuvo movimientos, así que es parte de la historia. Podés desactivarlo: deja de aparecer en la caja y en los listados, pero sus registros quedan.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeactivatePrompt(false)}>Cancelar</Button>
+            <Button type="button" onClick={doDeactivate} disabled={deleting}>
+              {deleting && <Spinner />} Desactivar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

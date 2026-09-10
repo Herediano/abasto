@@ -630,7 +630,15 @@ datos a alguien de afuera.**
   negativo ni pasos fuera de escala (`gap-5`). Botones en voz activa: «Guardar
   cambios» al editar, «Crear <cosa>» al alta. El formulario de Productos pasó de
   lista plana de ~13 campos a cuatro grupos (identificación · unidades ·
-  impuestos · reposición).
+  impuestos · reposición). El diálogo vive en un componente compartido
+  (`components/product-form-dialog.tsx`): mismo alta/edición desde el listado y
+  desde el detalle.
+- **Productos, más completo**: el detalle usa el molde del módulo (`ModuleScreen`
+  + `ModuleSection`, sin `Card`) y se edita ahí mismo. **Acciones en lote** en el
+  listado (seleccionar varios → categoría, IVA, activar/desactivar, eliminar:
+  `PATCH /products/bulk`, `POST /products/bulk-delete`). **Eliminar producto**
+  (`DELETE /products/:id`, permiso `productos.eliminar`): borrado real si nunca
+  tuvo movimientos, si no se ofrece desactivar.
 - **Margen en el gráfico de Ventas**: `SaleLine.unitCost` congela el costo del
   producto (`Product.costPrice`) al vender; el gráfico suma una métrica «Margen»
   (subtotal neto de promos − costo, comparada con el período anterior). Las
