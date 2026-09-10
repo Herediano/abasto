@@ -27,8 +27,22 @@ const PRICE_SOURCES: Record<string, string> = {
 // Alícuotas vigentes en Argentina; el backend valida contra la misma lista.
 const TAX_RATES = ['0', '2.5', '5', '10.5', '21', '27'];
 
+// Unidad de venta: lista cerrada, misma que valida el backend (SALE_UNITS).
+const SALE_UNITS: { value: string; label: string }[] = [
+  { value: 'unidad', label: 'Unidad' },
+  { value: 'kg', label: 'Kilo' },
+  { value: 'g', label: 'Gramo' },
+  { value: 'litro', label: 'Litro' },
+  { value: 'ml', label: 'Mililitro' },
+  { value: 'metro', label: 'Metro' },
+  { value: 'docena', label: 'Docena' },
+];
+const PACK_NAMES = ['Caja', 'Pack', 'Plancha', 'Display', 'Bolsón', 'Bulto', 'Pallet'];
+const unitLabel = (u: string) => SALE_UNITS.find(x => x.value === u)?.label.toLowerCase() ?? u;
+const unitPlural = (u: string) => (u === 'unidad' ? 'unidades' : unitLabel(u));
+
 const EMPTY_FORM = {
-  barcode: '', name: '', brand: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1',
+  barcode: '', name: '', brand: '', categoryId: '', unit: 'unidad', purchaseUnit: '', unitsPerPurchase: '1', packBarcode: '',
   taxRate: '21', internalTaxRate: '0', minStock: '', manejaVencimiento: false, isWeighed: false,
 };
 type FormState = typeof EMPTY_FORM;
@@ -42,6 +56,7 @@ function formOf(p: Product): FormState {
     unit: p.unit,
     purchaseUnit: p.purchaseUnit ?? '',
     unitsPerPurchase: p.unitsPerPurchase ?? '1',
+    packBarcode: p.packBarcode ?? '',
     taxRate: p.taxRate,
     internalTaxRate: p.internalTaxRate ?? '0',
     minStock: p.minStock ?? '',
@@ -105,6 +120,9 @@ export function ProductDetailPage() {
 
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(baseline), [form, baseline]);
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
+  // "Se compra por bulto cerrado" está activo cuando hay nombre de bulto.
+  const comprado = form.purchaseUnit.trim() !== '';
+  const packInvalido = comprado && !(Number(form.unitsPerPurchase) > 1);
 
   const loadProduct = () => api<Product>(`/products/${id}`, {}, token).then(p => {
     setProduct(p);
@@ -172,7 +190,13 @@ export function ProductDetailPage() {
     setSaving(true);
     setError('');
     try {
-      const body = { ...form, categoryId: form.categoryId || null, minStock: form.minStock || null };
+      const body = {
+        ...form,
+        categoryId: form.categoryId || null,
+        minStock: form.minStock || null,
+        purchaseUnit: comprado ? form.purchaseUnit.trim() : '',
+        packBarcode: comprado ? form.packBarcode.trim() : '',
+      };
       if (creando) {
         const created = await api<Product>('/products', { method: 'POST', body: JSON.stringify(body) }, token);
         navigate(`/catalog/products/${created.id}`, { replace: true });
@@ -282,7 +306,6 @@ export function ProductDetailPage() {
 
   const totalStock = stock.reduce((sum, s) => sum + Number(s.quantity), 0);
   const m = product ? margin(product.costPrice, product.salePrice) : null;
-  const purchaseWord = form.purchaseUnit.trim() || 'bulto';
 
   const generalTab = (
     <div className="flex flex-col gap-6">
@@ -311,16 +334,48 @@ export function ProductDetailPage() {
       <div className="grid gap-3">
         <p className="text-chico font-semibold text-muted-foreground">Unidades</p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Unidad de venta" htmlFor="p-unit">
-            <Input id="p-unit" value={form.unit} disabled={soloLectura} onChange={e => set('unit', e.target.value)} />
+          <Field label="Se vende por" htmlFor="p-unit" hint={form.isWeighed ? '(pesable · siempre por kilo)' : undefined}>
+            <Select id="p-unit" value={form.unit} disabled={soloLectura || form.isWeighed} onChange={e => set('unit', e.target.value)}>
+              {SALE_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              {!SALE_UNITS.some(u => u.value === form.unit) && <option value={form.unit}>{form.unit}</option>}
+            </Select>
           </Field>
-          <Field label="Unidad de compra" htmlFor="p-punit" hint="(opcional · bulto, caja, pack)">
-            <Input id="p-punit" value={form.purchaseUnit} disabled={soloLectura} placeholder="bulto" onChange={e => set('purchaseUnit', e.target.value)} />
+          <Field label="Se compra" htmlFor="p-buymode">
+            <Select
+              id="p-buymode"
+              value={comprado ? 'pack' : 'same'}
+              disabled={soloLectura}
+              onChange={e => {
+                if (e.target.value === 'same') setForm(f => ({ ...f, purchaseUnit: '', unitsPerPurchase: '1', packBarcode: '' }));
+                else setForm(f => ({ ...f, purchaseUnit: f.purchaseUnit || 'Caja', unitsPerPurchase: f.unitsPerPurchase === '1' ? '' : f.unitsPerPurchase }));
+              }}
+            >
+              <option value="same">En la misma unidad que se vende</option>
+              <option value="pack">Por bulto cerrado (caja, pack…)</option>
+            </Select>
           </Field>
         </div>
-        <Field label={`Unidades de venta por ${purchaseWord}`} htmlFor="p-upp" hint="(1 = se compra y se vende en la misma unidad)">
-          <Input id="p-upp" type="number" min="0.001" step="0.001" value={form.unitsPerPurchase} disabled={soloLectura} onChange={e => set('unitsPerPurchase', e.target.value)} />
-        </Field>
+        {comprado && (
+          <div className="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-2">
+            <Field label="Nombre del bulto" htmlFor="p-punit">
+              <Input id="p-punit" list="pack-names" value={form.purchaseUnit} disabled={soloLectura} onChange={e => set('purchaseUnit', e.target.value)} />
+              <datalist id="pack-names">{PACK_NAMES.map(n => <option key={n} value={n} />)}</datalist>
+            </Field>
+            <Field label={`Unidades por ${form.purchaseUnit.trim() || 'bulto'}`} htmlFor="p-upp">
+              <Input id="p-upp" type="number" min="2" step="1" value={form.unitsPerPurchase} disabled={soloLectura} onChange={e => set('unitsPerPurchase', e.target.value)} />
+            </Field>
+            <Field label="Código de barras del bulto" htmlFor="p-packbc" hint="(opcional · para escanear la caja al recibir)" className="sm:col-span-2">
+              <Input id="p-packbc" value={form.packBarcode} disabled={soloLectura} onChange={e => set('packBarcode', e.target.value)} />
+            </Field>
+            {Number(form.unitsPerPurchase) > 1 ? (
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                1 {form.purchaseUnit.trim() || 'bulto'} = {Number(form.unitsPerPurchase)} {unitPlural(form.unit)}. Al recibir 1 {(form.purchaseUnit.trim() || 'bulto').toLowerCase()} entran {Number(form.unitsPerPurchase)} al stock; el costo se prorratea.
+              </p>
+            ) : form.unitsPerPurchase !== '' && (
+              <p className="text-xs text-destructive sm:col-span-2">Un bulto tiene que traer más de una unidad.</p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3">
@@ -348,7 +403,7 @@ export function ProductDetailPage() {
           <Label htmlFor="p-venc" className="font-normal">Maneja vencimiento</Label>
         </div>
         <div className="flex items-center gap-2">
-          <Checkbox id="p-pes" checked={form.isWeighed} disabled={soloLectura} onCheckedChange={c => set('isWeighed', c === true)} />
+          <Checkbox id="p-pes" checked={form.isWeighed} disabled={soloLectura} onCheckedChange={c => setForm(f => ({ ...f, isWeighed: c === true, unit: c === true ? 'kg' : f.unit }))} />
           <Label htmlFor="p-pes" className="font-normal">Pesable (se vende por peso, con balanza)</Label>
         </div>
       </div>
@@ -579,7 +634,7 @@ export function ProductDetailPage() {
               {creando && (
                 <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => navigate('/catalog/products')}>Cancelar</Button>
               )}
-              <Button type="button" size="sm" disabled={saving || !form.barcode.trim() || !form.name.trim() || !form.unit.trim()} onClick={() => void save()}>
+              <Button type="button" size="sm" disabled={saving || !form.barcode.trim() || !form.name.trim() || !form.unit.trim() || packInvalido} onClick={() => void save()}>
                 {saving && <Spinner />} {creando ? 'Crear producto' : 'Guardar cambios'}
               </Button>
             </div>

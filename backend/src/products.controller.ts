@@ -19,6 +19,29 @@ import { buscarProductoIds } from './product-search.util';
 // habilitaba cargar valores que despues rompen la facturacion.
 export const TAX_RATES = [0, 2.5, 5, 10.5, 21, 27];
 
+// Unidad de venta: lista cerrada. La columna sigue siendo texto libre por
+// compatibilidad, pero el alta/edicion solo acepta estos valores (o un alias
+// conocido que se normaliza). Los pesables se fuerzan a 'kg'.
+export const SALE_UNITS = ['unidad', 'kg', 'g', 'litro', 'ml', 'metro', 'docena'];
+const SALE_UNIT_ALIASES: Record<string, string> = {
+  u: 'unidad', un: 'unidad', uni: 'unidad', unidades: 'unidad',
+  kilo: 'kg', kilos: 'kg', kilogramo: 'kg', kgs: 'kg',
+  gr: 'g', grs: 'g', gramo: 'g', gramos: 'g',
+  l: 'litro', lt: 'litro', lts: 'litro', litros: 'litro',
+  mililitro: 'ml', mililitros: 'ml', cc: 'ml',
+  m: 'metro', mt: 'metro', mts: 'metro', metros: 'metro',
+  doc: 'docena', docenas: 'docena',
+};
+
+function normalizeSaleUnit(value: unknown, fallback: string, isWeighed: boolean): string {
+  if (isWeighed) return 'kg';
+  const raw = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!raw) return fallback;
+  const canon = SALE_UNIT_ALIASES[raw] ?? raw;
+  if (!SALE_UNITS.includes(canon)) throw new UnprocessableEntityException(`La unidad de venta debe ser una de: ${SALE_UNITS.join(', ')}`);
+  return canon;
+}
+
 function parseOptionalDecimal(value: unknown, field: string): number | null | undefined {
   if (value === undefined) return undefined;
   if (value === null || value === '') return null;
@@ -54,9 +77,9 @@ export class ProductsController {
     // Se acumulan en AND porque barcode y search pueden venir juntos y cada uno
     // aporta su propio OR: puestos como claves sueltas, el segundo pisaría al primero.
     const filters: Prisma.ProductWhereInput[] = [];
-    // Un producto puede tener codigos adicionales: el escaneo tiene que
-    // encontrarlo tanto por el principal como por cualquiera de los otros.
-    if (query.barcode) filters.push({ OR: [{ barcode: query.barcode }, { extraBarcodes: { some: { barcode: query.barcode } } }] });
+    // Un producto puede tener codigos adicionales y el codigo del bulto cerrado:
+    // el escaneo tiene que encontrarlo por cualquiera de ellos.
+    if (query.barcode) filters.push({ OR: [{ barcode: query.barcode }, { packBarcode: query.barcode }, { extraBarcodes: { some: { barcode: query.barcode } } }] });
     // Un pesable se escanea con el código de balanza (peso embebido), que no es
     // el barcode del producto: se resuelve el producto por su código interno.
     if (query.internalCode) filters.push({ internalCode: query.internalCode });
@@ -115,6 +138,35 @@ export class ProductsController {
       this.prisma.productLot.deleteMany({ where: { tenantId, productId: { in: ids } } }),
       this.prisma.product.deleteMany({ where: { tenantId, id: { in: ids } } }),
     ]);
+  }
+
+  /**
+   * "Se compra por bulto cerrado": lee purchaseUnit / unitsPerPurchase /
+   * packBarcode del body y los devuelve coherentes. Sin purchaseUnit = se
+   * compra en la misma unidad que se vende (factor 1, sin código de bulto).
+   */
+  private parsePurchasePack(body: Record<string, unknown>): { purchaseUnit: string | null; unitsPerPurchase: number; packBarcode: string | null } {
+    const purchaseUnit = typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : null;
+    const packBarcode = typeof body.packBarcode === 'string' && body.packBarcode.trim() ? body.packBarcode.trim() : null;
+    if (!purchaseUnit) {
+      if (packBarcode) throw new UnprocessableEntityException('El código del bulto necesita que primero definas el bulto de compra');
+      return { purchaseUnit: null, unitsPerPurchase: 1, packBarcode: null };
+    }
+    const n = Number(body.unitsPerPurchase);
+    if (!Number.isFinite(n) || n <= 1) throw new UnprocessableEntityException('Un bulto tiene que traer más de una unidad de venta');
+    return { purchaseUnit, unitsPerPurchase: n, packBarcode };
+  }
+
+  /** El código no puede chocar con otro producto: ni con su barcode principal,
+   *  ni con el de otro bulto, ni con un código adicional. */
+  private async assertBarcodeFree(tenantId: string, code: string, exceptProductId?: string) {
+    const notThis = exceptProductId ? { id: { not: exceptProductId } } : {};
+    const [asMain, asPack, asExtra] = await Promise.all([
+      this.prisma.product.findFirst({ where: { tenantId, barcode: code, ...notThis }, select: { id: true } }),
+      this.prisma.product.findFirst({ where: { tenantId, packBarcode: code, ...notThis }, select: { id: true } }),
+      this.prisma.productBarcode.findFirst({ where: { tenantId, barcode: code }, select: { id: true } }),
+    ]);
+    if (asMain || asPack || asExtra) throw new ConflictException(`El código ${code} ya lo usa otro producto`);
   }
 
   @Get() @RequirePermission('productos.ver')
@@ -665,10 +717,14 @@ export class ProductsController {
     const taxRate = body.taxRate === undefined ? undefined : parseOptionalDecimal(body.taxRate, 'taxRate') ?? undefined;
     assertTaxRate(taxRate);
     const internalTaxRate = parseOptionalDecimal(body.internalTaxRate, 'internalTaxRate');
-    const unitsPerPurchase = parseOptionalDecimal(body.unitsPerPurchase, 'unitsPerPurchase');
-    if (unitsPerPurchase !== undefined && unitsPerPurchase !== null && unitsPerPurchase <= 0) throw new UnprocessableEntityException('Las unidades por bulto deben ser mayores a cero');
+    const isWeighed = body.isWeighed === true;
+    const unit = normalizeSaleUnit(body.unit, 'unidad', isWeighed);
+    const pack = this.parsePurchasePack(body);
+    const barcode = (body.barcode as string).trim();
     const categoryId = typeof body.categoryId === 'string' && body.categoryId ? body.categoryId : undefined;
     if (categoryId && !(await this.prisma.category.findFirst({ where: { id: categoryId, tenantId } }))) throw new BadRequestException('Categoría no encontrada');
+    await this.assertBarcodeFree(tenantId, barcode);
+    if (pack.packBarcode) await this.assertBarcodeFree(tenantId, pack.packBarcode);
 
     const [{ product_code_seq: internalCode }] = await this.prisma.$queryRaw<Array<{ product_code_seq: number }>>`
       UPDATE tenants SET product_code_seq = product_code_seq + 1 WHERE id = ${tenantId}::uuid RETURNING product_code_seq
@@ -676,14 +732,15 @@ export class ProductsController {
 
     try {
       return await this.prisma.product.create({ data: {
-        tenantId, internalCode: String(internalCode), barcode: (body.barcode as string).trim(), name: (body.name as string).trim(), unit: (body.unit as string).trim(),
+        tenantId, internalCode: String(internalCode), barcode, name: (body.name as string).trim(), unit,
         categoryId,
         brand: typeof body.brand === 'string' ? body.brand : undefined,
         description: typeof body.description === 'string' ? body.description : undefined,
         manejaVencimiento: body.manejaVencimiento === true,
-        isWeighed: body.isWeighed === true,
-        purchaseUnit: typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : undefined,
-        unitsPerPurchase: unitsPerPurchase ?? undefined,
+        isWeighed,
+        purchaseUnit: pack.purchaseUnit ?? undefined,
+        unitsPerPurchase: pack.unitsPerPurchase,
+        packBarcode: pack.packBarcode ?? undefined,
         internalTaxRate: internalTaxRate ?? undefined,
         taxRate, minStock: minStock ?? undefined,
       } });
@@ -701,29 +758,38 @@ export class ProductsController {
     if (!current) throw new BadRequestException('Producto no encontrado');
     const barcode = typeof body.barcode === 'string' ? body.barcode.trim() : current.barcode;
     const name = typeof body.name === 'string' ? body.name.trim() : current.name;
-    const unit = typeof body.unit === 'string' ? body.unit.trim() : current.unit;
-    if (!barcode || !name || !unit) throw new BadRequestException('barcode, name y unit son obligatorios');
+    if (!barcode || !name) throw new BadRequestException('barcode y name son obligatorios');
     // Los precios (costo y venta) se cargan solo desde el módulo de Precios.
     const minStock = parseOptionalDecimal(body.minStock, 'minStock');
     const taxRate = parseOptionalDecimal(body.taxRate, 'taxRate');
     assertTaxRate(taxRate);
     const internalTaxRate = parseOptionalDecimal(body.internalTaxRate, 'internalTaxRate');
-    const unitsPerPurchase = parseOptionalDecimal(body.unitsPerPurchase, 'unitsPerPurchase');
-    if (unitsPerPurchase !== undefined && unitsPerPurchase !== null && unitsPerPurchase <= 0) throw new UnprocessableEntityException('Las unidades por bulto deben ser mayores a cero');
+    const isWeighed = typeof body.isWeighed === 'boolean' ? body.isWeighed : current.isWeighed;
+    const unit = body.unit === undefined && !isWeighed ? current.unit : normalizeSaleUnit(body.unit, current.unit, isWeighed);
     const categoryId = body.categoryId === null || body.categoryId === '' ? null : typeof body.categoryId === 'string' ? body.categoryId : current.categoryId;
     if (categoryId && !(await this.prisma.category.findFirst({ where: { id: categoryId, tenantId } }))) throw new BadRequestException('Categoría no encontrada');
+
+    // El bulto de compra solo se toca si el body trae alguno de sus campos
+    // (así el PUT parcial de activar/desactivar no lo borra).
+    const tocaPack = body.purchaseUnit !== undefined || body.unitsPerPurchase !== undefined || body.packBarcode !== undefined;
+    const pack = tocaPack
+      ? this.parsePurchasePack(body)
+      : { purchaseUnit: current.purchaseUnit, unitsPerPurchase: Number(current.unitsPerPurchase), packBarcode: current.packBarcode };
+    if (barcode !== current.barcode) await this.assertBarcodeFree(tenantId, barcode, id);
+    if (pack.packBarcode && pack.packBarcode !== current.packBarcode) await this.assertBarcodeFree(tenantId, pack.packBarcode, id);
 
     try {
       return await this.prisma.product.update({ where: { id }, data: {
         barcode, name, unit,
         categoryId,
-        brand: typeof body.brand === 'string' ? body.brand.trim() : null,
-        description: typeof body.description === 'string' ? body.description.trim() : null,
+        brand: body.brand === undefined ? current.brand : (typeof body.brand === 'string' && body.brand.trim() ? body.brand.trim() : null),
+        description: body.description === undefined ? current.description : (typeof body.description === 'string' && body.description.trim() ? body.description.trim() : null),
         manejaVencimiento: typeof body.manejaVencimiento === 'boolean' ? body.manejaVencimiento : current.manejaVencimiento,
-        isWeighed: typeof body.isWeighed === 'boolean' ? body.isWeighed : current.isWeighed,
+        isWeighed,
         isActive: typeof body.isActive === 'boolean' ? body.isActive : current.isActive,
-        purchaseUnit: body.purchaseUnit === undefined ? current.purchaseUnit : (typeof body.purchaseUnit === 'string' && body.purchaseUnit.trim() ? body.purchaseUnit.trim() : null),
-        unitsPerPurchase: unitsPerPurchase === undefined || unitsPerPurchase === null ? current.unitsPerPurchase : unitsPerPurchase,
+        purchaseUnit: pack.purchaseUnit,
+        unitsPerPurchase: pack.unitsPerPurchase,
+        packBarcode: pack.packBarcode,
         internalTaxRate: internalTaxRate === undefined || internalTaxRate === null ? current.internalTaxRate : internalTaxRate,
         minStock: minStock === undefined ? current.minStock : minStock,
         taxRate: taxRate === undefined ? current.taxRate : (taxRate ?? current.taxRate),

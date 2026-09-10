@@ -18,6 +18,24 @@ export class PurchasesService {
     return n;
   }
 
+  /**
+   * Resuelve el producto de una línea. Por id si viene; si no, por código: primero
+   * el barcode del producto, y si no matchea, el código del bulto cerrado
+   * (packBarcode) — en ese caso `scannedPack` avisa que hay que cargar por bulto.
+   */
+  private async resolveLineProduct(tenantId: string, opts: { productId?: string; barcode?: string }) {
+    if (opts.productId) {
+      const product = await this.prisma.product.findFirst({ where: { tenantId, id: opts.productId, isActive: true } });
+      return { product, scannedPack: false };
+    }
+    const code = (opts.barcode ?? '').trim();
+    if (!code) return { product: null, scannedPack: false };
+    const byBarcode = await this.prisma.product.findFirst({ where: { tenantId, barcode: code, isActive: true } });
+    if (byBarcode) return { product: byBarcode, scannedPack: false };
+    const byPack = await this.prisma.product.findFirst({ where: { tenantId, packBarcode: code, isActive: true } });
+    return { product: byPack, scannedPack: !!byPack };
+  }
+
   private parseOtherTaxes(raw: unknown): OtherTax[] {
     if (!Array.isArray(raw)) return [];
     return (raw as OtherTaxInput[]).map(item => {
@@ -44,7 +62,7 @@ export class PurchasesService {
     const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitFactor: number; unitCost: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
     for (const line of rawLines) {
       const barcode = typeof line.barcode === 'string' ? line.barcode.trim() : '';
-      const product = barcode ? await this.prisma.product.findFirst({ where: { tenantId: user.tenantId, barcode, isActive: true } }) : null;
+      const { product, scannedPack } = await this.resolveLineProduct(user.tenantId, { barcode });
       if (!product) throw new UnprocessableEntityException(`No existe un producto activo con barcode ${barcode || '(vacío)'}`);
       const quantity = this.money(line.quantity, 'quantity');
       const unitCost = this.money(line.unitCost, 'unitCost');
@@ -53,8 +71,9 @@ export class PurchasesService {
       const productLotId = typeof line.productLotId === 'string' && line.productLotId ? line.productLotId : undefined;
       if (product.manejaVencimiento && !productLotId) throw new UnprocessableEntityException(`El producto ${product.name} requiere lote`);
       if (productLotId && !(await this.prisma.productLot.findFirst({ where: { id: productLotId, tenantId: user.tenantId, productId: product.id } }))) throw new UnprocessableEntityException('El lote no corresponde al producto');
-      // El factor se resuelve del producto, no del cliente, y queda congelado en la linea.
-      const unitFactor = line.byPackage === true ? Number(product.unitsPerPurchase) : 1;
+      // El factor se resuelve del producto, no del cliente, y queda congelado en la
+      // linea. Escanear el código del bulto ya implica cargar por bulto.
+      const unitFactor = (scannedPack || line.byPackage === true) ? Number(product.unitsPerPurchase) : 1;
       const lineSubtotal = Number((quantity * unitCost).toFixed(2));
       const lineTax = Number((lineSubtotal * taxRate / 100).toFixed(2));
       lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitFactor, unitCost, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
@@ -118,7 +137,7 @@ export class PurchasesService {
     for (const raw of rawLines) {
       const productId = typeof raw.productId === 'string' ? raw.productId : '';
       const barcode = typeof raw.barcode === 'string' ? raw.barcode.trim() : '';
-      const product = await this.prisma.product.findFirst({ where: { tenantId: user.tenantId, isActive: true, ...(productId ? { id: productId } : { barcode }) } });
+      const { product, scannedPack } = await this.resolveLineProduct(user.tenantId, { productId: productId || undefined, barcode });
       if (!product) throw new UnprocessableEntityException(`No existe el producto ${barcode || productId || '(vacío)'}`);
       const quantity = this.money(raw.quantity, 'quantity'); const unitCost = this.money(raw.unitCost, 'unitCost'); const taxRate = this.money(raw.taxRate ?? 0, 'taxRate');
       if (quantity <= 0) throw new UnprocessableEntityException('quantity debe ser mayor a cero');
@@ -128,7 +147,7 @@ export class PurchasesService {
       // rawLines puede venir del cliente (trae byPackage) o ser las lineas ya
       // guardadas de la factura (traen unitFactor); en ese caso se preserva.
       const stored = 'unitFactor' in raw && raw.unitFactor !== undefined && raw.unitFactor !== null ? Number(raw.unitFactor) : null;
-      const byPackage = 'byPackage' in raw && raw.byPackage === true;
+      const byPackage = ('byPackage' in raw && raw.byPackage === true) || scannedPack;
       const unitFactor = stored ?? (byPackage ? Number(product.unitsPerPurchase) : 1);
       const lineSubtotal = Number((quantity * unitCost).toFixed(2)); const lineTax = Number((lineSubtotal * taxRate / 100).toFixed(2));
       lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitFactor, unitCost, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });

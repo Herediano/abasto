@@ -402,9 +402,9 @@
     "semantic_hash": "6c7454d7a61501ad0416bd3efe085567"
   },
   "backend/src/products.controller.ts": {
-    "mtime": 1789027563.5130453,
-    "seen": 1789027621.283352,
-    "ast_hash": "c5d9bbe2cfc691d3d171c4bca123c422",
+    "mtime": 1789028108.0552132,
+    "seen": 1789028424.4961472,
+    "ast_hash": "abe5161a5029218ebbf99e6086c945af",
     "semantic_hash": ""
   },
   "backend/src/promotions.controller.ts": {
@@ -420,9 +420,9 @@
     "semantic_hash": ""
   },
   "backend/src/purchases.service.ts": {
-    "mtime": 1788712171.812225,
-    "seen": 1789020040.3755534,
-    "ast_hash": "79dd4c732826d6de4a1009273b2d3841",
+    "mtime": 1789028138.647949,
+    "seen": 1789028424.4964237,
+    "ast_hash": "f7b7d011ce8230b19cce912d172b4b31",
     "semantic_hash": ""
   },
   "backend/src/rangos.controller.ts": {
@@ -654,9 +654,9 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/api.ts": {
-    "mtime": 1788925549.861353,
-    "seen": 1789020040.3756747,
-    "ast_hash": "ec4eaeccad66821749d2113869334d8b",
+    "mtime": 1789028151.5958462,
+    "seen": 1789028424.504887,
+    "ast_hash": "a456918b9e61422bd351edf1b2e5975c",
     "semantic_hash": ""
   },
   "frontend/src/lib/auth-context.tsx": {
@@ -732,9 +732,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/product-detail-page.tsx": {
-    "mtime": 1789027563.514046,
-    "seen": 1789027621.2956493,
-    "ast_hash": "5a199ad832c1b067e8eee46a436aef50",
+    "mtime": 1789028283.2862382,
+    "seen": 1789028424.5080645,
+    "ast_hash": "9012e77e1be37af75fcbb4b8454ce82b",
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/products-page.tsx": {
@@ -798,9 +798,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/stock/stock-in-page.tsx": {
-    "mtime": 1789012963.1993368,
-    "seen": 1789020040.375742,
-    "ast_hash": "11aeb90f74d58294211f1e1dcc8054a8",
+    "mtime": 1789028292.3514707,
+    "seen": 1789028424.509776,
+    "ast_hash": "b894ff1bb24d031c43fcdc16f3d65dfe",
     "semantic_hash": ""
   },
   "frontend/src/pages/stock/stock-out-page.tsx": {

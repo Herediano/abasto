@@ -148,7 +148,10 @@ export function StockInPage() {
         .then(r => {
           const found = r.items[0] ?? null;
           setProduct(found);
-          if (found) setLine(l => (l.barcode.trim() === barcode ? { ...l, taxRate: found.taxRate, packSize: found.unitsPerPurchase ?? '1', byPackage: false } : l));
+          // Si lo que se escaneó es el código del bulto cerrado, se carga por
+          // bulto automáticamente (el backend hace lo mismo al confirmar).
+          const esBulto = !!found?.packBarcode && found.packBarcode === barcode;
+          if (found) setLine(l => (l.barcode.trim() === barcode ? { ...l, taxRate: found.taxRate, packSize: found.unitsPerPurchase ?? '1', byPackage: esBulto } : l));
         })
         .catch(() => setProduct(null))
         .finally(() => setLookupPending(false));

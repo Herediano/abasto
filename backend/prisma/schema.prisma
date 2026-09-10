@@ -693,9 +693,21 @@ model Product {
   name                 String
   description          String?
   categoryId           String?               @map("category_id") @db.Uuid
+  // Unidad de venta. Texto libre en la base, pero el alta/edición lo valida
+  // contra una lista fija (SALE_UNITS en products.controller): unidad, kg, g,
+  // litro, ml, metro, docena. Cuando isWeighed = true se fuerza a 'kg'.
   unit                 String
+  // "Se compra por bulto cerrado": nombre del bulto (Caja, Pack, Pallet…) y
+  // cuántas unidades de venta trae. purchaseUnit null = se compra en la misma
+  // unidad que se vende (unitsPerPurchase queda en 1). El factor se congela en
+  // PurchaseInvoiceLine.unitFactor al confirmar la factura.
   purchaseUnit         String?               @map("purchase_unit")
   unitsPerPurchase     Decimal               @default(1) @map("units_per_purchase") @db.Decimal(14, 3)
+  // Código de barras del bulto cerrado (el de fábrica de la caja). Al recibir
+  // mercadería, escanear este código resuelve el producto y carga por bulto
+  // automáticamente. Único dentro del tenant contra products.barcode,
+  // products.pack_barcode y product_barcodes.barcode (se valida en el controller).
+  packBarcode          String?               @map("pack_barcode")
   brand                String?
   costPrice            Decimal?              @map("cost_price") @db.Decimal(14, 2)
   // CACHE del precio vigente en la lista base. La fuente de verdad es

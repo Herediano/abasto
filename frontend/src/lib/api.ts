@@ -113,6 +113,7 @@ export type Product = {
   unit: string;
   purchaseUnit?: string | null;
   unitsPerPurchase?: string | null;
+  packBarcode?: string | null;
   brand?: string | null;
   costPrice?: string | null;
   salePrice?: string | null;
