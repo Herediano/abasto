@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Package, Plus, Trash } from '@phosphor-icons/react';
+import { Package, PencilSimple, Plus, Star, Trash } from '@phosphor-icons/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-sc
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ApiError, api, errorMessage, type Branch, type Category, type Lot, type PriceList, type PriceTier, type Product, type StockItem } from '@/lib/api';
+import { ApiError, api, errorMessage, type Branch, type Category, type Lot, type PriceList, type PriceTier, type Product, type ProductSupplierLink, type StockItem, type Supplier } from '@/lib/api';
 import { fecha, money, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -123,6 +123,13 @@ export function ProductDetailPage() {
   const [savingBarcode, setSavingBarcode] = useState(false);
   const [tierForm, setTierForm] = useState({ minQty: '', price: '', priceListId: '' });
   const [savingTier, setSavingTier] = useState(false);
+  // Proveedores del producto (se cargan a mano además de venir de las compras).
+  const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
+  const [newSupplier, setNewSupplier] = useState({ supplierId: '', supplierCode: '', cost: '' });
+  const [savingSupplier, setSavingSupplier] = useState(false);
+  const [editSupplierId, setEditSupplierId] = useState('');
+  const [editSupplier, setEditSupplier] = useState({ supplierCode: '', cost: '' });
+  const [removeSupplierLink, setRemoveSupplierLink] = useState<ProductSupplierLink | null>(null);
   // Reposición por sucursal (solo si el negocio tiene más de una): pisa el valor
   // general del producto. Se guarda con la misma barra "Guardar cambios".
   const [ruleBranchId, setRuleBranchId] = useState('');
@@ -174,7 +181,8 @@ export function ProductDetailPage() {
     api<Category[]>('/categories', {}, token).then(setCategories).catch(() => {});
     api<PriceList[]>('/price-lists', {}, token).then(setPriceLists).catch(() => {});
     api<Branch[]>('/branches', {}, token).then(setBranches).catch(() => {});
-  }, [token]);
+    if (can('proveedores.ver')) api<Supplier[]>('/suppliers', {}, token).then(setSupplierOptions).catch(() => {});
+  }, [token, can]);
 
   useEffect(() => {
     if (creando) {
@@ -314,6 +322,49 @@ export function ProductDetailPage() {
       await loadTiers();
     } catch (err) {
       setError(errorMessage(err));
+    }
+  }
+
+  async function addSupplier() {
+    if (!newSupplier.supplierId) return;
+    setSavingSupplier(true);
+    setError('');
+    try {
+      await api(`/products/${id}/suppliers`, { method: 'POST', body: JSON.stringify({
+        supplierId: newSupplier.supplierId,
+        supplierCode: newSupplier.supplierCode.trim() || undefined,
+        cost: newSupplier.cost.trim() || undefined,
+      }) }, token);
+      setNewSupplier({ supplierId: '', supplierCode: '', cost: '' });
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingSupplier(false);
+    }
+  }
+
+  async function patchSupplier(supplierId: string, body: Record<string, unknown>) {
+    setError('');
+    try {
+      await api(`/products/${id}/suppliers/${supplierId}`, { method: 'PATCH', body: JSON.stringify(body) }, token);
+      setEditSupplierId('');
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function doRemoveSupplier() {
+    if (!removeSupplierLink) return;
+    setError('');
+    try {
+      await api(`/products/${id}/suppliers/${removeSupplierLink.supplierId}`, { method: 'DELETE' }, token);
+      setRemoveSupplierLink(null);
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+      setRemoveSupplierLink(null);
     }
   }
 
@@ -561,28 +612,97 @@ export function ProductDetailPage() {
         )}
       </ModuleSection>
 
-      <ModuleSection title="Proveedores" description="Se arma solo con las compras registradas de este producto.">
-        {(product?.suppliers ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">Todavía no se registraron compras de este producto.</p>
-        ) : (
+      <ModuleSection title="Proveedores" description="Quién te vende este producto. Se completa solo al registrar compras y podés agregar más a mano. La ★ marca a quién pedirle al reponer.">
+        {(product?.suppliers ?? []).length > 0 && (
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-9" />
                 <TableHead>Proveedor</TableHead>
-                <TableHead className="text-right">Último costo</TableHead>
+                <TableHead className="text-right">Costo</TableHead>
                 <TableHead>Última compra</TableHead>
+                {puedeEditar && <TableHead className="w-16" />}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(product?.suppliers ?? []).map(s => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.supplierName}</TableCell>
-                  <TableCell className="text-right">{s.lastCost ? money(Number(s.lastCost)) : '—'}</TableCell>
-                  <TableCell>{fecha(s.lastPurchaseAt)}</TableCell>
-                </TableRow>
-              ))}
+              {(product?.suppliers ?? []).map(s => {
+                const editing = editSupplierId === s.supplierId;
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell className="w-9">
+                      <button
+                        type="button"
+                        disabled={!puedeEditar || s.isPreferred}
+                        onClick={() => void patchSupplier(s.supplierId, { preferred: true })}
+                        className={s.isPreferred ? 'text-primary' : 'text-placeholder hover:text-foreground disabled:hover:text-placeholder'}
+                        aria-label={s.isPreferred ? 'Proveedor principal' : 'Marcar como principal'}
+                        title={s.isPreferred ? 'Principal' : 'Marcar como principal'}
+                      >
+                        <Star weight={s.isPreferred ? 'fill' : 'regular'} />
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{s.supplierName}</div>
+                      {editing ? (
+                        <Input value={editSupplier.supplierCode} placeholder="Código del proveedor" onChange={e => setEditSupplier(f => ({ ...f, supplierCode: e.target.value }))} className="mt-1 h-8 max-w-40" />
+                      ) : s.supplierCode ? (
+                        <div className="text-chico text-placeholder">Cód. {s.supplierCode}</div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editing
+                        ? <Input type="number" min="0" step="0.01" value={editSupplier.cost} onChange={e => setEditSupplier(f => ({ ...f, cost: e.target.value }))} className="h-8 max-w-28 text-right" />
+                        : (s.lastCost ? money(Number(s.lastCost)) : <span className="text-placeholder">—</span>)}
+                    </TableCell>
+                    <TableCell>{s.lastPurchaseAt ? fecha(s.lastPurchaseAt) : <span className="text-placeholder">a mano</span>}</TableCell>
+                    {puedeEditar && (
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {editing ? (
+                            <>
+                              <Button type="button" size="sm" variant="outline" onClick={() => void patchSupplier(s.supplierId, { supplierCode: editSupplier.supplierCode.trim() || null, cost: editSupplier.cost.trim() || null })}>Guardar</Button>
+                              <Button type="button" size="sm" variant="ghost" onClick={() => setEditSupplierId('')}>Cancelar</Button>
+                            </>
+                          ) : (
+                            <>
+                              <button type="button" onClick={() => { setEditSupplierId(s.supplierId); setEditSupplier({ supplierCode: s.supplierCode ?? '', cost: s.lastCost ?? '' }); }} className="text-muted-foreground hover:text-foreground" aria-label={`Editar ${s.supplierName}`}>
+                                <PencilSimple className="size-4" />
+                              </button>
+                              <button type="button" onClick={() => setRemoveSupplierLink(s)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${s.supplierName}`}>
+                                <Trash className="size-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
+        )}
+        {(product?.suppliers ?? []).length === 0 && (
+          <p className="text-sm text-muted-foreground">Todavía no hay proveedores para este producto.</p>
+        )}
+        {puedeEditar && can('proveedores.ver') && (
+          <form className="flex flex-wrap items-end gap-2" onSubmit={e => { e.preventDefault(); void addSupplier(); }}>
+            <Field label="Agregar proveedor" htmlFor="add-supplier" className="min-w-48">
+              <Select id="add-supplier" value={newSupplier.supplierId} onChange={e => setNewSupplier(f => ({ ...f, supplierId: e.target.value }))}>
+                <option value="">Elegir…</option>
+                {supplierOptions.filter(o => !(product?.suppliers ?? []).some(l => l.supplierId === o.id)).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </Select>
+            </Field>
+            <Field label="Código" htmlFor="add-supplier-code" className="max-w-32" hint="(opcional)">
+              <Input id="add-supplier-code" value={newSupplier.supplierCode} onChange={e => setNewSupplier(f => ({ ...f, supplierCode: e.target.value }))} />
+            </Field>
+            <Field label="Costo" htmlFor="add-supplier-cost" className="max-w-28" hint="(opcional)">
+              <Input id="add-supplier-cost" type="number" min="0" step="0.01" value={newSupplier.cost} onChange={e => setNewSupplier(f => ({ ...f, cost: e.target.value }))} />
+            </Field>
+            <Button type="submit" variant="outline" size="sm" disabled={savingSupplier || !newSupplier.supplierId}>
+              {savingSupplier ? <Spinner /> : <Plus />} Agregar
+            </Button>
+          </form>
         )}
       </ModuleSection>
     </div>
@@ -766,6 +886,25 @@ export function ProductDetailPage() {
             <Button type="button" variant="outline" onClick={() => setDeactivatePrompt(false)}>Cancelar</Button>
             <Button type="button" onClick={() => void setActive(false)} disabled={busy}>
               {busy && <Spinner />} Desactivar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!removeSupplierLink} onOpenChange={o => { if (!o) setRemoveSupplierLink(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quitar «{removeSupplierLink?.supplierName}»</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {removeSupplierLink?.lastPurchaseAt
+              ? 'Este proveedor tiene compras registradas de este producto. Quitarlo del listado no borra esas compras —siguen en el historial y en el stock—, solo deja de figurar como proveedor del producto.'
+              : 'Se quita este proveedor del producto. No afecta nada más.'}
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRemoveSupplierLink(null)}>Cancelar</Button>
+            <Button type="button" variant="destructive" onClick={() => void doRemoveSupplier()}>
+              <Trash /> Quitar
             </Button>
           </DialogFooter>
         </DialogContent>

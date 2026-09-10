@@ -822,8 +822,12 @@ model ProductBarcode {
   @@map("product_barcodes")
 }
 
-// Se completa sola al confirmar cada factura de compra: quien nos vende cada
-// producto, a que codigo lo pide el proveedor y a cuanto fue la ultima compra.
+// Quien nos vende cada producto: a que codigo lo pide el proveedor y a cuanto
+// fue la ultima compra. Lo llena solo el confirmar de cada factura de compra,
+// y ademas se puede cargar a mano desde la pantalla del producto (un negocio
+// que migra con años de compras no las va a recargar todas).
+// lastPurchaseAt = null significa "vinculado a mano, todavia no le compramos";
+// lastCost es el ultimo costo conocido (estimado a mano hasta que haya compra).
 model ProductSupplier {
   id             String    @id @default(uuid()) @db.Uuid
   tenantId       String    @map("tenant_id") @db.Uuid
@@ -832,6 +836,9 @@ model ProductSupplier {
   supplierCode   String?   @map("supplier_code")
   lastCost       Decimal?  @map("last_cost") @db.Decimal(14, 2)
   lastPurchaseAt DateTime? @map("last_purchase_at") @db.Timestamptz(6)
+  // El proveedor por defecto del producto: a quien se le pide al reponer. Solo
+  // uno por producto (el service desmarca los demas al marcar este).
+  isPreferred    Boolean   @default(false) @map("is_preferred")
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant         Tenant    @relation(fields: [tenantId], references: [id])

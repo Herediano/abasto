@@ -118,6 +118,13 @@ export class PurchasesService {
         });
         await tx.stockMovement.create({ data: { tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: baseQuantity, movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoice.id, notes: `Factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}` } });
       }
+      // Si algún producto de la factura quedó sin proveedor preferido, se toma el
+      // más antiguo (para que Reposición pueda decir a quién pedirle).
+      for (const productId of [...new Set(invoice.lines.map(l => l.productId))]) {
+        if (await tx.productSupplier.findFirst({ where: { tenantId, productId, isPreferred: true }, select: { id: true } })) continue;
+        const primero = await tx.productSupplier.findFirst({ where: { tenantId, productId }, orderBy: { createdAt: 'asc' }, select: { id: true } });
+        if (primero) await tx.productSupplier.update({ where: { id: primero.id }, data: { isPreferred: true } });
+      }
       return tx.purchaseInvoice.update({ where: { id: invoice.id }, data: { status: PurchaseInvoiceStatus.confirmed }, include: { supplier: true, lines: true, warehouse: true } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }

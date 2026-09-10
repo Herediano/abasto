@@ -518,9 +518,10 @@ acción en dos lugares (y peor, una destructiva) es el error a no cometer.
   `General` (identificación · **códigos de barras** —principal, del bulto y
   alternativos, todos en un solo bloque— · unidades · impuestos · tipo) ·
   `Stock` (**reposición** —mínimo + reponer hasta, acá y en ningún otro lado—,
-  existencias por depósito, proveedores) · `Precios` (costo/venta, escalas,
-  historial). El resumen (`SummaryLine` + un renglón de contexto) va arriba de
-  las pestañas.
+  existencias por depósito, **proveedores** —editable: agregar a mano, código
+  del proveedor, costo, y la ★ del preferido—) · `Precios` (costo/venta,
+  escalas, historial). El resumen (`SummaryLine` + un renglón de contexto) va
+  arriba de las pestañas.
 - **Los cambios masivos son por Excel, no con checkbox.** Exportar filtrado →
   editar en la planilla → reimportar. No hay selección múltiple en las filas: el
   volumen de un catálogo mayorista se edita mejor en Excel, y evita repetir en
@@ -703,11 +704,19 @@ datos a alguien de afuera.**
   bulto cerrado (nombre + unidades); el código del bulto se carga en el bloque
   «Códigos de barras» junto al principal y los alternativos —un solo lugar para
   cualquier código— y al recibir carga por bulto solo; el IVA es una situación
-  (con `exento` y `no gravado`, que no son 0 %) en un bloque que arranca plegado;
-  la reposición vive solo en la pestaña Stock —mínimo + «reponer hasta»—, con
+  (con `exento` y `no gravado`, que no son 0 %) como dos campos normales; la
+  reposición vive solo en la pestaña Stock —mínimo + «reponer hasta»—, con
   override por sucursal (`ProductStockRule`) que **solo aparece si el negocio
   tiene más de una sucursal**, y Reposición sugiere cuánto pedir redondeado al
   bulto.
+- **Proveedores del producto, cargables a mano.** `ProductSupplier` ya no se
+  llena solo al confirmar compras: desde la pestaña Stock se agregan proveedores
+  a mano (código del proveedor + costo de referencia), se marca el preferido con
+  la ★ (uno por producto, a quien Reposición sugiere pedirle) y se quitan —con
+  aviso si tienen compras registradas—. Un negocio que migra con años de compras
+  no las va a recargar; ahora igual puede armar el «a quién le compro qué».
+  `lastPurchaseAt = null` = «cargado a mano». Endpoints
+  `POST/PATCH/DELETE /products/:id/suppliers`.
 - **Margen en el gráfico de Ventas**: `SaleLine.unitCost` congela el costo del
   producto (`Product.costPrice`) al vender; el gráfico suma una métrica «Margen»
   (subtotal neto de promos − costo, comparada con el período anterior). Las

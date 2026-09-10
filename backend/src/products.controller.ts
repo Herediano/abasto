@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req, Res, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Prisma } from '@prisma/client';
 import ExcelJS from 'exceljs';
@@ -322,6 +322,7 @@ export class ProductsController {
           ...(branchId ? [{ stockRules: { some: { branchId, minStock: { not: null } } } }] : []),
         ],
       },
+      include: { suppliers: { where: { isPreferred: true }, include: { supplier: { select: { name: true } } }, take: 1 } },
     });
     if (!products.length) return [];
     const ids = products.map(p => p.id);
@@ -334,13 +335,18 @@ export class ProductsController {
         const eff = effectiveStockRule(p, ruleMap.get(p.id));
         const currentStock = sumMap.get(p.id) ?? 0;
         const packSize = p.purchaseUnit ? Number(p.unitsPerPurchase) : 1;
+        const pref = p.suppliers[0];
+        const { suppliers, ...rest } = p;
+        void suppliers;
         return {
-          ...p,
+          ...rest,
           currentStock,
           minStock: eff.minStock == null ? null : String(eff.minStock),
           maxStock: eff.maxStock == null ? null : String(eff.maxStock),
           branchOverride: eff.branchOverride,
           suggestedOrder: suggestedOrder(currentStock, eff.maxStock, packSize),
+          preferredSupplierName: pref?.supplier.name ?? null,
+          preferredSupplierCode: pref?.supplierCode ?? null,
           _min: eff.minStock,
         };
       })
@@ -646,7 +652,7 @@ export class ProductsController {
       include: {
         category: { select: { name: true } },
         extraBarcodes: { orderBy: { createdAt: 'asc' } },
-        suppliers: { include: { supplier: { select: { name: true } } }, orderBy: { lastPurchaseAt: 'desc' } },
+        suppliers: { include: { supplier: { select: { name: true } } }, orderBy: [{ isPreferred: 'desc' }, { lastPurchaseAt: 'desc' }, { supplier: { name: 'asc' } }] },
         priceHistory: { orderBy: { createdAt: 'desc' }, take: 50 },
         stockRules: { include: { branch: { select: { id: true, name: true } } } },
       },
@@ -655,7 +661,7 @@ export class ProductsController {
       ...product,
       categoryName: product.category?.name ?? null,
       category: undefined,
-      suppliers: product.suppliers.map(s => ({ id: s.id, supplierId: s.supplierId, supplierName: s.supplier.name, supplierCode: s.supplierCode, lastCost: s.lastCost, lastPurchaseAt: s.lastPurchaseAt })),
+      suppliers: product.suppliers.map(s => ({ id: s.id, supplierId: s.supplierId, supplierName: s.supplier.name, supplierCode: s.supplierCode, lastCost: s.lastCost, lastPurchaseAt: s.lastPurchaseAt, isPreferred: s.isPreferred })),
       stockRules: product.stockRules.map(r => ({ branchId: r.branchId, branchName: r.branch.name, minStock: r.minStock, maxStock: r.maxStock })),
       activeBranchId: request.user.branchId ?? null,
     };
@@ -761,6 +767,69 @@ export class ProductsController {
     if (!fila) throw new BadRequestException('Escala no encontrada');
     await this.prisma.priceTier.delete({ where: { id: tierId } });
     return { deleted: true };
+  }
+
+  // --- Proveedores del producto -------------------------------------------
+  // El vínculo se llena solo al confirmar compras, pero también se carga a mano
+  // (negocios que migran con años de compras sin recargar). El proveedor
+  // marcado como preferido es a quien se le pide al reponer; hay uno solo.
+
+  private async ensurePreferredSupplier(tx: Prisma.TransactionClient, tenantId: string, productId: string) {
+    const hay = await tx.productSupplier.findFirst({ where: { tenantId, productId, isPreferred: true }, select: { id: true } });
+    if (hay) return;
+    const primero = await tx.productSupplier.findFirst({ where: { tenantId, productId }, orderBy: { createdAt: 'asc' }, select: { id: true } });
+    if (primero) await tx.productSupplier.update({ where: { id: primero.id }, data: { isPreferred: true } });
+  }
+
+  @Post(':id/suppliers')
+  @RequirePermission('productos.editar')
+  async addSupplier(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: { supplierId?: unknown; supplierCode?: unknown; cost?: unknown; preferred?: unknown }) {
+    const tenantId = request.user.tenantId;
+    if (!(await this.prisma.product.findFirst({ where: { id, tenantId }, select: { id: true } }))) throw new BadRequestException('Producto no encontrado');
+    const supplierId = typeof body.supplierId === 'string' ? body.supplierId : '';
+    if (!supplierId || !(await this.prisma.supplier.findFirst({ where: { id: supplierId, tenantId, isActive: true }, select: { id: true } }))) throw new BadRequestException('Proveedor no encontrado');
+    if (await this.prisma.productSupplier.findFirst({ where: { tenantId, productId: id, supplierId }, select: { id: true } })) throw new ConflictException('Ese proveedor ya está asociado al producto');
+    const supplierCode = typeof body.supplierCode === 'string' && body.supplierCode.trim() ? body.supplierCode.trim() : null;
+    const lastCost = parseOptionalDecimal(body.cost, 'cost') ?? null;
+    const preferred = body.preferred === true;
+    return this.prisma.$transaction(async tx => {
+      if (preferred) await tx.productSupplier.updateMany({ where: { tenantId, productId: id }, data: { isPreferred: false } });
+      const row = await tx.productSupplier.create({ data: { tenantId, productId: id, supplierId, supplierCode, lastCost, isPreferred: preferred } });
+      await this.ensurePreferredSupplier(tx, tenantId, id);
+      return row;
+    });
+  }
+
+  @Patch(':id/suppliers/:supplierId')
+  @RequirePermission('productos.editar')
+  async updateSupplier(@Req() request: AuthRequest, @Param('id') id: string, @Param('supplierId') supplierId: string, @Body() body: { supplierCode?: unknown; cost?: unknown; preferred?: unknown }) {
+    const tenantId = request.user.tenantId;
+    const link = await this.prisma.productSupplier.findFirst({ where: { tenantId, productId: id, supplierId } });
+    if (!link) throw new BadRequestException('El proveedor no está asociado al producto');
+    const data: Prisma.ProductSupplierUncheckedUpdateInput = {};
+    if ('supplierCode' in body) data.supplierCode = typeof body.supplierCode === 'string' && body.supplierCode.trim() ? body.supplierCode.trim() : null;
+    if ('cost' in body) data.lastCost = parseOptionalDecimal(body.cost, 'cost') ?? null;
+    return this.prisma.$transaction(async tx => {
+      if (body.preferred === true) await tx.productSupplier.updateMany({ where: { tenantId, productId: id, NOT: { supplierId } }, data: { isPreferred: false } });
+      if ('preferred' in body) data.isPreferred = body.preferred === true;
+      const row = await tx.productSupplier.update({ where: { id: link.id }, data });
+      await this.ensurePreferredSupplier(tx, tenantId, id);
+      return row;
+    });
+  }
+
+  @Delete(':id/suppliers/:supplierId')
+  @RequirePermission('productos.editar')
+  async removeSupplier(@Req() request: AuthRequest, @Param('id') id: string, @Param('supplierId') supplierId: string) {
+    const tenantId = request.user.tenantId;
+    const link = await this.prisma.productSupplier.findFirst({ where: { tenantId, productId: id, supplierId } });
+    if (!link) throw new BadRequestException('El proveedor no está asociado al producto');
+    const hadPurchases = link.lastPurchaseAt != null;
+    await this.prisma.$transaction(async tx => {
+      await tx.productSupplier.delete({ where: { id: link.id } });
+      if (link.isPreferred) await this.ensurePreferredSupplier(tx, tenantId, id);
+    });
+    return { deleted: true, hadPurchases };
   }
 
   @Get(':id/lots') @RequirePermission('stock.ver')

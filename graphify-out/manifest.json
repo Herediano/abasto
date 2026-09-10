@@ -402,9 +402,9 @@
     "semantic_hash": ""
   },
   "backend/src/products.controller.ts": {
-    "mtime": 1789030332.124574,
-    "seen": 1789030488.2071214,
-    "ast_hash": "8fe4caa59afce42a8f3df4f4450d79b1",
+    "mtime": 1789030892.2776754,
+    "seen": 1789031299.9305863,
+    "ast_hash": "fcb44e84d6abdd3091d5a35617d7df8b",
     "semantic_hash": ""
   },
   "backend/src/promotions.controller.ts": {
@@ -420,9 +420,9 @@
     "semantic_hash": ""
   },
   "backend/src/purchases.service.ts": {
-    "mtime": 1789028138.647949,
-    "seen": 1789028424.4964237,
-    "ast_hash": "f7b7d011ce8230b19cce912d172b4b31",
+    "mtime": 1789030904.6837416,
+    "seen": 1789031299.9308681,
+    "ast_hash": "9a32788da388a09e00afd5ae5a77557f",
     "semantic_hash": ""
   },
   "backend/src/rangos.controller.ts": {
@@ -654,9 +654,9 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/api.ts": {
-    "mtime": 1789030348.7316997,
-    "seen": 1789030488.2176874,
-    "ast_hash": "7f2cf4e5a3eb60d5d229bb3d21766ced",
+    "mtime": 1789030932.0799918,
+    "seen": 1789031299.9396272,
+    "ast_hash": "811e06f80cfad061c825e64ab94f366b",
     "semantic_hash": ""
   },
   "frontend/src/lib/auth-context.tsx": {
@@ -732,9 +732,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/product-detail-page.tsx": {
-    "mtime": 1789030373.2154732,
-    "seen": 1789030488.221075,
-    "ast_hash": "c60f823dca47a4d52fc89eebf6c06766",
+    "mtime": 1789031191.365621,
+    "seen": 1789031299.9429142,
+    "ast_hash": "27110cc3e70a52d8fcf6a3629323f2f8",
     "semantic_hash": ""
   },
   "frontend/src/pages/catalog/products-page.tsx": {
@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "frontend/src/pages/stock/restock-page.tsx": {
-    "mtime": 1789029114.7095926,
-    "seen": 1789029364.667275,
-    "ast_hash": "1280391ecb57005446a535c9eefff0ed",
+    "mtime": 1789031053.7584994,
+    "seen": 1789031299.944345,
+    "ast_hash": "8013cf80c0175406d55e2ce182a17526",
     "semantic_hash": ""
   },
   "frontend/src/pages/stock/stock-history-page.tsx": {
@@ -990,9 +990,9 @@
     "semantic_hash": ""
   },
   "docs/modelo-datos-base.md": {
-    "mtime": 1789030407.208883,
-    "seen": 1789030488.231871,
-    "ast_hash": "69cc57a4bba9ad4bc1e907023c15bf2f",
+    "mtime": 1789031265.8587003,
+    "seen": 1789031299.9535484,
+    "ast_hash": "28d14821adf97e067d2f73ca2fd49ad1",
     "semantic_hash": ""
   },
   "docs/producto.md": {
@@ -1026,9 +1026,9 @@
     "semantic_hash": ""
   },
   "docs/diseno.md": {
-    "mtime": 1789030009.1657188,
-    "seen": 1789030051.8394072,
-    "ast_hash": "edde28c39a2923d99a64d8f0c619bdbf",
+    "mtime": 1789031260.8876104,
+    "seen": 1789031299.9533997,
+    "ast_hash": "6e47b3b3ace6397d204424c669d77647",
     "semantic_hash": ""
   },
   "frontend/src/components/command-palette.tsx": {

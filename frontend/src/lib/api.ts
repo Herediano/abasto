@@ -161,6 +161,8 @@ export type ProductSupplierLink = {
   supplierCode?: string | null;
   lastCost?: string | null;
   lastPurchaseAt?: string | null;
+  /** El proveedor por defecto del producto: a quien se le pide al reponer. */
+  isPreferred?: boolean;
 };
 
 export type LowStockProduct = Product & {
@@ -169,6 +171,9 @@ export type LowStockProduct = Product & {
   suggestedOrder: number | null;
   /** true si la sucursal activa tiene su propio mín/máx. */
   branchOverride?: boolean;
+  /** Proveedor preferido del producto: a quién pedirle. */
+  preferredSupplierName?: string | null;
+  preferredSupplierCode?: string | null;
 };
 
 export type Category = { id: string; name: string; productCount?: number };

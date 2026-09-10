@@ -18,6 +18,7 @@ Un único esquema de PostgreSQL con una columna `tenant_id` en cada tabla de neg
 - `id` UUID, PK
 - `tenant_id` UUID, FK a `tenants`
 - `barcode` obligatorio (identificador principal para escaneo), `sku` opcional, `name`, `description`
+- `product_suppliers`: quién vende cada producto. Lo llena el confirmar de compras **y** se carga a mano desde la pantalla del producto (`supplier_code`, `last_cost`, `is_preferred`; `last_purchase_at = null` = cargado a mano). Un negocio que migra con historia no la recarga toda.
 - `category` categoría o rubro, opcional
 - `unit`, `brand`
 - `maneja_vencimiento` booleano

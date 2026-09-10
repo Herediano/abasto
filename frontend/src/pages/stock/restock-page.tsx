@@ -75,6 +75,7 @@ export function RestockPage() {
                   <TableHead className="text-right">Stock actual</TableHead>
                   <TableHead className="text-right">Mínimo</TableHead>
                   <TableHead className="text-right">Pedir</TableHead>
+                  <TableHead>Proveedor</TableHead>
                   <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
@@ -95,6 +96,11 @@ export function RestockPage() {
                       <TableCell className="text-right tabular">
                         {p.suggestedOrder != null
                           ? <span className="font-semibold">{quantity(p.suggestedOrder)}{p.purchaseUnit ? ` (${p.suggestedOrder / Number(p.unitsPerPurchase)} ${p.purchaseUnit.toLowerCase()})` : ''}</span>
+                          : <span className="text-placeholder">—</span>}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {p.preferredSupplierName
+                          ? <>{p.preferredSupplierName}{p.preferredSupplierCode ? <span className="text-placeholder"> · {p.preferredSupplierCode}</span> : null}</>
                           : <span className="text-placeholder">—</span>}
                       </TableCell>
                       <TableCell>
