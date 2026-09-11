@@ -148,12 +148,13 @@ async function main() {
   }
 
   // ---- Categorías ----
+  const MARGENES: Record<string, number> = { Almacén: 25, Bebidas: 18, Fiambrería: 28, Limpieza: 22, Perfumería: 30 };
   const catByName = new Map<string, string>();
   for (const name of CATEGORIAS) {
     const c = await prisma.category.upsert({
       where: { tenantId_name: { tenantId, name } },
-      update: {},
-      create: { tenantId, name },
+      update: { targetMargin: new Prisma.Decimal(MARGENES[name]) },
+      create: { tenantId, name, targetMargin: new Prisma.Decimal(MARGENES[name]) },
     });
     catByName.set(name, c.id);
   }
@@ -217,6 +218,53 @@ async function main() {
     creados.push({ id: prod.id, name: p.name, cost: p.cost, price: p.price, min: p.min, venc: !!p.venc });
   }
   console.log(`  · ${creados.length} productos con stock`);
+
+  // ---- Producto extra con pack/IVA/proveedor preferido/regla por sucursal ----
+  const yerba = creados.find(p => p.name === 'YERBA PLAYADITO 1KG');
+  const papel = creados.find(p => p.name === 'PAPEL HIGIENICO ELEGANTE x4');
+  if (yerba) {
+    await prisma.product.update({ where: { id: yerba.id }, data: { packBarcode: `${BARCODE_PREFIX}PACK1`, ivaSituacion: '21' } });
+    const proveedorLaCachuera = await prisma.supplier.findFirst({ where: { tenantId, name: 'La Cachuera S.A.' } });
+    if (proveedorLaCachuera) {
+      await prisma.productSupplier.upsert({
+        where: { tenantId_productId_supplierId: { tenantId, productId: yerba.id, supplierId: proveedorLaCachuera.id } },
+        update: { isPreferred: true, lastCost: money(yerba.cost) },
+        create: { tenantId, productId: yerba.id, supplierId: proveedorLaCachuera.id, isPreferred: true, lastCost: money(yerba.cost), lastPurchaseAt: daysAgo(20) },
+      });
+    }
+  }
+  if (papel) {
+    await prisma.product.update({ where: { id: papel.id }, data: { ivaSituacion: '10.5', taxRate: new Prisma.Decimal(10.5) } });
+  }
+
+  // ---- Pricing avanzado: regla de aumento, precio por cantidad, promo ----
+  await prisma.priceRule.upsert({
+    where: { tenantId_name: { tenantId, name: 'Aumento Bebidas (demo)' } },
+    update: {},
+    create: {
+      tenantId, name: 'Aumento Bebidas (demo)', priceListId: priceList.id, target: 'salePrice',
+      selection: { categories: [catByName.get('Bebidas')] }, operationType: 'percent', operationValue: new Prisma.Decimal(8),
+      rounding: 'ending99',
+    },
+  });
+  if (yerba) {
+    await prisma.priceTier.upsert({
+      where: { tenantId_priceListId_productId_minQty: { tenantId, priceListId: priceList.id, productId: yerba.id, minQty: new Prisma.Decimal(6) } },
+      update: {},
+      create: { tenantId, priceListId: priceList.id, productId: yerba.id, minQty: new Prisma.Decimal(6), price: money(Math.round(yerba.price * 0.92)) },
+    });
+  }
+  const yaHayPromo = await prisma.promotion.findFirst({ where: { tenantId, name: '10% en Limpieza (demo)' } });
+  if (!yaHayPromo) {
+    await prisma.promotion.create({
+      data: {
+        tenantId, name: '10% en Limpieza (demo)', type: 'percent', config: { percent: 10 },
+        scopeType: 'category', scopeValue: catByName.get('Limpieza'), validFrom: daysAgo(5), validTo: daysFromNow(25),
+        isActive: true, priority: 0, exclusive: true, daysOfWeek: [],
+      },
+    });
+  }
+  console.log('  · pricing: 1 regla, 1 precio por cantidad, 1 promoción');
 
   // ---- Clientes + cuenta corriente ----
   const clientesCreados: { id: string; name: string; deuda: number }[] = [];
@@ -447,7 +495,99 @@ async function main() {
       await prisma.purchaseInvoiceLine.createMany({ data: lineas.map(l => ({ ...l, invoiceId: inv.id })) });
     }
   }
+  if (papel) {
+    await prisma.productStockRule.upsert({
+      where: { productId_branchId: { productId: papel.id, branchId: centro.id } },
+      update: {},
+      create: { tenantId, productId: papel.id, branchId: centro.id, minStock: new Prisma.Decimal(15), maxStock: new Prisma.Decimal(60) },
+    });
+  }
   console.log(`  · 2ª sucursal «Sucursal Centro»: ${surtidoCentro.length} productos, ${ventasCentro} ventas en 8 jornadas`);
+
+  // ---- Nota de crédito: devolución parcial de una venta reciente de Casa Central ----
+  const ventaParaDevolver = await prisma.sale.findFirst({
+    where: { tenantId, pointOfSale: DEMO_POS, status: 'confirmed' },
+    orderBy: { occurredAt: 'desc' },
+    include: { lines: true },
+  });
+  if (ventaParaDevolver && ventaParaDevolver.lines.length) {
+    const yaTieneNC = await prisma.creditNote.findFirst({ where: { tenantId, saleId: ventaParaDevolver.id } });
+    if (!yaTieneNC) {
+      const linea = ventaParaDevolver.lines[0];
+      const numeroNC = (await prisma.creditNote.count({ where: { tenantId } })) + 1;
+      const nc = await prisma.creditNote.create({
+        data: {
+          tenantId, saleId: ventaParaDevolver.id, warehouseId: warehouse.id, customerId: ventaParaDevolver.customerId,
+          userId: user.id, docType: 'credit_note', pointOfSale: DEMO_POS, number: numeroNC,
+          reason: 'Cliente devolvió el producto (demo)', refundMethod: 'cash',
+          subtotal: linea.lineSubtotal, taxTotal: linea.lineTax, total: linea.lineTotal, occurredAt: daysAgo(1),
+        },
+      });
+      await prisma.creditNoteLine.create({
+        data: {
+          tenantId, creditNoteId: nc.id, saleLineId: linea.id, productId: linea.productId, description: linea.description,
+          quantity: linea.quantity, unitPrice: linea.unitPrice, taxRate: linea.taxRate,
+          lineSubtotal: linea.lineSubtotal, lineTax: linea.lineTax, lineTotal: linea.lineTotal,
+        },
+      });
+      await prisma.stockMovement.create({
+        data: {
+          tenantId, productId: linea.productId, warehouseId: warehouse.id, quantity: linea.quantity,
+          movementType: 'adjustment_in', occurredAt: daysAgo(1), notes: 'Devolución por nota de crédito (demo)',
+        },
+      });
+      console.log('  · 1 nota de crédito (devolución parcial)');
+    }
+  }
+
+  // ---- Tareas del usuario ----
+  const yaHayTareas = await prisma.task.findFirst({ where: { tenantId, userId: user.id } });
+  if (!yaHayTareas) {
+    const TAREAS: { text: string; done: boolean }[] = [
+      { text: 'Llamar a Molinos por el aumento de harina', done: false },
+      { text: 'Revisar vencimientos de fiambrería', done: false },
+      { text: 'Cargar factura de Arcor pendiente', done: false },
+      { text: 'Hacer arqueo de caja de ayer', done: true },
+    ];
+    await prisma.task.createMany({
+      data: TAREAS.map((t, i) => ({ tenantId, userId: user.id, text: t.text, done: t.done, sort: i })),
+    });
+    console.log(`  · ${TAREAS.length} tareas`);
+  }
+
+  // ---- Cuenta corriente con proveedor ----
+  const proveedorMolinosFull = await prisma.supplier.findFirst({ where: { tenantId, name: 'Molinos Río de la Plata' } });
+  if (proveedorMolinosFull && proveedorMolinosFull.accountBalance.equals(0)) {
+    const debe = money(184500);
+    const pago = money(60000);
+    await prisma.supplierAccountMovement.create({
+      data: { tenantId, supplierId: proveedorMolinosFull.id, type: 'invoice', amount: debe, balanceAfter: debe, userId: user.id, notes: 'Factura recibida (demo)', occurredAt: daysAgo(10) },
+    });
+    const saldo = money(184500 - 60000);
+    await prisma.supplierAccountMovement.create({
+      data: { tenantId, supplierId: proveedorMolinosFull.id, type: 'payment', amount: pago.negated(), balanceAfter: saldo, userId: user.id, notes: 'Pago parcial (demo)', occurredAt: daysAgo(3) },
+    });
+    await prisma.supplier.update({ where: { id: proveedorMolinosFull.id }, data: { accountBalance: saldo } });
+    console.log('  · cuenta corriente con Molinos (factura + pago parcial)');
+  }
+
+  // ---- Pedido de compra abierto ----
+  const provLaCachuera = await prisma.supplier.findFirst({ where: { tenantId, name: 'La Cachuera S.A.' } });
+  if (provLaCachuera) {
+    const yaHayPedido = await prisma.purchaseOrder.findFirst({ where: { tenantId, supplierId: provLaCachuera.id, status: 'open' } });
+    if (!yaHayPedido) {
+      const items = creados.filter(p => ['YERBA PLAYADITO 1KG', 'YERBA ROSAMONTE 1KG'].includes(p.name));
+      if (items.length) {
+        const po = await prisma.purchaseOrder.create({
+          data: { tenantId, supplierId: provLaCachuera.id, warehouseId: warehouse.id, status: 'open', notes: 'Reposición mensual (demo)', createdById: user.id },
+        });
+        await prisma.purchaseOrderLine.createMany({
+          data: items.map(p => ({ tenantId, purchaseOrderId: po.id, productId: p.id, quantity: new Prisma.Decimal(p.min * 2) })),
+        });
+        console.log('  · 1 pedido de compra abierto (La Cachuera)');
+      }
+    }
+  }
 
   console.log('Demo lista.');
 }
