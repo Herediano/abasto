@@ -554,31 +554,34 @@ export function EscritorioPage() {
 
   return (
     <div className="pt-4">
-      {/* Saludo (y lo que hay para mirar, en la campana de arriba). */}
-      <div className="mt-6">
-        <p className="flex items-center gap-1.5 text-chico font-medium tracking-[0.14em] text-placeholder">
-          <CalendarBlank weight="fill" className="size-3.5 shrink-0" />
-          <span className="capitalize">{hoy}</span>
-          <span className="opacity-50">·</span>
-          <LiveClock fontSize={13} />
-        </p>
-        <h1 className="type-display mt-2 text-h1 font-semibold leading-tight [text-wrap:balance]">
-          <span className="text-primary">{saludo()}</span>
-          {nombre && <span className="text-foreground">, {nombre}</span>}
-          <span className="text-primary">.</span>
-        </h1>
-        {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
-          <p className="mt-3 text-chico text-muted-foreground">
-            Estás viendo {session.user.branch.name}.{' '}
-            <button
-              type="button"
-              onClick={() => setActiveBranch(session.user.id, null)}
-              className="font-medium text-primary hover:underline"
-            >
-              Volver a {session.user.homeBranch.name}
-            </button>
+      {/* Saludo a la izquierda; hora grande + fecha debajo, a la derecha. */}
+      <div className="mt-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="type-display text-h1 font-semibold leading-tight [text-wrap:balance]">
+            <span className="text-primary">{saludo()}</span>
+            {nombre && <span className="text-foreground">, {nombre}</span>}
+            <span className="text-primary">.</span>
+          </h1>
+          {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
+            <p className="mt-3 text-chico text-muted-foreground">
+              Estás viendo {session.user.branch.name}.{' '}
+              <button
+                type="button"
+                onClick={() => setActiveBranch(session.user.id, null)}
+                className="font-medium text-primary hover:underline"
+              >
+                Volver a {session.user.homeBranch.name}
+              </button>
+            </p>
+          )}
+        </div>
+        <div className="shrink-0 text-right">
+          <LiveClock fontSize={36} className="font-display font-semibold text-foreground" />
+          <p className="mt-1 flex items-center justify-end gap-1.5 text-chico font-medium tracking-[0.14em] text-placeholder">
+            <CalendarBlank weight="fill" className="size-3.5 shrink-0" />
+            <span className="capitalize">{hoy}</span>
           </p>
-        )}
+        </div>
       </div>
 
       {canCaja && (
