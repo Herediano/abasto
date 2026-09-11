@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Calculator, Play } from '@phosphor-icons/react';
+import { ArrowRight, Calculator, FloppyDisk, Play, X } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ModuleSection } from '@/components/module-screen';
 import { Spinner } from '@/components/spinner';
-import { api, errorMessage, type Category, type PriceList, type PriceRounding, type PriceSelection, type TierBulkResult } from '@/lib/api';
-import { money } from '@/lib/format';
+import { Badge } from '@/components/ui/badge';
+import { api, errorMessage, type Category, type PriceList, type PriceRounding, type PriceRule, type PriceSelection, type TierBulkResult } from '@/lib/api';
+import { fecha, money } from '@/lib/format';
 import { SelectionBuilder } from './selection-builder';
 
 /**
@@ -52,6 +54,18 @@ export function TierBulkUpdate({ token, priceLists, categories, priceListId, onP
   const [calculando, setCalculando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
 
+  const [rules, setRules] = useState<PriceRule[]>([]);
+  const [nombreCriterio, setNombreCriterio] = useState('');
+  const [guardarValor, setGuardarValor] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [pidiendoValor, setPidiendoValor] = useState<PriceRule | null>(null);
+  const [valorCriterio, setValorCriterio] = useState('');
+
+  // Los criterios de "tier" viven acá; los demás tipos se guardan y se listan
+  // en Precio único — mezclarlos confundiría más de lo que ahorra.
+  const loadRules = () => api<PriceRule[]>('/price-rules', {}, token).then(r => setRules(r.filter(x => x.operationType === 'tier'))).catch(() => {});
+  useEffect(() => { void loadRules(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => setPreview(null), [selection, minQty, discountPercent, redondear, rounding, priceListId]);
 
   const listo = seleccionados > 0 && minQty.trim() !== '' && discountPercent.trim() !== '';
@@ -80,6 +94,68 @@ export function TierBulkUpdate({ token, priceLists, categories, priceListId, onP
       onError(errorMessage(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const guardarCriterio = async () => {
+    setGuardando(true);
+    onError('');
+    try {
+      await api('/price-rules', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: nombreCriterio.trim(),
+          priceListId,
+          selection,
+          operationType: 'tier',
+          tierMinQty: Number(minQty),
+          // Sin valor el criterio guarda a quién y la cantidad, y el % de
+          // descuento se pide cada vez — para cuando cambia según el mes.
+          operationValue: guardarValor ? Number(discountPercent) : null,
+          rounding: redondear ? rounding : null,
+        }),
+      }, token);
+      setNombreCriterio('');
+      onMessage('Criterio guardado.');
+      loadRules();
+    } catch (e) {
+      onError(errorMessage(e));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const correrCriterio = async (regla: PriceRule, value?: string) => {
+    onError('');
+    try {
+      const r = await api<TierBulkResult & { rule: { name: string } }>(`/price-rules/${regla.id}/run`, {
+        method: 'POST',
+        body: JSON.stringify({ dryRun: false, value: value ?? undefined }),
+      }, token);
+      onMessage(`«${r.rule.name}»: precio por cantidad cargado en ${r.affected} productos.`);
+      setPidiendoValor(null);
+      setValorCriterio('');
+      loadRules();
+    } catch (e) {
+      onError(errorMessage(e));
+    }
+  };
+
+  const usarCriterio = (regla: PriceRule) => {
+    setSelection(regla.selection ?? {});
+    setMinQty(regla.tierMinQty ?? '');
+    setDiscountPercent(regla.operationValue ?? '');
+    setRedondear(!!regla.rounding);
+    if (regla.rounding) setRounding(regla.rounding as PriceRounding);
+    onMessage(`Cargué «${regla.name}». Revisá y calculá.`);
+  };
+
+  const borrarCriterio = async (regla: PriceRule) => {
+    try {
+      await api(`/price-rules/${regla.id}`, { method: 'DELETE' }, token);
+      loadRules();
+    } catch (e) {
+      onError(errorMessage(e));
     }
   };
 
@@ -140,6 +216,22 @@ export function TierBulkUpdate({ token, priceLists, categories, priceListId, onP
           <Button onClick={() => void ejecutar(false)} disabled={!preview || aplicando || preview.affected === 0}>
             {aplicando ? <Spinner /> : <Play />} Aplicar {preview ? `a ${preview.affected}` : ''}
           </Button>
+
+          <div className="ml-auto flex items-end gap-2">
+            <Input
+              value={nombreCriterio}
+              onChange={e => setNombreCriterio(e.target.value)}
+              placeholder="Guardar esta selección como…"
+              className="max-w-56"
+            />
+            <label className="flex items-center gap-1.5 whitespace-nowrap pb-2 text-xs text-muted-foreground" title="Si lo dejás sin marcar, el criterio guarda a quién y la cantidad, y el % se pide cada vez.">
+              <input type="checkbox" checked={guardarValor} onChange={e => setGuardarValor(e.target.checked)} className="size-3.5" />
+              con el {discountPercent || '%'}
+            </label>
+            <Button variant="outline" onClick={guardarCriterio} disabled={guardando || !nombreCriterio.trim() || seleccionados === 0}>
+              {guardando ? <Spinner /> : <FloppyDisk />} Guardar
+            </Button>
+          </div>
         </div>
 
         {preview && (
@@ -181,6 +273,90 @@ export function TierBulkUpdate({ token, priceLists, categories, priceListId, onP
           <Alert className="mt-4">Elegí al menos un producto arriba para poder calcular.</Alert>
         )}
       </ModuleSection>
+
+      <ModuleSection
+        title="Selecciones guardadas"
+        description="Las políticas de precio por cantidad que se repiten, listas para volver a aplicar. Recalculan sobre la venta del momento."
+      >
+        {rules.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Todavía no guardaste ninguna. Armá una selección arriba y ponele nombre — por ejemplo «Almacén por docena».
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>A quiénes</TableHead>
+                  <TableHead>Qué hace</TableHead>
+                  <TableHead>Última vez</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rules.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{r.selectionLabel}</TableCell>
+                    <TableCell className="text-sm">
+                      Desde {r.tierMinQty} unidades
+                      {r.needsValue
+                        ? <Badge variant="outline" className="ml-1.5">pregunta el %</Badge>
+                        : r.operationValue ? ` · ${r.operationValue}% menos` : ''}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{r.lastRunAt ? fecha(r.lastRunAt) : 'nunca'}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => (r.needsValue ? (setPidiendoValor(r), setValorCriterio('')) : correrCriterio(r))}
+                        >
+                          <Play /> Aplicar
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => usarCriterio(r)}>Usar arriba</Button>
+                        <Button size="sm" variant="ghost" onClick={() => borrarCriterio(r)} aria-label="Borrar">
+                          <X />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </ModuleSection>
+
+      <Dialog open={!!pidiendoValor} onOpenChange={open => !open && setPidiendoValor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{pidiendoValor?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{pidiendoValor?.selectionLabel} · desde {pidiendoValor?.tierMinQty} unidades</p>
+          <Field label="Cuánto menos (%)" htmlFor="tier-crit-valor">
+            <Input
+              id="tier-crit-valor"
+              autoFocus
+              type="number"
+              step="0.1"
+              value={valorCriterio}
+              onChange={e => setValorCriterio(e.target.value)}
+              placeholder="10"
+            />
+          </Field>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPidiendoValor(null)}>Cancelar</Button>
+            <Button
+              disabled={valorCriterio.trim() === ''}
+              onClick={() => pidiendoValor && correrCriterio(pidiendoValor, valorCriterio)}
+            >
+              Aplicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

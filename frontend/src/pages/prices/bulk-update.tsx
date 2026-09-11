@@ -191,7 +191,9 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
   const necesitaValor = op.tipo !== 'round' && !usaMargenCategoria;
   const listo = seleccionados > 0 && (!necesitaValor || valor.trim() !== '') && !bloqueada;
 
-  const loadRules = () => api<PriceRule[]>('/price-rules', {}, token).then(setRules).catch(() => {});
+  // Los criterios de "tier" (precio por cantidad) se guardan y se muestran en
+  // la otra sub-pestaña, con su propia forma (cantidad + %) que no encaja acá.
+  const loadRules = () => api<PriceRule[]>('/price-rules', {}, token).then(r => setRules(r.filter(x => x.operationType !== 'tier'))).catch(() => {});
   const loadScheduled = () => api<ScheduledChange[]>('/prices/scheduled', {}, token).then(setScheduled).catch(() => {});
   const loadTramos = () => api<RoundingRule[]>('/prices/rounding-rules', {}, token).then(setTramos).catch(() => {});
 
@@ -257,8 +259,10 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
           operationType: op.tipo,
           // Sin valor el criterio guarda sólo a quién se le aplica, y el
           // porcentaje se pide al ejecutarlo. Es lo que sirve para un aumento
-          // de proveedor, que cambia de número todos los meses.
-          operationValue: guardarValor && necesitaValor ? Number(valor) : null,
+          // de proveedor, que cambia de número todos los meses. Con margen por
+          // categoría el valor no aplica nunca: se resuelve por producto.
+          operationValue: usaMargenCategoria ? null : (guardarValor && necesitaValor ? Number(valor) : null),
+          useCategoryMargin: usaMargenCategoria,
           rounding: op.tipo === 'round' ? rounding : redondear ? rounding : null,
         }),
       }, token);
@@ -295,6 +299,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
     const encontrada = OPERACIONES.find(o => o.tipo === regla.operationType && (regla.operationType !== 'percent' || o.target === regla.target));
     if (encontrada) setOpKey(encontrada.key);
     setValor(regla.operationValue ?? '');
+    setUsarMargenCategoria(regla.useCategoryMargin);
     setRedondear(!!regla.rounding && regla.operationType !== 'round');
     if (regla.rounding) setRounding(regla.rounding as PriceRounding);
     onMessage(`Cargué «${regla.name}». Revisá y calculá.`);
@@ -512,10 +517,14 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
               placeholder="Guardar esta selección como…"
               className="max-w-56"
             />
-            <label className="flex items-center gap-1.5 whitespace-nowrap pb-2 text-xs text-muted-foreground" title="Si lo dejás sin marcar, el criterio guarda a quién se le aplica y el porcentaje se pide cada vez.">
-              <input type="checkbox" checked={guardarValor} onChange={e => setGuardarValor(e.target.checked)} className="size-3.5" />
-              con el {valor || '%'}
-            </label>
+            {usaMargenCategoria ? (
+              <span className="whitespace-nowrap pb-2 text-xs text-muted-foreground">con el margen por categoría</span>
+            ) : (
+              <label className="flex items-center gap-1.5 whitespace-nowrap pb-2 text-xs text-muted-foreground" title="Si lo dejás sin marcar, el criterio guarda a quién se le aplica y el porcentaje se pide cada vez.">
+                <input type="checkbox" checked={guardarValor} onChange={e => setGuardarValor(e.target.checked)} className="size-3.5" />
+                con el {valor || '%'}
+              </label>
+            )}
             <Button variant="outline" onClick={guardarCriterio} disabled={guardando || !nombreCriterio.trim() || seleccionados === 0}>
               {guardando ? <Spinner /> : <FloppyDisk />} Guardar
             </Button>
@@ -638,9 +647,11 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
                       <TableCell className="text-sm text-muted-foreground">{r.selectionLabel}</TableCell>
                       <TableCell className="text-sm">
                         {o?.titulo ?? r.operationType}
-                        {r.needsValue
-                          ? <Badge variant="outline" className="ml-1.5">pregunta el %</Badge>
-                          : r.operationValue ? ` · ${r.operationValue}%` : ''}
+                        {r.useCategoryMargin
+                          ? <Badge variant="secondary" className="ml-1.5">margen por categoría</Badge>
+                          : r.needsValue
+                            ? <Badge variant="outline" className="ml-1.5">pregunta el %</Badge>
+                            : r.operationValue ? ` · ${r.operationValue}%` : ''}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{r.lastRunAt ? fecha(r.lastRunAt) : 'nunca'}</TableCell>
                       <TableCell className="text-right">

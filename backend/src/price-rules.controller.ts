@@ -5,7 +5,10 @@ import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
-import { OPERATIONS, PricesService, ROUNDINGS, TARGETS, type BulkInput } from './prices.service';
+import { OPERATIONS, PricesService, ROUNDINGS, TARGETS, type BulkInput, type BulkTierInput } from './prices.service';
+
+/** Los mismos tipos del bulk directo, más "tier" (precio por cantidad), que tiene su propio endpoint. */
+const TIPOS_CRITERIO = [...OPERATIONS, 'tier'];
 import { describirSeleccion, normalizarSeleccion, seleccionDesdeScope, type PriceSelection } from './price-selection.util';
 
 /**
@@ -33,26 +36,41 @@ export class PriceRulesController {
     if (!name) throw new BadRequestException('El nombre es obligatorio');
 
     const operationType = String(body.operationType ?? '');
-    if (!OPERATIONS.includes(operationType as never)) throw new UnprocessableEntityException('La operación no es válida');
+    if (!TIPOS_CRITERIO.includes(operationType)) throw new UnprocessableEntityException('La operación no es válida');
 
-    // `margin` y `supplierIncrease` definen solos dónde escriben.
-    const target = operationType === 'margin' || operationType === 'supplierIncrease' ? 'salePrice' : String(body.target ?? '');
+    // `margin`, `supplierIncrease` y `tier` definen solos dónde escriben (`tier`
+    // no usa target para nada — precio por cantidad no es ni costo ni venta base
+    // —, pero la columna es NOT NULL y sale directo del bulk directo).
+    const target = operationType === 'margin' || operationType === 'supplierIncrease' || operationType === 'tier'
+      ? 'salePrice'
+      : String(body.target ?? '');
     if (!TARGETS.includes(target as never)) throw new UnprocessableEntityException('El precio a modificar no es válido');
 
     const rounding = body.rounding === null || body.rounding === undefined || body.rounding === '' ? null : String(body.rounding);
     if (rounding && !ROUNDINGS.includes(rounding as never)) throw new UnprocessableEntityException('El redondeo no es válido');
     if (operationType === 'round' && !rounding) throw new UnprocessableEntityException('Elegí cómo redondear');
 
+    // Sólo tiene sentido con "margin": ignora operationValue y resuelve el % por
+    // la categoría de cada producto, igual que el check homónimo del bulk directo.
+    const useCategoryMargin = operationType === 'margin' && body.useCategoryMargin === true;
+
     // Sin valor el criterio queda "a pedir": es el caso del aumento de proveedor.
+    // Con useCategoryMargin nunca hace falta un valor, ni guardado ni al pedirlo.
     const crudo = body.operationValue;
     const sinValor = crudo === null || crudo === undefined || crudo === '';
-    const operationValue = operationType === 'round' || sinValor ? null : Number(crudo);
+    const operationValue = operationType === 'round' || useCategoryMargin || sinValor ? null : Number(crudo);
     if (operationValue !== null && !Number.isFinite(operationValue)) {
       throw new UnprocessableEntityException('El valor de la operación debe ser un número');
     }
 
+    let tierMinQty: number | null = null;
+    if (operationType === 'tier') {
+      tierMinQty = Number(body.tierMinQty);
+      if (!Number.isFinite(tierMinQty) || tierMinQty <= 1) throw new UnprocessableEntityException('La cantidad tiene que ser mayor a 1');
+    }
+
     const selection = normalizarSeleccion(body.selection);
-    return { name, target, operationType, operationValue, rounding, selection };
+    return { name, target, operationType, operationValue, useCategoryMargin, tierMinQty, rounding, selection };
   }
 
   /** La selección de una regla, sea del modelo nuevo o del viejo. */
@@ -86,7 +104,7 @@ export class PriceRulesController {
         selection,
         // Para listarlo sin que el frontend tenga que rearmar el texto.
         selectionLabel: describirSeleccion(selection, nombres),
-        needsValue: r.operationType !== 'round' && r.operationValue === null,
+        needsValue: r.operationType !== 'round' && r.operationValue === null && !r.useCategoryMargin,
       };
     });
   }
@@ -153,23 +171,32 @@ export class PriceRulesController {
     const guardado = regla.operationValue === null ? null : Number(regla.operationValue);
     const pasado = body?.value === null || body?.value === undefined || body?.value === '' ? null : Number(body.value);
     const value = pasado ?? guardado;
-    if (regla.operationType !== 'round' && value === null) {
+    if (regla.operationType !== 'round' && value === null && !regla.useCategoryMargin) {
       throw new UnprocessableEntityException(`«${regla.name}» no tiene un porcentaje guardado: indicá cuánto aplicar.`);
     }
 
-    const input: BulkInput = {
-      priceListId: regla.priceListId,
-      validFrom: body?.validFrom,
-      selection: this.seleccionDe(regla),
-      target: regla.target,
-      operation: {
-        type: regla.operationType,
-        value: value ?? undefined,
+    const resultado = regla.operationType === 'tier'
+      ? await this.prices.ejecutarEscala(tenantId, request.user.id, {
+        priceListId: regla.priceListId,
+        selection: this.seleccionDe(regla),
+        minQty: Number(regla.tierMinQty),
+        discountPercent: value ?? undefined,
         rounding: regla.rounding ?? undefined,
-      },
-      dryRun: body?.dryRun,
-    };
-    const resultado = await this.prices.ejecutar(tenantId, request.user.id, input);
+        dryRun: body?.dryRun,
+      } satisfies BulkTierInput)
+      : await this.prices.ejecutar(tenantId, request.user.id, {
+        priceListId: regla.priceListId,
+        validFrom: body?.validFrom,
+        selection: this.seleccionDe(regla),
+        target: regla.target,
+        operation: {
+          type: regla.operationType,
+          value: value ?? undefined,
+          rounding: regla.rounding ?? undefined,
+          useCategoryMargin: regla.useCategoryMargin,
+        },
+        dryRun: body?.dryRun,
+      } satisfies BulkInput);
     if (!body?.dryRun) await this.prisma.priceRule.update({ where: { id }, data: { lastRunAt: new Date() } });
     return { ...resultado, rule: { id: regla.id, name: regla.name } };
   }

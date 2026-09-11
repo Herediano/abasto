@@ -391,11 +391,18 @@ model PriceRule {
   // con AND. Es JSON y no columnas porque los filtros se suman seguido y no
   // vale una migración por cada uno.
   selection      Json?
-  operationType  String    @map("operation_type") // percent | margin | round | supplierIncrease
+  operationType  String    @map("operation_type") // percent | margin | round | supplierIncrease | tier
   // null = el criterio guarda a QUIÉN se le aplica, pero el valor se escribe en
   // el momento. Es el caso real del aumento de proveedor: la selección se repite
-  // todos los meses, el porcentaje cambia siempre.
+  // todos los meses, el porcentaje cambia siempre. Para "tier" es el % de
+  // descuento; para "margin" con useCategoryMargin no se usa (queda null).
   operationValue Decimal?  @map("operation_value") @db.Decimal(10, 2)
+  // Sólo con operationType "margin": ignora operationValue y resuelve el % por
+  // la categoría de cada producto (Category.targetMargin), igual que el check
+  // homónimo del bulk directo.
+  useCategoryMargin Boolean @default(false) @map("use_category_margin")
+  // Sólo con operationType "tier": desde qué cantidad rige el precio por cantidad.
+  tierMinQty     Decimal?  @map("tier_min_qty") @db.Decimal(14, 3)
   rounding       String?
   lastRunAt      DateTime? @map("last_run_at") @db.Timestamptz(6)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

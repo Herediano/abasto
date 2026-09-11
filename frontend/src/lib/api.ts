@@ -249,7 +249,7 @@ export type PriceSelection = {
 };
 
 export type PriceTarget = 'salePrice' | 'costPrice';
-export type PriceOperationType = 'percent' | 'margin' | 'round' | 'supplierIncrease';
+export type PriceOperationType = 'percent' | 'margin' | 'round' | 'supplierIncrease' | 'tier';
 export type PriceRounding = 'nearest10' | 'nearest100' | 'ending99' | 'byRules';
 
 /** Contador en vivo: cuántos productos entran en la selección, con una muestra. */
@@ -298,6 +298,10 @@ export type PriceRule = {
   operationType: PriceOperationType;
   /** null = el criterio guarda a quién, y el porcentaje se pide al ejecutarlo. */
   operationValue?: string | null;
+  /** Sólo con operationType "margin": ignora operationValue y usa el margen de la categoría de cada producto. */
+  useCategoryMargin: boolean;
+  /** Sólo con operationType "tier": desde qué cantidad rige el precio por cantidad. */
+  tierMinQty?: string | null;
   needsValue: boolean;
   rounding?: string | null;
   lastRunAt?: string | null;
