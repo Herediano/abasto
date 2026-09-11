@@ -9,6 +9,14 @@ import { sendExport } from './export.util';
 
 const TIPOS = ['nxm', 'a_plus_b', 'percent', 'amount', 'special_price'] as const;
 const SCOPES = ['all', 'category', 'brand'];
+const DIAS_LABEL = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** "Todos los días" / "vie, sáb y dom", + la franja horaria si hay una cargada. */
+function describirVigenciaSemanal(daysOfWeek: number[], startTime: string | null, endTime: string | null): string {
+  const dias = daysOfWeek.length ? daysOfWeek.map(d => DIAS_LABEL[d]).join(', ') : 'todos los días';
+  const horario = startTime && endTime ? `de ${startTime} a ${endTime}` : 'todo el día';
+  return `${dias} · ${horario}`;
+}
 
 type Tipo = (typeof TIPOS)[number];
 
@@ -97,12 +105,36 @@ export class PromotionsController {
     if (validTo && Number.isNaN(validTo.getTime())) throw new UnprocessableEntityException('La fecha de fin no es válida');
     if (validTo && validTo <= validFrom) throw new UnprocessableEntityException('La fecha de fin tiene que ser posterior a la de inicio');
 
-    return { name, type, config: parseConfig(type, body.config), scopeType, scopeValue, validFrom, validTo, isActive: body.isActive !== false };
+    const exclusive = body.exclusive !== false;
+    const { daysOfWeek, startTime, endTime } = this.parseVigenciaSemanal(body);
+    return { name, type, config: parseConfig(type, body.config), scopeType, scopeValue, validFrom, validTo, isActive: body.isActive !== false, exclusive, daysOfWeek, startTime, endTime };
+  }
+
+  /**
+   * Día de la semana y franja horaria, además del rango de fechas. Vacío/null
+   * en cualquiera de los dos = sin esa restricción (todos los días / todo el
+   * día), que es el caso de la enorme mayoría de las promos.
+   */
+  private parseVigenciaSemanal(body: Record<string, unknown>) {
+    const crudos = Array.isArray(body.daysOfWeek) ? body.daysOfWeek : [];
+    const daysOfWeek = [...new Set(crudos.map(d => Number(d)).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
+    if (daysOfWeek.length === 7) daysOfWeek.length = 0; // los 7 días es lo mismo que "sin restricción"
+
+    const hora = (v: unknown) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : null);
+    const startTime = hora(body.startTime);
+    const endTime = hora(body.endTime);
+    if ((startTime === null) !== (endTime === null)) {
+      throw new UnprocessableEntityException('Si limitás el horario, indicá desde y hasta qué hora');
+    }
+    if (startTime !== null && endTime !== null && endTime <= startTime) {
+      throw new UnprocessableEntityException('La hora de fin tiene que ser posterior a la de inicio');
+    }
+    return { daysOfWeek, startTime, endTime };
   }
 
   @Get() @RequirePermission('promociones.ver')
   list(@Req() request: AuthRequest) {
-    return this.prisma.promotion.findMany({ where: { tenantId: request.user.tenantId }, orderBy: [{ isActive: 'desc' }, { validFrom: 'desc' }] });
+    return this.prisma.promotion.findMany({ where: { tenantId: request.user.tenantId }, orderBy: [{ priority: 'asc' }] });
   }
 
   @Get('export') @RequirePermission('promociones.ver')
@@ -129,6 +161,7 @@ export class PromotionsController {
         { header: 'Alcance', key: 'alcance', width: 26 },
         { header: 'Desde', key: 'desde', width: 14 },
         { header: 'Hasta', key: 'hasta', width: 14 },
+        { header: 'Cuándo', key: 'cuando', width: 26 },
         { header: 'Estado', key: 'estado', width: 12 },
       ],
       promos.map(p => ({
@@ -138,14 +171,31 @@ export class PromotionsController {
         alcance: alcance(p.scopeType, p.scopeValue),
         desde: p.validFrom.toLocaleDateString('es-AR'),
         hasta: p.validTo ? p.validTo.toLocaleDateString('es-AR') : 'sin fin',
+        cuando: describirVigenciaSemanal(p.daysOfWeek, p.startTime, p.endTime),
         estado: p.isActive ? 'Activa' : 'Inactiva',
       })),
     );
   }
 
   @Post() @RequirePermission('promociones.crear')
-  create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
-    return this.prisma.promotion.create({ data: { tenantId: request.user.tenantId, ...this.parse(body) } });
+  async create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
+    const tenantId = request.user.tenantId;
+    // Nueva promoción entra al final de la cola de evaluación: no hay que
+    // reordenar todo para que un alta no salte por delante de lo que ya había.
+    const ultima = await this.prisma.promotion.findFirst({ where: { tenantId }, orderBy: { priority: 'desc' }, select: { priority: true } });
+    return this.prisma.promotion.create({ data: { tenantId, priority: (ultima?.priority ?? -1) + 1, ...this.parse(body) } });
+  }
+
+  // Va antes de :id porque si no, Nest matchea "reorder" como si fuera un id.
+  @Put('reorder') @RequirePermission('promociones.editar')
+  async reorder(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
+    const tenantId = request.user.tenantId;
+    const ids = Array.isArray(body.ids) ? body.ids.filter((id): id is string => typeof id === 'string') : [];
+    if (!ids.length) throw new BadRequestException('ids es obligatorio');
+    const propias = await this.prisma.promotion.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true } });
+    if (propias.length !== ids.length) throw new BadRequestException('Alguna promoción no existe');
+    await this.prisma.$transaction(ids.map((id, priority) => this.prisma.promotion.update({ where: { id }, data: { priority } })));
+    return { reordered: ids.length };
   }
 
   @Put(':id') @RequirePermission('promociones.editar')

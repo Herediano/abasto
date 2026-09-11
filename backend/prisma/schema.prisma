@@ -84,6 +84,11 @@ model Tenant {
   // Zona horaria del negocio (IANA). Hoy informativa; se vuelve operativa con
   // la migración de las columnas de fecha a timestamptz.
   timezone                 String                    @default("America/Argentina/Buenos_Aires")
+  // Si confirmar una factura de compra pisa el costo del producto directo, o lo
+  // deja como "pendiente de revisar" para decidirlo a mano (ver /prices/pending-costs).
+  // Default false: no todos los negocios quieren que un aumento de costo mueva
+  // precios solo, sin poder armar un plan antes.
+  autoUpdateCostOnPurchase Boolean                   @default(false) @map("auto_update_cost_on_purchase")
   productCodeSeq           Int                       @default(0) @map("product_code_seq")
   createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -299,12 +304,15 @@ model CustomerAccountMovement {
 }
 
 model Category {
-  id        String    @id @default(uuid()) @db.Uuid
-  tenantId  String    @map("tenant_id") @db.Uuid
-  name      String
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  tenant    Tenant    @relation(fields: [tenantId], references: [id])
-  products  Product[]
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  name         String
+  // Margen habitual del rubro (ej. Almacén 25%, Bebidas 18%). Lo usa "Fijar un
+  // margen" cuando se pide sugerir venta por categoría en vez de un % a mano.
+  targetMargin Decimal?  @map("target_margin") @db.Decimal(6, 2)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  products     Product[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -448,6 +456,21 @@ model Promotion {
   validFrom  DateTime  @map("valid_from") @db.Timestamptz(6)
   validTo    DateTime? @map("valid_to") @db.Timestamptz(6)
   isActive   Boolean   @default(true) @map("is_active")
+  // Orden de evaluación en la caja: se prueban de menor a mayor y gana la
+  // primera que aplica sobre un producto, no la que más descuenta. Se maneja
+  // sólo con el endpoint de reordenar (arrastrar en la lista), nunca a mano.
+  priority   Int       @default(0)
+  // Si es exclusiva, ganado el descuento no se sigue evaluando el resto para
+  // ese producto. Si no, se suman los descuentos de las que vienen después en
+  // la lista, hasta la próxima exclusiva o el final.
+  exclusive  Boolean   @default(true)
+  // Además del rango de fechas: en qué días de la semana corre (0=domingo…
+  // 6=sábado; vacío = todos) y, opcional, en qué franja horaria (HH:mm, hora
+  // local del negocio; null = todo el día). Las dos cosas son AND con el rango
+  // de fechas — todo tiene que cumplirse para que la promo pegue.
+  daysOfWeek Int[]     @default([]) @map("days_of_week")
+  startTime  String?   @map("start_time")
+  endTime    String?   @map("end_time")
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant     Tenant    @relation(fields: [tenantId], references: [id])

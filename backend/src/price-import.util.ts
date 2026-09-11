@@ -38,13 +38,47 @@ export const PRICE_IMPORT_FIELDS: ImportField[] = [
     kind: 'text',
     help: 'Opcional. El nombre se actualiza sólo si mapeás esta columna: un archivo de precios no debe reescribir el catálogo por accidente.',
   },
+  {
+    key: 'tier3Price',
+    label: 'Precio por 3 o más',
+    aliases: ['preciox3', 'precio3', 'preciopor3', 'tier3'],
+    kind: 'number',
+    help: 'Opcional. Sin mapear, el producto queda con precio único. Rige a partir de 3 unidades en la misma venta.',
+  },
+  {
+    key: 'tier6Price',
+    label: 'Precio por 6 o más',
+    aliases: ['preciox6', 'precio6', 'preciopor6', 'tier6', 'preciomediadocena'],
+    kind: 'number',
+    help: 'Opcional, independiente del anterior. Rige a partir de 6 unidades.',
+  },
+  {
+    key: 'tier12Price',
+    label: 'Precio por 12 o más',
+    aliases: ['preciox12', 'precio12', 'preciopor12', 'tier12', 'preciodocena'],
+    kind: 'number',
+    help: 'Opcional, independiente de los anteriores. Rige a partir de 12 unidades.',
+  },
+];
+
+/** Los tres escalones fijos que entiende el import: unidad, media docena, docena. */
+export const TIER_IMPORT_STEPS: Array<{ field: 'tier3Price' | 'tier6Price' | 'tier12Price'; minQty: number }> = [
+  { field: 'tier3Price', minQty: 3 },
+  { field: 'tier6Price', minQty: 6 },
+  { field: 'tier12Price', minQty: 12 },
 ];
 
 /** Lo que ya hay cargado para un producto, para saber si la fila cambia algo. */
-export type PrecioActual = { id: string; name: string; cost: number | null; sale: number | null };
+export type PrecioActual = {
+  id: string; name: string; cost: number | null; sale: number | null;
+  /** Escalas ya cargadas en la lista base, por cantidad mínima. */
+  tiers?: Map<number, number>;
+};
+
+export type TierUpdate = { minQty: number; price: number };
 
 export type PricePlanRow =
-  | { kind: 'update'; rowNumber: number; barcode: string; productId: string; cost?: number; sale?: number; name?: string }
+  | { kind: 'update'; rowNumber: number; barcode: string; productId: string; cost?: number; sale?: number; name?: string; tiers?: TierUpdate[] }
   | { kind: 'skip'; rowNumber: number; barcode: string; reason: string }
   | { kind: 'error'; rowNumber: number; barcode: string; message: string };
 
@@ -112,7 +146,19 @@ export function planPriceRows(params: {
     if (venta !== null && venta !== actual.sale) fila.sale = venta;
     if (nombre && nombre !== actual.name) fila.name = nombre;
 
-    if (fila.cost === undefined && fila.sale === undefined && fila.name === undefined) {
+    const tiers: TierUpdate[] = [];
+    for (const paso of TIER_IMPORT_STEPS) {
+      const precio = numero(cell(row, mapping, paso.field));
+      if (precio === 'invalido') {
+        salida.push({ kind: 'error', rowNumber, barcode, message: `El precio por ${paso.minQty} o más no es un número válido` });
+        return;
+      }
+      if (precio === null) continue;
+      if (actual.tiers?.get(paso.minQty) !== precio) tiers.push({ minQty: paso.minQty, price: precio });
+    }
+    if (tiers.length) fila.tiers = tiers;
+
+    if (fila.cost === undefined && fila.sale === undefined && fila.name === undefined && !fila.tiers) {
       salida.push({ kind: 'skip', rowNumber, barcode, reason: 'sin cambios' });
       return;
     }

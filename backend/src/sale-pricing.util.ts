@@ -60,7 +60,10 @@ export function descuentoPromo(tipo: string, config: PromoConfig, cantidad: numb
   }
 }
 
-type PromoFila = { id: string; name: string; type: string; config: unknown; scopeType: string; scopeValue: string | null };
+type PromoFila = {
+  id: string; name: string; type: string; config: unknown; scopeType: string; scopeValue: string | null; exclusive: boolean;
+  daysOfWeek: number[]; startTime: string | null; endTime: string | null;
+};
 
 /** ¿Esta promoción alcanza a este producto? */
 function alcanza(promo: PromoFila, producto: { categoryId: string | null; brand: string | null }) {
@@ -68,6 +71,22 @@ function alcanza(promo: PromoFila, producto: { categoryId: string | null; brand:
   if (promo.scopeType === 'category') return producto.categoryId === promo.scopeValue;
   if (promo.scopeType === 'brand') return producto.brand === promo.scopeValue;
   return false;
+}
+
+/**
+ * ¿Corre en este momento según su día de la semana y franja horaria? Vacío en
+ * `daysOfWeek` = todos los días; sin `startTime`/`endTime` = todo el día. Es AND
+ * con el rango de fechas (`validFrom`/`validTo`), que ya filtró la consulta.
+ */
+function enHorario(promo: PromoFila, at: Date): boolean {
+  if (promo.daysOfWeek.length && !promo.daysOfWeek.includes(at.getDay())) return false;
+  if (promo.startTime && promo.endTime) {
+    const minutos = at.getHours() * 60 + at.getMinutes();
+    const [sh, sm] = promo.startTime.split(':').map(Number);
+    const [eh, em] = promo.endTime.split(':').map(Number);
+    if (minutos < sh * 60 + sm || minutos >= eh * 60 + em) return false;
+  }
+  return true;
 }
 
 /**
@@ -89,8 +108,11 @@ export async function cotizar(
     db.product.findMany({ where: { tenantId, id: { in: productIds } }, select: { id: true, taxRate: true, categoryId: true, brand: true } }),
     resolverPrecios(db, tenantId, productIds, priceListId, at),
     db.priceTier.findMany({ where: { tenantId, priceListId, productId: { in: productIds } }, orderBy: { minQty: 'desc' } }),
+    // En orden de prioridad: la evaluación de abajo respeta ese orden, no el
+    // que más descuenta.
     db.promotion.findMany({
       where: { tenantId, isActive: true, validFrom: { lte: at }, OR: [{ validTo: null }, { validTo: { gte: at } }] },
+      orderBy: { priority: 'asc' },
     }),
   ]);
   const porProducto = new Map(productos.map(p => [p.id, p]));
@@ -105,18 +127,24 @@ export async function cotizar(
     const escala = escalas.find(e => e.productId === l.productId && l.quantity >= Number(e.minQty));
     const unitPrice = escala ? Number(escala.price) : listPrice;
 
-    // Promoción: si aplican varias, gana la que más descuenta y sólo esa.
-    // Acumularlas abre casos de borde (dos del 60% dejarían el producto gratis)
-    // que no valen la complejidad en un mostrador.
-    let mejor: { promo: PromoFila; monto: number } | null = null;
-    for (const promo of promos) {
-      if (!producto || !alcanza(promo as PromoFila, producto)) continue;
+    // Promoción: se evalúan en orden de prioridad y gana la primera que
+    // aplica, no la que más descuenta. Si esa primera no es exclusiva, se
+    // sigue sumando lo que aporten las siguientes hasta la próxima exclusiva
+    // o el final de la lista — así una promo de categoría puede convivir con
+    // un NxM puntual si así se la marcó.
+    let primera: PromoFila | null = null;
+    let descuento = 0;
+    for (const promo of promos as PromoFila[]) {
+      if (!producto || !alcanza(promo, producto) || !enHorario(promo, at)) continue;
       const monto = descuentoPromo(promo.type, (promo.config ?? {}) as PromoConfig, l.quantity, unitPrice);
-      if (monto > 0 && (!mejor || monto > mejor.monto)) mejor = { promo: promo as PromoFila, monto };
+      if (monto <= 0) continue;
+      if (!primera) primera = promo;
+      descuento += monto;
+      if (promo.exclusive) break;
     }
 
     const bruto = r2(unitPrice * l.quantity);
-    const discountAmount = mejor ? Math.min(mejor.monto, bruto) : 0;
+    const discountAmount = primera ? Math.min(descuento, bruto) : 0;
     const lineSubtotal = r2(bruto - discountAmount);
     const lineTax = r2(lineSubtotal * (taxRate / 100));
 
@@ -126,8 +154,8 @@ export async function cotizar(
       listPrice,
       unitPrice,
       discountAmount,
-      promotionId: mejor?.promo.id ?? null,
-      promotionName: mejor?.promo.name ?? null,
+      promotionId: primera?.id ?? null,
+      promotionName: primera?.name ?? null,
       taxRate,
       lineSubtotal,
       lineTax,

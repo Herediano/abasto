@@ -49,7 +49,7 @@ const BATCH = 500;
 const MUESTRA = 20;
 
 /** Un producto de la selección, ya resuelto lo que hace falta para operar. */
-type Elegido = { id: string; name: string; cost: number | null; sale: number | null; ultimoCambio: Date | null };
+type Elegido = { id: string; name: string; cost: number | null; sale: number | null; ultimoCambio: Date | null; categoryId: string | null };
 
 export type BulkInput = {
   priceListId?: string;
@@ -59,9 +59,22 @@ export type BulkInput = {
   /** Alcance de un solo eje (modelo viejo). Se traduce a `selection`. */
   scope?: { type?: string; value?: string; ids?: unknown };
   target?: string;
-  operation?: { type?: string; value?: unknown; rounding?: string | null };
+  operation?: { type?: string; value?: unknown; rounding?: string | null; useCategoryMargin?: boolean };
   dryRun?: boolean;
 };
+
+/** Precio por cantidad: "desde N unidades, X% menos que la venta actual". */
+export type BulkTierInput = {
+  priceListId?: string;
+  selection?: unknown;
+  minQty?: unknown;
+  discountPercent?: unknown;
+  rounding?: string | null;
+  dryRun?: boolean;
+};
+
+/** Una fila de la previa de precio por cantidad. */
+export type TierChange = { id: string; name: string; salePrice: number; tierBefore: number | null; tierAfter: number };
 
 export type TramoRedondeo = { fromAmount: Prisma.Decimal; toAmount: Prisma.Decimal | null; mode: string };
 
@@ -128,7 +141,7 @@ export class PricesService {
   private candidatos(tenantId: string, seleccion: PriceSelection) {
     return this.prisma.product.findMany({
       where: selectionWhere(tenantId, seleccion),
-      select: { id: true, name: true, costPrice: true },
+      select: { id: true, name: true, costPrice: true, categoryId: true },
       orderBy: { name: 'asc' },
     });
   }
@@ -163,7 +176,7 @@ export class PricesService {
   }
 
   private armar(
-    products: Array<{ id: string; name: string; costPrice: Prisma.Decimal | null }>,
+    products: Array<{ id: string; name: string; costPrice: Prisma.Decimal | null; categoryId: string | null }>,
     precios: Map<string, Prisma.Decimal | null>,
     ultimos: Map<string, Date>,
   ): Elegido[] {
@@ -175,6 +188,7 @@ export class PricesService {
         cost: p.costPrice === null ? null : Number(p.costPrice),
         sale: vigente === undefined || vigente === null ? null : Number(vigente),
         ultimoCambio: ultimos.get(p.id) ?? null,
+        categoryId: p.categoryId,
       };
     });
   }
@@ -255,8 +269,13 @@ export class PricesService {
     const escribeCosto = operationType === 'supplierIncrease' || target === 'costPrice';
     const escribeVenta = operationType === 'supplierIncrease' || target === 'salePrice';
 
+    // "Fijar un margen" admite un % a mano o, con este flag, el margen objetivo
+    // de la categoría de cada producto — así una selección con varios rubros no
+    // se aplana a un único número.
+    const useCategoryMargin = operationType === 'margin' && body.operation?.useCategoryMargin === true;
+
     const rawValue = Number(body.operation?.value);
-    if (operationType !== 'round') {
+    if (operationType !== 'round' && !useCategoryMargin) {
       if (!Number.isFinite(rawValue)) throw new UnprocessableEntityException('operation.value debe ser un número');
       if (operationType === 'margin' && rawValue < 0) throw new UnprocessableEntityException('El margen no puede ser negativo');
       if (operationType !== 'margin' && rawValue <= -100) {
@@ -295,6 +314,19 @@ export class PricesService {
 
     const elegidos = await this.seleccionar(tenantId, seleccion, lista.id, validFrom, target === 'costPrice' ? 'cost' : 'sale');
 
+    // Margen objetivo por categoría, sólo si se pidió usarlo: un mapa categoryId -> %.
+    const margenPorCategoria = new Map<string, number>();
+    if (useCategoryMargin) {
+      const categoryIds = [...new Set(elegidos.map(p => p.categoryId).filter((id): id is string => id !== null))];
+      if (categoryIds.length) {
+        const categorias = await this.prisma.category.findMany({
+          where: { tenantId, id: { in: categoryIds }, targetMargin: { not: null } },
+          select: { id: true, targetMargin: true },
+        });
+        for (const c of categorias) if (c.targetMargin !== null) margenPorCategoria.set(c.id, Number(c.targetMargin));
+      }
+    }
+
     const changes: Change[] = [];
     // Productos que no se pueden calcular: no se inventan valores, se reportan.
     const skipped: Array<{ id: string; name: string; reason: string }> = [];
@@ -318,7 +350,16 @@ export class PricesService {
           skipped.push({ id: p.id, name: p.name, reason: 'sin precio de costo' });
           continue;
         }
-        saleAfter = redondear(p.cost * (1 + rawValue / 100));
+        let margen = rawValue;
+        if (useCategoryMargin) {
+          const deLaCategoria = p.categoryId ? margenPorCategoria.get(p.categoryId) : undefined;
+          if (deLaCategoria === undefined) {
+            skipped.push({ id: p.id, name: p.name, reason: 'su categoría no tiene margen objetivo definido' });
+            continue;
+          }
+          margen = deLaCategoria;
+        }
+        saleAfter = redondear(p.cost * (1 + margen / 100));
       } else {
         const base = target === 'costPrice' ? p.cost : p.sale;
         if (base === null) {
@@ -385,5 +426,133 @@ export class PricesService {
     }
 
     return { ...resumen, applied: true };
+  }
+
+  /**
+   * Precio por cantidad para toda una selección de una vez: "desde N unidades,
+   * X% menos que la venta actual". Escribe `PriceTier`, no `ProductPrice` —
+   * cada producto conserva su precio único y, además, este escalón. No crea
+   * escalas donde no había: el producto sigue teniendo precio único si nunca
+   * se le carga ninguna (acá, a mano en su ficha, o importando precios).
+   */
+  async ejecutarEscala(tenantId: string, userId: string, body: BulkTierInput) {
+    const minQty = Number(body.minQty);
+    if (!Number.isFinite(minQty) || minQty <= 1) throw new UnprocessableEntityException('La cantidad tiene que ser mayor a 1');
+    const discountPercent = Number(body.discountPercent);
+    if (!Number.isFinite(discountPercent) || discountPercent <= 0 || discountPercent >= 100) {
+      throw new UnprocessableEntityException('El descuento tiene que ser mayor a 0% y menor a 100%');
+    }
+    const rounding = (body.rounding ?? undefined) as Rounding | undefined;
+    if (rounding !== undefined && !ROUNDINGS.includes(rounding)) throw new UnprocessableEntityException('El redondeo no es válido');
+
+    const lista = await this.resolverLista(tenantId, body.priceListId);
+    const tramos: TramoRedondeo[] = rounding === 'byRules'
+      ? await this.prisma.roundingRule.findMany({ where: { tenantId }, orderBy: { fromAmount: 'asc' }, select: { fromAmount: true, toAmount: true, mode: true } })
+      : [];
+    if (rounding === 'byRules' && !tramos.length) {
+      throw new UnprocessableEntityException('No hay tramos de redondeo configurados. Cargá al menos uno o elegí un redondeo fijo.');
+    }
+    const redondear = (v: number) => {
+      if (!rounding) return round2(v);
+      return rounding === 'byRules' ? aplicarTramos(v, tramos) : aplicarModo(v, rounding);
+    };
+
+    const seleccion = this.seleccionDe(body as BulkInput);
+    const elegidos = await this.seleccionar(tenantId, seleccion, lista.id, new Date(), 'sale');
+
+    const existentes = elegidos.length
+      ? await this.prisma.priceTier.findMany({ where: { tenantId, priceListId: lista.id, minQty, productId: { in: elegidos.map(e => e.id) } } })
+      : [];
+    const tierActual = new Map(existentes.map(t => [t.productId, Number(t.price)]));
+
+    const changes: TierChange[] = [];
+    const skipped: Array<{ id: string; name: string; reason: string }> = [];
+    for (const p of elegidos) {
+      if (p.sale === null) {
+        skipped.push({ id: p.id, name: p.name, reason: 'sin precio de venta' });
+        continue;
+      }
+      const tierAfter = redondear(p.sale * (1 - discountPercent / 100));
+      if (tierAfter <= 0) {
+        skipped.push({ id: p.id, name: p.name, reason: 'el resultado sería cero o negativo' });
+        continue;
+      }
+      const tierBefore = tierActual.get(p.id) ?? null;
+      if (tierBefore !== null && round2(tierBefore) === tierAfter) continue;
+      changes.push({ id: p.id, name: p.name, salePrice: p.sale, tierBefore, tierAfter });
+    }
+
+    const resumen = {
+      affected: changes.length,
+      selected: elegidos.length,
+      skipped: skipped.length,
+      skippedDetail: skipped.slice(0, PREVIEW_LIMIT),
+      preview: changes.slice(0, PREVIEW_LIMIT),
+      priceList: { id: lista.id, name: lista.name },
+      minQty,
+      discountPercent,
+    };
+    if (body.dryRun) return { ...resumen, applied: false };
+
+    for (let i = 0; i < changes.length; i += BATCH) {
+      const batch = changes.slice(i, i + BATCH);
+      await this.prisma.$transaction(
+        batch.map(c => this.prisma.priceTier.upsert({
+          where: { tenantId_priceListId_productId_minQty: { tenantId, priceListId: lista.id, productId: c.id, minQty } },
+          create: { tenantId, priceListId: lista.id, productId: c.id, minQty, price: c.tierAfter },
+          update: { price: c.tierAfter },
+        })),
+      );
+    }
+    return { ...resumen, applied: true };
+  }
+
+  /**
+   * Productos donde la última compra registrada (`ProductSupplier.lastCost`,
+   * el proveedor con `lastPurchaseAt` más reciente) quedó en un número distinto
+   * al costo que el producto tiene cargado. Pasa cuando el tenant no activó
+   * "actualizar costo automático" en Ajustes → La empresa: la compra se
+   * registra igual, pero el costo del producto no se pisa solo.
+   */
+  async costosPendientes(tenantId: string) {
+    const filas = await this.prisma.$queryRaw<Array<{
+      product_id: string; product_name: string; cost_price: Prisma.Decimal | null;
+      supplier_id: string; supplier_name: string; last_cost: Prisma.Decimal; last_purchase_at: Date | null;
+    }>>`
+      SELECT DISTINCT ON (ps.product_id)
+        ps.product_id, p.name AS product_name, p.cost_price,
+        ps.supplier_id, s.name AS supplier_name, ps.last_cost, ps.last_purchase_at
+      FROM product_suppliers ps
+      JOIN products p ON p.id = ps.product_id AND p.tenant_id = ps.tenant_id
+      JOIN suppliers s ON s.id = ps.supplier_id AND s.tenant_id = ps.tenant_id
+      WHERE ps.tenant_id = ${tenantId}::uuid AND ps.last_cost IS NOT NULL AND p.is_active = true
+      ORDER BY ps.product_id, ps.last_purchase_at DESC NULLS LAST
+    `;
+    return filas
+      .filter(f => f.cost_price === null || !f.cost_price.equals(f.last_cost))
+      .map(f => ({
+        productId: f.product_id,
+        productName: f.product_name,
+        currentCost: f.cost_price === null ? null : Number(f.cost_price),
+        lastCost: Number(f.last_cost),
+        supplierId: f.supplier_id,
+        supplierName: f.supplier_name,
+        lastPurchaseAt: f.last_purchase_at ? f.last_purchase_at.toISOString() : null,
+      }));
+  }
+
+  /** Aplica el costo de la última compra a los productos elegidos del panel de arriba. */
+  async sincronizarCostos(tenantId: string, userId: string, productIds: string[]) {
+    const pendientes = (await this.costosPendientes(tenantId)).filter(p => productIds.includes(p.productId));
+    let updated = 0;
+    await this.prisma.$transaction(async tx => {
+      for (const p of pendientes) {
+        await tx.product.update({ where: { id: p.productId }, data: { costPrice: p.lastCost } });
+        const h = priceChange({ tenantId, productId: p.productId, field: 'cost', before: p.currentCost, after: p.lastCost, source: 'invoice', userId });
+        if (h) await tx.productPriceHistory.create({ data: h });
+        updated++;
+      }
+    });
+    return { updated };
   }
 }

@@ -76,7 +76,7 @@ export class AuthService {
       return {
         ...this.token(created.user),
         user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId, branch: { id: created.sucursal.id, name: created.sucursal.name }, homeBranch: { id: created.sucursal.id, name: created.sucursal.name }, canNavigateBranches: permisos.some(p => p.key === 'sucursales.navegar'), preferences: {} },
-        tenant: { id: created.tenant.id, name: created.tenant.name, logo: created.tenant.logo, timezone: created.tenant.timezone },
+        tenant: { id: created.tenant.id, name: created.tenant.name, logo: created.tenant.logo, timezone: created.tenant.timezone, autoUpdateCostOnPurchase: created.tenant.autoUpdateCostOnPurchase },
       };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El taxId o email ya está registrado');
@@ -126,7 +126,7 @@ export class AuthService {
     user: {
       id: string; name: string; email: string; rangoId: string; warehouseId: string | null; preferences: unknown;
       rango: { name: string; permissions: { key: string }[] };
-      tenant: { id: string; name: string; logo: string | null; timezone: string };
+      tenant: { id: string; name: string; logo: string | null; timezone: string; autoUpdateCostOnPurchase: boolean };
       branch: { id: string; name: string } | null;
       warehouse: { branch: { id: string; name: string } } | null;
     },
@@ -143,7 +143,7 @@ export class AuthService {
         canNavigateBranches,
         preferences: (user.preferences as Record<string, unknown> | null) ?? {},
       },
-      tenant: { id: user.tenant.id, name: user.tenant.name, logo: user.tenant.logo, timezone: user.tenant.timezone },
+      tenant: { id: user.tenant.id, name: user.tenant.name, logo: user.tenant.logo, timezone: user.tenant.timezone, autoUpdateCostOnPurchase: user.tenant.autoUpdateCostOnPurchase },
     };
   }
 
@@ -208,6 +208,7 @@ export class AuthService {
       if (!TIMEZONES.has(body.timezone)) throw new UnprocessableEntityException('Zona horaria no reconocida');
       data.timezone = body.timezone;
     }
+    if (typeof body.autoUpdateCostOnPurchase === 'boolean') data.autoUpdateCostOnPurchase = body.autoUpdateCostOnPurchase;
     await this.prisma.tenant.update({ where: { id: actor.tenantId }, data });
     return this.me(actor);
   }

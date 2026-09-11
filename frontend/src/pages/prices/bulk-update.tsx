@@ -161,6 +161,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
   const [seleccionados, setSeleccionados] = useState(0);
   const [opKey, setOpKey] = useState<OpKey>('supplierIncrease');
   const [valor, setValor] = useState('');
+  const [usarMargenCategoria, setUsarMargenCategoria] = useState(false);
   const [redondear, setRedondear] = useState(false);
   const [rounding, setRounding] = useState<PriceRounding>('nearest10');
   const [validFrom, setValidFrom] = useState('');
@@ -185,7 +186,9 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
   const listaDerivada = !!lista?.derivesFromId;
   const escribeVenta = op.tipo !== 'percent' || op.target === 'salePrice';
   const bloqueada = listaDerivada && escribeVenta;
-  const necesitaValor = op.tipo !== 'round';
+  const puedeUsarMargenCategoria = opKey === 'margin';
+  const usaMargenCategoria = puedeUsarMargenCategoria && usarMargenCategoria;
+  const necesitaValor = op.tipo !== 'round' && !usaMargenCategoria;
   const listo = seleccionados > 0 && (!necesitaValor || valor.trim() !== '') && !bloqueada;
 
   const loadRules = () => api<PriceRule[]>('/price-rules', {}, token).then(setRules).catch(() => {});
@@ -201,7 +204,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
 
   // La previa deja de valer en cuanto cambia cualquier parámetro: mostrarla
   // desactualizada al lado del botón de aplicar es peor que no mostrarla.
-  useEffect(() => setPreview(null), [selection, opKey, valor, redondear, rounding, priceListId, validFrom]);
+  useEffect(() => setPreview(null), [selection, opKey, valor, usarMargenCategoria, redondear, rounding, priceListId, validFrom]);
 
   const cuerpo = (dryRun: boolean) => ({
     priceListId,
@@ -212,6 +215,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
       type: op.tipo,
       value: necesitaValor ? Number(valor) : undefined,
       rounding: op.tipo === 'round' ? rounding : redondear ? rounding : undefined,
+      useCategoryMargin: usaMargenCategoria ? true : undefined,
     },
     dryRun,
   });
@@ -363,7 +367,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
             <button
               key={o.key}
               type="button"
-              onClick={() => setOpKey(o.key)}
+              onClick={() => { setOpKey(o.key); if (o.key !== 'margin') setUsarMargenCategoria(false); }}
               className={cn(
                 'flex flex-col items-start gap-1 rounded-md border p-3 text-left transition-colors',
                 opKey === o.key ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50',
@@ -381,6 +385,18 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
           <Alert variant="destructive">
             <strong>Ojo:</strong> {op.cuidado}
           </Alert>
+        )}
+
+        {puedeUsarMargenCategoria && (
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={usarMargenCategoria}
+              onChange={e => setUsarMargenCategoria(e.target.checked)}
+              className="size-4"
+            />
+            Usar el margen objetivo de cada categoría en vez de un % fijo
+          </label>
         )}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

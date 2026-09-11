@@ -10,7 +10,7 @@ import { activarPreciosVigentes, guardarPrecio } from './price-resolver.util';
 import { priceChange, type PriceHistoryEntry } from './price-history.util';
 import { PRICE_IMPORT_FIELDS, planPriceRows, type PrecioActual, type PricePlanRow } from './price-import.util';
 import { autoMap, cell, readSheet, type ColumnMapping } from './sheet-import.util';
-import { PricesService, type BulkInput } from './prices.service';
+import { PricesService, type BulkInput, type BulkTierInput } from './prices.service';
 
 const MODOS_REDONDEO = ['nearest10', 'nearest100', 'ending99', 'none'];
 
@@ -26,6 +26,12 @@ export class PricesController {
   @Post('bulk')
   bulk(@Req() request: AuthRequest, @Body() body: BulkInput) {
     return this.prices.ejecutar(request.user.tenantId, request.user.id, body);
+  }
+
+  /** Precio por cantidad para toda una selección: "desde N unidades, X% menos". */
+  @Post('bulk-tier')
+  bulkTier(@Req() request: AuthRequest, @Body() body: BulkTierInput) {
+    return this.prices.ejecutarEscala(request.user.tenantId, request.user.id, body);
   }
 
   /**
@@ -99,11 +105,25 @@ export class PricesController {
       where: { tenantId, barcode: { in: barcodes } },
       select: { id: true, barcode: true, name: true, costPrice: true, salePrice: true },
     });
+    // Las escalas del importador viven en la lista base, igual que el precio de
+    // venta: es la que resuelve la caja. Sin lista base no hay tiers previos que
+    // comparar, pero igual se arma el mapa vacío para no romper el diff.
+    const listaBaseId = (await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true }, select: { id: true } }))?.id;
+    const tiersExistentes = listaBaseId
+      ? await this.prisma.priceTier.findMany({ where: { tenantId, priceListId: listaBaseId, productId: { in: products.map(p => p.id) } } })
+      : [];
+    const tiersPorProducto = new Map<string, Map<number, number>>();
+    for (const t of tiersExistentes) {
+      const mapa = tiersPorProducto.get(t.productId) ?? new Map<number, number>();
+      mapa.set(Number(t.minQty), Number(t.price));
+      tiersPorProducto.set(t.productId, mapa);
+    }
     const existingByBarcode = new Map<string, PrecioActual>(products.map(p => [p.barcode, {
       id: p.id,
       name: p.name,
       cost: p.costPrice === null ? null : Number(p.costPrice),
       sale: p.salePrice === null ? null : Number(p.salePrice),
+      tiers: tiersPorProducto.get(p.id),
     }]));
 
     const plan = planPriceRows({ sheet, mapping, existingByBarcode });
@@ -125,15 +145,16 @@ export class PricesController {
             ...(p.cost !== undefined ? ['costo'] : []),
             ...(p.sale !== undefined ? ['venta'] : []),
             ...(p.name !== undefined ? ['nombre'] : []),
+            ...(p.tiers ?? []).map(t => `escala x${t.minQty}`),
           ],
         })),
       };
     }
 
-    // Los precios de venta se escriben en la lista base, que es la que la caja
-    // resuelve al cobrar. Sin lista base no hay dónde ponerlos.
-    const listaBase = await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true }, select: { id: true } });
-    if (updates.some(p => p.sale !== undefined) && !listaBase) {
+    // Los precios de venta y las escalas se escriben en la lista base, que es
+    // la que la caja resuelve al cobrar. Sin lista base no hay dónde ponerlos.
+    const listaBase = listaBaseId ? { id: listaBaseId } : null;
+    if (updates.some(p => p.sale !== undefined || p.tiers) && !listaBase) {
       throw new UnprocessableEntityException('No hay una lista de precios base configurada. Creá una en Precios antes de importar.');
     }
 
@@ -161,6 +182,16 @@ export class PricesController {
             const h = priceChange({ tenantId, productId: fila.productId, field: 'sale', before: actual.sale, after: fila.sale, source: 'import', userId });
             if (h) historia.push(h);
             await guardarPrecio(tx, { tenantId, productId: fila.productId, priceListId: listaBase!.id, price: fila.sale, source: 'import', userId });
+          }
+          // Precio por cantidad: mismo mecanismo que cargarlo a mano en la ficha
+          // del producto, pero vía planilla. Sin columna mapeada, el producto
+          // sigue con precio único — nunca se le inventa una escala.
+          for (const t of fila.tiers ?? []) {
+            await tx.priceTier.upsert({
+              where: { tenantId_priceListId_productId_minQty: { tenantId, priceListId: listaBase!.id, productId: fila.productId, minQty: t.minQty } },
+              create: { tenantId, priceListId: listaBase!.id, productId: fila.productId, minQty: t.minQty, price: t.price },
+              update: { price: t.price },
+            });
           }
           updated++;
         }
@@ -306,6 +337,20 @@ export class PricesController {
       .slice(0, limit);
 
     return { items };
+  }
+
+  // --- costos pendientes de sincronizar (compras con "actualizar costo automático" apagado) ---
+
+  @Get('pending-costs') @RequirePermission('precios.ver')
+  pendingCosts(@Req() request: AuthRequest) {
+    return this.prices.costosPendientes(request.user.tenantId);
+  }
+
+  @Post('pending-costs/sync')
+  async syncPendingCosts(@Req() request: AuthRequest, @Body() body: { productIds?: unknown }) {
+    const productIds = Array.isArray(body.productIds) ? body.productIds.filter((id): id is string => typeof id === 'string') : [];
+    if (!productIds.length) throw new BadRequestException('productIds es obligatorio');
+    return this.prices.sincronizarCostos(request.user.tenantId, request.user.id, productIds);
   }
 
   // --- politica de redondeo por tramo ---

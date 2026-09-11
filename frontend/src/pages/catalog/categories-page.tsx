@@ -24,6 +24,7 @@ export function CategoriesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [name, setName] = useState('');
+  const [targetMargin, setTargetMargin] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<Category | null>(null);
   const [reassignTo, setReassignTo] = useState('');
@@ -40,6 +41,7 @@ export function CategoriesPage() {
   function openCreate() {
     setEditing(null);
     setName('');
+    setTargetMargin('');
     setError('');
     setOpen(true);
   }
@@ -47,6 +49,7 @@ export function CategoriesPage() {
   function openEdit(c: Category) {
     setEditing(c);
     setName(c.name);
+    setTargetMargin(c.targetMargin === null || c.targetMargin === undefined ? '' : String(c.targetMargin));
     setError('');
     setOpen(true);
   }
@@ -62,8 +65,9 @@ export function CategoriesPage() {
     setSaving(true);
     setError('');
     try {
-      if (editing) await api(`/categories/${editing.id}`, { method: 'PUT', body: JSON.stringify({ name }) }, token);
-      else await api('/categories', { method: 'POST', body: JSON.stringify({ name }) }, token);
+      const body = { name, targetMargin: targetMargin.trim() === '' ? null : Number(targetMargin) };
+      if (editing) await api(`/categories/${editing.id}`, { method: 'PUT', body: JSON.stringify(body) }, token);
+      else await api('/categories', { method: 'POST', body: JSON.stringify(body) }, token);
       setOpen(false);
       await load();
     } catch (err) {
@@ -113,6 +117,7 @@ export function CategoriesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
+                  <TableHead className="text-right">Margen objetivo</TableHead>
                   <TableHead className="text-right">Productos</TableHead>
                   {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
@@ -121,6 +126,9 @@ export function CategoriesPage() {
                 {items.map(c => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {c.targetMargin === null || c.targetMargin === undefined ? '—' : `${c.targetMargin}%`}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">{c.productCount ?? 0}</TableCell>
                     {puedeEditar && (
                       <TableCell className="text-right">
@@ -151,6 +159,17 @@ export function CategoriesPage() {
           <form className="grid gap-4" onSubmit={submit}>
             <Field label="Nombre" htmlFor="category-name">
               <Input id="category-name" required autoFocus value={name} onChange={e => setName(e.target.value)} />
+            </Field>
+            <Field label="Margen objetivo (%)" htmlFor="category-margin" hint="El que se usa habitualmente en este rubro. Opcional: lo usa «Fijar un margen» en Precios para sugerir venta por categoría.">
+              <Input
+                id="category-margin"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Sin definir"
+                value={targetMargin}
+                onChange={e => setTargetMargin(e.target.value)}
+              />
             </Field>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>

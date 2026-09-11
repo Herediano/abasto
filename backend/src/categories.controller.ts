@@ -19,6 +19,16 @@ export class CategoriesController {
     if (clash) throw new ConflictException('Ya existe una categoría con ese nombre');
   }
 
+  // undefined = no tocar el campo, null = borrarlo. Distinto de "" o NaN, que son error.
+  private targetMarginDe(body: Record<string, unknown>): number | null | undefined {
+    if (!('targetMargin' in body)) return undefined;
+    const raw = body.targetMargin;
+    if (raw === null || raw === '') return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) throw new BadRequestException('targetMargin debe ser un número positivo');
+    return n;
+  }
+
   @Get() @RequirePermission('productos.ver')
   async list(@Req() request: AuthRequest) {
     const rows = await this.prisma.category.findMany({
@@ -36,8 +46,9 @@ export class CategoriesController {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) throw new BadRequestException('name es obligatorio');
     await this.assertNameFree(tenantId, name);
+    const targetMargin = this.targetMarginDe(body);
     try {
-      return await this.prisma.category.create({ data: { tenantId, name } });
+      return await this.prisma.category.create({ data: { tenantId, name, targetMargin: targetMargin ?? null } });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('La categoría ya existe');
       throw error;
@@ -53,8 +64,9 @@ export class CategoriesController {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) throw new BadRequestException('name es obligatorio');
     await this.assertNameFree(tenantId, name, id);
+    const targetMargin = this.targetMarginDe(body);
     try {
-      return await this.prisma.category.update({ where: { id }, data: { name } });
+      return await this.prisma.category.update({ where: { id }, data: { name, ...(targetMargin !== undefined ? { targetMargin } : {}) } });
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('La categoría ya existe');
       throw error;

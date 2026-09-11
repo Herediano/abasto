@@ -89,6 +89,7 @@ export class PurchasesService {
   }
 
   async confirm(tenantId: string, invoiceId: string) {
+    const tenant = await this.prisma.tenant.findFirst({ where: { id: tenantId }, select: { autoUpdateCostOnPurchase: true } });
     return this.prisma.$transaction(async tx => {
       const invoice = await tx.purchaseInvoice.findFirst({ where: { id: invoiceId, tenantId }, include: { lines: true } });
       if (!invoice) throw new NotFoundException('Factura no encontrada');
@@ -103,12 +104,20 @@ export class PurchasesService {
         // siempre la unidad base, asi que la conversion ocurre aca.
         const baseQuantity = new Prisma.Decimal(line.quantity).mul(line.unitFactor);
         const costPerBaseUnit = new Prisma.Decimal(line.unitCost).div(line.unitFactor).toDecimalPlaces(2);
-        if (product.costPrice === null) {
-          await tx.product.update({ where: { id: product.id }, data: { costPrice: costPerBaseUnit } });
-          await tx.productPriceHistory.create({ data: {
-            tenantId, productId: product.id, field: 'cost', oldValue: null,
-            newValue: costPerBaseUnit, source: 'invoice', userId: invoice.createdById,
-          } });
+        // Sin costo todavía, siempre se carga: si no, el producto queda sin
+        // costo para siempre. Con costo ya cargado, sólo se pisa solo si el
+        // negocio activó "actualizar costo automático" en Ajustes → La
+        // empresa; si no, la compra queda registrada (ProductSupplier.lastCost,
+        // abajo) y aparece en /prices/pending-costs para decidir a mano.
+        if (product.costPrice === null || tenant?.autoUpdateCostOnPurchase) {
+          const costoAnterior = product.costPrice;
+          if (costoAnterior === null || !costoAnterior.equals(costPerBaseUnit)) {
+            await tx.product.update({ where: { id: product.id }, data: { costPrice: costPerBaseUnit } });
+            await tx.productPriceHistory.create({ data: {
+              tenantId, productId: product.id, field: 'cost', oldValue: costoAnterior,
+              newValue: costPerBaseUnit, source: 'invoice', userId: invoice.createdById,
+            } });
+          }
         }
         // Se arma solo el historial de a quien le compramos cada producto.
         await tx.productSupplier.upsert({

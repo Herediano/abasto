@@ -96,7 +96,7 @@ export type Session = {
     /** ¿Puede mirar otras sucursales además de la suya? */
     canNavigateBranches?: boolean;
   };
-  tenant: { id: string; name: string; logo?: string | null; timezone?: string };
+  tenant: { id: string; name: string; logo?: string | null; timezone?: string; autoUpdateCostOnPurchase?: boolean };
 };
 
 export type Permission = { key: string; area: string; label: string; dangerous: boolean };
@@ -187,7 +187,7 @@ export type LowStockProduct = Product & {
   preferredSupplierCode?: string | null;
 };
 
-export type Category = { id: string; name: string; productCount?: number };
+export type Category = { id: string; name: string; productCount?: number; targetMargin?: number | null };
 
 export type PriceList = {
   id: string;
@@ -317,6 +317,13 @@ export type Promotion = {
   validFrom: string;
   validTo?: string | null;
   isActive: boolean;
+  priority: number;
+  exclusive: boolean;
+  /** Días de la semana en que corre (0=domingo…6=sábado). Vacío = todos los días. */
+  daysOfWeek: number[];
+  /** Franja horaria "HH:mm". null en cualquiera de los dos = todo el día. */
+  startTime: string | null;
+  endTime: string | null;
 };
 
 export type Customer = {
@@ -393,6 +400,28 @@ export type CustomerAccount = {
 };
 
 export type PriceTier = { id: string; priceListId: string; priceListName: string; minQty: string; price: string };
+
+export type TierBulkResult = {
+  affected: number;
+  selected: number;
+  skipped: number;
+  skippedDetail: Array<{ id: string; name: string; reason: string }>;
+  preview: Array<{ id: string; name: string; salePrice: number; tierBefore: number | null; tierAfter: number }>;
+  priceList: { id: string; name: string };
+  minQty: number;
+  discountPercent: number;
+  applied: boolean;
+};
+
+export type PendingCost = {
+  productId: string;
+  productName: string;
+  currentCost: number | null;
+  lastCost: number;
+  supplierId: string;
+  supplierName: string;
+  lastPurchaseAt: string | null;
+};
 
 export type PriceAuditRow = {
   id: string;

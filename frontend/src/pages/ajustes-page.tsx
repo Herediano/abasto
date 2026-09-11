@@ -285,11 +285,13 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
   const [name, setName] = useState(session.tenant.name);
   const [logo, setLogo] = useState<string | null>(session.tenant.logo ?? null);
   const [tz, setTz] = useState(session.tenant.timezone ?? TIMEZONES[0].value);
+  const [autoCost, setAutoCost] = useState(session.tenant.autoUpdateCostOnPurchase ?? false);
   const [state, setState] = useState<'idle' | 'saving' | 'ok'>('idle');
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const dirty = name.trim() !== session.tenant.name || logo !== (session.tenant.logo ?? null) || tz !== (session.tenant.timezone ?? TIMEZONES[0].value);
+  const dirty = name.trim() !== session.tenant.name || logo !== (session.tenant.logo ?? null)
+    || tz !== (session.tenant.timezone ?? TIMEZONES[0].value) || autoCost !== (session.tenant.autoUpdateCostOnPurchase ?? false);
 
   async function pickLogo(file: File | undefined) {
     if (!file) return;
@@ -306,7 +308,7 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
     setState('saving');
     setError('');
     try {
-      await api('/auth/tenant', { method: 'PATCH', body: JSON.stringify({ name, logo, timezone: tz }) }, session.accessToken);
+      await api('/auth/tenant', { method: 'PATCH', body: JSON.stringify({ name, logo, timezone: tz, autoUpdateCostOnPurchase: autoCost }) }, session.accessToken);
       await onSaved();
       setState('ok');
       setTimeout(() => setState('idle'), 1800);
@@ -351,6 +353,19 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
             </Select>
           </Field>
         </div>
+
+        <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
+          <input type="checkbox" checked={autoCost} onChange={e => setAutoCost(e.target.checked)} className="mt-0.5 size-4" />
+          <span>
+            <span className="font-medium">Actualizar el costo automáticamente al confirmar una compra</span>
+            <span className="block text-muted-foreground">
+              {autoCost
+                ? 'Cada factura confirmada pisa el costo del producto con el precio de esa compra, aunque ya tuviera uno cargado.'
+                : 'El costo sólo se carga solo la primera vez. Después, si un proveedor te aumenta, la compra queda registrada pero el costo del producto no se mueve hasta que lo revises en Precios → Actualizar («Costos por sincronizar») — así podés armar el aumento de venta antes de tocar nada.'}
+            </span>
+          </span>
+        </label>
+
         <Button type="submit" disabled={!dirty || state === 'saving'} className="justify-self-start">
           {state === 'saving' && <Spinner />} {state === 'ok' ? <><Check /> Guardado</> : 'Guardar cambios'}
         </Button>
