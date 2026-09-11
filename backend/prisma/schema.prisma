@@ -33,6 +33,9 @@ enum MovementType {
 
 enum PurchaseInvoiceStatus {
   draft
+  // Mercadería recibida y stock movido, pero todavía sin los datos fiscales
+  // de la factura del proveedor (ver "completar factura").
+  received
   confirmed
   cancelled
   corrected
@@ -104,6 +107,9 @@ model Tenant {
   purchaseInvoices         PurchaseInvoice[]
   purchaseInvoiceLines     PurchaseInvoiceLine[]
   purchaseInvoiceRevisions PurchaseInvoiceRevision[]
+  supplierAccountMovements SupplierAccountMovement[]
+  purchaseOrders           PurchaseOrder[]
+  purchaseOrderLines       PurchaseOrderLine[]
   productBarcodes          ProductBarcode[]
   productSuppliers         ProductSupplier[]
   productPriceHistory      ProductPriceHistory[]
@@ -668,6 +674,8 @@ model User {
   shiftsClosed             CashShift[]               @relation("ShiftClosedBy")
   cashMovements            CashMovement[]
   customerAccountMovements CustomerAccountMovement[]
+  supplierAccountMovements SupplierAccountMovement[]
+  purchaseOrders           PurchaseOrder[]
   tasks                    Task[]
 
   @@index([tenantId])
@@ -795,6 +803,7 @@ model Product {
   lots                 ProductLot[]
   stockMovements       StockMovement[]
   purchaseInvoiceLines PurchaseInvoiceLine[]
+  purchaseOrderLines   PurchaseOrderLine[]
   extraBarcodes        ProductBarcode[]
   suppliers            ProductSupplier[]
   priceHistory         ProductPriceHistory[]
@@ -841,6 +850,10 @@ model Supplier {
   email            String?
   phone            String?
   address          String?
+  // Cuenta corriente con el proveedor. Positivo = nosotros le debemos a él.
+  // accountBalance es CACHE — la fuente de verdad es SupplierAccountMovement
+  // (mismo criterio que Customer.accountBalance).
+  accountBalance   Decimal           @default(0) @map("account_balance") @db.Decimal(14, 2)
   isActive         Boolean           @default(true) @map("is_active")
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -848,10 +861,93 @@ model Supplier {
   lots             ProductLot[]
   purchaseInvoices PurchaseInvoice[]
   products         ProductSupplier[]
+  accountMovements SupplierAccountMovement[]
+  purchaseOrders   PurchaseOrder[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
   @@map("suppliers")
+}
+
+enum SupplierAccountMovementType {
+  invoice
+  payment
+  adjustment
+}
+
+// Espejo de CustomerAccountMovement, del otro lado del mostrador: lo que le
+// debemos a un proveedor en vez de lo que nos debe un cliente. `invoice` se
+// registra sola al confirmar una factura (o al recibir mercadería sin factura
+// todavía, ver PurchaseInvoiceStatus.received); `payment` y `adjustment` son
+// manuales (pagar, o una nota de débito/crédito del proveedor).
+model SupplierAccountMovement {
+  id                String                      @id @default(uuid()) @db.Uuid
+  tenantId          String                      @map("tenant_id") @db.Uuid
+  supplierId        String                      @map("supplier_id") @db.Uuid
+  type              SupplierAccountMovementType
+  amount            Decimal                     @db.Decimal(14, 2)
+  balanceAfter      Decimal                     @map("balance_after") @db.Decimal(14, 2)
+  purchaseInvoiceId String?                     @map("purchase_invoice_id") @db.Uuid
+  userId            String                      @map("user_id") @db.Uuid
+  notes             String?
+  occurredAt        DateTime                    @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  tenant            Tenant                      @relation(fields: [tenantId], references: [id])
+  supplier          Supplier                    @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  purchaseInvoice   PurchaseInvoice?            @relation(fields: [purchaseInvoiceId, tenantId], references: [id, tenantId])
+  user              User                        @relation(fields: [userId], references: [id])
+
+  @@unique([id, tenantId])
+  @@index([tenantId, supplierId, occurredAt])
+  @@map("supplier_account_movements")
+}
+
+enum PurchaseOrderStatus {
+  open
+  received
+  cancelled
+}
+
+// Pedido a proveedor: la contracara liviana de la Orden de Compra de otros
+// sistemas (Odoo, Dux). No hace 3-way matching ni reserva stock — es una lista
+// de qué se le pidió a quién, para no perderla entre que se decide reponer
+// (Stock → Reposición) y que llega la factura. "Recibido" es manual: no se
+// infiere de ninguna factura, así no hace falta linkear una factura a un
+// pedido puntual para poder cerrarlo.
+model PurchaseOrder {
+  id          String              @id @default(uuid()) @db.Uuid
+  tenantId    String              @map("tenant_id") @db.Uuid
+  supplierId  String              @map("supplier_id") @db.Uuid
+  warehouseId String              @map("warehouse_id") @db.Uuid
+  status      PurchaseOrderStatus @default(open)
+  notes       String?
+  createdById String              @map("created_by_id") @db.Uuid
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant      Tenant              @relation(fields: [tenantId], references: [id])
+  supplier    Supplier            @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  warehouse   Warehouse           @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  createdBy   User                @relation(fields: [createdById], references: [id])
+  lines       PurchaseOrderLine[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, supplierId])
+  @@index([tenantId, status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  purchaseOrderId String        @map("purchase_order_id") @db.Uuid
+  productId       String        @map("product_id") @db.Uuid
+  quantity        Decimal       @db.Decimal(14, 3)
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product         Product       @relation(fields: [productId, tenantId], references: [id, tenantId])
+
+  @@unique([id, tenantId])
+  @@index([tenantId, purchaseOrderId])
+  @@map("purchase_order_lines")
 }
 
 // Codigos adicionales: un mismo producto puede venir con distintos EAN segun
@@ -963,6 +1059,7 @@ model Warehouse {
   lots             ProductLot[]
   stockMovements   StockMovement[]
   purchaseInvoices PurchaseInvoice[]
+  purchaseOrders   PurchaseOrder[]
   users            User[]
   sales            Sale[]
   cashRegisters    CashRegister[]
@@ -1032,9 +1129,16 @@ model PurchaseInvoice {
   warehouseId     String                    @map("warehouse_id") @db.Uuid
   createdById     String                    @map("created_by_id") @db.Uuid
   invoiceType     PurchaseInvoiceType       @map("invoice_type")
-  pointOfSale     String                    @map("point_of_sale")
-  invoiceNumber   String                    @map("invoice_number")
+  // Nulos mientras el estado es `received`: la mercadería ya entró a stock
+  // pero todavía no llegó el papel fiscal del proveedor (ver "completar
+  // factura"). `remitoNumber` es la referencia de ese remito, si lo hay.
+  pointOfSale     String?                   @map("point_of_sale")
+  invoiceNumber   String?                   @map("invoice_number")
+  remitoNumber    String?                   @map("remito_number")
   issueDate       DateTime                  @map("issue_date") @db.Date
+  // Cuándo vence el pago. Informativo — no bloquea nada — pero es lo que
+  // alimenta "vence esta semana" en Compras y en el escritorio.
+  dueDate         DateTime?                 @map("due_date") @db.Date
   currency        String                    @default("ARS")
   subtotal        Decimal                   @db.Decimal(14, 2)
   taxTotal        Decimal                   @map("tax_total") @db.Decimal(14, 2)
@@ -1051,10 +1155,12 @@ model PurchaseInvoice {
   createdBy       User                      @relation(fields: [createdById], references: [id])
   lines           PurchaseInvoiceLine[]
   revisions       PurchaseInvoiceRevision[]
+  accountMovements SupplierAccountMovement[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, invoiceType, pointOfSale, invoiceNumber])
   @@index([tenantId, issueDate])
+  @@index([tenantId, dueDate])
   @@map("purchase_invoices")
 }
 

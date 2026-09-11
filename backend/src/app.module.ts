@@ -39,13 +39,17 @@ import { CreditNotesController } from './credit-notes.controller';
 import { CreditNotesService } from './credit-notes.service';
 import { TasksController } from './tasks.controller';
 import { BootstrapService } from './bootstrap.service';
+import { SuppliersAccountController } from './suppliers-account.controller';
+import { SuppliersAccountService } from './suppliers-account.service';
+import { PurchaseOrdersController } from './purchase-orders.controller';
+import { PurchaseOrdersService } from './purchase-orders.service';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, RangosController, EscritorioController, ReportesController, CreditNotesController, TasksController],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, SuppliersAccountController, PurchaseOrdersController, RangosController, EscritorioController, ReportesController, CreditNotesController, TasksController],
   providers: [
     StockService, AuthService, JwtAuthGuard, PermissionGuard, PurchasesService, PriceActivationService, PricesService, SalesService,
-    CajaService, CuentasCorrientesService, RangosService, BootstrapService, CreditNotesService,
+    CajaService, CuentasCorrientesService, SuppliersAccountService, PurchaseOrdersService, RangosService, BootstrapService, CreditNotesService,
   ],
 })
 export class AppModule {}

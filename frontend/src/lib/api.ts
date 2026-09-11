@@ -183,6 +183,7 @@ export type LowStockProduct = Product & {
   /** true si la sucursal activa tiene su propio mín/máx. */
   branchOverride?: boolean;
   /** Proveedor preferido del producto: a quién pedirle. */
+  preferredSupplierId?: string | null;
   preferredSupplierName?: string | null;
   preferredSupplierCode?: string | null;
 };
@@ -471,6 +472,7 @@ export type Supplier = {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
+  accountBalance?: string | number;
 };
 
 export type Lot = {
@@ -515,10 +517,12 @@ export type PurchaseInvoice = {
   id: string;
   supplierId: string;
   invoiceType: string;
-  pointOfSale: string;
-  invoiceNumber: string;
+  pointOfSale: string | null;
+  invoiceNumber: string | null;
+  remitoNumber?: string | null;
+  dueDate?: string | null;
   issueDate: string;
-  status: string;
+  status: 'draft' | 'received' | 'confirmed' | 'corrected' | 'cancelled' | string;
   subtotal: string;
   taxTotal: string;
   otherTaxes?: Array<{ label: string; amount: number }> | null;
@@ -527,6 +531,36 @@ export type PurchaseInvoice = {
   notes?: string | null;
   supplier?: { name: string };
   lines: Array<{ productId: string; productLotId?: string | null; barcode: string; description?: string | null; quantity: string; unitFactor?: string; unitCost: string; taxRate: string }>;
+};
+
+export type SupplierAccountMovement = {
+  id: string;
+  type: 'invoice' | 'payment' | 'adjustment';
+  amount: string;
+  balanceAfter: string;
+  notes?: string | null;
+  occurredAt: string;
+  userName?: string;
+  comprobante?: string | null;
+};
+
+export type SupplierAccount = {
+  supplierId: string;
+  supplierName: string;
+  balance: number;
+  movements: SupplierAccountMovement[];
+};
+
+export type PurchaseOrder = {
+  id: string;
+  supplierId: string;
+  warehouseId: string;
+  status: 'open' | 'received' | 'cancelled';
+  notes?: string | null;
+  createdAt: string;
+  supplier?: { name: string };
+  createdBy?: { name: string };
+  lines: Array<{ id: string; productId: string; quantity: string; product?: { name: string; barcode: string } }>;
 };
 
 export type Sale = {

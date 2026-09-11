@@ -48,7 +48,8 @@ export class PurchasesController {
   }
 
   @Post() @RequirePermission('compras.crear') create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) { return this.purchases.createDraft(request.user, body); }
-  @Post(':id/confirm') @RequirePermission('compras.crear') confirm(@Req() request: AuthRequest, @Param('id') id: string) { return this.purchases.confirm(request.user.tenantId, id); }
+  @Post(':id/confirm') @RequirePermission('compras.crear') confirm(@Req() request: AuthRequest, @Param('id') id: string) { return this.purchases.confirm(request.user.tenantId, request.user.id, id); }
+  @Post(':id/complete-invoice') @RequirePermission('compras.crear') completeInvoice(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) { return this.purchases.completeInvoice(request.user.tenantId, id, body); }
   @Post(':id/correct') @RequirePermission('compras.corregir') correct(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) { return this.purchases.correct(request.user, id, body); }
   @Post(':id/cancel') @RequirePermission('compras.anular') cancel(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) { return this.purchases.cancel(request.user, id, body); }
 }

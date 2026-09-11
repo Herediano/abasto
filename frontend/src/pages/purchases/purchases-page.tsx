@@ -19,7 +19,7 @@ import { Select } from '@/components/ui/select';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { api, errorMessage, type Lot, type Pagination, type Product, type PurchaseInvoice, type Supplier } from '@/lib/api';
+import { api, errorMessage, type Lot, type Pagination, type Product, type PurchaseInvoice, type PurchaseOrder, type Supplier } from '@/lib/api';
 import { fecha, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -33,6 +33,7 @@ import { useAuth } from '@/lib/auth-context';
 
 const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'success' | 'destructive' }> = {
   draft: { label: 'Borrador', variant: 'secondary' },
+  received: { label: 'Recibida, factura pendiente', variant: 'secondary' },
   confirmed: { label: 'Confirmada', variant: 'success' },
   corrected: { label: 'Corregida', variant: 'secondary' },
   cancelled: { label: 'Cancelada', variant: 'destructive' },
@@ -42,7 +43,7 @@ const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'succ
 // con el que se confirmó, no el actual del producto (que pudo cambiar).
 type Line = { barcode: string; productName: string; productLotId: string; quantity: string; unitCost: string; taxRate: string; byPackage: boolean; packSize: string; unitFactor?: string };
 const EMPTY_LINE: Line = { barcode: '', productName: '', productLotId: '', quantity: '', unitCost: '', taxRate: '21', byPackage: false, packSize: '' };
-const EMPTY_HEADER = { supplierId: '', invoiceType: 'A', pointOfSale: '', invoiceNumber: '', issueDate: inputDate(), notes: '' };
+const EMPTY_HEADER = { supplierId: '', invoiceType: 'A', pointOfSale: '', invoiceNumber: '', remitoNumber: '', dueDate: '', pendingInvoice: false, issueDate: inputDate(), notes: '' };
 
 type OtherTax = { label: string; amount: string };
 
@@ -74,9 +75,48 @@ export function PurchasesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const storedDraft = useMemo(() => readDraft(tenantId), [tenantId]);
 
-  const [view, setView] = useState<'facturas' | 'nueva'>('facturas');
+  const [view, setView] = useState<'facturas' | 'nueva' | 'pedidos'>('facturas');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [error, setError] = useState('');
+
+  // --- pedidos a proveedor (orden de compra liviana, ver Reposición) ---
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState('');
+  const [orderActionId, setOrderActionId] = useState<string | null>(null);
+
+  const loadOrders = () => {
+    setOrdersLoading(true);
+    return api<PurchaseOrder[]>('/purchase-orders', {}, token)
+      .then(setOrders)
+      .catch(e => setOrdersError(errorMessage(e)))
+      .finally(() => setOrdersLoading(false));
+  };
+  useEffect(() => { if (view === 'pedidos') void loadOrders(); }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function receiveOrder(id: string) {
+    setOrderActionId(id);
+    try { await api(`/purchase-orders/${id}/receive`, { method: 'POST' }, token); await loadOrders(); }
+    catch (err) { setOrdersError(errorMessage(err)); }
+    finally { setOrderActionId(null); }
+  }
+
+  async function cancelOrder(id: string) {
+    setOrderActionId(id);
+    try { await api(`/purchase-orders/${id}/cancel`, { method: 'POST' }, token); await loadOrders(); }
+    catch (err) { setOrdersError(errorMessage(err)); }
+    finally { setOrderActionId(null); }
+  }
+
+  function loadInvoiceFromOrder(order: PurchaseOrder) {
+    setEditingInvoice(null);
+    setCorrectionReason('');
+    setHeader({ ...EMPTY_HEADER, supplierId: order.supplierId });
+    setLines([]);
+    setOtherTaxes([]);
+    setError('');
+    setView('nueva');
+  }
 
   // --- listado ---
   const [items, setItems] = useState<PurchaseInvoice[]>([]);
@@ -91,6 +131,12 @@ export function PurchasesPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
+
+  // --- completar factura: una recibida por remito, ahora con el papel ---
+  const [completingInvoice, setCompletingInvoice] = useState<PurchaseInvoice | null>(null);
+  const [completeForm, setCompleteForm] = useState({ invoiceType: 'A', pointOfSale: '', invoiceNumber: '', dueDate: '' });
+  const [completeError, setCompleteError] = useState('');
+  const [completing, setCompleting] = useState(false);
 
   // --- formulario de alta / corrección ---
   const [product, setProduct] = useState<Product | null>(null);
@@ -321,7 +367,11 @@ export function PurchasesPage() {
     setEditingInvoice(invoice);
     setCorrectionReason('');
     setError('');
-    setHeader({ supplierId: invoice.supplierId, invoiceType: invoice.invoiceType, pointOfSale: invoice.pointOfSale, invoiceNumber: invoice.invoiceNumber, issueDate: inputDate(invoice.issueDate), notes: invoice.notes ?? '' });
+    setHeader({
+      supplierId: invoice.supplierId, invoiceType: invoice.invoiceType, pointOfSale: invoice.pointOfSale ?? '', invoiceNumber: invoice.invoiceNumber ?? '',
+      remitoNumber: invoice.remitoNumber ?? '', dueDate: invoice.dueDate ? inputDate(invoice.dueDate) : '', pendingInvoice: false,
+      issueDate: inputDate(invoice.issueDate), notes: invoice.notes ?? '',
+    });
     setLines(invoice.lines.map(l => ({
       barcode: l.barcode,
       productName: l.description ?? l.barcode,
@@ -346,6 +396,28 @@ export function PurchasesPage() {
     setOtherTaxes([]);
     setError('');
     setView('facturas');
+  }
+
+  function openCompleteInvoice(invoice: PurchaseInvoice) {
+    setCompletingInvoice(invoice);
+    setCompleteForm({ invoiceType: invoice.invoiceType, pointOfSale: '', invoiceNumber: '', dueDate: invoice.dueDate ? inputDate(invoice.dueDate) : '' });
+    setCompleteError('');
+  }
+
+  async function submitCompleteInvoice(e: FormEvent) {
+    e.preventDefault();
+    if (!completingInvoice) return;
+    setCompleting(true);
+    setCompleteError('');
+    try {
+      await api(`/purchases/invoices/${completingInvoice.id}/complete-invoice`, { method: 'POST', body: JSON.stringify(completeForm) }, token);
+      setCompletingInvoice(null);
+      await load();
+    } catch (err) {
+      setCompleteError(errorMessage(err));
+    } finally {
+      setCompleting(false);
+    }
   }
 
   function openCancelInvoice(invoice: PurchaseInvoice) {
@@ -387,6 +459,7 @@ export function PurchasesPage() {
         }
         views={[
           { key: 'facturas', label: 'Facturas' },
+          { key: 'pedidos', label: 'Pedidos' },
           ...(puedeCrear ? [{ key: 'nueva', label: editingInvoice ? 'Corregir factura' : 'Nueva factura' }] : []),
         ]}
         view={view}
@@ -450,7 +523,7 @@ export function PurchasesPage() {
                       <TableRow key={i.id}>
                         <TableCell>{fecha(i.issueDate)}</TableCell>
                         <TableCell>{i.supplier?.name ?? '—'}</TableCell>
-                        <TableCell>{i.invoiceType} {i.pointOfSale}-{i.invoiceNumber}</TableCell>
+                        <TableCell>{i.invoiceNumber ? `${i.invoiceType} ${i.pointOfSale}-${i.invoiceNumber}` : `Remito${i.remitoNumber ? ` ${i.remitoNumber}` : ''}`}</TableCell>
                         <TableCell className="text-right font-medium">{money(Number(i.total))}</TableCell>
                         <TableCell>
                           <Badge variant={STATUS_LABEL[i.status]?.variant ?? 'secondary'}>{STATUS_LABEL[i.status]?.label ?? i.status}</Badge>
@@ -458,10 +531,13 @@ export function PurchasesPage() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button variant="ghost" size="sm" onClick={() => setDetalle(i)}>Ver</Button>
-                            {puedeCorregir && (i.status === 'confirmed' || i.status === 'corrected') && (
+                            {puedeCrear && i.status === 'received' && (
+                              <Button variant="outline" size="sm" onClick={() => openCompleteInvoice(i)}>Completar factura</Button>
+                            )}
+                            {puedeCorregir && (i.status === 'confirmed' || i.status === 'corrected' || i.status === 'received') && (
                               <Button variant="outline" size="sm" onClick={() => startCorrection(i)}>Corregir</Button>
                             )}
-                            {puedeAnular && (i.status === 'confirmed' || i.status === 'corrected') && (
+                            {puedeAnular && (i.status === 'confirmed' || i.status === 'corrected' || i.status === 'received') && (
                               <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => openCancelInvoice(i)}>Anular</Button>
                             )}
                           </div>
@@ -480,6 +556,52 @@ export function PurchasesPage() {
                   </div>
                 )}
               </div>
+            )}
+          </ModuleSection>
+        ) : view === 'pedidos' ? (
+          <ModuleSection title="Pedidos a proveedor" description="Nacen desde Reposición: no reconcilian cantidades contra la factura, sólo avisan qué se pidió y a quién hasta que llegue.">
+            {ordersError && <Alert variant="destructive">{ordersError}</Alert>}
+            {ordersLoading ? (
+              <PageSpinner />
+            ) : orders.length === 0 ? (
+              <EmptyState icon={ShoppingCartSimple} title="Todavía no hay pedidos" description="Generalos desde Stock → Reposición, seleccionando productos por debajo del mínimo." />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Proveedor</TableHead>
+                    <TableHead>Productos</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map(o => (
+                    <TableRow key={o.id}>
+                      <TableCell>{fecha(o.createdAt)}</TableCell>
+                      <TableCell>{o.supplier?.name ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{o.lines.map(l => l.product?.name ?? l.productId).join(', ')}</TableCell>
+                      <TableCell>
+                        <Badge variant={o.status === 'open' ? 'secondary' : o.status === 'received' ? 'success' : 'destructive'}>
+                          {o.status === 'open' ? 'Abierto' : o.status === 'received' ? 'Recibido' : 'Cancelado'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {o.status === 'open' && puedeCrear && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => loadInvoiceFromOrder(o)}>Cargar factura</Button>
+                              <Button variant="outline" size="sm" disabled={orderActionId === o.id} onClick={() => receiveOrder(o.id)}>Marcar recibido</Button>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" disabled={orderActionId === o.id} onClick={() => cancelOrder(o.id)}>Cancelar</Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </ModuleSection>
         ) : (
@@ -504,16 +626,44 @@ export function PurchasesPage() {
                       <option value="other">Otro</option>
                     </Select>
                   </Field>
-                  <Field label="Punto de venta" htmlFor="pointOfSale">
-                    <Input id="pointOfSale" required placeholder="0001" value={header.pointOfSale} onChange={e => setHeader({ ...header, pointOfSale: e.target.value })} />
-                  </Field>
-                  <Field label="Número" htmlFor="invoiceNumber">
-                    <Input id="invoiceNumber" required placeholder="00001234" value={header.invoiceNumber} onChange={e => setHeader({ ...header, invoiceNumber: e.target.value })} />
-                  </Field>
+                  {!header.pendingInvoice && (
+                    <>
+                      <Field label="Punto de venta" htmlFor="pointOfSale">
+                        <Input id="pointOfSale" required placeholder="0001" value={header.pointOfSale} onChange={e => setHeader({ ...header, pointOfSale: e.target.value })} />
+                      </Field>
+                      <Field label="Número" htmlFor="invoiceNumber">
+                        <Input id="invoiceNumber" required placeholder="00001234" value={header.invoiceNumber} onChange={e => setHeader({ ...header, invoiceNumber: e.target.value })} />
+                      </Field>
+                    </>
+                  )}
                   <Field label="Fecha" htmlFor="issueDate">
                     <Input id="issueDate" required type="date" value={header.issueDate} onChange={e => setHeader({ ...header, issueDate: e.target.value })} />
                   </Field>
                 </div>
+
+                {!editingInvoice && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="pendingInvoice"
+                      checked={header.pendingInvoice}
+                      onCheckedChange={checked => setHeader({ ...header, pendingInvoice: checked === true })}
+                    />
+                    <Label htmlFor="pendingInvoice" className="font-normal">
+                      Todavía no tengo la factura (llegó con remito) — la mercadería entra a stock igual
+                    </Label>
+                  </div>
+                )}
+
+                {header.pendingInvoice && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Nº de remito" htmlFor="remitoNumber" hint="(opcional)">
+                      <Input id="remitoNumber" value={header.remitoNumber} onChange={e => setHeader({ ...header, remitoNumber: e.target.value })} />
+                    </Field>
+                    <Field label="Vencimiento estimado" htmlFor="dueDate" hint="(opcional)">
+                      <Input id="dueDate" type="date" value={header.dueDate} onChange={e => setHeader({ ...header, dueDate: e.target.value })} />
+                    </Field>
+                  </div>
+                )}
               </div>
             </ModuleSection>
 
@@ -703,7 +853,7 @@ export function PurchasesPage() {
       <Dialog open={!!detalle} onOpenChange={open => !open && setDetalle(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{detalle ? `${detalle.invoiceType} ${detalle.pointOfSale}-${detalle.invoiceNumber}` : ''}</DialogTitle>
+            <DialogTitle>{detalle ? (detalle.invoiceNumber ? `${detalle.invoiceType} ${detalle.pointOfSale}-${detalle.invoiceNumber}` : `Remito${detalle.remitoNumber ? ` ${detalle.remitoNumber}` : ''}`) : ''}</DialogTitle>
           </DialogHeader>
           {detalle && (
             <div className="flex flex-col gap-3 text-sm">
@@ -742,16 +892,65 @@ export function PurchasesPage() {
                 {Number(detalle.otherTaxesTotal ?? 0) > 0 && <span className="text-muted-foreground">Otros impuestos: {money(Number(detalle.otherTaxesTotal))}</span>}
                 <span className="font-semibold">Total: {money(Number(detalle.total))}</span>
               </div>
+              {Number(detalle.otherTaxesTotal ?? 0) > 0 && (detalle.status === 'confirmed' || detalle.status === 'corrected' || detalle.status === 'received') && (
+                <p className="text-chico text-placeholder">Los otros impuestos se prorratearon entre las líneas: el costo que quedó cargado en cada producto incluye su parte proporcional.</p>
+              )}
             </div>
           )}
           <DialogFooter>
-            {puedeCorregir && detalle && (detalle.status === 'confirmed' || detalle.status === 'corrected') && (
+            {puedeCrear && detalle && detalle.status === 'received' && (
+              <Button type="button" variant="outline" onClick={() => { const inv = detalle; setDetalle(null); openCompleteInvoice(inv); }}>
+                Completar factura
+              </Button>
+            )}
+            {puedeCorregir && detalle && (detalle.status === 'confirmed' || detalle.status === 'corrected' || detalle.status === 'received') && (
               <Button type="button" variant="outline" onClick={() => { const inv = detalle; setDetalle(null); if (inv) startCorrection(inv); }}>
                 Corregir
               </Button>
             )}
             <Button type="button" variant="outline" onClick={() => setDetalle(null)}>Cerrar</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!completingInvoice} onOpenChange={open => !open && setCompletingInvoice(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Completar factura</DialogTitle>
+          </DialogHeader>
+          {completingInvoice && (
+            <p className="text-sm text-muted-foreground">
+              Remito{completingInvoice.remitoNumber ? ` ${completingInvoice.remitoNumber}` : ''} · {completingInvoice.supplier?.name} · {money(Number(completingInvoice.total))}
+              <br />La mercadería ya está en stock y la deuda ya está registrada; esto sólo carga el número real de la factura.
+            </p>
+          )}
+          {completeError && <Alert variant="destructive">{completeError}</Alert>}
+          <form className="grid gap-4" onSubmit={submitCompleteInvoice}>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Tipo" htmlFor="complete-type">
+                <Select id="complete-type" value={completeForm.invoiceType} onChange={e => setCompleteForm({ ...completeForm, invoiceType: e.target.value })}>
+                  <option>A</option>
+                  <option>B</option>
+                  <option>C</option>
+                  <option>E</option>
+                  <option value="other">Otro</option>
+                </Select>
+              </Field>
+              <Field label="Punto de venta" htmlFor="complete-pos">
+                <Input id="complete-pos" required placeholder="0001" value={completeForm.pointOfSale} onChange={e => setCompleteForm({ ...completeForm, pointOfSale: e.target.value })} />
+              </Field>
+              <Field label="Número" htmlFor="complete-num">
+                <Input id="complete-num" required placeholder="00001234" value={completeForm.invoiceNumber} onChange={e => setCompleteForm({ ...completeForm, invoiceNumber: e.target.value })} />
+              </Field>
+            </div>
+            <Field label="Vencimiento" htmlFor="complete-due" hint="(opcional)">
+              <Input id="complete-due" type="date" value={completeForm.dueDate} onChange={e => setCompleteForm({ ...completeForm, dueDate: e.target.value })} />
+            </Field>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCompletingInvoice(null)}>Volver</Button>
+              <Button type="submit" disabled={completing}>{completing && <Spinner />} Completar factura</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -762,7 +961,7 @@ export function PurchasesPage() {
           </DialogHeader>
           {cancellingInvoice && (
             <p className="text-sm text-muted-foreground">
-              {cancellingInvoice.invoiceType} {cancellingInvoice.pointOfSale}-{cancellingInvoice.invoiceNumber} · {cancellingInvoice.supplier?.name} · {money(Number(cancellingInvoice.total))}
+              {cancellingInvoice.invoiceNumber ? `${cancellingInvoice.invoiceType} ${cancellingInvoice.pointOfSale}-${cancellingInvoice.invoiceNumber}` : `Remito${cancellingInvoice.remitoNumber ? ` ${cancellingInvoice.remitoNumber}` : ''}`} · {cancellingInvoice.supplier?.name} · {money(Number(cancellingInvoice.total))}
             </p>
           )}
           <Alert variant="destructive">Esto revierte todo el stock que generó esta factura y la marca como anulada. La factura original queda en el historial, no se borra.</Alert>

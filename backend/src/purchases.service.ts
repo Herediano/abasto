@@ -1,12 +1,16 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma, PurchaseInvoiceStatus, PurchaseInvoiceType } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
+import { registrarMovimientoCuentaProveedor } from './cuenta-corriente-proveedor.util';
 
 type InvoiceLineInput = { barcode?: unknown; productId?: unknown; productLotId?: unknown; quantity?: unknown; unitCost?: unknown; taxRate?: unknown; byPackage?: unknown; unitFactor?: unknown };
 type OtherTaxInput = { label?: unknown; amount?: unknown };
 type OtherTax = { label: string; amount: number };
 
-const CORRECTABLE_STATUSES: PurchaseInvoiceStatus[] = [PurchaseInvoiceStatus.confirmed, PurchaseInvoiceStatus.corrected];
+// "received" entra acá también: una factura que llegó sin el papel fiscal
+// todavía se puede corregir o anular igual que una confirmada — el stock que
+// generó es real independientemente de si ya tiene número de factura.
+const CORRECTABLE_STATUSES: PurchaseInvoiceStatus[] = [PurchaseInvoiceStatus.confirmed, PurchaseInvoiceStatus.corrected, PurchaseInvoiceStatus.received];
 
 @Injectable()
 export class PurchasesService {
@@ -49,11 +53,19 @@ export class PurchasesService {
     if (!user.warehouseId) throw new UnprocessableEntityException('El usuario no tiene una sucursal/depósito asignado');
     const supplierId = typeof body.supplierId === 'string' ? body.supplierId : '';
     const invoiceType = typeof body.invoiceType === 'string' ? body.invoiceType as PurchaseInvoiceType : PurchaseInvoiceType.other;
+    // "Todavía no tengo la factura": la mercadería entra igual con lo que haya
+    // (remito), y pointOfSale/invoiceNumber quedan en null hasta "completar
+    // factura". Sin este flag, los dos son obligatorios como siempre.
+    const pendingInvoice = body.pendingInvoice === true;
     const pointOfSale = typeof body.pointOfSale === 'string' ? body.pointOfSale.trim() : '';
     const invoiceNumber = typeof body.invoiceNumber === 'string' ? body.invoiceNumber.trim() : '';
+    const remitoNumber = typeof body.remitoNumber === 'string' && body.remitoNumber.trim() ? body.remitoNumber.trim() : null;
     const issueDate = new Date(String(body.issueDate ?? ''));
+    const dueDate = body.dueDate ? new Date(String(body.dueDate)) : null;
+    if (dueDate && Number.isNaN(dueDate.getTime())) throw new UnprocessableEntityException('La fecha de vencimiento no es válida');
     const rawLines = Array.isArray(body.lines) ? body.lines as InvoiceLineInput[] : [];
-    if (!supplierId || !pointOfSale || !invoiceNumber || Number.isNaN(issueDate.getTime()) || rawLines.length === 0) throw new UnprocessableEntityException('supplierId, invoiceType, pointOfSale, invoiceNumber, issueDate y al menos una línea son obligatorios');
+    if (!supplierId || Number.isNaN(issueDate.getTime()) || rawLines.length === 0) throw new UnprocessableEntityException('supplierId, invoiceType, issueDate y al menos una línea son obligatorios');
+    if (!pendingInvoice && (!pointOfSale || !invoiceNumber)) throw new UnprocessableEntityException('pointOfSale e invoiceNumber son obligatorios (o marcá "todavía no tengo la factura")');
     if (!Object.values(PurchaseInvoiceType).includes(invoiceType)) throw new UnprocessableEntityException('invoiceType no es válido');
     const supplier = await this.prisma.supplier.findFirst({ where: { id: supplierId, tenantId: user.tenantId, isActive: true } });
     if (!supplier) throw new NotFoundException('Proveedor no encontrado');
@@ -84,17 +96,39 @@ export class PurchasesService {
     const otherTaxesTotal = otherTaxes.reduce((sum, t) => sum + t.amount, 0);
     const total = subtotal + taxTotal + otherTaxesTotal;
     try {
-      return this.prisma.purchaseInvoice.create({ data: { tenantId: user.tenantId, supplierId, warehouseId: user.warehouseId, createdById: user.id, invoiceType, pointOfSale, invoiceNumber, issueDate, currency: typeof body.currency === 'string' ? body.currency : 'ARS', subtotal, taxTotal, otherTaxes: otherTaxes.length ? otherTaxes : undefined, otherTaxesTotal, total, notes: typeof body.notes === 'string' ? body.notes : undefined, lines: { create: lines.map(line => line) } }, include: { supplier: true, lines: true, warehouse: true } });
+      return this.prisma.purchaseInvoice.create({
+        data: {
+          tenantId: user.tenantId, supplierId, warehouseId: user.warehouseId, createdById: user.id, invoiceType,
+          pointOfSale: pendingInvoice ? null : pointOfSale, invoiceNumber: pendingInvoice ? null : invoiceNumber,
+          remitoNumber, issueDate, dueDate,
+          currency: typeof body.currency === 'string' ? body.currency : 'ARS', subtotal, taxTotal,
+          otherTaxes: otherTaxes.length ? otherTaxes : undefined, otherTaxesTotal, total,
+          notes: typeof body.notes === 'string' ? body.notes : undefined, lines: { create: lines.map(line => line) },
+        },
+        include: { supplier: true, lines: true, warehouse: true },
+      });
     } catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ya existe una factura con ese tipo, punto de venta y número'); throw error; }
   }
 
-  async confirm(tenantId: string, invoiceId: string) {
+  async confirm(tenantId: string, userId: string, invoiceId: string) {
     const tenant = await this.prisma.tenant.findFirst({ where: { id: tenantId }, select: { autoUpdateCostOnPurchase: true } });
     return this.prisma.$transaction(async tx => {
       const invoice = await tx.purchaseInvoice.findFirst({ where: { id: invoiceId, tenantId }, include: { lines: true } });
       if (!invoice) throw new NotFoundException('Factura no encontrada');
-      if (invoice.status === PurchaseInvoiceStatus.confirmed) return invoice;
+      if (invoice.status === PurchaseInvoiceStatus.confirmed || invoice.status === PurchaseInvoiceStatus.received) return invoice;
       if (invoice.status !== PurchaseInvoiceStatus.draft) throw new ConflictException('La factura no se puede confirmar en su estado actual');
+      // Sin número de factura todavía (se cargó como "recibido, factura
+      // pendiente"): el producto y el comprobante van a decir "sin número" en
+      // las notas del movimiento hasta que se complete.
+      const comprobante = invoice.invoiceNumber
+        ? `Factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}`
+        : `Remito${invoice.remitoNumber ? ` ${invoice.remitoNumber}` : ''} (factura pendiente)`;
+      // El flete, aduana u otro cargo de "Otros impuestos" se prorratea entre
+      // las líneas según su peso en el subtotal, así el costo que queda
+      // cargado en el producto es el costo real puesto en el depósito, no
+      // sólo lo que dice el renglón de la factura.
+      const otherTaxesTotal = new Prisma.Decimal(invoice.otherTaxesTotal ?? 0);
+      const subtotalFactura = new Prisma.Decimal(invoice.subtotal);
       for (const line of invoice.lines) {
         const product = await tx.product.findFirst({ where: { id: line.productId, tenantId } });
         if (!product) throw new UnprocessableEntityException('Un producto de la factura ya no existe');
@@ -103,7 +137,12 @@ export class PurchasesService {
         // La factura viene en la unidad del proveedor (bulto); el ledger guarda
         // siempre la unidad base, asi que la conversion ocurre aca.
         const baseQuantity = new Prisma.Decimal(line.quantity).mul(line.unitFactor);
-        const costPerBaseUnit = new Prisma.Decimal(line.unitCost).div(line.unitFactor).toDecimalPlaces(2);
+        let unitCostCargado = new Prisma.Decimal(line.unitCost);
+        if (otherTaxesTotal.greaterThan(0) && subtotalFactura.greaterThan(0)) {
+          const proporcion = new Prisma.Decimal(line.lineSubtotal).div(subtotalFactura);
+          unitCostCargado = unitCostCargado.add(otherTaxesTotal.mul(proporcion).div(line.quantity));
+        }
+        const costPerBaseUnit = unitCostCargado.div(line.unitFactor).toDecimalPlaces(2);
         // Sin costo todavía, siempre se carga: si no, el producto queda sin
         // costo para siempre. Con costo ya cargado, sólo se pisa solo si el
         // negocio activó "actualizar costo automático" en Ajustes → La
@@ -125,7 +164,7 @@ export class PurchasesService {
           create: { tenantId, productId: line.productId, supplierId: invoice.supplierId, lastCost: costPerBaseUnit, lastPurchaseAt: invoice.issueDate },
           update: { lastCost: costPerBaseUnit, lastPurchaseAt: invoice.issueDate },
         });
-        await tx.stockMovement.create({ data: { tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: baseQuantity, movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoice.id, notes: `Factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}` } });
+        await tx.stockMovement.create({ data: { tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: baseQuantity, movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoice.id, notes: comprobante } });
       }
       // Si algún producto de la factura quedó sin proveedor preferido, se toma el
       // más antiguo (para que Reposición pueda decir a quién pedirle).
@@ -134,8 +173,40 @@ export class PurchasesService {
         const primero = await tx.productSupplier.findFirst({ where: { tenantId, productId }, orderBy: { createdAt: 'asc' }, select: { id: true } });
         if (primero) await tx.productSupplier.update({ where: { id: primero.id }, data: { isPreferred: true } });
       }
-      return tx.purchaseInvoice.update({ where: { id: invoice.id }, data: { status: PurchaseInvoiceStatus.confirmed }, include: { supplier: true, lines: true, warehouse: true } });
+      // La mercadería recibida ya es una deuda real con el proveedor, tenga o
+      // no el número de factura todavía (un remito solo ya prueba la deuda).
+      await registrarMovimientoCuentaProveedor(tx, tenantId, invoice.supplierId, Number(invoice.total), {
+        type: 'invoice', purchaseInvoiceId: invoice.id, userId, notes: comprobante,
+      });
+      const nuevoEstado = invoice.invoiceNumber ? PurchaseInvoiceStatus.confirmed : PurchaseInvoiceStatus.received;
+      return tx.purchaseInvoice.update({ where: { id: invoice.id }, data: { status: nuevoEstado }, include: { supplier: true, lines: true, warehouse: true } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
+  /**
+   * Completa los datos fiscales de una factura que se cargó como "recibido,
+   * factura pendiente": no vuelve a mover stock ni a tocar la cuenta corriente
+   * (esa deuda ya se registró al recibir la mercadería) — sólo pone el número
+   * real de la factura del proveedor.
+   */
+  async completeInvoice(tenantId: string, invoiceId: string, body: Record<string, unknown>) {
+    const invoice = await this.prisma.purchaseInvoice.findFirst({ where: { id: invoiceId, tenantId } });
+    if (!invoice) throw new NotFoundException('Factura no encontrada');
+    if (invoice.status !== PurchaseInvoiceStatus.received) throw new ConflictException('Esta factura no está pendiente de completar');
+    const invoiceType = typeof body.invoiceType === 'string' ? body.invoiceType as PurchaseInvoiceType : invoice.invoiceType;
+    if (!Object.values(PurchaseInvoiceType).includes(invoiceType)) throw new UnprocessableEntityException('invoiceType no es válido');
+    const pointOfSale = typeof body.pointOfSale === 'string' ? body.pointOfSale.trim() : '';
+    const invoiceNumber = typeof body.invoiceNumber === 'string' ? body.invoiceNumber.trim() : '';
+    if (!pointOfSale || !invoiceNumber) throw new UnprocessableEntityException('pointOfSale e invoiceNumber son obligatorios para completar la factura');
+    const dueDate = body.dueDate ? new Date(String(body.dueDate)) : invoice.dueDate;
+    if (dueDate && Number.isNaN(dueDate.getTime())) throw new UnprocessableEntityException('La fecha de vencimiento no es válida');
+    try {
+      return await this.prisma.purchaseInvoice.update({
+        where: { id: invoiceId },
+        data: { invoiceType, pointOfSale, invoiceNumber, dueDate, status: PurchaseInvoiceStatus.confirmed },
+        include: { supplier: true, lines: true, warehouse: true },
+      });
+    } catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Ya existe una factura con ese tipo, punto de venta y número'); throw error; }
   }
 
   async correct(user: { id: string; tenantId: string }, invoiceId: string, body: Record<string, unknown>) {
@@ -182,6 +253,25 @@ export class PurchasesService {
       await tx.purchaseInvoiceLine.deleteMany({ where: { invoiceId, tenantId: user.tenantId } });
       const updated = await tx.purchaseInvoice.update({ where: { id: invoiceId }, data: { supplierId, invoiceType: typeof body.invoiceType === 'string' && Object.values(PurchaseInvoiceType).includes(body.invoiceType as PurchaseInvoiceType) ? body.invoiceType as PurchaseInvoiceType : current.invoiceType, pointOfSale: typeof body.pointOfSale === 'string' ? body.pointOfSale.trim() : current.pointOfSale, invoiceNumber: typeof body.invoiceNumber === 'string' ? body.invoiceNumber.trim() : current.invoiceNumber, issueDate: body.issueDate ? new Date(String(body.issueDate)) : current.issueDate, currency: typeof body.currency === 'string' ? body.currency : current.currency, subtotal, taxTotal, otherTaxes: otherTaxes.length ? otherTaxes : Prisma.JsonNull, otherTaxesTotal, total, status: PurchaseInvoiceStatus.corrected, notes: typeof body.notes === 'string' ? body.notes : current.notes, lines: { create: lines } }, include: { supplier: true, lines: true, warehouse: true } });
       for (const line of lines) await tx.stockMovement.create({ data: { tenantId: user.tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: current.warehouseId, quantity: new Prisma.Decimal(line.quantity).mul(line.unitFactor), movementType: 'purchase_in', referenceType: 'purchase_invoice', referenceId: invoiceId, notes: `Factura corregida ${updated.invoiceType} ${updated.pointOfSale}-${updated.invoiceNumber}` } });
+      // La cuenta corriente ya tenía el total viejo cargado (al recibir o al
+      // confirmar); acá sólo se ajusta la diferencia, no se vuelve a cargar
+      // todo. Si además cambió de proveedor, se revierte entero del viejo y
+      // se carga entero en el nuevo — un delta no tendría a quién aplicarse.
+      if (supplierId !== current.supplierId) {
+        await registrarMovimientoCuentaProveedor(tx, user.tenantId, current.supplierId, -Number(current.total), {
+          type: 'adjustment', purchaseInvoiceId: invoiceId, userId: user.id, notes: `Corrección: ${reason} (pasó a otro proveedor)`,
+        });
+        await registrarMovimientoCuentaProveedor(tx, user.tenantId, supplierId, total, {
+          type: 'adjustment', purchaseInvoiceId: invoiceId, userId: user.id, notes: `Corrección: ${reason} (venía de otro proveedor)`,
+        });
+      } else {
+        const delta = Math.round((total - Number(current.total)) * 100) / 100;
+        if (delta !== 0) {
+          await registrarMovimientoCuentaProveedor(tx, user.tenantId, supplierId, delta, {
+            type: 'adjustment', purchaseInvoiceId: invoiceId, userId: user.id, notes: `Corrección: ${reason}`,
+          });
+        }
+      }
       return updated;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
@@ -195,6 +285,11 @@ export class PurchasesService {
       if (!CORRECTABLE_STATUSES.includes(invoice.status)) throw new ConflictException('Solo se pueden anular facturas confirmadas');
       await tx.purchaseInvoiceRevision.create({ data: { tenantId: user.tenantId, invoiceId, createdById: user.id, reason: `Anulación: ${reason}`, snapshot: { invoice: { supplierId: invoice.supplierId, invoiceType: invoice.invoiceType, pointOfSale: invoice.pointOfSale, invoiceNumber: invoice.invoiceNumber, issueDate: invoice.issueDate.toISOString(), currency: invoice.currency, subtotal: invoice.subtotal.toString(), taxTotal: invoice.taxTotal.toString(), total: invoice.total.toString(), notes: invoice.notes }, lines: invoice.lines.map(line => ({ productId: line.productId, productLotId: line.productLotId, barcode: line.barcode, description: line.description, quantity: line.quantity.toString(), unitCost: line.unitCost.toString(), taxRate: line.taxRate.toString(), lineSubtotal: line.lineSubtotal.toString(), lineTax: line.lineTax.toString(), lineTotal: line.lineTotal.toString() })) } } });
       for (const line of invoice.lines) await tx.stockMovement.create({ data: { tenantId: user.tenantId, productId: line.productId, productLotId: line.productLotId, warehouseId: invoice.warehouseId, quantity: new Prisma.Decimal(line.quantity).mul(line.unitFactor).negated(), movementType: 'adjustment_out', referenceType: 'purchase_invoice_cancellation', referenceId: invoiceId, notes: `Anulación de factura ${invoice.invoiceType} ${invoice.pointOfSale}-${invoice.invoiceNumber}: ${reason}` } });
+      // Se anula la deuda que había generado esta factura, tenga o no ya
+      // número fiscal.
+      await registrarMovimientoCuentaProveedor(tx, user.tenantId, invoice.supplierId, -Number(invoice.total), {
+        type: 'adjustment', purchaseInvoiceId: invoiceId, userId: user.id, notes: `Anulación: ${reason}`,
+      });
       return tx.purchaseInvoice.update({ where: { id: invoiceId }, data: { status: PurchaseInvoiceStatus.cancelled }, include: { supplier: true, lines: true, warehouse: true } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }

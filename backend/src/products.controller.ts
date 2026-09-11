@@ -317,7 +317,7 @@ export class ProductsController {
           ...(branchId ? [{ stockRules: { some: { branchId, minStock: { not: null } } } }] : []),
         ],
       },
-      include: { suppliers: { where: { isPreferred: true }, include: { supplier: { select: { name: true } } }, take: 1 } },
+      include: { suppliers: { where: { isPreferred: true }, include: { supplier: { select: { id: true, name: true } } }, take: 1 } },
     });
     if (!products.length) return [];
     const ids = products.map(p => p.id);
@@ -340,6 +340,7 @@ export class ProductsController {
           maxStock: eff.maxStock == null ? null : String(eff.maxStock),
           branchOverride: eff.branchOverride,
           suggestedOrder: suggestedOrder(currentStock, eff.maxStock, packSize),
+          preferredSupplierId: pref?.supplier.id ?? null,
           preferredSupplierName: pref?.supplier.name ?? null,
           preferredSupplierCode: pref?.supplierCode ?? null,
           _min: eff.minStock,
