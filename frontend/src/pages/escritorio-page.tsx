@@ -650,14 +650,9 @@ export function EscritorioPage() {
                 )}
               />
             )}
-            <div className="flex items-center gap-2">
-              <span className="module-tile__chip flex size-8 shrink-0 items-center justify-center rounded-md">
-                <m.Icon weight="fill" className="size-5" />
-              </span>
-              <h2 className="min-w-0 flex-1 truncate font-display text-h3 font-semibold tracking-tight [text-wrap:balance]">
-                {m.label}
-              </h2>
-            </div>
+            <h2 className="min-w-0 flex-1 truncate font-display text-h3 font-semibold tracking-tight text-foreground [text-wrap:balance]">
+              {m.label}
+            </h2>
             {/* El dato clave arriba; abajo SOLO lo que el dato no cuenta. Las
                 protagonistas agregan su detalle (quién/cuánto, tendencia) en
                 vez de repetirlo en el texto gris. Monocromo: si algo está mal,

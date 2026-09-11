@@ -345,27 +345,29 @@ html body[data-scroll-locked] {
 
 /*
  * Color por módulo en el escritorio: el matiz propio de cada tarjeta
- * (--ab-tile-hue, ver lib/modules.tsx) vive en la pastilla del ícono y en el
- * motivo de fondo — identidad de un vistazo, sin leer. La cáscara es neutra:
- * borde fino y sombra dura desplazada (estilo Uiverse) que voltea al otro lado
- * en hover — el mueble es de todos, el color es del módulo.
+ * (--ab-tile-hue, ver lib/modules.tsx) vive en la BARRA IZQUIERDA (misma idea
+ * que una etiqueta de color en Trello/Notion/Linear: identifica sin ilustrar)
+ * y en el motivo de fondo, bien sutil. La cáscara es neutra: borde fino y
+ * sombra dura desplazada (estilo Uiverse) que voltea al otro lado en hover.
+ *
+ * La barra va por box-shadow inset, NO por border: el border-color de la
+ * variante oscura (más abajo) resetea los 4 lados del shorthand `border` y se
+ * comía cualquier `border-left`/`border-top` puesto ahí. box-shadow no choca
+ * con eso y además se puede combinar con la sombra Uiverse en una sola regla.
  */
 .module-tile {
+  --ab-tile-accent: inset 4px 0 0 0 var(--ab-tile-hue);
   cursor: pointer;
   background: rgb(255, 255, 255);
   border-radius: 5px;
   border: 1px solid var(--border-uiverse);
-  box-shadow: var(--shadow-uiverse);
+  box-shadow: var(--ab-tile-accent), var(--shadow-uiverse);
   transform: translateY(1px);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 .module-tile:hover {
-  box-shadow: var(--shadow-uiverse-hover);
+  box-shadow: var(--ab-tile-accent), var(--shadow-uiverse-hover);
   transform: translateY(-2px);
-}
-.module-tile__chip {
-  background: var(--ab-tile-hue);
-  color: #fff;
 }
 .module-tile__motif {
   color: var(--ab-tile-hue);
@@ -376,10 +378,10 @@ html body[data-scroll-locked] {
 :root:not([data-theme='light']) .module-tile {
   background: color-mix(in srgb, var(--ab-tile-hue) 12%, var(--color-card));
   border-color: var(--border-uiverse);
-  box-shadow: var(--shadow-uiverse);
+  box-shadow: var(--ab-tile-accent), var(--shadow-uiverse);
 }
 :root:not([data-theme='light']) .module-tile:hover {
-  box-shadow: var(--shadow-uiverse-hover);
+  box-shadow: var(--ab-tile-accent), var(--shadow-uiverse-hover);
 }
 :root:not([data-theme='light']) .module-tile__motif { opacity: 0.2; }
 :root:not([data-theme='light']) .module-tile:hover .module-tile__motif { opacity: 0.32; }
