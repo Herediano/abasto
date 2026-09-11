@@ -135,7 +135,11 @@ export class PromotionsController {
 
   @Get() @RequirePermission('promociones.ver')
   list(@Req() request: AuthRequest) {
-    return this.prisma.promotion.findMany({ where: { tenantId: request.user.tenantId }, orderBy: [{ priority: 'asc' }] });
+    // createdAt como desempate: las promos de antes de que existiera prioridad
+    // quedaron todas en 0 (sin backfill), y sin un segundo criterio Postgres no
+    // garantiza el mismo orden entre consultas — "gana la primera" necesita que
+    // haya una primera de verdad.
+    return this.prisma.promotion.findMany({ where: { tenantId: request.user.tenantId }, orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }] });
   }
 
   @Get('export') @RequirePermission('promociones.ver')

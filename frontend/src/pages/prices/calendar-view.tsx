@@ -82,6 +82,9 @@ export function CalendarView({ token, promotions, onError, onEditPromotion }: Pr
   }
 
   for (const p of promotions) {
+    // Una promo desactivada no va a aplicarse sola aunque llegue su fecha: no
+    // tiene sentido anunciar "arranca" algo que en realidad no va a pasar.
+    if (!p.isActive) continue;
     const desde = new Date(p.validFrom);
     if (desde > ahora) {
       eventos.push({

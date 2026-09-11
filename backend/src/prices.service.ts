@@ -538,8 +538,13 @@ export class PricesService {
       FROM product_suppliers ps
       JOIN products p ON p.id = ps.product_id AND p.tenant_id = ps.tenant_id
       JOIN suppliers s ON s.id = ps.supplier_id AND s.tenant_id = ps.tenant_id
-      WHERE ps.tenant_id = ${tenantId}::uuid AND ps.last_cost IS NOT NULL AND p.is_active = true
-      ORDER BY ps.product_id, ps.last_purchase_at DESC NULLS LAST
+      -- Sólo compras de verdad: un costo de proveedor cargado a mano en la
+      -- ficha (sin comprarle todavía) deja last_purchase_at en null y no es
+      -- "la última compra" de nada — incluirlo mostraría un dato inventado
+      -- como si viniera de una factura, y con más de uno así el DISTINCT ON
+      -- elegiría cualquiera de forma arbitraria.
+      WHERE ps.tenant_id = ${tenantId}::uuid AND ps.last_cost IS NOT NULL AND ps.last_purchase_at IS NOT NULL AND p.is_active = true
+      ORDER BY ps.product_id, ps.last_purchase_at DESC
     `;
     return filas
       .filter(f => f.cost_price === null || !f.cost_price.equals(f.last_cost))

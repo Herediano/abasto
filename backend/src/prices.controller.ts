@@ -96,8 +96,9 @@ export class PricesController {
       throw new UnprocessableEntityException('Falta indicar qué columna tiene el código de barras');
     }
     const mapeado = (k: string) => mapping[k] != null && mapping[k] >= 0;
-    if (!mapeado('costPrice') && !mapeado('salePrice') && !mapeado('name')) {
-      throw new UnprocessableEntityException('Mapeá al menos una columna de precio (costo o venta). Sin eso no hay nada que importar.');
+    if (!mapeado('costPrice') && !mapeado('salePrice') && !mapeado('name')
+      && !mapeado('tier3Price') && !mapeado('tier6Price') && !mapeado('tier12Price')) {
+      throw new UnprocessableEntityException('Mapeá al menos una columna de precio (costo, venta o precio por cantidad). Sin eso no hay nada que importar.');
     }
 
     const barcodes = [...new Set(sheet.rows.map(r => cell(r, mapping, 'barcode')).filter(Boolean))];

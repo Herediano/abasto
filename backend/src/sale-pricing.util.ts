@@ -109,10 +109,12 @@ export async function cotizar(
     resolverPrecios(db, tenantId, productIds, priceListId, at),
     db.priceTier.findMany({ where: { tenantId, priceListId, productId: { in: productIds } }, orderBy: { minQty: 'desc' } }),
     // En orden de prioridad: la evaluación de abajo respeta ese orden, no el
-    // que más descuenta.
+    // que más descuenta. createdAt desempata las que quedaron en la misma
+    // prioridad (todas las de antes de este campo, en 0) para que el orden no
+    // cambie de una venta a la otra.
     db.promotion.findMany({
       where: { tenantId, isActive: true, validFrom: { lte: at }, OR: [{ validTo: null }, { validTo: { gte: at } }] },
-      orderBy: { priority: 'asc' },
+      orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
     }),
   ]);
   const porProducto = new Map(productos.map(p => [p.id, p]));
