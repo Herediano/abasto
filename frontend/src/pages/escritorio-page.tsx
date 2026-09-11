@@ -650,7 +650,7 @@ export function EscritorioPage() {
                 )}
               />
             )}
-            <h2 className="min-w-0 flex-1 truncate font-display text-h3 font-semibold tracking-tight text-foreground">
+            <h2 className="min-w-0 shrink-0 truncate font-display text-h3 font-semibold tracking-tight text-foreground">
               {m.label}
             </h2>
             {/* El dato clave arriba; abajo SOLO lo que el dato no cuenta. Las
