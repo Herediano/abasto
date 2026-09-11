@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowsClockwise } from '@phosphor-icons/react';
+import { ArrowsClockwise, ShoppingCartSimple } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { ListFilters } from '@/components/list-filters';
@@ -44,7 +45,17 @@ export function RestockPage() {
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   return (
-    <ModuleScreen title="Stock" views={stockViews(can)}>
+    <ModuleScreen
+      title="Stock"
+      views={stockViews(can)}
+      actions={
+        can('compras.crear') ? (
+          <Button asChild variant="outline">
+            <Link to="/compras"><ShoppingCartSimple /> Cargar factura</Link>
+          </Button>
+        ) : undefined
+      }
+    >
       {error && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
         search={search}

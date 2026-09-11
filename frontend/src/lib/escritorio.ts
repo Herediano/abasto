@@ -127,7 +127,7 @@ export function statFor(key: string, s: EscritorioSummary): TileStat | null {
         flag: 'warn',
       };
     }
-case 'compras': {
+    case 'compras': {
       if (!s.compras) return null;
       if (s.compras.sinCargar === 0) return { value: 'Todo cargado', hint: 'sin facturas pendientes' };
       const prov = ejemplos(s.compras.proveedores);
@@ -188,7 +188,7 @@ export function pendientes(s: EscritorioSummary): Pendiente[] {
   };
   if (s.stock) add(s.stock.bajoMinimo, 'Producto bajo mínimo', 'Productos bajo mínimo', '/stock/restock', 'stock');
   if (s.vencimientos) add(s.vencimientos.lotes, 'Lote por vencer', 'Lotes por vencer', '/stock/expirations', 'stock');
-  if (s.compras) add(s.compras.sinCargar, 'Compra sin cargar', 'Compras sin cargar', '/stock/in', 'stock');
+  if (s.compras) add(s.compras.sinCargar, 'Compra sin cargar', 'Compras sin cargar', '/compras', 'compras');
   if (s.precios) add(s.precios.pendientes, 'Precio sin trasladar', 'Precios sin trasladar', '/precios', 'precios');
   if (s.cuentacorriente) add(s.cuentacorriente.vencidos, 'Cuenta vencida', 'Cuentas vencidas', '/catalog/customers', 'clientes');
   return out;

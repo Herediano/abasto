@@ -1,26 +1,35 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlass, Plus, Trash } from '@phosphor-icons/react';
+import { useSearchParams } from 'react-router-dom';
+import { MagnifyingGlass, Plus, ShoppingCartSimple, Trash } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProductSearchDialog } from '@/components/product-search-dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/empty-state';
+import { ExportMenu } from '@/components/export-menu';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
 import { Label } from '@/components/ui/label';
+import { ListFilters, type ActiveFilter } from '@/components/list-filters';
 import { ModuleScreen, ModuleSection } from '@/components/module-screen';
-import { stockViews } from '@/components/stock-nav';
 import { Select } from '@/components/ui/select';
-import { Spinner } from '@/components/spinner';
+import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { api, errorMessage, type Lot, type Product, type PurchaseInvoice, type Supplier } from '@/lib/api';
+import { api, errorMessage, type Lot, type Pagination, type Product, type PurchaseInvoice, type Supplier } from '@/lib/api';
 import { fecha, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
+
+/**
+ * Compras: cargar, corregir y anular facturas de proveedor. Vivió mucho
+ * tiempo escondida dentro de Stock → "Ingreso", detrás del permiso
+ * `stock.mover` aunque las acciones de acá siempre usaron sus propios
+ * permisos (`compras.*`) — comprar no es lo mismo que mover stock a mano, y
+ * ahora tiene su propio módulo y su propio permiso de entrada.
+ */
 
 const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'success' | 'destructive' }> = {
   draft: { label: 'Borrador', variant: 'secondary' },
@@ -52,23 +61,43 @@ function readDraft(tenantId: string): Draft | null {
   }
 }
 
-export function StockInPage() {
+const lineTotal = (l: { quantity: string | number; unitCost: string | number; taxRate: string | number }) =>
+  Number(l.quantity) * Number(l.unitCost) * (1 + Number(l.taxRate) / 100);
+
+export function PurchasesPage() {
   const { session, can } = useAuth();
+  const puedeCrear = can('compras.crear');
   const puedeCorregir = can('compras.corregir');
+  const puedeAnular = can('compras.anular');
   const token = session!.accessToken;
   const tenantId = session!.tenant.id;
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const storedDraft = useMemo(() => readDraft(tenantId), [tenantId]);
 
+  const [view, setView] = useState<'facturas' | 'nueva'>('facturas');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [error, setError] = useState('');
+
+  // --- listado ---
+  const [items, setItems] = useState<PurchaseInvoice[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [filtros, setFiltros] = useState({ supplierId: searchParams.get('supplierId') ?? '', status: '', from: '', to: '' });
+  const [loading, setLoading] = useState(true);
+  const [detalle, setDetalle] = useState<PurchaseInvoice | null>(null);
+  const [cancellingInvoice, setCancellingInvoice] = useState<PurchaseInvoice | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+
+  // --- formulario de alta / corrección ---
   const [product, setProduct] = useState<Product | null>(null);
   const [lookupPending, setLookupPending] = useState(false);
-  const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
   const [editingInvoice, setEditingInvoice] = useState<PurchaseInvoice | null>(storedDraft?.editingInvoice ?? null);
   const [correctionReason, setCorrectionReason] = useState(storedDraft?.correctionReason ?? '');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
   const [header, setHeader] = useState(storedDraft?.header ?? EMPTY_HEADER);
   const [line, setLine] = useState<Line>(storedDraft?.line ?? EMPTY_LINE);
   const [lines, setLines] = useState<Line[]>(storedDraft?.lines ?? []);
@@ -76,10 +105,6 @@ export function StockInPage() {
   const [newLot, setNewLot] = useState({ expirationDate: '', receivedAt: '' });
   const [addingLine, setAddingLine] = useState(false);
   const [myWarehouseId, setMyWarehouseId] = useState<string | null>(session!.user.warehouseId ?? null);
-  const [cancellingInvoice, setCancellingInvoice] = useState<PurchaseInvoice | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState('');
   const [newProduct, setNewProduct] = useState({ name: '', unit: 'unidad', manejaVencimiento: false });
   const [newProductHint, setNewProductHint] = useState(false);
   const [buscarOpen, setBuscarOpen] = useState(false);
@@ -96,25 +121,15 @@ export function StockInPage() {
   function addOtherTax() {
     setOtherTaxes([...otherTaxes, { label: '', amount: '' }]);
   }
-
   function updateOtherTax(index: number, patch: Partial<OtherTax>) {
     setOtherTaxes(otherTaxes.map((t, i) => (i === index ? { ...t, ...patch } : t)));
   }
-
   function removeOtherTax(index: number) {
     setOtherTaxes(otherTaxes.filter((_, i) => i !== index));
   }
 
-  const loadInvoices = () => api<PurchaseInvoice[]>('/purchases/invoices', {}, token).then(setInvoices).catch(e => setError(errorMessage(e)));
-
   useEffect(() => {
-    setMyWarehouseId(session!.user.warehouseId ?? null);
-    Promise.all([api<Supplier[]>('/suppliers', {}, token), api<PurchaseInvoice[]>('/purchases/invoices', {}, token)])
-      .then(([s, i]) => {
-        setSuppliers(s);
-        setInvoices(i);
-      })
-      .catch(e => setError(errorMessage(e)));
+    api<Supplier[]>('/suppliers', {}, token).then(setSuppliers).catch(e => setError(errorMessage(e)));
   }, [token]);
 
   // Keep the Proveedor combobox in sync with React state: a native <select> shows its first
@@ -130,11 +145,11 @@ export function StockInPage() {
   // sistema cuando hay que encontrar un producto sin tener el código.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'F3') { e.preventDefault(); setBuscarOpen(true); }
+      if (view === 'nueva' && e.key === 'F3') { e.preventDefault(); setBuscarOpen(true); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [view]);
 
   useEffect(() => {
     const barcode = line.barcode.trim();
@@ -240,6 +255,34 @@ export function StockInPage() {
     setLines(lines.filter((_, i) => i !== index));
   }
 
+  // --- listado: cargar con filtros/paginación, igual que Ventas ---
+  const exportParams = { ...filtros, ...(search ? { search } : {}) };
+
+  const load = () => {
+    setLoading(true);
+    const p = new URLSearchParams({ page: String(page), pageSize: '20' });
+    for (const [k, v] of Object.entries(exportParams)) if (v) p.set(k, v);
+    return api<{ items: PurchaseInvoice[]; pagination: Pagination }>(`/purchases/invoices?${p}`, {}, token)
+      .then(r => { setItems(r.items); setPagination(r.pagination); })
+      .catch(e => setError(errorMessage(e)))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+  useEffect(() => { setPage(1); }, [filtros]);
+  useEffect(() => { void load(); }, [token, page, filtros, search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const nombreProveedor = (id: string) => suppliers.find(s => s.id === id)?.name ?? id;
+  const activeFilters: ActiveFilter[] = [
+    filtros.supplierId && { key: 'sup', label: nombreProveedor(filtros.supplierId), clear: () => setFiltros({ ...filtros, supplierId: '' }) },
+    filtros.status && { key: 'status', label: STATUS_LABEL[filtros.status]?.label ?? filtros.status, clear: () => setFiltros({ ...filtros, status: '' }) },
+    filtros.from && { key: 'from', label: `Desde ${filtros.from}`, clear: () => setFiltros({ ...filtros, from: '' }) },
+    filtros.to && { key: 'to', label: `Hasta ${filtros.to}`, clear: () => setFiltros({ ...filtros, to: '' }) },
+  ].filter(Boolean) as ActiveFilter[];
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!lines.length) return setError('Agregá al menos un producto a la factura');
@@ -265,8 +308,8 @@ export function StockInPage() {
       setHeader(EMPTY_HEADER);
       setLines([]);
       setOtherTaxes([]);
-      await loadInvoices();
-      if (!editingInvoice) navigate('/stock');
+      setView('facturas');
+      await load();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -291,6 +334,7 @@ export function StockInPage() {
       unitFactor: l.unitFactor ?? '1',
     })));
     setOtherTaxes((invoice.otherTaxes ?? []).map(t => ({ label: t.label, amount: String(t.amount) })));
+    setView('nueva');
   }
 
   function cancelCorrection() {
@@ -301,6 +345,7 @@ export function StockInPage() {
     setLines([]);
     setOtherTaxes([]);
     setError('');
+    setView('facturas');
   }
 
   function openCancelInvoice(invoice: PurchaseInvoice) {
@@ -318,7 +363,7 @@ export function StockInPage() {
     try {
       await api(`/purchases/invoices/${cancellingInvoice.id}/cancel`, { method: 'POST', body: JSON.stringify({ reason: cancelReason }) }, token);
       setCancellingInvoice(null);
-      await loadInvoices();
+      await load();
     } catch (err) {
       setCancelError(errorMessage(err));
     } finally {
@@ -328,48 +373,152 @@ export function StockInPage() {
 
   return (
     <>
-      <ModuleScreen title="Stock" views={stockViews(can)}>
-      {error && <Alert variant="destructive">{error}</Alert>}
-      {editingInvoice && <Alert>Estás corrigiendo una factura confirmada. La original queda registrada en el historial.</Alert>}
+      <ModuleScreen
+        title="Compras"
+        actions={
+          <>
+            <ExportMenu path="/purchases/invoices" params={exportParams} filename="compras" label="Exportar facturas" />
+            {puedeCrear && view === 'facturas' && (
+              <Button onClick={() => setView('nueva')}>
+                <Plus /> Cargar factura
+              </Button>
+            )}
+          </>
+        }
+        views={[
+          { key: 'facturas', label: 'Facturas' },
+          ...(puedeCrear ? [{ key: 'nueva', label: editingInvoice ? 'Corregir factura' : 'Nueva factura' }] : []),
+        ]}
+        view={view}
+        onView={k => setView(k as typeof view)}
+      >
+        {error && <Alert variant="destructive">{error}</Alert>}
 
-      <ModuleSection title={editingInvoice ? 'Corregir factura' : 'Ingreso por factura'}>
-          <form className="grid gap-6" onSubmit={submit}>
-            <Field label="Proveedor" htmlFor="supplierId">
-              <Select id="supplierId" required value={header.supplierId} onChange={e => setHeader({ ...header, supplierId: e.target.value })}>
-                {suppliers.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <div className="grid grid-cols-4 gap-4">
-              <Field label="Tipo" htmlFor="invoiceType">
-                <Select id="invoiceType" value={header.invoiceType} onChange={e => setHeader({ ...header, invoiceType: e.target.value })}>
-                  <option>A</option>
-                  <option>B</option>
-                  <option>C</option>
-                  <option>E</option>
-                  <option value="other">Otro</option>
+        {view === 'facturas' ? (
+          <ModuleSection title="Facturas cargadas" description="Cada factura confirmada movió stock. Corregirla o anularla revierte y vuelve a mover, nunca la borra.">
+            <ListFilters
+              search={searchInput}
+              onSearch={setSearchInput}
+              searchPlaceholder="Punto de venta o número"
+              searchLabel="Buscar comprobante"
+              activeFilters={activeFilters}
+            >
+              <Field label="Proveedor" htmlFor="f-supplier">
+                <Select id="f-supplier" value={filtros.supplierId} onChange={e => { setFiltros({ ...filtros, supplierId: e.target.value }); setSearchParams(e.target.value ? { supplierId: e.target.value } : {}); }}>
+                  <option value="">Todos</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </Select>
               </Field>
-              <Field label="Punto de venta" htmlFor="pointOfSale">
-                <Input id="pointOfSale" required placeholder="0001" value={header.pointOfSale} onChange={e => setHeader({ ...header, pointOfSale: e.target.value })} />
+              <Field label="Estado" htmlFor="f-status">
+                <Select id="f-status" value={filtros.status} onChange={e => setFiltros({ ...filtros, status: e.target.value })}>
+                  <option value="">Todos</option>
+                  {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </Select>
               </Field>
-              <Field label="Número" htmlFor="invoiceNumber">
-                <Input id="invoiceNumber" required placeholder="00001234" value={header.invoiceNumber} onChange={e => setHeader({ ...header, invoiceNumber: e.target.value })} />
+              <Field label="Desde" htmlFor="f-from">
+                <Input id="f-from" type="date" value={filtros.from} onChange={e => setFiltros({ ...filtros, from: e.target.value })} />
               </Field>
-              <Field label="Fecha" htmlFor="issueDate">
-                <Input id="issueDate" required type="date" value={header.issueDate} onChange={e => setHeader({ ...header, issueDate: e.target.value })} />
+              <Field label="Hasta" htmlFor="f-to">
+                <Input id="f-to" type="date" value={filtros.to} onChange={e => setFiltros({ ...filtros, to: e.target.value })} />
               </Field>
-            </div>
+            </ListFilters>
 
-            <Card className="bg-secondary/40">
-              <CardHeader className="border-none pb-0">
-                <CardTitle className="text-sm">Agregar producto</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3">
+            {loading ? (
+              <PageSpinner />
+            ) : items.length === 0 ? (
+              <EmptyState
+                icon={ShoppingCartSimple}
+                title={activeFilters.length > 0 ? 'Sin facturas con estos filtros' : 'Todavía no cargaste ninguna factura'}
+                description={activeFilters.length > 0 ? 'Probá quitando algún filtro.' : 'Cargá la primera factura de un proveedor para que entre a stock.'}
+                action={activeFilters.length === 0 && puedeCrear ? <Button onClick={() => setView('nueva')}><Plus /> Cargar factura</Button> : undefined}
+              />
+            ) : (
+              <div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Proveedor</TableHead>
+                      <TableHead>Comprobante</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map(i => (
+                      <TableRow key={i.id}>
+                        <TableCell>{fecha(i.issueDate)}</TableCell>
+                        <TableCell>{i.supplier?.name ?? '—'}</TableCell>
+                        <TableCell>{i.invoiceType} {i.pointOfSale}-{i.invoiceNumber}</TableCell>
+                        <TableCell className="text-right font-medium">{money(Number(i.total))}</TableCell>
+                        <TableCell>
+                          <Badge variant={STATUS_LABEL[i.status]?.variant ?? 'secondary'}>{STATUS_LABEL[i.status]?.label ?? i.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => setDetalle(i)}>Ver</Button>
+                            {puedeCorregir && (i.status === 'confirmed' || i.status === 'corrected') && (
+                              <Button variant="outline" size="sm" onClick={() => startCorrection(i)}>Corregir</Button>
+                            )}
+                            {puedeAnular && (i.status === 'confirmed' || i.status === 'corrected') && (
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => openCancelInvoice(i)}>Anular</Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-between border-t border-border pt-3 text-chico">
+                    <span className="text-muted-foreground">{pagination.total} factura{pagination.total === 1 ? '' : 's'}</span>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
+                      <Button variant="outline" size="sm" disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)}>Siguiente</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </ModuleSection>
+        ) : (
+          <form className="flex flex-col" onSubmit={submit}>
+            {editingInvoice && <Alert>Estás corrigiendo una factura confirmada. La original queda registrada en el historial.</Alert>}
+
+            <ModuleSection title={editingInvoice ? 'Corregir factura' : 'Datos de la factura'}>
+              <div className="grid gap-4">
+                <Field label="Proveedor" htmlFor="supplierId">
+                  <Select id="supplierId" required value={header.supplierId} onChange={e => setHeader({ ...header, supplierId: e.target.value })}>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </Select>
+                </Field>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <Field label="Tipo" htmlFor="invoiceType">
+                    <Select id="invoiceType" value={header.invoiceType} onChange={e => setHeader({ ...header, invoiceType: e.target.value })}>
+                      <option>A</option>
+                      <option>B</option>
+                      <option>C</option>
+                      <option>E</option>
+                      <option value="other">Otro</option>
+                    </Select>
+                  </Field>
+                  <Field label="Punto de venta" htmlFor="pointOfSale">
+                    <Input id="pointOfSale" required placeholder="0001" value={header.pointOfSale} onChange={e => setHeader({ ...header, pointOfSale: e.target.value })} />
+                  </Field>
+                  <Field label="Número" htmlFor="invoiceNumber">
+                    <Input id="invoiceNumber" required placeholder="00001234" value={header.invoiceNumber} onChange={e => setHeader({ ...header, invoiceNumber: e.target.value })} />
+                  </Field>
+                  <Field label="Fecha" htmlFor="issueDate">
+                    <Input id="issueDate" required type="date" value={header.issueDate} onChange={e => setHeader({ ...header, issueDate: e.target.value })} />
+                  </Field>
+                </div>
+              </div>
+            </ModuleSection>
+
+            <ModuleSection title="Productos">
+              <div className="grid gap-3">
                 <div className="grid grid-cols-6 gap-3">
                   <Field label="Código de barras" htmlFor="line-barcode" className="col-span-2">
                     <div className="flex gap-2">
@@ -416,7 +565,7 @@ export function StockInPage() {
                 )}
 
                 {!lookupPending && !product && line.barcode.trim() && (
-                  <div className="grid gap-3 rounded-md border border-border bg-card p-3">
+                  <div className="grid gap-3 rounded-md border border-border bg-muted/40 p-3">
                     <p className="text-sm text-muted-foreground">Producto no encontrado. Completá los datos para crearlo sin salir de esta pantalla.</p>
                     {newProductHint && <p className="text-xs text-muted-foreground">Nombre sugerido desde la base de referencia. Revisalo antes de crear.</p>}
                     <div className="grid grid-cols-6 items-end gap-3">
@@ -451,7 +600,7 @@ export function StockInPage() {
                 </div>
 
                 {product?.manejaVencimiento && (
-                  <div className="grid grid-cols-2 gap-3 rounded-md border border-border bg-card p-3">
+                  <div className="grid grid-cols-2 gap-3 rounded-md border border-border bg-muted/40 p-3">
                     <Field label="Vencimiento" htmlFor="new-lot-expiration">
                       <Input id="new-lot-expiration" required type="date" value={newLot.expirationDate} onChange={e => setNewLot({ ...newLot, expirationDate: e.target.value })} />
                     </Field>
@@ -462,44 +611,42 @@ export function StockInPage() {
                 )}
 
                 {lines.length > 0 && (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Barcode</TableHead>
-                        <TableHead>Producto</TableHead>
-                        <TableHead className="text-right">Cantidad</TableHead>
-                        <TableHead className="text-right">Unitario</TableHead>
-                        <TableHead className="text-right">Importe</TableHead>
-                        <TableHead />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lines.map((l, i) => (
-                        <TableRow key={i}>
-                          <TableCell className="font-mono text-xs">{l.barcode}</TableCell>
-                          <TableCell>{l.productName}</TableCell>
-                          <TableCell className="text-right">{l.quantity}</TableCell>
-                          <TableCell className="text-right">{money(Number(l.unitCost))}</TableCell>
-                          <TableCell className="text-right font-medium">{money(Number(l.quantity) * Number(l.unitCost) * (1 + Number(l.taxRate) / 100))}</TableCell>
-                          <TableCell>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)}>
-                              <Trash />
-                            </Button>
-                          </TableCell>
+                  <div className="overflow-hidden rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Código</TableHead>
+                          <TableHead>Producto</TableHead>
+                          <TableHead className="text-right">Cantidad</TableHead>
+                          <TableHead className="text-right">Unitario</TableHead>
+                          <TableHead className="text-right">Importe</TableHead>
+                          <TableHead />
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {lines.map((l, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-mono text-xs">{l.barcode}</TableCell>
+                            <TableCell>{l.productName}</TableCell>
+                            <TableCell className="text-right">{l.quantity}</TableCell>
+                            <TableCell className="text-right">{money(Number(l.unitCost))}</TableCell>
+                            <TableCell className="text-right font-medium">{money(lineTotal(l))}</TableCell>
+                            <TableCell>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)}>
+                                <Trash />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </ModuleSection>
 
-            <Card className="bg-secondary/40">
-              <CardHeader className="border-none pb-0">
-                <CardTitle className="text-sm">Otros impuestos</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                <p className="text-xs text-muted-foreground">Percepciones, impuestos internos u otros cargos que la factura del proveedor liste aparte del IVA.</p>
+            <ModuleSection title="Otros impuestos" description="Percepciones, impuestos internos u otros cargos que la factura del proveedor liste aparte del IVA.">
+              <div className="grid gap-3">
                 {otherTaxes.map((t, i) => (
                   <div key={i} className="grid grid-cols-6 items-end gap-3">
                     <Field label="Concepto" htmlFor={`other-tax-label-${i}`} className="col-span-3">
@@ -516,91 +663,97 @@ export function StockInPage() {
                 <Button type="button" variant="outline" className="w-fit" onClick={addOtherTax}>
                   <Plus /> Agregar impuesto
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </ModuleSection>
 
-            <div className="flex flex-wrap justify-end gap-8 text-sm">
-              <div>
-                Subtotal: <strong>{money(subtotal)}</strong>
-              </div>
-              <div>
-                IVA: <strong>{money(tax)}</strong>
-              </div>
-              {otherTaxesTotal > 0 && (
-                <div>
-                  Otros impuestos: <strong>{money(otherTaxesTotal)}</strong>
+            <ModuleSection title="Confirmar">
+              <div className="grid gap-4">
+                <div className="flex flex-wrap justify-end gap-8 text-sm">
+                  <div>Subtotal: <strong>{money(subtotal)}</strong></div>
+                  <div>IVA: <strong>{money(tax)}</strong></div>
+                  {otherTaxesTotal > 0 && <div>Otros impuestos: <strong>{money(otherTaxesTotal)}</strong></div>}
+                  <div>Total: <strong>{money(subtotal + tax + otherTaxesTotal)}</strong></div>
                 </div>
-              )}
-              <div>
-                Total: <strong>{money(subtotal + tax + otherTaxesTotal)}</strong>
+
+                <Field label="Notas" htmlFor="notes" hint="(opcional)">
+                  <Textarea id="notes" value={header.notes} onChange={e => setHeader({ ...header, notes: e.target.value })} />
+                </Field>
+
+                {editingInvoice && (
+                  <Field label="Motivo de la corrección" htmlFor="reason">
+                    <Textarea id="reason" required value={correctionReason} onChange={e => setCorrectionReason(e.target.value)} placeholder="Ej.: se ingresó una cantidad incorrecta" />
+                  </Field>
+                )}
+
+                <div className="flex gap-2">
+                  <Button disabled={saving}>
+                    {saving && <Spinner />} {editingInvoice ? 'Guardar corrección y actualizar stock' : 'Confirmar ingreso y actualizar stock'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={cancelCorrection}>
+                    {editingInvoice ? 'Cancelar corrección' : 'Cancelar'}
+                  </Button>
+                </div>
+              </div>
+            </ModuleSection>
+          </form>
+        )}
+      </ModuleScreen>
+
+      {/* Ver una factura ya cargada, sin arrancar una corrección. */}
+      <Dialog open={!!detalle} onOpenChange={open => !open && setDetalle(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{detalle ? `${detalle.invoiceType} ${detalle.pointOfSale}-${detalle.invoiceNumber}` : ''}</DialogTitle>
+          </DialogHeader>
+          {detalle && (
+            <div className="flex flex-col gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <span className="text-muted-foreground">Proveedor</span><span>{detalle.supplier?.name ?? '—'}</span>
+                <span className="text-muted-foreground">Fecha</span><span>{fecha(detalle.issueDate)}</span>
+                <span className="text-muted-foreground">Estado</span>
+                <span><Badge variant={STATUS_LABEL[detalle.status]?.variant ?? 'secondary'}>{STATUS_LABEL[detalle.status]?.label ?? detalle.status}</Badge></span>
+                {detalle.notes && <><span className="text-muted-foreground">Notas</span><span>{detalle.notes}</span></>}
+              </div>
+              <div className="overflow-hidden rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="text-right">Cant.</TableHead>
+                      <TableHead className="text-right">Unitario</TableHead>
+                      <TableHead className="text-right">Importe</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detalle.lines.map((l, i) => (
+                      <TableRow key={i}>
+                        <TableCell>{l.description ?? l.barcode}</TableCell>
+                        <TableCell className="text-right">{Number(l.quantity)}</TableCell>
+                        <TableCell className="text-right">{money(Number(l.unitCost))}</TableCell>
+                        <TableCell className="text-right font-medium">{money(lineTotal(l))}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="flex flex-wrap justify-end gap-x-4 gap-y-1">
+                <span className="text-muted-foreground">Subtotal: {money(Number(detalle.subtotal))}</span>
+                <span className="text-muted-foreground">IVA: {money(Number(detalle.taxTotal))}</span>
+                {Number(detalle.otherTaxesTotal ?? 0) > 0 && <span className="text-muted-foreground">Otros impuestos: {money(Number(detalle.otherTaxesTotal))}</span>}
+                <span className="font-semibold">Total: {money(Number(detalle.total))}</span>
               </div>
             </div>
-
-            <Field label="Notas" htmlFor="notes" hint="(opcional)">
-              <Textarea id="notes" value={header.notes} onChange={e => setHeader({ ...header, notes: e.target.value })} />
-            </Field>
-
-            {editingInvoice && (
-              <Field label="Motivo de la corrección" htmlFor="reason">
-                <Textarea id="reason" required value={correctionReason} onChange={e => setCorrectionReason(e.target.value)} placeholder="Ej.: se ingresó una cantidad incorrecta" />
-              </Field>
-            )}
-
-            <div className="flex gap-2">
-              <Button disabled={saving}>
-                {saving && <Spinner />} {editingInvoice ? 'Guardar corrección y actualizar stock' : 'Confirmar ingreso y actualizar stock'}
+          )}
+          <DialogFooter>
+            {puedeCorregir && detalle && (detalle.status === 'confirmed' || detalle.status === 'corrected') && (
+              <Button type="button" variant="outline" onClick={() => { const inv = detalle; setDetalle(null); if (inv) startCorrection(inv); }}>
+                Corregir
               </Button>
-              {editingInvoice && (
-                <Button type="button" variant="outline" onClick={cancelCorrection}>
-                  Cancelar corrección
-                </Button>
-              )}
-            </div>
-          </form>
-      </ModuleSection>
-
-      <ModuleSection title="Facturas cargadas">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Proveedor</TableHead>
-                <TableHead>Comprobante</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map(i => (
-                <TableRow key={i.id}>
-                  <TableCell>{fecha(i.issueDate)}</TableCell>
-                  <TableCell>{i.supplier?.name ?? '—'}</TableCell>
-                  <TableCell>
-                    {i.invoiceType} {i.pointOfSale}-{i.invoiceNumber}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">{money(Number(i.total))}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_LABEL[i.status]?.variant ?? 'secondary'}>{STATUS_LABEL[i.status]?.label ?? i.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {puedeCorregir && (i.status === 'confirmed' || i.status === 'corrected') && (
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => startCorrection(i)}>
-                          Corregir
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => openCancelInvoice(i)}>
-                          Anular
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-      </ModuleSection>
-      </ModuleScreen>
+            )}
+            <Button type="button" variant="outline" onClick={() => setDetalle(null)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!cancellingInvoice} onOpenChange={open => !open && setCancellingInvoice(null)}>
         <DialogContent>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { PencilSimple, Plus, Truck } from '@phosphor-icons/react';
+import { Link } from 'react-router-dom';
+import { PencilSimple, Plus, ShoppingCartSimple, Truck } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -177,6 +178,11 @@ export function SuppliersPage() {
               </Field>
             </div>
             <DialogFooter>
+              {editing && can('compras.ver') && (
+                <Button asChild variant="outline" className="mr-auto">
+                  <Link to={`/compras?supplierId=${editing.id}`}><ShoppingCartSimple /> Ver compras</Link>
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
               </Button>

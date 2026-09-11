@@ -13,7 +13,6 @@ export const AjustesPage = lazyPage(() => import('@/pages/ajustes-page'), 'Ajust
 export const LoginPage = lazyPage(() => import('@/pages/auth/login-page'), 'LoginPage');
 export const SignupPage = lazyPage(() => import('@/pages/auth/signup-page'), 'SignupPage');
 export const StockPage = lazyPage(() => import('@/pages/stock/stock-page'), 'StockPage');
-export const StockInPage = lazyPage(() => import('@/pages/stock/stock-in-page'), 'StockInPage');
 export const StockOutPage = lazyPage(() => import('@/pages/stock/stock-out-page'), 'StockOutPage');
 export const StockTransferPage = lazyPage(() => import('@/pages/stock/stock-transfer-page'), 'StockTransferPage');
 export const StockHistoryPage = lazyPage(() => import('@/pages/stock/stock-history-page'), 'StockHistoryPage');
@@ -29,6 +28,7 @@ export const PosPage = lazyPage(() => import('@/pages/sales/pos-page'), 'PosPage
 export const SalesHistoryPage = lazyPage(() => import('@/pages/sales/sales-history-page'), 'SalesHistoryPage');
 export const ShiftsHistoryPage = lazyPage(() => import('@/pages/sales/shifts-history-page'), 'ShiftsHistoryPage');
 export const PricesPage = lazyPage(() => import('@/pages/prices/prices-page'), 'PricesPage');
+export const PurchasesPage = lazyPage(() => import('@/pages/purchases/purchases-page'), 'PurchasesPage');
 export const ReportesPage = lazyPage(() => import('@/pages/reportes-page'), 'ReportesPage');
 
 /**
@@ -46,7 +46,6 @@ const ROUTE_PAGE: Record<string, Preloadable> = {
   '/stock': StockPage,
   '/stock/restock': RestockPage,
   '/stock/expirations': ExpirationsPage,
-  '/stock/in': StockInPage,
   '/stock/out': StockOutPage,
   '/stock/transfer': StockTransferPage,
   '/stock/history': StockHistoryPage,
@@ -56,6 +55,7 @@ const ROUTE_PAGE: Record<string, Preloadable> = {
   '/catalog/suppliers': SuppliersPage,
   '/catalog/customers': CustomersPage,
   '/precios': PricesPage,
+  '/compras': PurchasesPage,
   '/reportes': ReportesPage,
   '/ventas': PosPage,
   '/ventas/historial': SalesHistoryPage,

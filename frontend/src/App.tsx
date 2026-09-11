@@ -5,8 +5,8 @@ import { FullScreenRoute, ProtectedRoute } from '@/components/layout/protected-r
 import { FullPageLoading } from '@/components/spinner';
 import {
   AjustesPage, CategoriesPage, CustomersPage, EscritorioPage, ExpirationsPage, LoginPage,
-  PosPage, PricesPage, ProductDetailPage, ProductsPage, ReportesPage, RestockPage,
-  SalesHistoryPage, ShiftsHistoryPage, SignupPage, StockHistoryPage, StockInPage, StockOutPage,
+  PosPage, PricesPage, ProductDetailPage, ProductsPage, PurchasesPage, ReportesPage, RestockPage,
+  SalesHistoryPage, ShiftsHistoryPage, SignupPage, StockHistoryPage, StockOutPage,
   StockPage, StockTransferPage, SuppliersPage, WarehousesPage,
 } from '@/lib/lazy-pages';
 
@@ -35,11 +35,14 @@ function App() {
           <Route path="/stock/restock" element={<RestockPage />} />
         </Route>
         <Route element={<PermissionRoute permission="stock.mover" />}>
-          <Route path="/stock/in" element={<StockInPage />} />
           <Route path="/stock/out" element={<StockOutPage />} />
         </Route>
         <Route element={<PermissionRoute permission="stock.transferir" />}>
           <Route path="/stock/transfer" element={<StockTransferPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="compras.ver" />}>
+          <Route path="/compras" element={<PurchasesPage />} />
         </Route>
 
         <Route element={<PermissionRoute permission="productos.ver" />}>

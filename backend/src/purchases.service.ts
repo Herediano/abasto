@@ -199,5 +199,44 @@ export class PurchasesService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
-  list(tenantId: string, warehouseIds?: string[]) { return this.prisma.purchaseInvoice.findMany({ where: { tenantId, ...(warehouseIds ? { warehouseId: { in: warehouseIds } } : {}) }, include: { supplier: { select: { name: true } }, warehouse: { select: { name: true } }, lines: true }, orderBy: { issueDate: 'desc' } }); }
+  /** El `where` que arma la lista y el export: mismo filtro, una sola vez. */
+  private whereDe(tenantId: string, warehouseIds: string[] | undefined, query: Record<string, string | undefined>): Prisma.PurchaseInvoiceWhereInput {
+    const search = query.search?.trim();
+    return {
+      tenantId,
+      ...(warehouseIds ? { warehouseId: { in: warehouseIds } } : {}),
+      ...(query.supplierId ? { supplierId: query.supplierId } : {}),
+      ...(query.status ? { status: query.status as PurchaseInvoiceStatus } : {}),
+      ...(query.from || query.to
+        ? { issueDate: { gte: query.from ? new Date(`${query.from}T00:00:00`) : undefined, lte: query.to ? new Date(`${query.to}T23:59:59.999`) : undefined } }
+        : {}),
+      ...(search
+        ? { OR: [{ invoiceNumber: { contains: search, mode: 'insensitive' } }, { pointOfSale: { contains: search, mode: 'insensitive' } }] }
+        : {}),
+    };
+  }
+
+  async list(tenantId: string, warehouseIds: string[] | undefined, query: Record<string, string | undefined> = {}) {
+    const page = Math.max(1, Number.parseInt(query.page ?? '1', 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize ?? '20', 10) || 20));
+    const where = this.whereDe(tenantId, warehouseIds, query);
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.purchaseInvoice.findMany({
+        where, include: { supplier: { select: { name: true } }, warehouse: { select: { name: true } }, lines: true },
+        orderBy: { issueDate: 'desc' }, skip: (page - 1) * pageSize, take: pageSize,
+      }),
+      this.prisma.purchaseInvoice.count({ where }),
+    ]);
+    return { items, pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } };
+  }
+
+  /** Todas las filas del filtro activo, sin paginar — para el Excel. */
+  exportRows(tenantId: string, warehouseIds: string[] | undefined, query: Record<string, string | undefined>) {
+    return this.prisma.purchaseInvoice.findMany({
+      where: this.whereDe(tenantId, warehouseIds, query),
+      include: { supplier: { select: { name: true } } },
+      orderBy: { issueDate: 'desc' },
+      take: 10000,
+    });
+  }
 }

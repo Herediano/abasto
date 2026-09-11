@@ -1,6 +1,6 @@
 import {
   Barcode, CashRegister, ChartBar, Gear, GearSix, Package, Receipt,
-  ShieldCheck, Tag, Truck, UsersThree, Vault, Warehouse,
+  ShieldCheck, ShoppingCartSimple, Tag, Truck, UsersThree, Vault, Warehouse,
   type Icon,
 } from '@phosphor-icons/react';
 
@@ -55,6 +55,11 @@ export const MODULES: ModuleDef[] = [
     key: 'stock', label: 'Stock', path: '/stock', permission: 'stock.ver', Icon: Package,
     blurb: 'Existencias por producto, depósito y lote.', crumb: 'Escritorio /',
     motif: '<path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8M12 12v8"/>',
+  },
+  {
+    key: 'compras', label: 'Compras', path: '/compras', permission: 'compras.ver', Icon: ShoppingCartSimple,
+    blurb: 'Facturas de proveedor: cargar, corregir, anular.', crumb: 'Escritorio /',
+    motif: '<path d="M3 4h2l2.4 12.2a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>',
   },
   {
     key: 'productos', label: 'Productos', path: '/catalog/products', permission: 'productos.ver', Icon: Barcode,
@@ -118,6 +123,7 @@ export const moduleByKey = (key: string) => BY_KEY.get(key);
 const OP = (h: number) => `oklch(0.60 0.20 ${h})`;
 const HUES: Record<string, string> = {
   stock: OP(20), // rojo carmín
+  compras: OP(55), // naranja-oro
   precios: OP(125), // lima
   productos: OP(160), // esmeralda
   proveedores: OP(195), // cian
