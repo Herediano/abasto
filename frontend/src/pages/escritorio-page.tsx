@@ -3,6 +3,7 @@ import { CalendarBlank, CashRegister, EyeSlash, Plus } from '@phosphor-icons/rea
 import { Link, useNavigate } from 'react-router-dom';
 import ReactGridLayout, { noCompactor, useContainerWidth, type Compactor, type Layout } from 'react-grid-layout';
 import { useEscritorioSummary } from '@/components/layout/escritorio-shell';
+import { LiveClock } from '@/components/live-clock';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
 import { hora as fmtHora } from '@/lib/format';
 import { compact, statFor, type EscritorioSummary, type TileBar } from '@/lib/escritorio';
@@ -558,6 +559,8 @@ export function EscritorioPage() {
         <p className="flex items-center gap-1.5 text-chico font-medium tracking-[0.14em] text-placeholder">
           <CalendarBlank weight="fill" className="size-3.5 shrink-0" />
           <span className="capitalize">{hoy}</span>
+          <span className="opacity-50">·</span>
+          <LiveClock fontSize={13} />
         </p>
         <h1 className="type-display mt-2 text-h1 font-semibold leading-tight [text-wrap:balance]">
           <span className="text-primary">{saludo()}</span>
