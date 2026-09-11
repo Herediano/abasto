@@ -20,8 +20,9 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { BulkUpdate } from './bulk-update';
 import { TierBulkUpdate } from './tier-bulk-update';
+import { CalendarView } from './calendar-view';
 
-type View = 'listas' | 'actualizar' | 'promociones' | 'historial';
+type View = 'listas' | 'actualizar' | 'promociones' | 'calendario' | 'historial';
 /** Dentro de "Actualizar": precio único (venta/costo/margen) o precio por cantidad (escalas). */
 type ModoActualizar = 'unico' | 'cantidad';
 /** Alcance de una promoción: sigue siendo de un solo eje. */
@@ -477,6 +478,7 @@ export function PricesPage() {
           { key: 'listas', label: 'Listas' },
           { key: 'actualizar', label: 'Actualizar' },
           { key: 'promociones', label: 'Promociones' },
+          { key: 'calendario', label: 'Calendario' },
           { key: 'historial', label: 'Historial' },
         ]}
         view={view}
@@ -822,6 +824,15 @@ export function PricesPage() {
           )}
           </ModuleSection>
         </div>
+      )}
+
+      {view === 'calendario' && (
+        <CalendarView
+          token={token}
+          promotions={promotions}
+          onError={setError}
+          onEditPromotion={p => { openPromoDialog(p); }}
+        />
       )}
 
       {view === 'historial' && (
