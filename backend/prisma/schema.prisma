@@ -145,6 +145,7 @@ model Branch {
   users      User[]
   paymentAdjustments PaymentAdjustment[]
   stockRules ProductStockRule[]
+  priceLists PriceList[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])
@@ -317,6 +318,12 @@ model PriceList {
   id            String         @id @default(uuid()) @db.Uuid
   tenantId      String         @map("tenant_id") @db.Uuid
   name          String
+  // Alcance: null = general, sirve en toda la empresa. Con sucursal, la lista
+  // existe sólo ahí. Una sucursal puede tener su propia lista por defecto, que
+  // le gana a la general en esa sucursal (ver listaParaCobrar en sales.service).
+  // El default es null a propósito: un negocio de una sucursal nunca se topa
+  // con el concepto.
+  branchId      String?        @map("branch_id") @db.Uuid
   isDefault     Boolean        @default(false) @map("is_default")
   derivesFromId String?        @map("derives_from_id") @db.Uuid
   markupPercent Decimal?       @map("markup_percent") @db.Decimal(6, 2)
@@ -324,6 +331,7 @@ model PriceList {
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  branch        Branch?        @relation(fields: [branchId, tenantId], references: [id, tenantId])
   derivesFrom   PriceList?     @relation("PriceListDerivation", fields: [derivesFromId], references: [id])
   derivedLists  PriceList[]    @relation("PriceListDerivation")
   prices        ProductPrice[]
@@ -366,9 +374,19 @@ model PriceRule {
   name           String
   priceListId    String    @map("price_list_id") @db.Uuid
   target         String // salePrice | costPrice
-  scopeType      String    @map("scope_type") // all | category | brand
+  // Alcance de un solo eje: el modelo viejo. Las reglas nuevas guardan
+  // `selection` y dejan estos dos en null; se leen sólo para las ya existentes.
+  scopeType      String?   @map("scope_type") // all | category | brand | ids
   scopeValue     String?   @map("scope_value")
-  operationType  String    @map("operation_type") // percent | margin | round
+  // Selección apilable (PriceSelection en price-selection.util.ts): categorías,
+  // marcas, proveedores, productos puntuales, margen, antigüedad… combinados
+  // con AND. Es JSON y no columnas porque los filtros se suman seguido y no
+  // vale una migración por cada uno.
+  selection      Json?
+  operationType  String    @map("operation_type") // percent | margin | round | supplierIncrease
+  // null = el criterio guarda a QUIÉN se le aplica, pero el valor se escribe en
+  // el momento. Es el caso real del aumento de proveedor: la selección se repite
+  // todos los meses, el porcentaje cambia siempre.
   operationValue Decimal?  @map("operation_value") @db.Decimal(10, 2)
   rounding       String?
   lastRunAt      DateTime? @map("last_run_at") @db.Timestamptz(6)

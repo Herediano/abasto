@@ -1,37 +1,35 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Calculator, DownloadSimple, Eye, PencilSimple, Play, Plus, FloppyDisk, Trash, UploadSimple } from '@phosphor-icons/react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { PencilSimple, Plus, Trash, UploadSimple } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ExportMenu } from '@/components/export-menu';
+import { ImportWizard } from '@/components/import-wizard';
+import { ListFilters, type ActiveFilter } from '@/components/list-filters';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ModuleScreen, ModuleSection } from '@/components/module-screen';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, downloadFile, errorMessage, uploadFile, type Category, type PriceList, type PriceRule, type RoundingRule, type ScheduledChange, type Promotion, type PriceAuditRow } from '@/lib/api';
+import { api, errorMessage, type Branch, type Category, type PriceList, type PriceListDetail, type Promotion, type PriceAuditRow } from '@/lib/api';
 import { fecha, fechaHora, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
+import { BulkUpdate } from './bulk-update';
 
 type View = 'listas' | 'actualizar' | 'promociones' | 'historial';
+/** Alcance de una promoción: sigue siendo de un solo eje. */
 type ScopeType = 'all' | 'category' | 'brand';
-type Target = 'salePrice' | 'costPrice';
-type OperationType = 'percent' | 'margin' | 'round';
-type Rounding = 'nearest10' | 'nearest100' | 'ending99' | 'byRules';
 
-type BulkResult = {
-  affected: number;
-  skipped: number;
-  skippedDetail: Array<{ id: string; name: string; reason: string }>;
-  preview: Array<{ id: string; name: string; before: number | null; after: number }>;
-  applied: boolean;
-  scheduled: boolean;
-  validFrom: string;
-  priceList: { id: string; name: string };
-};
+/**
+ * Atajos para nombrar una lista. Una lista es un **segmento de cliente**, así
+ * que el nombre tiene que decir a quién se le cobra; la cuenta (de dónde se
+ * calcula y con qué %) va en su propio campo y cambia con el tiempo, por lo que
+ * meterla en el nombre lo deja viejo enseguida.
+ */
+const NOMBRES_SUGERIDOS = ['Mostrador', 'Mayorista', 'Distribuidor', 'Revendedor', 'Empleados'];
 
 const PRICE_SOURCES: Record<string, string> = {
   manual: 'Edición manual',
@@ -41,48 +39,40 @@ const PRICE_SOURCES: Record<string, string> = {
   invoice: 'Factura de compra',
 };
 
-const MODOS_REDONDEO: Record<string, string> = {
-  nearest10: 'A la decena',
-  nearest100: 'A la centena',
-  ending99: 'Terminación 99',
-  none: 'Sin redondear',
-};
-
 export function PricesPage() {
-  const { session } = useAuth();
+  const { session, can } = useAuth();
   const token = session?.accessToken ?? '';
+  // Cada acción de la cabecera se arma por el permiso que de verdad necesita su
+  // endpoint: la planilla sale de Productos y las promos tienen su propia área,
+  // así que un rango con precios y nada más no debe ver botones que darían 403.
+  const puedeEditarPrecios = can('precios.editar');
+  const puedeVerProductos = can('productos.ver');
+  const puedeVerPromos = can('promociones.ver');
+  const puedeCrearPromos = can('promociones.crear');
   const [error, setError] = useState('');
   const [toolsMessage, setToolsMessage] = useState('');
   const [view, setView] = useState<View>('listas');
 
   // herramientas de catalogo
   const [categories, setCategories] = useState<Category[]>([]);
-  const [exportingPrices, setExportingPrices] = useState(false);
-  const [importingPrices, setImportingPrices] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [updateNames, setUpdateNames] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
-  // accion masiva
   // listas de precios
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [priceListId, setPriceListId] = useState('');
   const [listDialogOpen, setListDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<PriceList | null>(null);
-  const [listForm, setListForm] = useState({ name: '', derivesFromId: '', markupPercent: '' });
+  const [listForm, setListForm] = useState({ name: '', derivesFromId: '', markupPercent: '', branchId: '', isDefault: false });
   const [savingList, setSavingList] = useState(false);
-
-  // vigencia: vacío = ahora
-  const [validFrom, setValidFrom] = useState('');
-
-  // criterios guardados, tramos de redondeo y cambios programados
-  const [rules, setRules] = useState<PriceRule[]>([]);
-  const [roundingRules, setRoundingRules] = useState<RoundingRule[]>([]);
-  const [scheduled, setScheduled] = useState<ScheduledChange[]>([]);
-  const [savingRule, setSavingRule] = useState(false);
-  const [runningRule, setRunningRule] = useState('');
-  const [ruleName, setRuleName] = useState('');
-  const [tramo, setTramo] = useState({ fromAmount: '', toAmount: '', mode: 'nearest10' });
+  // Sucursales, para elegir el alcance de una lista. Con una sola el campo no
+  // se muestra: un negocio de una sucursal no tiene que enterarse del concepto.
+  const [branches, setBranches] = useState<Branch[]>([]);
+  // Lista abierta: qué cobra, producto por producto.
+  const [detalle, setDetalle] = useState<PriceListDetail | null>(null);
+  const [detalleId, setDetalleId] = useState('');
+  const [detalleBusqueda, setDetalleBusqueda] = useState('');
+  const [detallePagina, setDetallePagina] = useState(1);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
 
   // promociones: se configuran ahora, las aplica Ventas
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -100,16 +90,6 @@ export function PricesPage() {
   const [auditFiltro, setAuditFiltro] = useState({ field: '', source: '', from: '', to: '' });
   const [loadingAudit, setLoadingAudit] = useState(false);
 
-  const [scopeType, setScopeType] = useState<ScopeType>('all');
-  const [scopeValue, setScopeValue] = useState('');
-  const [target, setTarget] = useState<Target>('salePrice');
-  const [operationType, setOperationType] = useState<OperationType>('percent');
-  const [operationValue, setOperationValue] = useState('10');
-  const [rounding, setRounding] = useState<Rounding>('nearest10');
-  const [preview, setPreview] = useState<BulkResult | null>(null);
-  const [calculating, setCalculating] = useState(false);
-  const [applying, setApplying] = useState(false);
-
   const loadLists = () =>
     api<PriceList[]>('/price-lists', {}, token)
       .then(l => {
@@ -118,10 +98,32 @@ export function PricesPage() {
       })
       .catch(e => setError(errorMessage(e)));
 
-  const loadRules = () => api<PriceRule[]>('/price-rules', {}, token).then(setRules).catch(() => {});
-  const loadRounding = () => api<RoundingRule[]>('/prices/rounding-rules', {}, token).then(setRoundingRules).catch(() => {});
-  const loadScheduled = () => api<ScheduledChange[]>('/prices/scheduled', {}, token).then(setScheduled).catch(() => {});
   const loadPromotions = () => api<Promotion[]>('/promotions', {}, token).then(setPromotions).catch(() => {});
+
+  const abrirLista = (id: string) => {
+    setDetalleId(id);
+    setDetalleBusqueda('');
+    setDetallePagina(1);
+  };
+
+  // El detalle se recarga solo al cambiar de lista, buscar o pasar de página.
+  useEffect(() => {
+    if (!detalleId) {
+      setDetalle(null);
+      return;
+    }
+    setCargandoDetalle(true);
+    const p = new URLSearchParams({ page: String(detallePagina), pageSize: '50' });
+    if (detalleBusqueda.trim()) p.set('search', detalleBusqueda.trim());
+    const t = setTimeout(() => {
+      api<PriceListDetail>(`/price-lists/${detalleId}?${p}`, {}, token)
+        .then(setDetalle)
+        .catch(e => setError(errorMessage(e)))
+        .finally(() => setCargandoDetalle(false));
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detalleId, detalleBusqueda, detallePagina, token]);
 
   const loadAudit = () => {
     setLoadingAudit(true);
@@ -196,110 +198,13 @@ export function PricesPage() {
 
   useEffect(() => {
     api<Category[]>('/categories', {}, token).then(setCategories).catch(e => setError(errorMessage(e)));
+    api<Branch[]>('/branches', {}, token).then(setBranches).catch(() => {});
     void loadLists();
-    void loadRules();
-    void loadRounding();
-    void loadScheduled();
     void loadPromotions();
   }, [token]);
 
   // La auditoria se recarga sola al cambiar los filtros.
   useEffect(() => { void loadAudit(); }, [token, auditFiltro]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /** Guarda la configuración actual del formulario como criterio reutilizable. */
-  async function saveRule() {
-    if (!ruleName.trim()) { setError('Poné un nombre al criterio'); return; }
-    setSavingRule(true);
-    setError('');
-    try {
-      await api('/price-rules', { method: 'POST', body: JSON.stringify({
-        name: ruleName.trim(),
-        priceListId,
-        scopeType,
-        scopeValue: scopeType === 'all' ? null : scopeValue,
-        target,
-        operationType,
-        operationValue: operationType === 'round' ? null : Number(operationValue),
-        rounding: operationType === 'round' ? rounding : null,
-      }) }, token);
-      setRuleName('');
-      setToolsMessage('Criterio guardado. Podés volver a aplicarlo cuando quieras.');
-      await loadRules();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSavingRule(false);
-    }
-  }
-
-  async function runRule(rule: PriceRule) {
-    setRunningRule(rule.id);
-    setError('');
-    setToolsMessage('');
-    try {
-      const r = await api<BulkResult & { rule: { name: string } }>(`/price-rules/${rule.id}/run`, { method: 'POST', body: JSON.stringify({ dryRun: false }) }, token);
-      setToolsMessage(`«${rule.name}»: ${r.affected} precios actualizados.${r.skipped ? ` ${r.skipped} salteados.` : ''}`);
-      await Promise.all([loadRules(), loadScheduled()]);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setRunningRule('');
-    }
-  }
-
-  async function deleteRule(id: string) {
-    try {
-      await api(`/price-rules/${id}`, { method: 'DELETE' }, token);
-      await loadRules();
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }
-
-  async function addTramo(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    try {
-      await api('/prices/rounding-rules', { method: 'POST', body: JSON.stringify({
-        fromAmount: Number(tramo.fromAmount),
-        toAmount: tramo.toAmount === '' ? null : Number(tramo.toAmount),
-        mode: tramo.mode,
-      }) }, token);
-      setTramo({ fromAmount: '', toAmount: '', mode: 'nearest10' });
-      await loadRounding();
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }
-
-  async function deleteTramo(id: string) {
-    try {
-      await api(`/prices/rounding-rules/${id}`, { method: 'DELETE' }, token);
-      await loadRounding();
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }
-
-  async function cancelScheduled(c: ScheduledChange) {
-    setError('');
-    try {
-      await api(`/prices/scheduled?priceListId=${c.priceListId}&validFrom=${encodeURIComponent(c.validFrom)}`, { method: 'DELETE' }, token);
-      setToolsMessage('Cambio programado cancelado.');
-      await loadScheduled();
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }
-
-  // Cualquier cambio en los parametros invalida la vista previa: aplicar sin
-  // recalcular escribiria valores distintos a los que el usuario vio.
-  useEffect(() => {
-    setPreview(null);
-  }, [scopeType, scopeValue, target, operationType, operationValue, rounding, priceListId, validFrom]);
-
-  const listaElegida = priceLists.find(l => l.id === priceListId);
-  const listaEsDerivada = Boolean(listaElegida?.derivesFromId);
 
   function openListDialog(lista: PriceList | null) {
     setEditingList(lista);
@@ -307,6 +212,8 @@ export function PricesPage() {
       name: lista?.name ?? '',
       derivesFromId: lista?.derivesFromId ?? '',
       markupPercent: lista?.markupPercent ?? '',
+      branchId: lista?.branchId ?? '',
+      isDefault: lista?.isDefault ?? false,
     });
     setError('');
     setListDialogOpen(true);
@@ -321,6 +228,9 @@ export function PricesPage() {
         name: listForm.name.trim(),
         derivesFromId: listForm.derivesFromId || null,
         markupPercent: listForm.derivesFromId ? listForm.markupPercent : null,
+        // '' = general (toda la empresa). El backend lo traduce a null.
+        branchId: listForm.branchId || null,
+        isDefault: listForm.isDefault,
       };
       if (editingList) await api(`/price-lists/${editingList.id}`, { method: 'PUT', body: JSON.stringify(body) }, token);
       else await api('/price-lists', { method: 'POST', body: JSON.stringify(body) }, token);
@@ -344,102 +254,75 @@ export function PricesPage() {
     }
   }
 
-  async function exportPrices() {
-    setExportingPrices(true);
-    setError('');
-    try {
-      await downloadFile('/products/export', token, 'productos.xlsx');
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setExportingPrices(false);
-    }
-  }
-
-  async function importPrices(file: File) {
-    setImportingPrices(true);
-    setToolsMessage('');
-    setError('');
-    try {
-      type ImportResult = {
-        updated: number;
-        renamed: number;
-        notFound: string[];
-        invalid: string[];
-        matchedColumns: { barcode: string | null; costPrice: string | null; salePrice: string | null; name: string | null };
-      };
-      const result = await uploadFile<ImportResult>('/products/import-prices', token, file, { updateNames: String(updateNames) });
-      const cols = [
-        result.matchedColumns.barcode && `código="${result.matchedColumns.barcode}"`,
-        result.matchedColumns.costPrice && `costo="${result.matchedColumns.costPrice}"`,
-        result.matchedColumns.salePrice && `venta="${result.matchedColumns.salePrice}"`,
-        updateNames && result.matchedColumns.name && `nombre="${result.matchedColumns.name}"`,
-      ].filter(Boolean).join(', ');
-      const partes = [`Precios actualizados: ${result.updated}`];
-      if (updateNames) partes.push(`nombres actualizados: ${result.renamed}`);
-      setToolsMessage(`${partes.join(', ')} (columnas detectadas: ${cols}).${result.notFound.length ? ` No encontrados: ${result.notFound.length}.` : ''}${result.invalid.length ? ` Valores inválidos: ${result.invalid.length}.` : ''}`);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setImportingPrices(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  }
-
-  function buildBody(dryRun: boolean) {
-    return JSON.stringify({
-      priceListId: priceListId || undefined,
-      // El input date da fecha sin hora; se aplica a las 00:00 de ese día.
-      validFrom: validFrom ? new Date(`${validFrom}T00:00:00`).toISOString() : undefined,
-      scope: { type: scopeType, value: scopeType === 'all' ? undefined : scopeValue },
-      target,
-      operation: {
-        type: operationType,
-        value: operationType === 'round' ? 0 : Number(operationValue),
-        rounding: operationType === 'round' ? rounding : undefined,
-      },
-      dryRun,
-    });
-  }
-
-  async function calculate() {
-    setCalculating(true);
-    setError('');
-    setToolsMessage('');
-    try {
-      setPreview(await api<BulkResult>('/prices/bulk', { method: 'POST', body: buildBody(true) }, token));
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setCalculating(false);
-    }
-  }
-
-  async function apply() {
-    setApplying(true);
-    setError('');
-    try {
-      const result = await api<BulkResult>('/prices/bulk', { method: 'POST', body: buildBody(false) }, token);
-      setToolsMessage(
-        result.scheduled
-          ? `Programado: ${result.affected} precios van a entrar en vigencia el ${fecha(result.validFrom)}.`
-          : `Listo: ${result.affected} precios actualizados.${result.skipped ? ` ${result.skipped} salteados.` : ''}`,
-      );
-      setPreview(null);
-      await loadScheduled();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setApplying(false);
-    }
-  }
-
-  const scopeReady = scopeType === 'all' || Boolean(scopeValue);
+  /** Chips de los filtros de auditoría activos, como en el resto de los listados. */
+  const auditFiltrosActivos: ActiveFilter[] = [
+    auditFiltro.field && {
+      key: 'field',
+      label: auditFiltro.field === 'sale' ? 'sólo venta' : 'sólo costo',
+      clear: () => setAuditFiltro({ ...auditFiltro, field: '' }),
+    },
+    auditFiltro.source && {
+      key: 'source',
+      label: PRICE_SOURCES[auditFiltro.source] ?? auditFiltro.source,
+      clear: () => setAuditFiltro({ ...auditFiltro, source: '' }),
+    },
+    auditFiltro.from && {
+      key: 'from',
+      label: `desde ${fecha(auditFiltro.from)}`,
+      clear: () => setAuditFiltro({ ...auditFiltro, from: '' }),
+    },
+    auditFiltro.to && {
+      key: 'to',
+      label: `hasta ${fecha(auditFiltro.to)}`,
+      clear: () => setAuditFiltro({ ...auditFiltro, to: '' }),
+    },
+  ].filter(Boolean) as ActiveFilter[];
 
   return (
     <>
       <ModuleScreen
         title="Precios"
+        /**
+         * Exportar y la acción principal van acá, en la cabecera, y cambian con
+         * la vista activa (docs/diseno.md, «La cabecera»). Cada acción existe en
+         * un solo lugar: dentro de las vistas ya no hay botones de exportar.
+         */
+        actions={
+          <>
+            {view === 'listas' && (
+              <>
+                <ExportMenu path="/price-lists" filename="listas-de-precios" label="Exportar listas" />
+                {puedeEditarPrecios && (
+                  <Button onClick={() => openListDialog(null)}>
+                    <Plus /> Nueva lista
+                  </Button>
+                )}
+              </>
+            )}
+            {view === 'actualizar' && (
+              <>
+                {/* La planilla y su reimporte son el mismo viaje de ida y vuelta,
+                    así que el par vive junto en la vista donde se actualiza. */}
+                {puedeVerProductos && <ExportMenu path="/products" filename="planilla-de-precios" label="Exportar planilla" />}
+                {puedeEditarPrecios && (
+                  <Button onClick={() => setImportOpen(true)}>
+                    <UploadSimple /> Importar precios
+                  </Button>
+                )}
+              </>
+            )}
+            {view === 'promociones' && (
+              <>
+                {puedeVerPromos && <ExportMenu path="/promotions" filename="promociones" label="Exportar promociones" />}
+                {puedeCrearPromos && (
+                  <Button onClick={() => setPromoOpen(true)}>
+                    <Plus /> Nueva promoción
+                  </Button>
+                )}
+              </>
+            )}
+          </>
+        }
         views={[
           { key: 'listas', label: 'Listas' },
           { key: 'actualizar', label: 'Actualizar' },
@@ -452,27 +335,125 @@ export function PricesPage() {
       {toolsMessage && <Alert>{toolsMessage}</Alert>}
       {error && <Alert variant="destructive">{error}</Alert>}
 
-      {view === 'listas' && (
+      {/* Lista abierta: qué cobra, producto por producto. Reemplaza la tabla de
+          listas en lugar de apilarse debajo, como cualquier drill-down. */}
+      {view === 'listas' && detalleId && (
+        <div className="flex flex-col">
+          <ModuleSection
+            title={detalle?.list.name ?? 'Lista'}
+            description={
+              detalle
+                ? [
+                  detalle.list.branchName ? `Sólo ${detalle.list.branchName}` : 'General — toda la empresa',
+                  detalle.list.isDefault ? 'por defecto' : null,
+                  detalle.list.derivesFromName
+                    ? `calculada desde ${detalle.list.derivesFromName} ${Number(detalle.list.markupPercent) >= 0 ? '+' : ''}${Number(detalle.list.markupPercent)}%`
+                    : 'precios cargados a mano',
+                  `${detalle.list.pricedProducts ?? 0} de ${detalle.list.totalProducts ?? 0} con precio propio`,
+                  detalle.list.customerCount ? `${detalle.list.customerCount} cliente(s)` : null,
+                ].filter(Boolean).join(' · ')
+                : 'Cargando…'
+            }
+            actions={
+              <Button variant="outline" size="sm" onClick={() => setDetalleId('')}>
+                ← Listas
+              </Button>
+            }
+          >
+            <ListFilters
+              search={detalleBusqueda}
+              onSearch={v => { setDetalleBusqueda(v); setDetallePagina(1); }}
+              searchPlaceholder="Nombre, SKU o código de barras"
+              searchLabel="Buscar en la lista"
+              activeFilters={[]}
+            />
+
+            {cargandoDetalle && !detalle ? (
+              <Spinner />
+            ) : !detalle || detalle.items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay productos que coincidan.</p>
+            ) : (
+              <>
+                <div className="overflow-hidden rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-right">Costo</TableHead>
+                        <TableHead className="text-right">Precio en esta lista</TableHead>
+                        <TableHead className="text-right">Margen</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detalle.items.map(p => (
+                        <TableRow key={p.id}>
+                          <TableCell>
+                            <span className="font-medium">{p.name}</span>
+                            <span className="block text-micro text-muted-foreground">{p.sku || p.barcode}</span>
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {p.cost === null ? '—' : money(p.cost)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {p.price === null
+                              ? <span className="text-muted-foreground">sin precio</span>
+                              : <>
+                                  <span className="font-medium">{money(p.price)}</span>
+                                  {/* Un precio heredado se mueve solo cuando cambia la
+                                      lista de origen; uno propio, no. */}
+                                  {!p.explicit && (
+                                    <span className="block text-micro text-muted-foreground">heredado</span>
+                                  )}
+                                </>}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {p.margin === null ? '—' : `${p.margin.toFixed(1)}%`}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {detalle.pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-end gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Página {detalle.pagination.page} de {detalle.pagination.totalPages} · {detalle.pagination.total} productos
+                    </span>
+                    <Button variant="outline" size="sm" disabled={detallePagina <= 1} onClick={() => setDetallePagina(detallePagina - 1)}>
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={detallePagina >= detalle.pagination.totalPages}
+                      onClick={() => setDetallePagina(detallePagina + 1)}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </ModuleSection>
+        </div>
+      )}
+
+      {view === 'listas' && !detalleId && (
         <div className="flex flex-col">
           <ModuleSection
             title="Listas de precios"
-            description="Una lista puede tener precios propios o calcularse desde otra con un recargo."
-            actions={
-              <>
-                <ExportMenu path="/price-lists" filename="listas-de-precios" />
-                <Button variant="outline" size="sm" onClick={() => openListDialog(null)}>
-                  <Plus /> Nueva lista
-                </Button>
-              </>
-            }
+            description="Una lista de precios es a quién se le cobra ese precio: mostrador, mayorista, distribuidor. Se le asigna a un cliente en su ficha; el que no tiene ninguna paga la lista por defecto."
           >
           <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Lista</TableHead>
-                  <TableHead>Cómo se calcula</TableHead>
-                  <TableHead className="text-right">Precios propios</TableHead>
+                  <TableHead>Alcance</TableHead>
+                  <TableHead className="text-right">Con precio</TableHead>
+                  <TableHead className="text-right">Clientes</TableHead>
+                  <TableHead className="text-right">Último cambio</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -480,12 +461,37 @@ export function PricesPage() {
                 {priceLists.map(l => (
                   <TableRow key={l.id}>
                     <TableCell className="font-medium">
-                      {l.name} {l.isDefault && <Badge variant="secondary">base</Badge>}
+                      {/* La fila abre la lista: es lo que antes no se podía hacer. */}
+                      <button type="button" onClick={() => abrirLista(l.id)} className="text-left hover:underline">
+                        {l.name}
+                      </button>{' '}
+                      {l.isDefault && <Badge variant="secondary" title="Se usa cuando el cliente no tiene lista propia, y para consumidor final.">por defecto</Badge>}
+                      {!l.isActive && <Badge variant="outline">inactiva</Badge>}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {l.derivesFromName ? `${l.derivesFromName} ${Number(l.markupPercent) >= 0 ? '+' : ''}${Number(l.markupPercent)}%` : 'Precios propios'}
+                    {/* Sólo el alcance. Cómo se arma la lista (a mano o calculada
+                        desde otra) se ve al abrirla y al editarla, no en la tabla. */}
+                    <TableCell className="text-muted-foreground">{l.branchName ?? 'General'}</TableCell>
+                    {/* Una lista derivada no tiene precios propios: los calcula. Poner 0
+                        ahí haría pensar que está vacía. */}
+                    <TableCell className="text-right">
+                      {l.derivesFromName && !l.pricedProducts
+                        ? <span className="text-muted-foreground">calculados</span>
+                        : <>
+                            {l.pricedProducts ?? 0}
+                            <span className="text-muted-foreground"> de {l.totalProducts ?? 0}</span>
+                            {!!l.scheduledProducts && (
+                              <span className="ml-1 text-warning" title={`${l.scheduledProducts} con un cambio programado`}>
+                                +{l.scheduledProducts}
+                              </span>
+                            )}
+                          </>}
                     </TableCell>
-                    <TableCell className="text-right">{l.priceCount ?? 0}</TableCell>
+                    <TableCell className="text-right">
+                      {l.customerCount || <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {l.lastChangeAt ? fecha(l.lastChangeAt) : '—'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openListDialog(l)} aria-label={`Editar ${l.name}`}>
@@ -505,298 +511,19 @@ export function PricesPage() {
           </div>
           </ModuleSection>
 
-          <ModuleSection
-            title="Planillas de precios"
-            description="Exportá el listado o actualizá precios desde un Excel."
-          >
-          <div className="flex flex-wrap gap-2">
-            <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && importPrices(e.target.files[0])} />
-            <Button variant="outline" onClick={exportPrices} disabled={exportingPrices}>
-              {exportingPrices ? <Spinner /> : <DownloadSimple />} Exportar precios
-            </Button>
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)} disabled={importingPrices}>
-              {importingPrices ? <Spinner /> : <UploadSimple />} Importar precios
-            </Button>
-          </div>
-          </ModuleSection>
         </div>
       )}
 
       {view === 'actualizar' && (
-        <div className="flex flex-col">
-          <ModuleSection
-            title="Actualización masiva"
-            description="Calculá primero para ver qué cambia. Nada se guarda hasta que apliques."
-          >
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="Lista de precios" htmlFor="priceList">
-              <Select id="priceList" value={priceListId} onChange={e => setPriceListId(e.target.value)}>
-                {priceLists.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </Select>
-            </Field>
-
-            <Field label="Aplicar desde" htmlFor="validFrom" hint="(vacío = ahora)">
-              <Input id="validFrom" type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} min={inputDate()} />
-            </Field>
-
-            <Field label="Aplicar a" htmlFor="scope">
-              <Select id="scope" value={scopeType} onChange={e => { setScopeType(e.target.value as ScopeType); setScopeValue(''); }}>
-                <option value="all">Todos los productos</option>
-                <option value="category">Una categoría</option>
-                <option value="brand">Una marca</option>
-              </Select>
-            </Field>
-
-            {scopeType === 'category' && (
-              <Field label="Categoría" htmlFor="scopeValue">
-                <Select id="scopeValue" value={scopeValue} onChange={e => setScopeValue(e.target.value)}>
-                  <option value="">Elegí una…</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </Select>
-              </Field>
-            )}
-            {scopeType === 'brand' && (
-              <Field label="Marca" htmlFor="scopeValue">
-                <Input id="scopeValue" value={scopeValue} onChange={e => setScopeValue(e.target.value)} placeholder="Escribí la marca exacta" />
-              </Field>
-            )}
-
-            <Field label="Precio a modificar" htmlFor="target">
-              <Select id="target" value={target} onChange={e => setTarget(e.target.value as Target)}>
-                <option value="salePrice">Precio de venta</option>
-                <option value="costPrice">Precio de costo</option>
-              </Select>
-            </Field>
-
-            <Field label="Operación" htmlFor="operation">
-              <Select
-                id="operation"
-                value={operationType}
-                onChange={e => {
-                  const next = e.target.value as OperationType;
-                  setOperationType(next);
-                  if (next === 'margin') setTarget('salePrice');
-                }}
-              >
-                <option value="percent">Aumentar / bajar %</option>
-                <option value="margin">Fijar margen sobre el costo</option>
-                <option value="round">Redondear</option>
-              </Select>
-            </Field>
-
-            {operationType !== 'round' ? (
-              <Field label={operationType === 'percent' ? 'Porcentaje (negativo = baja)' : 'Margen %'} htmlFor="value">
-                <Input id="value" type="number" step="0.01" value={operationValue} onChange={e => setOperationValue(e.target.value)} />
-              </Field>
-            ) : (
-              <Field label="Redondeo" htmlFor="rounding">
-                <Select id="rounding" value={rounding} onChange={e => setRounding(e.target.value as Rounding)}>
-                  <option value="nearest10">A la decena más cercana</option>
-                  <option value="nearest100">A la centena más cercana</option>
-                  <option value="ending99">A terminación 99</option>
-                  <option value="byRules">Según los tramos configurados</option>
-                </Select>
-              </Field>
-            )}
-          </div>
-
-          {operationType === 'margin' && (
-            <p className="text-sm text-muted-foreground">
-              El margen se calcula sobre el precio de costo. Los productos sin costo cargado se saltean.
-            </p>
-          )}
-
-          {/* Se avisa antes de calcular, para que no lo descubra recién al recibir el error. */}
-          {listaEsDerivada && target === 'salePrice' && (
-            <Alert variant="destructive">
-              «{listaElegida?.name}» se calcula desde «{listaElegida?.derivesFromName}». Actualizá esa lista y ésta se mueve sola,
-              o editala para que tenga precios propios.
-            </Alert>
-          )}
-
-          {validFrom && (
-            <Alert>
-              Los precios nuevos van a entrar en vigencia el {validFrom}. Hasta entonces siguen rigiendo los actuales.
-            </Alert>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={calculate} disabled={calculating || !scopeReady}>
-              {calculating ? <Spinner /> : <Eye />} Calcular
-            </Button>
-            <Button onClick={apply} disabled={!preview || preview.affected === 0 || applying || (listaEsDerivada && target === 'salePrice')}>
-              {applying ? <Spinner /> : <Calculator />} Aplicar {preview ? `a ${preview.affected}` : ''}
-            </Button>
-
-            {/* Guardar esta misma configuración como criterio reutilizable. */}
-            <div className="ml-auto flex items-end gap-2">
-              <Input
-                value={ruleName}
-                onChange={e => setRuleName(e.target.value)}
-                placeholder="Guardar como criterio…"
-                className="max-w-48"
-              />
-              <Button variant="outline" onClick={saveRule} disabled={savingRule || !ruleName.trim() || !scopeReady}>
-                {savingRule ? <Spinner /> : <FloppyDisk />} Guardar
-              </Button>
-            </div>
-          </div>
-
-          {preview && (
-            <div className="flex flex-col gap-3">
-              <Alert>
-                {preview.affected === 0
-                  ? 'Ningún producto cambia con estos parámetros.'
-                  : `${preview.affected} productos van a cambiar.`}
-                {preview.skipped > 0 && ` ${preview.skipped} salteados (sin precio de origen).`}
-                {preview.affected > preview.preview.length && ` Mostrando los primeros ${preview.preview.length}.`}
-              </Alert>
-
-              {preview.preview.length > 0 && (
-                <div className="max-h-96 overflow-y-auto rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Producto</TableHead>
-                        <TableHead className="text-right">Antes</TableHead>
-                        <TableHead className="text-right">Después</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {preview.preview.map(row => (
-                        <TableRow key={row.id}>
-                          <TableCell className="font-medium">{row.name}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{money(row.before)}</TableCell>
-                          <TableCell className="text-right font-medium">{money(row.after)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </div>
-          )}
-          </ModuleSection>
-
-      {scheduled.length > 0 && (
-          <ModuleSection
-            title="Cambios programados"
-            description="Todavía no rigen. Entran solos en la fecha indicada; hasta entonces se pueden cancelar."
-          >
-            <div className="overflow-hidden rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Entra en vigencia</TableHead>
-                    <TableHead>Lista</TableHead>
-                    <TableHead className="text-right">Productos</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {scheduled.map(c => (
-                    <TableRow key={`${c.priceListId}-${c.validFrom}`}>
-                      <TableCell className="font-medium">{fecha(c.validFrom)}</TableCell>
-                      <TableCell>{c.priceListName}</TableCell>
-                      <TableCell className="text-right">{c.products}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => cancelScheduled(c)}>
-                          Cancelar
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </ModuleSection>
-      )}
-
-          <ModuleSection
-            title="Criterios guardados"
-            description="Configuraciones que se vuelven a aplicar con un clic. Recalculan con los valores del momento, no repiten los precios de la vez pasada."
-          >
-          {rules.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Todavía no guardaste ninguno. Configurá una actualización arriba y ponele nombre.
-            </p>
-          ) : (
-            <div className="overflow-hidden rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Criterio</TableHead>
-                    <TableHead>Qué hace</TableHead>
-                    <TableHead>Última vez</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rules.map(r => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.name}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {r.target === 'salePrice' ? 'Venta' : 'Costo'} · {r.priceListName} ·{' '}
-                        {r.operationType === 'percent' ? `${Number(r.operationValue) >= 0 ? '+' : ''}${Number(r.operationValue)}%`
-                          : r.operationType === 'margin' ? `margen ${Number(r.operationValue)}%`
-                          : `redondeo ${MODOS_REDONDEO[r.rounding ?? ''] ?? r.rounding}`}
-                        {r.scopeType !== 'all' && ` · sólo ${r.scopeType === 'brand' ? r.scopeValue : categories.find(c => c.id === r.scopeValue)?.name ?? 'una categoría'}`}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{r.lastRunAt ? fecha(r.lastRunAt) : 'nunca'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="outline" size="sm" onClick={() => runRule(r)} disabled={runningRule === r.id}>
-                            {runningRule === r.id ? <Spinner /> : <Play />} Aplicar
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteRule(r.id)} aria-label={`Borrar ${r.name}`}>
-                            <Trash />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-          </ModuleSection>
-
-          <ModuleSection
-            title="Política de redondeo"
-            description="Tramos por monto: un producto de $500 y otro de $50.000 no se redondean igual. Se usan al elegir «Según los tramos configurados»."
-          >
-          {roundingRules.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {roundingRules.map(t => (
-                <span key={t.id} className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
-                  ${Number(t.fromAmount).toLocaleString('es-AR')} – {t.toAmount ? `$${Number(t.toAmount).toLocaleString('es-AR')}` : '∞'}
-                  <Badge variant="outline">{MODOS_REDONDEO[t.mode] ?? t.mode}</Badge>
-                  <button type="button" onClick={() => deleteTramo(t.id)} className="text-muted-foreground hover:text-destructive" aria-label="Quitar tramo">
-                    <Trash className="size-3.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          <form onSubmit={addTramo} className="flex flex-wrap items-end gap-2">
-            <Field label="Desde $" htmlFor="tramo-desde" className="max-w-32">
-              <Input id="tramo-desde" required type="number" min="0" step="0.01" value={tramo.fromAmount} onChange={e => setTramo({ ...tramo, fromAmount: e.target.value })} />
-            </Field>
-            <Field label="Hasta $" htmlFor="tramo-hasta" hint="(vacío = sin tope)" className="max-w-32">
-              <Input id="tramo-hasta" type="number" min="0" step="0.01" value={tramo.toAmount} onChange={e => setTramo({ ...tramo, toAmount: e.target.value })} />
-            </Field>
-            <Field label="Redondear" htmlFor="tramo-modo" className="max-w-48">
-              <Select id="tramo-modo" value={tramo.mode} onChange={e => setTramo({ ...tramo, mode: e.target.value })}>
-                {Object.entries(MODOS_REDONDEO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </Select>
-            </Field>
-            <Button type="submit" variant="outline">
-              <Plus /> Agregar tramo
-            </Button>
-          </form>
-          </ModuleSection>
-        </div>
+        <BulkUpdate
+          token={token}
+          priceLists={priceLists}
+          categories={categories}
+          priceListId={priceListId}
+          onPriceListChange={setPriceListId}
+          onError={setError}
+          onMessage={setToolsMessage}
+        />
       )}
 
       {view === 'promociones' && (
@@ -804,14 +531,6 @@ export function PricesPage() {
           <ModuleSection
             title="Promociones"
             description="Se configuran acá y se aplican solas en la caja mientras estén vigentes. F6 en la caja lista las ofertas del momento."
-            actions={
-              <>
-                <ExportMenu path="/promotions" filename="promociones" />
-                <Button variant="outline" size="sm" onClick={() => setPromoOpen(true)}>
-                  <Plus /> Nueva promoción
-                </Button>
-              </>
-            }
           >
           {promotions.length === 0 ? (
             <p className="text-sm text-muted-foreground">Todavía no cargaste ninguna.</p>
@@ -858,7 +577,9 @@ export function PricesPage() {
             title="Auditoría de precios"
             description="Cada cambio de precio, con su origen y quién lo hizo. Es sólo lectura: nada de esto se edita ni se borra."
           >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Mismo molde que el resto de los listados: los filtros detrás del
+              botón y lo activo vuelve como chips que se sacan de a uno. */}
+          <ListFilters activeFilters={auditFiltrosActivos}>
             <Field label="Precio" htmlFor="audit-field">
               <Select id="audit-field" value={auditFiltro.field} onChange={e => setAuditFiltro({ ...auditFiltro, field: e.target.value })}>
                 <option value="">Costo y venta</option>
@@ -881,7 +602,7 @@ export function PricesPage() {
             <Field label="Hasta" htmlFor="audit-to">
               <Input id="audit-to" type="date" value={auditFiltro.to} onChange={e => setAuditFiltro({ ...auditFiltro, to: e.target.value })} />
             </Field>
-          </div>
+          </ListFilters>
 
           {loadingAudit ? (
             <Spinner />
@@ -1012,26 +733,79 @@ export function PricesPage() {
             <DialogTitle>{editingList ? 'Editar lista' : 'Nueva lista de precios'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={saveList} className="grid gap-4">
-            <Field label="Nombre" htmlFor="list-name">
-              <Input id="list-name" required value={listForm.name} onChange={e => setListForm({ ...listForm, name: e.target.value })} placeholder="Minorista" />
+            <Field
+              label="¿A quién se le cobra con esta lista?"
+              htmlFor="list-name"
+              hint="ese es el nombre"
+            >
+              <Input id="list-name" required value={listForm.name} onChange={e => setListForm({ ...listForm, name: e.target.value })} placeholder="Mayorista" />
             </Field>
 
-            <Field label="Cómo se calcula" htmlFor="list-derives">
+            {/* El nombre de una lista es el segmento de cliente, no la cuenta que
+                hay detrás («Mayorista», no «Base -15%»): la cuenta ya la dice el
+                campo de abajo y cambia con el tiempo. Los atajos son los
+                segmentos que aparecen en casi todos los negocios del rubro. */}
+            {!editingList && (
+              <div className="flex flex-wrap gap-1.5">
+                {NOMBRES_SUGERIDOS.filter(n => !priceLists.some(l => l.name.toLowerCase() === n.toLowerCase())).map(n => (
+                  <Button key={n} type="button" variant="outline" size="sm" onClick={() => setListForm({ ...listForm, name: n })}>
+                    {n}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {/* Con una sola sucursal el alcance no se pregunta: siempre es general. */}
+            {branches.length > 1 && (
+              <Field label="¿Dónde se aplica?" htmlFor="list-branch">
+                <Select
+                  id="list-branch"
+                  value={listForm.branchId}
+                  onChange={e => setListForm({ ...listForm, branchId: e.target.value })}
+                  disabled={editingList?.isDefault && !editingList.branchId}
+                >
+                  <option value="">General — toda la empresa</option>
+                  {branches.map(b => <option key={b.id} value={b.id}>Sólo {b.name}</option>)}
+                </Select>
+              </Field>
+            )}
+
+            <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
+              <Checkbox
+                checked={listForm.isDefault}
+                onCheckedChange={v => setListForm({ ...listForm, isDefault: v === true })}
+                disabled={editingList?.isDefault && !editingList.branchId}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium">Usar por defecto</span>
+                <span className="block text-muted-foreground">
+                  {listForm.branchId
+                    ? 'En esa sucursal se cobra con esta lista cuando el cliente no tiene una propia. Le gana a la general.'
+                    : 'Es la que paga el consumidor final y cualquier cliente sin lista propia.'}
+                </span>
+              </span>
+            </label>
+
+            <Field label="Cómo se arma" htmlFor="list-derives">
               <Select
                 id="list-derives"
                 value={listForm.derivesFromId}
                 onChange={e => setListForm({ ...listForm, derivesFromId: e.target.value })}
                 disabled={editingList?.isDefault}
               >
-                <option value="">Precios propios</option>
+                <option value="">Precio por precio, a mano</option>
                 {priceLists
                   .filter(l => l.id !== editingList?.id)
-                  .map(l => <option key={l.id} value={l.id}>Derivada de {l.name}</option>)}
+                  .map(l => <option key={l.id} value={l.id}>Calculada desde {l.name}</option>)}
               </Select>
             </Field>
 
             {editingList?.isDefault && (
-              <p className="text-sm text-muted-foreground">La lista base siempre tiene precios propios: es el origen del resto.</p>
+              <p className="text-sm text-muted-foreground">
+                Esta es la lista por defecto: la que paga el cliente que no tiene una propia y el consumidor final.
+                Sus precios se cargan a mano porque es el origen del que se calculan las demás.
+              </p>
             )}
 
             {listForm.derivesFromId && (
@@ -1060,39 +834,16 @@ export function PricesPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Importar precios</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Subí un archivo .xlsx o .csv. Los productos se identifican por código de barras y las columnas se detectan por el nombre del encabezado.
-          </p>
-          <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
-            <Checkbox checked={updateNames} onCheckedChange={value => setUpdateNames(value === true)} className="mt-0.5" />
-            <span>
-              <span className="font-medium">Actualizar también los nombres</span>
-              <span className="block text-muted-foreground">
-                Reemplaza el nombre de cada producto con el del archivo. Dejalo sin tildar si solo querés actualizar precios.
-              </span>
-            </span>
-          </label>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setImportDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                setImportDialogOpen(false);
-                fileInputRef.current?.click();
-              }}
-            >
-              Elegir archivo
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Mismo wizard que Productos → Importar: subir, mapear, ver qué cambia, aplicar. */}
+      <ImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onDone={() => setToolsMessage('Precios importados.')}
+        token={token}
+        title="Importar precios"
+        fieldsPath="/prices/import-fields"
+        importPath="/prices/import"
+      />
     </>
   );
 }

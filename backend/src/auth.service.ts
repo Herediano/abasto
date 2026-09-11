@@ -67,7 +67,9 @@ export class AuthService {
         // Sin lista base no se puede cotizar, y sin cotizar no se puede vender:
         // toda empresa nace con una. Las demás listas (mayorista, por cliente)
         // se crean después desde Precios y pueden derivar de ésta.
-        await tx.priceList.create({ data: { tenantId: tenantCreated.id, name: 'Mostrador', isDefault: true } });
+        // Se llama «General» porque eso es lo que es: la que rige en toda la
+        // empresa mientras nadie diga otra cosa. `branchId: null` = general.
+        await tx.priceList.create({ data: { tenantId: tenantCreated.id, name: 'General', isDefault: true, branchId: null } });
         return { tenant: tenantCreated, user: userCreated, sucursal };
       });
       const permisos = await this.prisma.rangoPermission.findMany({ where: { rangoId: created.user.rangoId }, select: { key: true } });

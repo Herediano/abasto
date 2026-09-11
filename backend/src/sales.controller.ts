@@ -81,7 +81,7 @@ export class SalesController {
 
   /** Cotiza el carrito sin guardarlo. */
   @Post('quote') @RequirePermission('caja.operar') quote(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {
-    return this.sales.quote(request.user.tenantId, body);
+    return this.sales.quote(request.user, body);
   }
 
   @Post() @RequirePermission('caja.operar') create(@Req() request: AuthRequest, @Body() body: Record<string, unknown>) {

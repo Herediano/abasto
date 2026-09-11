@@ -1,56 +1,123 @@
-import { normalizeHeader, normalizeNumber, readSheet } from './sheet-import.util';
+import { cell, normalizeNumber, type ColumnMapping, type ImportField, type Sheet } from './sheet-import.util';
 
-export { normalizeNumber };
+/**
+ * Importador de precios: sólo costo y venta sobre productos que **ya existen**,
+ * matcheando por código de barras. No crea nada — para eso está el importador de
+ * Productos, que cubre todos los campos.
+ *
+ * Usa el mismo contrato de 3 fases que el de productos (`inspect` → `preview` →
+ * `apply`) para poder compartir el wizard del frontend. Antes tenía su propio
+ * diálogo que adivinaba las columnas y aplicaba de una, sin previa: si el
+ * archivo traía la columna equivocada, te enterabas después de escribir.
+ */
+export const PRICE_IMPORT_FIELDS: ImportField[] = [
+  {
+    key: 'barcode',
+    label: 'Código de barras',
+    aliases: ['codigodebarras', 'codigobarras', 'barcode', 'ean', 'ean13', 'codigo', 'cod'],
+    kind: 'text',
+    matchKey: true,
+    help: 'Con esto se busca el producto. Los códigos que no estén en el catálogo se informan y no se tocan.',
+  },
+  {
+    key: 'costPrice',
+    label: 'Precio de costo',
+    aliases: ['preciodecosto', 'preciocosto', 'costprice', 'preciocompra', 'pcompra', 'costo', 'cost'],
+    kind: 'number',
+  },
+  {
+    key: 'salePrice',
+    label: 'Precio de venta',
+    aliases: ['preciodeventa', 'precioventa', 'saleprice', 'precio', 'pventa', 'venta', 'plista', 'preciolista'],
+    kind: 'number',
+  },
+  {
+    key: 'name',
+    label: 'Nombre nuevo',
+    aliases: ['nombrenuevo', 'nombre', 'producto', 'descripcion', 'detalle'],
+    kind: 'text',
+    help: 'Opcional. El nombre se actualiza sólo si mapeás esta columna: un archivo de precios no debe reescribir el catálogo por accidente.',
+  },
+];
 
-const BARCODE_ALIASES = ['codigodebarras', 'codigobarras', 'codbarras', 'codbarra', 'codigoean', 'eancode', 'codbar', 'barcode', 'ean', 'ean13', 'codigo', 'cod'];
-const COST_ALIASES = ['preciodecosto', 'preciocosto', 'costprice', 'preciocompra', 'pcompra', 'costo', 'cost'];
-const SALE_ALIASES = ['preciodeventa', 'precioventa', 'precioalpublico', 'preciopublico', 'preciofinal', 'saleprice', 'pvp', 'precio', 'price'];
-// "nombreactual" queda afuera a proposito: en la planilla de renombrado es la
-// columna del nombre viejo, no la que hay que aplicar.
-const NAME_ALIASES = ['nombrenuevo', 'nuevonombre', 'nombreproducto', 'descripcion', 'detalle', 'producto', 'nombre', 'name', 'description'];
+/** Lo que ya hay cargado para un producto, para saber si la fila cambia algo. */
+export type PrecioActual = { id: string; name: string; cost: number | null; sale: number | null };
 
-export type ParsedPriceRow = { barcode: string; costPrice: string; salePrice: string; name: string };
-export type ParsePricesResult = {
-  rows: ParsedPriceRow[];
-  matchedColumns: { barcode: string | null; costPrice: string | null; salePrice: string | null; name: string | null };
-};
+export type PricePlanRow =
+  | { kind: 'update'; rowNumber: number; barcode: string; productId: string; cost?: number; sale?: number; name?: string }
+  | { kind: 'skip'; rowNumber: number; barcode: string; reason: string }
+  | { kind: 'error'; rowNumber: number; barcode: string; message: string };
 
-function findColumn(headers: string[], aliases: string[]): number {
-  const normalized = headers.map(normalizeHeader);
-  for (const alias of aliases) {
-    const idx = normalized.indexOf(alias);
-    if (idx !== -1) return idx;
-  }
-  return -1;
+function numero(raw: string): number | null | 'invalido' {
+  const limpio = normalizeNumber(raw);
+  if (!limpio) return null;
+  const n = Number(limpio);
+  if (!Number.isFinite(n) || n < 0) return 'invalido';
+  return n;
 }
 
-export async function parsePricesFile(buffer: Buffer, filename: string): Promise<ParsePricesResult> {
-  const { headers, rows: matrix } = await readSheet(buffer, filename);
-  if (!headers.length) return { rows: [], matchedColumns: { barcode: null, costPrice: null, salePrice: null, name: null } };
+/**
+ * Plan de lo que haría el archivo, sin tocar nada. Una fila sólo entra como
+ * `update` si cambia algo de verdad, así la previa no promete trabajo que no va
+ * a pasar.
+ */
+export function planPriceRows(params: {
+  sheet: Sheet;
+  mapping: ColumnMapping;
+  existingByBarcode: Map<string, PrecioActual>;
+}): PricePlanRow[] {
+  const { sheet, mapping, existingByBarcode } = params;
+  const mapeado = (k: string) => mapping[k] != null && mapping[k] >= 0;
+  const tocaNombre = mapeado('name');
+  const salida: PricePlanRow[] = [];
+  const vistos = new Set<string>();
 
-  const barcodeIdx = findColumn(headers, BARCODE_ALIASES);
-  const costIdx = findColumn(headers, COST_ALIASES);
-  let saleIdx = findColumn(headers, SALE_ALIASES);
-  if (saleIdx !== -1 && saleIdx === costIdx) saleIdx = -1;
-  let nameIdx = findColumn(headers, NAME_ALIASES);
-  if (nameIdx !== -1 && (nameIdx === costIdx || nameIdx === saleIdx || nameIdx === barcodeIdx)) nameIdx = -1;
+  sheet.rows.forEach((row, i) => {
+    // +2: la fila 1 es el encabezado y las planillas se numeran desde 1.
+    const rowNumber = i + 2;
+    if (!row.some(c => c.trim())) return;
 
-  const columns = {
-    barcode: barcodeIdx === -1 ? null : headers[barcodeIdx],
-    costPrice: costIdx === -1 ? null : headers[costIdx],
-    salePrice: saleIdx === -1 ? null : headers[saleIdx],
-    name: nameIdx === -1 ? null : headers[nameIdx],
-  };
-  if (barcodeIdx === -1) return { rows: [], matchedColumns: columns };
+    const barcode = cell(row, mapping, 'barcode');
+    if (!barcode) {
+      salida.push({ kind: 'error', rowNumber, barcode: '', message: 'Falta el código de barras' });
+      return;
+    }
+    if (vistos.has(barcode)) {
+      salida.push({ kind: 'skip', rowNumber, barcode, reason: 'repetido en el archivo' });
+      return;
+    }
+    vistos.add(barcode);
 
-  const rows: ParsedPriceRow[] = matrix
-    .map(fields => ({
-      barcode: (fields[barcodeIdx] ?? '').trim(),
-      costPrice: normalizeNumber(costIdx === -1 ? '' : fields[costIdx]),
-      salePrice: normalizeNumber(saleIdx === -1 ? '' : fields[saleIdx]),
-      name: nameIdx === -1 ? '' : (fields[nameIdx] ?? '').trim(),
-    }))
-    .filter(r => r.barcode);
+    const actual = existingByBarcode.get(barcode);
+    if (!actual) {
+      salida.push({ kind: 'skip', rowNumber, barcode, reason: 'no está en el catálogo' });
+      return;
+    }
 
-  return { rows, matchedColumns: columns };
+    const costo = numero(cell(row, mapping, 'costPrice'));
+    if (costo === 'invalido') {
+      salida.push({ kind: 'error', rowNumber, barcode, message: 'El precio de costo no es un número válido' });
+      return;
+    }
+    const venta = numero(cell(row, mapping, 'salePrice'));
+    if (venta === 'invalido') {
+      salida.push({ kind: 'error', rowNumber, barcode, message: 'El precio de venta no es un número válido' });
+      return;
+    }
+
+    const nombre = tocaNombre ? cell(row, mapping, 'name') : '';
+    // Celda vacía = no cambiar ese campo, igual que en el importador de productos.
+    const fila: PricePlanRow = { kind: 'update', rowNumber, barcode, productId: actual.id };
+    if (costo !== null && costo !== actual.cost) fila.cost = costo;
+    if (venta !== null && venta !== actual.sale) fila.sale = venta;
+    if (nombre && nombre !== actual.name) fila.name = nombre;
+
+    if (fila.cost === undefined && fila.sale === undefined && fila.name === undefined) {
+      salida.push({ kind: 'skip', rowNumber, barcode, reason: 'sin cambios' });
+      return;
+    }
+    salida.push(fila);
+  });
+
+  return salida;
 }

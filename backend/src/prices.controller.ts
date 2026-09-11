@@ -1,10 +1,15 @@
-import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, UnprocessableEntityException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { PrismaService } from './prisma/prisma.service';
 import { JwtAuthGuard } from './auth.guard';
 import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
-import { activarPreciosVigentes } from './price-resolver.util';
+import { activarPreciosVigentes, guardarPrecio } from './price-resolver.util';
+import { priceChange, type PriceHistoryEntry } from './price-history.util';
+import { PRICE_IMPORT_FIELDS, planPriceRows, type PrecioActual, type PricePlanRow } from './price-import.util';
+import { autoMap, cell, readSheet, type ColumnMapping } from './sheet-import.util';
 import { PricesService, type BulkInput } from './prices.service';
 
 const MODOS_REDONDEO = ['nearest10', 'nearest100', 'ending99', 'none'];
@@ -21,6 +26,154 @@ export class PricesController {
   @Post('bulk')
   bulk(@Req() request: AuthRequest, @Body() body: BulkInput) {
     return this.prices.ejecutar(request.user.tenantId, request.user.id, body);
+  }
+
+  /**
+   * Cuántos productos entran en una selección, con una muestra. Alimenta el
+   * contador en vivo de la pantalla: usa el mismo camino que la actualización,
+   * así lo que dice el contador es exactamente lo que se va a tocar.
+   */
+  @Post('selection/count') @RequirePermission('precios.ver')
+  count(@Req() request: AuthRequest, @Body() body: BulkInput) {
+    return this.prices.contar(request.user.tenantId, body);
+  }
+
+  // --- importacion de precios (mismo wizard que productos) ---
+
+  /** Catálogo de columnas que entiende el importador de precios (para el wizard). */
+  @Get('import-fields')
+  importFields() {
+    return { fields: PRICE_IMPORT_FIELDS };
+  }
+
+  /**
+   * Importa costo y venta desde Excel/CSV sobre productos que ya existen, en las
+   * mismas 3 fases que el importador de productos (se re-sube el archivo en cada
+   * una; son chicos):
+   *  - `phase=inspect` (sin mapping): encabezados, mapeo sugerido y filas de muestra.
+   *  - `phase=preview` + `mapping`: qué cambiaría, sin tocar nada.
+   *  - `phase=apply` + `mapping`: lo aplica.
+   *
+   * No crea productos: para eso está el importador de Productos. Lo que no está
+   * en el catálogo se cuenta como salteado y se ve en la previa.
+   */
+  @Post('import')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } }))
+  async import(
+    @Req() request: AuthRequest,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { mapping?: string; phase?: string },
+  ) {
+    if (!file) throw new BadRequestException('Subí un archivo .csv o .xlsx');
+    const tenantId = request.user.tenantId;
+    const userId = request.user.id;
+    const phase = body.phase === 'apply' ? 'apply' : body.phase === 'preview' ? 'preview' : 'inspect';
+
+    const sheet = await readSheet(file.buffer, file.originalname);
+    if (!sheet.headers.length) throw new UnprocessableEntityException('El archivo está vacío o no se pudo leer');
+    if (sheet.rows.length > 10000) throw new UnprocessableEntityException('El archivo tiene demasiadas filas (máximo 10.000 por vez)');
+
+    if (phase === 'inspect') {
+      const conDatos = sheet.rows.filter(r => r.some(c => c.trim()));
+      return {
+        headers: sheet.headers,
+        rowCount: conDatos.length,
+        suggested: autoMap(sheet.headers, PRICE_IMPORT_FIELDS),
+        sampleRows: conDatos.slice(0, 5),
+      };
+    }
+
+    let mapping: ColumnMapping = {};
+    try { mapping = { ...(JSON.parse(body.mapping || '{}') as ColumnMapping) }; }
+    catch { throw new BadRequestException('El mapeo de columnas no es válido'); }
+    if (mapping.barcode == null || mapping.barcode < 0) {
+      throw new UnprocessableEntityException('Falta indicar qué columna tiene el código de barras');
+    }
+    const mapeado = (k: string) => mapping[k] != null && mapping[k] >= 0;
+    if (!mapeado('costPrice') && !mapeado('salePrice') && !mapeado('name')) {
+      throw new UnprocessableEntityException('Mapeá al menos una columna de precio (costo o venta). Sin eso no hay nada que importar.');
+    }
+
+    const barcodes = [...new Set(sheet.rows.map(r => cell(r, mapping, 'barcode')).filter(Boolean))];
+    const products = await this.prisma.product.findMany({
+      where: { tenantId, barcode: { in: barcodes } },
+      select: { id: true, barcode: true, name: true, costPrice: true, salePrice: true },
+    });
+    const existingByBarcode = new Map<string, PrecioActual>(products.map(p => [p.barcode, {
+      id: p.id,
+      name: p.name,
+      cost: p.costPrice === null ? null : Number(p.costPrice),
+      sale: p.salePrice === null ? null : Number(p.salePrice),
+    }]));
+
+    const plan = planPriceRows({ sheet, mapping, existingByBarcode });
+    const updates = plan.filter((p): p is Extract<PricePlanRow, { kind: 'update' }> => p.kind === 'update');
+    const errors = plan.filter((p): p is Extract<PricePlanRow, { kind: 'error' }> => p.kind === 'error');
+    const skipped = plan.filter(p => p.kind === 'skip').length;
+
+    if (phase === 'preview') {
+      return {
+        // Este importador nunca crea: el wizard lo muestra en cero a propósito.
+        willCreate: 0,
+        willUpdate: updates.length,
+        skipped,
+        errors: errors.map(e => ({ row: e.rowNumber, message: e.message })),
+        sample: updates.slice(0, 15).map(p => ({
+          barcode: p.barcode,
+          action: 'Actualizar',
+          campos: [
+            ...(p.cost !== undefined ? ['costo'] : []),
+            ...(p.sale !== undefined ? ['venta'] : []),
+            ...(p.name !== undefined ? ['nombre'] : []),
+          ],
+        })),
+      };
+    }
+
+    // Los precios de venta se escriben en la lista base, que es la que la caja
+    // resuelve al cobrar. Sin lista base no hay dónde ponerlos.
+    const listaBase = await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true }, select: { id: true } });
+    if (updates.some(p => p.sale !== undefined) && !listaBase) {
+      throw new UnprocessableEntityException('No hay una lista de precios base configurada. Creá una en Precios antes de importar.');
+    }
+
+    let updated = 0;
+    for (let i = 0; i < updates.length; i += 500) {
+      const batch = updates.slice(i, i + 500);
+      await this.prisma.$transaction(async tx => {
+        const historia: PriceHistoryEntry[] = [];
+        for (const fila of batch) {
+          const actual = existingByBarcode.get(fila.barcode)!;
+          const datos: { costPrice?: number; name?: string } = {};
+          if (fila.cost !== undefined) {
+            datos.costPrice = fila.cost;
+            const h = priceChange({ tenantId, productId: fila.productId, field: 'cost', before: actual.cost, after: fila.cost, source: 'import', userId });
+            if (h) historia.push(h);
+          }
+          if (fila.name !== undefined) datos.name = fila.name;
+          if (datos.costPrice !== undefined || datos.name !== undefined) {
+            await tx.product.update({ where: { id: fila.productId }, data: datos });
+          }
+          // El costo es un campo del producto. El precio de venta NO: vive en
+          // ProductPrice, que es de donde la caja resuelve cuánto cobrar.
+          // guardarPrecio crea esa fila y refresca la caché Product.salePrice.
+          if (fila.sale !== undefined) {
+            const h = priceChange({ tenantId, productId: fila.productId, field: 'sale', before: actual.sale, after: fila.sale, source: 'import', userId });
+            if (h) historia.push(h);
+            await guardarPrecio(tx, { tenantId, productId: fila.productId, priceListId: listaBase!.id, price: fila.sale, source: 'import', userId });
+          }
+          updated++;
+        }
+        if (historia.length) await tx.productPriceHistory.createMany({ data: historia });
+      });
+    }
+
+    return {
+      created: 0,
+      updated,
+      skipped,
+      errors: errors.map(e => ({ row: e.rowNumber, message: e.message })),
+    };
   }
 
   // --- cambios programados ---

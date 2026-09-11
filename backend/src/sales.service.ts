@@ -27,16 +27,33 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 export class SalesService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  /** Lista con la que se le cobra a este cliente; sin cliente, la base del tenant. */
-  private async listaDelCliente(tenantId: string, customerId?: string | null) {
+  /**
+   * Lista con la que se le cobra, en este orden:
+   *
+   *   1. la del cliente, si tiene una asignada en su ficha;
+   *   2. la puesta por defecto **en esta sucursal** (una sucursal en otra ciudad
+   *      puede cobrar distinto, como pide docs/producto.md);
+   *   3. la general por defecto — la que paga el consumidor final.
+   *
+   * Sin sucursal activa se salta el paso 2, así un negocio de una sola sucursal
+   * nunca se topa con el concepto.
+   */
+  private async listaDelCliente(tenantId: string, customerId?: string | null, branchId?: string | null) {
     if (customerId) {
       const cliente = await this.prisma.customer.findFirst({ where: { id: customerId, tenantId } });
       if (!cliente) throw new BadRequestException('Cliente no encontrado');
       if (cliente.priceListId) return cliente.priceListId;
     }
-    const base = await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true } });
-    if (!base) throw new UnprocessableEntityException('No hay una lista de precios base configurada');
-    return base.id;
+    if (branchId) {
+      const deSucursal = await this.prisma.priceList.findFirst({
+        where: { tenantId, isDefault: true, isActive: true, branchId },
+        select: { id: true },
+      });
+      if (deSucursal) return deSucursal.id;
+    }
+    const general = await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true, branchId: null } });
+    if (!general) throw new UnprocessableEntityException('No hay una lista de precios general por defecto configurada');
+    return general.id;
   }
 
   private parseLineas(body: Record<string, unknown>): LineaPedida[] {
@@ -53,9 +70,13 @@ export class SalesService {
   }
 
   /** Cotiza sin guardar: es lo que consulta la pantalla mientras se cargan productos. */
-  async quote(tenantId: string, body: Record<string, unknown>) {
+  // Recibe el usuario entero, igual que `create`: la cotización tiene que
+  // resolver la lista con la misma sucursal con la que después se cobra, o la
+  // caja mostraría un precio y facturaría otro.
+  async quote(user: Usuario, body: Record<string, unknown>) {
+    const tenantId = user.tenantId;
     const customerId = typeof body.customerId === 'string' && body.customerId ? body.customerId : null;
-    const priceListId = await this.listaDelCliente(tenantId, customerId);
+    const priceListId = await this.listaDelCliente(tenantId, customerId, user.branchId);
     const lineas = this.parseLineas(body);
     const cotizadas = await cotizar(this.prisma, tenantId, priceListId, lineas);
 
@@ -131,7 +152,7 @@ export class SalesService {
     if (!user.warehouseId) throw new UnprocessableEntityException('El usuario no tiene una sucursal/depósito asignado');
 
     const customerId = typeof body.customerId === 'string' && body.customerId ? body.customerId : null;
-    const priceListId = await this.listaDelCliente(tenantId, customerId);
+    const priceListId = await this.listaDelCliente(tenantId, customerId, user.branchId);
     const lineas = this.parseLineas(body);
     const pointOfSale = typeof body.pointOfSale === 'string' && body.pointOfSale ? body.pointOfSale : PUNTO_VENTA_DEFAULT;
     const docType = 'internal';

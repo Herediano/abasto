@@ -194,10 +194,93 @@ export type PriceList = {
   name: string;
   isDefault: boolean;
   isActive: boolean;
+  /** null = general: rige en toda la empresa. Con sucursal, sólo ahí. */
+  branchId?: string | null;
+  branchName?: string | null;
   derivesFromId?: string | null;
   derivesFromName?: string | null;
   markupPercent?: string | null;
-  priceCount?: number;
+  /** Productos con precio propio vigente en esta lista. */
+  pricedProducts?: number;
+  /** Productos con un cambio de precio cargado a futuro. */
+  scheduledProducts?: number;
+  lastChangeAt?: string | null;
+  /** Clientes a los que se les cobra con esta lista. */
+  customerCount?: number;
+  /** Productos activos del catálogo, para leer la cobertura como "X de Y". */
+  totalProducts?: number;
+};
+
+/** Qué cobra una lista, producto por producto (`GET /price-lists/:id`). */
+export type PriceListDetail = {
+  list: PriceList;
+  items: Array<{
+    id: string;
+    name: string;
+    sku?: string | null;
+    barcode: string;
+    cost: number | null;
+    price: number | null;
+    margin: number | null;
+    /** true = precio cargado en esta lista; false = le llega calculado de la lista de la que deriva. */
+    explicit: boolean;
+  }>;
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+};
+
+/**
+ * Los filtros de una actualización masiva. Todos los presentes se combinan con
+ * AND, igual que los filtros de un listado: cada uno recorta el conjunto. Sin
+ * ninguno = todos los productos activos.
+ */
+export type PriceSelection = {
+  categoryIds?: string[];
+  brands?: string[];
+  supplierIds?: string[];
+  productIds?: string[];
+  excludeIds?: string[];
+  search?: string;
+  missing?: 'sale' | 'cost';
+  marginMin?: number;
+  marginMax?: number;
+  priceMin?: number;
+  priceMax?: number;
+  staleDays?: number;
+};
+
+export type PriceTarget = 'salePrice' | 'costPrice';
+export type PriceOperationType = 'percent' | 'margin' | 'round' | 'supplierIncrease';
+export type PriceRounding = 'nearest10' | 'nearest100' | 'ending99' | 'byRules';
+
+/** Contador en vivo: cuántos productos entran en la selección, con una muestra. */
+export type SelectionCount = {
+  total: number;
+  sample: Array<{ id: string; name: string; cost: number | null; sale: number | null; margin: number | null }>;
+  priceList: { id: string; name: string };
+};
+
+export type BulkPreviewRow = {
+  id: string;
+  name: string;
+  costBefore: number | null;
+  costAfter: number | null;
+  saleBefore: number | null;
+  saleAfter: number | null;
+  marginBefore: number | null;
+  marginAfter: number | null;
+};
+
+export type BulkResult = {
+  affected: number;
+  selected: number;
+  skipped: number;
+  skippedDetail: Array<{ id: string; name: string; reason: string }>;
+  preview: BulkPreviewRow[];
+  priceList: { id: string; name: string };
+  writes: { cost: boolean; sale: boolean };
+  scheduled: boolean;
+  validFrom: string;
+  applied: boolean;
 };
 
 export type PriceRule = {
@@ -205,11 +288,17 @@ export type PriceRule = {
   name: string;
   priceListId: string;
   priceListName?: string;
-  target: 'salePrice' | 'costPrice';
-  scopeType: 'all' | 'category' | 'brand';
+  target: PriceTarget;
+  /** Alcance viejo de un solo eje. Las reglas nuevas traen `selection`. */
+  scopeType?: 'all' | 'category' | 'brand' | 'ids' | null;
   scopeValue?: string | null;
-  operationType: 'percent' | 'margin' | 'round';
+  selection: PriceSelection;
+  /** Texto en criollo de la selección, armado por el backend. */
+  selectionLabel: string;
+  operationType: PriceOperationType;
+  /** null = el criterio guarda a quién, y el porcentaje se pide al ejecutarlo. */
   operationValue?: string | null;
+  needsValue: boolean;
   rounding?: string | null;
   lastRunAt?: string | null;
 };

@@ -69,11 +69,19 @@ export function ExportMenu({
   params,
   filename,
   className,
+  label = 'Exportar',
 }: {
   path: string;
   params?: Record<string, string | number | undefined> | URLSearchParams;
   filename: string;
   className?: string;
+  /**
+   * Qué se está exportando. El default alcanza cuando el módulo exporta una
+   * sola cosa; donde hay varias vistas que exportan distinto —Precios baja las
+   * listas, la planilla o las promociones— el botón tiene que decir cuál, o el
+   * mismo rótulo entrega tres archivos diferentes.
+   */
+  label?: string;
 }) {
   const { session } = useAuth();
   const token = session!.accessToken;
@@ -126,7 +134,7 @@ export function ExportMenu({
         )}
       >
         <DownloadSimple className="size-4" />
-        Exportar
+        {label}
         <CaretDown className="size-3 transition-transform group-data-[state=open]:rotate-180" />
       </MenuTrigger>
       <MenuContent>

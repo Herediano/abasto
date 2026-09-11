@@ -55,9 +55,14 @@ aplicar — reusado en dos botones:
   Backend: `sheet-import.util.ts` (leer la grilla, `autoMap` por índice de
   columna), `product-import.util.ts` (campos + `planProductRows`),
   `POST /products/import` en 3 fases (`phase=inspect|preview|apply`).
-- **Precios → "Importar precios"** → solo costo y venta sobre productos
-  existentes. Todavía usa su propio diálogo (`import-prices`); falta migrarlo
-  al mismo wizard con un set de columnas más chico.
+- **Precios → "Importar precios"** (hecho) → solo costo y venta sobre productos
+  existentes; no crea nada. Usa el mismo `ImportWizard` con un set de columnas
+  más chico (`PRICE_IMPORT_FIELDS` en `price-import.util.ts`) y las mismas 3
+  fases en `POST /prices/import`. El viejo `products/import-prices`, que
+  adivinaba las columnas y aplicaba de una sin previa, se eliminó.
+  El **nombre** dejó de tener su checkbox: se actualiza sólo si se mapea esa
+  columna, que es la misma garantía ("no reescribir el catálogo por accidente")
+  expresada con el mecanismo del wizard en vez de un flag aparte.
 
 Todo lo de bajo nivel (parseo xlsx/csv, formato de número argentino) salió de
 `price-import.util.ts` a `sheet-import.util.ts`, que ahora comparten los dos.
@@ -93,8 +98,8 @@ El modelo (`Promotion` + `config` JSON, tipos `nxm / a_plus_b / percent / amount
 | Etapa | Qué | Estado |
 |---|---|---|
 | **0** | Precio editable en la pestaña Precios del producto + margen en vivo + "calcular venta". Barrer carteles vencidos. | **hecho** |
-| **1** | Componente `ImportWizard` (subir → mapear → preview → aplicar) para Productos → "Importar". Falta que "Importar precios" del módulo Precios reuse el mismo wizard (hoy sigue con su diálogo propio). | **hecho (productos)** |
-| **2** | Simplificar "Actualizar". Margen objetivo por categoría para "sugerir precio". | — |
+| **1** | Componente `ImportWizard` (subir → mapear → preview → aplicar), usado por Productos → "Importar" y por Precios → "Importar precios". | **hecho** |
+| **2** | Simplificar "Actualizar": selección apilable (categorías, marcas, **proveedor**, productos a mano, margen, antigüedad, sin precio) con contador en vivo; operaciones nombradas por el trabajo real, con **«Me aumentó el proveedor»** moviendo costo y venta juntos para conservar el margen; redondeo como modificador en vez de operación; los criterios guardan la selección y el % es opcional. Falta: margen objetivo por categoría para "sugerir precio". | **hecho (falta margen por categoría)** |
 | **3** | Promos: diálogos por tipo + orden por prioridad + flag exclusiva. | — |
 | **4** | Nice to have: "Precios Cuidados" como lista/flag; comparar contra la lista anterior; etiquetas de lo que cambió. | — |
 
