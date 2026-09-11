@@ -22,7 +22,7 @@ export type LineaCotizada = {
   lineTotal: number;
 };
 
-function r2(n: number) {
+export function r2(n: number) {
   return Math.round(n * 100) / 100;
 }
 

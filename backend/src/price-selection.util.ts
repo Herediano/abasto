@@ -27,6 +27,13 @@ export type PriceSelection = {
   /** Margen actual sobre el costo, en %. Para encontrar lo que quedó mal cotizado. */
   marginMin?: number;
   marginMax?: number;
+  /**
+   * Margen actual por debajo del objetivo de SU PROPIA categoría
+   * (Category.targetMargin), no de un umbral parejo para todo el catálogo.
+   * Sin margen objetivo cargado en la categoría, el producto no entra: no hay
+   * con qué compararlo.
+   */
+  belowCategoryMargin?: boolean;
   priceMin?: number;
   priceMax?: number;
   /** Precio sin tocar desde hace N días o más. Nunca tocado también cuenta. */
@@ -71,6 +78,7 @@ export function normalizarSeleccion(raw: unknown): PriceSelection {
     missing,
     marginMin: numero(r.marginMin),
     marginMax: numero(r.marginMax),
+    belowCategoryMargin: r.belowCategoryMargin === true ? true : undefined,
     priceMin: numero(r.priceMin),
     priceMax: numero(r.priceMax),
     staleDays: staleDays !== undefined && staleDays > 0 ? Math.floor(staleDays) : undefined,
@@ -89,13 +97,13 @@ export function seleccionDesdeScope(scopeType?: string, scopeValue?: string | nu
 export function esTodo(s: PriceSelection): boolean {
   return !s.categoryIds && !s.brands && !s.supplierIds && !s.productIds && !s.excludeIds
     && !s.search && !s.missing && s.marginMin === undefined && s.marginMax === undefined
-    && s.priceMin === undefined && s.priceMax === undefined && s.staleDays === undefined;
+    && !s.belowCategoryMargin && s.priceMin === undefined && s.priceMax === undefined && s.staleDays === undefined;
 }
 
 /** true si hace falta el precio vigente para filtrar, no sólo para calcular. */
 export function necesitaPrecioParaFiltrar(s: PriceSelection): boolean {
   return s.missing === 'sale' || s.marginMin !== undefined || s.marginMax !== undefined
-    || s.priceMin !== undefined || s.priceMax !== undefined;
+    || !!s.belowCategoryMargin || s.priceMin !== undefined || s.priceMax !== undefined;
 }
 
 /** La parte de la selección que resuelve la base. */
@@ -134,8 +142,9 @@ export function margenPorcentual(cost: number | null, sale: number | null): numb
 /** Aplica los filtros que dependen del precio vigente. */
 export function pasaFiltrosDePrecio(
   s: PriceSelection,
-  datos: { cost: number | null; sale: number | null; ultimoCambio: Date | null },
+  datos: { cost: number | null; sale: number | null; ultimoCambio: Date | null; categoryId?: string | null },
   ahora: Date,
+  margenPorCategoria?: Map<string, number>,
 ): boolean {
   if (s.missing === 'sale' && datos.sale !== null) return false;
   if (s.priceMin !== undefined && (datos.sale === null || datos.sale < s.priceMin)) return false;
@@ -145,6 +154,12 @@ export function pasaFiltrosDePrecio(
     if (m === null) return false;
     if (s.marginMin !== undefined && m < s.marginMin) return false;
     if (s.marginMax !== undefined && m > s.marginMax) return false;
+  }
+  if (s.belowCategoryMargin) {
+    const objetivo = datos.categoryId ? margenPorCategoria?.get(datos.categoryId) : undefined;
+    if (objetivo === undefined) return false;
+    const m = margenPorcentual(datos.cost, datos.sale);
+    if (m === null || m >= objetivo) return false;
   }
   // Nunca tocado cuenta como lo más viejo: es justamente lo que se busca.
   if (s.staleDays !== undefined && datos.ultimoCambio !== null) {
@@ -172,6 +187,7 @@ export function describirSeleccion(s: PriceSelection, nombres: SelectionNames = 
   if (s.marginMin !== undefined && s.marginMax !== undefined) partes.push(`margen entre ${s.marginMin}% y ${s.marginMax}%`);
   else if (s.marginMin !== undefined) partes.push(`margen desde ${s.marginMin}%`);
   else if (s.marginMax !== undefined) partes.push(`margen hasta ${s.marginMax}%`);
+  if (s.belowCategoryMargin) partes.push('por debajo del margen de su categoría');
   if (s.priceMin !== undefined && s.priceMax !== undefined) partes.push(`precio entre ${s.priceMin} y ${s.priceMax}`);
   else if (s.priceMin !== undefined) partes.push(`precio desde ${s.priceMin}`);
   else if (s.priceMax !== undefined) partes.push(`precio hasta ${s.priceMax}`);

@@ -243,6 +243,7 @@ export type PriceSelection = {
   missing?: 'sale' | 'cost';
   marginMin?: number;
   marginMax?: number;
+  belowCategoryMargin?: boolean;
   priceMin?: number;
   priceMax?: number;
   staleDays?: number;
@@ -328,6 +329,17 @@ export type Promotion = {
   /** Franja horaria "HH:mm". null en cualquiera de los dos = todo el día. */
   startTime: string | null;
   endTime: string | null;
+};
+
+/** Resultado de simular una promo sobre un precio y una cantidad de ejemplo. */
+export type PromoPreview = {
+  quantity: number;
+  unitPrice: number;
+  bruto: number;
+  discountAmount: number;
+  total: number;
+  unitPriceEfectivo: number;
+  aplica: boolean;
 };
 
 export type Customer = {

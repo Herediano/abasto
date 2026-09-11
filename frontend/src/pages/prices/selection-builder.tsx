@@ -45,7 +45,8 @@ const ATAJOS: Array<{ key: string; label: string; hint: string; build: () => Pri
   { key: 'todos', label: 'Todos', hint: 'Todo el catálogo activo', build: () => ({}) },
   { key: 'sin-venta', label: 'Sin precio de venta', hint: 'Los que quedaron sin cotizar', build: () => ({ missing: 'sale' }) },
   { key: 'sin-costo', label: 'Sin costo', hint: 'No se les puede calcular margen', build: () => ({ missing: 'cost' }) },
-  { key: 'margen-bajo', label: `Margen bajo (−${MARGEN_BAJO}%)`, hint: 'Se venden por debajo de lo que deberían', build: () => ({ marginMax: MARGEN_BAJO }) },
+  { key: 'margen-bajo', label: `Margen bajo (−${MARGEN_BAJO}%)`, hint: 'Se venden por debajo de lo que deberían, con un umbral parejo para todo el catálogo', build: () => ({ marginMax: MARGEN_BAJO }) },
+  { key: 'bajo-su-categoria', label: 'Bajo el margen de su categoría', hint: 'Por debajo del margen objetivo cargado en SU categoría (Categorías → margen objetivo). No trae nada si ninguna categoría tiene uno cargado.', build: () => ({ belowCategoryMargin: true }) },
   { key: 'viejos', label: `Sin cambios ${DIAS_SIN_CAMBIOS} días`, hint: 'Los que se quedaron atrás', build: () => ({ staleDays: DIAS_SIN_CAMBIOS }) },
 ];
 
@@ -208,6 +209,7 @@ export function SelectionBuilder({ value, onChange, categories, priceListId, val
   if (value.missing === 'cost') chips.push({ key: 'mc', label: 'sin costo', clear: () => set('missing', undefined) });
   if (value.marginMin !== undefined) chips.push({ key: 'mgmin', label: `margen ≥ ${value.marginMin}%`, clear: () => set('marginMin', undefined) });
   if (value.marginMax !== undefined) chips.push({ key: 'mgmax', label: `margen ≤ ${value.marginMax}%`, clear: () => set('marginMax', undefined) });
+  if (value.belowCategoryMargin) chips.push({ key: 'bcm', label: 'bajo el margen de su categoría', clear: () => set('belowCategoryMargin', undefined) });
   if (value.priceMin !== undefined) chips.push({ key: 'pmin', label: `precio ≥ ${money(value.priceMin)}`, clear: () => set('priceMin', undefined) });
   if (value.priceMax !== undefined) chips.push({ key: 'pmax', label: `precio ≤ ${money(value.priceMax)}`, clear: () => set('priceMax', undefined) });
   if (value.staleDays !== undefined) chips.push({ key: 'stale', label: `sin cambios ${value.staleDays} días`, clear: () => set('staleDays', undefined) });

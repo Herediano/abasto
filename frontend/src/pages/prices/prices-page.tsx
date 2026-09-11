@@ -14,7 +14,7 @@ import { ModuleScreen, ModuleSection } from '@/components/module-screen';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type Branch, type Category, type PendingCost, type PriceList, type PriceListDetail, type Promotion, type PriceAuditRow } from '@/lib/api';
+import { api, errorMessage, type Branch, type Category, type PendingCost, type PriceList, type PriceListDetail, type Promotion, type PromoPreview, type PriceAuditRow } from '@/lib/api';
 import { fecha, fechaHora, inputDate, money } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
@@ -114,6 +114,16 @@ export function PricesPage() {
     daysOfWeek: [] as number[], limitarHorario: false, startTime: '09:00', endTime: '22:00',
   });
 
+  // "Probar esta promo": simula el descuento sobre un precio y una cantidad de
+  // ejemplo antes de guardar, con la misma cuenta que usa la caja.
+  const [prueba, setPrueba] = useState({ cantidad: '3', precio: '1000' });
+  const [pruebaResultado, setPruebaResultado] = useState<PromoPreview | null>(null);
+  const [probando, setProbando] = useState(false);
+  const [pruebaError, setPruebaError] = useState('');
+  // Cualquier cambio en el tipo o sus parámetros invalida el resultado: mostrar
+  // un cálculo viejo al lado de un config nuevo confundiría más que ayudar.
+  useEffect(() => setPruebaResultado(null), [promoForm.type, promoForm.n, promoForm.m, promoForm.buyQty, promoForm.getQty, promoForm.percent, promoForm.desdeUnidad, promoForm.amount, promoForm.price]);
+
   // auditoría
   const [audit, setAudit] = useState<PriceAuditRow[]>([]);
   const [auditFiltro, setAuditFiltro] = useState({ field: '', source: '', from: '', to: '' });
@@ -196,9 +206,33 @@ export function PricesPage() {
     }
   }
 
+  async function probarPromo() {
+    setProbando(true);
+    setPruebaError('');
+    try {
+      const r = await api<PromoPreview>('/promotions/preview', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: promoForm.type,
+          config: promoConfig(),
+          quantity: Number(prueba.cantidad),
+          unitPrice: Number(prueba.precio),
+        }),
+      }, token);
+      setPruebaResultado(r);
+    } catch (err) {
+      setPruebaError(errorMessage(err));
+      setPruebaResultado(null);
+    } finally {
+      setProbando(false);
+    }
+  }
+
   function openPromoDialog(promo: Promotion | null) {
     setEditingPromo(promo);
     setError('');
+    setPruebaResultado(null);
+    setPruebaError('');
     if (promo) {
       const c = promo.config;
       setPromoForm({
@@ -922,6 +956,43 @@ export function PricesPage() {
             {promoForm.type === 'special_price' && (
               <Field label="Precio especial $" htmlFor="promo-price"><Input id="promo-price" required type="number" min="0.01" step="0.01" value={promoForm.price} onChange={e => setPromoForm({ ...promoForm, price: e.target.value })} /></Field>
             )}
+
+            <div className="rounded-md border bg-muted/40 p-3">
+              <p className="mb-2 text-sm font-medium">Probar esta promo</p>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Antes de guardar: con un precio y una cantidad de ejemplo, así ves cómo cierra la cuenta en la caja.
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label="Cantidad" htmlFor="prueba-cant" className="max-w-28">
+                  <Input id="prueba-cant" type="number" min="1" step="1" value={prueba.cantidad} onChange={e => setPrueba({ ...prueba, cantidad: e.target.value })} />
+                </Field>
+                <Field label="Precio unitario $" htmlFor="prueba-precio" className="max-w-32">
+                  <Input id="prueba-precio" type="number" min="0.01" step="0.01" value={prueba.precio} onChange={e => setPrueba({ ...prueba, precio: e.target.value })} />
+                </Field>
+                <Button type="button" variant="outline" size="sm" onClick={() => void probarPromo()} disabled={probando}>
+                  {probando && <Spinner />} Probar
+                </Button>
+              </div>
+              {pruebaError && <Alert variant="destructive" className="mt-2">{pruebaError}</Alert>}
+              {pruebaResultado && (
+                <p className="mt-3 text-sm">
+                  {pruebaResultado.aplica ? (
+                    <>
+                      Sin promo: <span className="font-medium">{money(pruebaResultado.bruto)}</span>.
+                      Con promo: <span className="font-medium text-primary">{money(pruebaResultado.total)}</span>
+                      {' '}(descuenta {money(pruebaResultado.discountAmount)}, queda a {money(pruebaResultado.unitPriceEfectivo)} la unidad).
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      Con {pruebaResultado.quantity} unidad{pruebaResultado.quantity === 1 ? '' : 'es'} todavía no llega a aplicar
+                      {promoForm.type === 'nxm' && ` (hace falta al menos ${promoForm.n})`}
+                      {promoForm.type === 'a_plus_b' && ` (hace falta al menos ${Number(promoForm.buyQty) + Number(promoForm.getQty)})`}
+                      {promoForm.type === 'percent' && Number(promoForm.desdeUnidad) > 1 && ` (hace falta al menos ${promoForm.desdeUnidad})`}.
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
 
             <Field label="Aplicar a" htmlFor="promo-scope">
               <Select id="promo-scope" value={promoForm.scopeType} onChange={e => setPromoForm({ ...promoForm, scopeType: e.target.value as ScopeType, scopeValue: '' })}>

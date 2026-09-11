@@ -6,6 +6,7 @@ import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
 import { sendExport } from './export.util';
+import { descuentoPromo, r2 } from './sale-pricing.util';
 
 const TIPOS = ['nxm', 'a_plus_b', 'percent', 'amount', 'special_price'] as const;
 const SCOPES = ['all', 'category', 'brand'];
@@ -175,6 +176,38 @@ export class PromotionsController {
         estado: p.isActive ? 'Activa' : 'Inactiva',
       })),
     );
+  }
+
+  /**
+   * Simula el descuento de una promoción sin guardar nada: para probar que un
+   * NxM o un % está bien armado antes de cargarlo, con un precio y una
+   * cantidad de ejemplo. Usa la misma cuenta que la caja (`descuentoPromo`),
+   * así lo que ves acá es lo que va a pasar de verdad al vender.
+   */
+  @Post('preview') @RequirePermission('promociones.ver')
+  preview(@Body() body: { type?: string; config?: unknown; quantity?: unknown; unitPrice?: unknown }) {
+    const type = String(body.type ?? '') as Tipo;
+    if (!TIPOS.includes(type)) throw new UnprocessableEntityException(`El tipo debe ser uno de: ${TIPOS.join(', ')}`);
+    const config = parseConfig(type, body.config);
+
+    const quantity = Number(body.quantity);
+    if (!Number.isInteger(quantity) || quantity <= 0) throw new UnprocessableEntityException('La cantidad tiene que ser un entero mayor a cero');
+    const unitPrice = Number(body.unitPrice);
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) throw new UnprocessableEntityException('El precio unitario tiene que ser mayor a cero');
+
+    const bruto = r2(unitPrice * quantity);
+    const discountAmount = Math.min(descuentoPromo(type, config, quantity, unitPrice), bruto);
+    const total = r2(bruto - discountAmount);
+    return {
+      quantity,
+      unitPrice,
+      bruto,
+      discountAmount,
+      total,
+      // Precio por unidad ya con el descuento adentro, para leerlo directo.
+      unitPriceEfectivo: r2(total / quantity),
+      aplica: discountAmount > 0,
+    };
   }
 
   @Post() @RequirePermission('promociones.crear')

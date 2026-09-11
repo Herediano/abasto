@@ -175,6 +175,17 @@ export class PricesService {
     return { precios, ultimos };
   }
 
+  /** Margen objetivo por categoría, sólo para las categorías presentes en `products`. */
+  private async margenPorCategoriaDe(tenantId: string, products: Array<{ categoryId: string | null }>) {
+    const categoryIds = [...new Set(products.map(p => p.categoryId).filter((id): id is string => id !== null))];
+    if (!categoryIds.length) return new Map<string, number>();
+    const categorias = await this.prisma.category.findMany({
+      where: { tenantId, id: { in: categoryIds }, targetMargin: { not: null } },
+      select: { id: true, targetMargin: true },
+    });
+    return new Map(categorias.filter(c => c.targetMargin !== null).map(c => [c.id, Number(c.targetMargin)]));
+  }
+
   private armar(
     products: Array<{ id: string; name: string; costPrice: Prisma.Decimal | null; categoryId: string | null }>,
     precios: Map<string, Prisma.Decimal | null>,
@@ -211,8 +222,9 @@ export class PricesService {
     const { precios, ultimos } = await this.preciosDe(tenantId, products.map(p => p.id), listaId, validFrom, campoFecha, conFecha);
     const ahora = new Date();
     const filtrar = necesitaPrecioParaFiltrar(seleccion) || conFecha;
+    const margenPorCategoria = seleccion.belowCategoryMargin ? await this.margenPorCategoriaDe(tenantId, products) : undefined;
     return this.armar(products, precios, ultimos)
-      .filter(p => !filtrar || pasaFiltrosDePrecio(seleccion, p, ahora));
+      .filter(p => !filtrar || pasaFiltrosDePrecio(seleccion, p, ahora, margenPorCategoria));
   }
 
   /** Contador en vivo de la selección, con una muestra para mirar antes de operar. */
@@ -233,8 +245,9 @@ export class PricesService {
     const { precios, ultimos } = await this.preciosDe(tenantId, aResolver.map(p => p.id), lista.id, validFrom, 'sale', conFecha);
 
     const ahora = new Date();
+    const margenPorCategoria = seleccion.belowCategoryMargin ? await this.margenPorCategoriaDe(tenantId, aResolver) : undefined;
     const filas = this.armar(aResolver, precios, ultimos);
-    const elegidos = debeFiltrar ? filas.filter(p => pasaFiltrosDePrecio(seleccion, p, ahora)) : filas;
+    const elegidos = debeFiltrar ? filas.filter(p => pasaFiltrosDePrecio(seleccion, p, ahora, margenPorCategoria)) : filas;
 
     return {
       total: debeFiltrar ? elegidos.length : products.length,
