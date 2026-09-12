@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Field } from '@/components/field';
 import { ProductSearchDialog } from '@/components/product-search-dialog';
 import { SupervisorAuthDialog } from '@/components/supervisor-auth-dialog';
+import { TicketPrint, type TicketData } from '@/components/ticket-print';
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
 import { Select } from '@/components/ui/select';
@@ -99,6 +100,7 @@ export function PosPage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
+  const [ticket, setTicket] = useState<TicketData | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [cobrando, setCobrando] = useState(false);
   const [cobrarOpen, setCobrarOpen] = useState(false);
@@ -332,7 +334,11 @@ export function PosPage() {
     setCobrando(true);
     setError('');
     try {
-      const venta = await api<{ pointOfSale: string; number: number; total: string }>('/sales', {
+      const venta = await api<{
+        docType: string; pointOfSale: string; number: number; total: string; subtotal: string; taxTotal: string; surchargeTotal?: string; occurredAt: string;
+        customer?: { name: string } | null;
+        lines: Array<{ description: string; quantity: string; unitPrice: string; lineTotal: string }>;
+      }>('/sales', {
         method: 'POST',
         body: JSON.stringify({
           customerId: customerId || undefined,
@@ -343,7 +349,14 @@ export function PosPage() {
       setCobrarOpen(false);
       setItems([]);
       setQuote(null);
-      setAviso(`Venta ${venta.pointOfSale}-${String(venta.number).padStart(8, '0')} cobrada por ${money(Number(venta.total))}.`);
+      const letra = venta.docType.length === 1 ? `${venta.docType} ` : '';
+      setAviso(`Venta ${letra}${venta.pointOfSale}-${String(venta.number).padStart(8, '0')} cobrada por ${money(Number(venta.total))}.`);
+      setTicket({
+        docType: venta.docType, pointOfSale: venta.pointOfSale, number: venta.number, occurredAt: venta.occurredAt,
+        customerName: venta.customer?.name, subtotal: venta.subtotal, taxTotal: venta.taxTotal, total: venta.total,
+        surchargeTotal: venta.surchargeTotal, lines: venta.lines,
+        payments: pagos.map(p => ({ method: p.method, amount: String(p.amount) })),
+      });
       // Si se pagó a cuenta corriente, el saldo mostrado quedó viejo.
       if (customerId) api<CustomerAccount>(`/customers/${customerId}/account`, {}, token).then(setCustomerAccount).catch(() => {});
     } catch (err) {
@@ -486,6 +499,7 @@ export function PosPage() {
     // La caja ocupa la pantalla entera: sin riel, sin encabezado de aplicación.
     // El cajero está acá todo el día y no tiene que ver nada más.
     <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <TicketPrint ticket={ticket} tenantName={session!.tenant.name} />
       {/* Esto no es navegación: es el estado del turno, que el cajero necesita
           a la vista permanentemente. */}
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-2.5">
@@ -513,7 +527,18 @@ export function PosPage() {
       <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr_380px]">
         {/* Izquierda: escanear y el carrito. */}
         <div className="flex min-h-0 flex-col gap-3 p-4">
-          {aviso && <Alert>{aviso}</Alert>}
+          {aviso && (
+            <Alert>
+              <div className="flex items-center justify-between gap-3">
+                <span>{aviso}</span>
+                {ticket && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
+                    <Receipt /> Imprimir ticket
+                  </Button>
+                )}
+              </div>
+            </Alert>
+          )}
           {error && <Alert variant="destructive">{error}</Alert>}
           {sinPrecio.length > 0 && (
             <Alert variant="destructive">

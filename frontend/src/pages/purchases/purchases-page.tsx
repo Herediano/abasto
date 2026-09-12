@@ -41,8 +41,8 @@ const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'succ
 
 // unitFactor sólo viaja al corregir una factura ya confirmada: manda el factor
 // con el que se confirmó, no el actual del producto (que pudo cambiar).
-type Line = { barcode: string; productName: string; productLotId: string; quantity: string; unitCost: string; taxRate: string; byPackage: boolean; packSize: string; unitFactor?: string };
-const EMPTY_LINE: Line = { barcode: '', productName: '', productLotId: '', quantity: '', unitCost: '', taxRate: '21', byPackage: false, packSize: '' };
+type Line = { barcode: string; productName: string; productLotId: string; quantity: string; unitCost: string; discountPercent: string; taxRate: string; byPackage: boolean; packSize: string; unitFactor?: string };
+const EMPTY_LINE: Line = { barcode: '', productName: '', productLotId: '', quantity: '', unitCost: '', discountPercent: '0', taxRate: '21', byPackage: false, packSize: '' };
 const EMPTY_HEADER = { supplierId: '', invoiceType: 'A', pointOfSale: '', invoiceNumber: '', remitoNumber: '', dueDate: '', pendingInvoice: false, issueDate: inputDate(), notes: '' };
 
 type OtherTax = { label: string; amount: string };
@@ -62,8 +62,10 @@ function readDraft(tenantId: string): Draft | null {
   }
 }
 
-const lineTotal = (l: { quantity: string | number; unitCost: string | number; taxRate: string | number }) =>
-  Number(l.quantity) * Number(l.unitCost) * (1 + Number(l.taxRate) / 100);
+const netUnitCost = (l: { unitCost: string | number; discountPercent?: string | number }) =>
+  Number(l.unitCost) * (1 - Number(l.discountPercent ?? 0) / 100);
+const lineTotal = (l: { quantity: string | number; unitCost: string | number; discountPercent?: string | number; taxRate: string | number }) =>
+  Number(l.quantity) * netUnitCost(l) * (1 + Number(l.taxRate) / 100);
 
 export function PurchasesPage() {
   const { session, can } = useAuth();
@@ -160,8 +162,8 @@ export function PurchasesPage() {
     localStorage.setItem(draftKey(tenantId), JSON.stringify({ header, line, lines, otherTaxes, editingInvoice, correctionReason }));
   }, [tenantId, header, line, lines, otherTaxes, editingInvoice, correctionReason]);
 
-  const subtotal = lines.reduce((sum, l) => sum + Number(l.quantity) * Number(l.unitCost), 0);
-  const tax = lines.reduce((sum, l) => sum + (Number(l.quantity) * Number(l.unitCost) * Number(l.taxRate)) / 100, 0);
+  const subtotal = lines.reduce((sum, l) => sum + Number(l.quantity) * netUnitCost(l), 0);
+  const tax = lines.reduce((sum, l) => sum + (Number(l.quantity) * netUnitCost(l) * Number(l.taxRate)) / 100, 0);
   const otherTaxesTotal = otherTaxes.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
   function addOtherTax() {
@@ -339,7 +341,7 @@ export function PurchasesPage() {
       const body = {
         ...header,
         reason: correctionReason,
-        lines: lines.map(l => ({ ...l, quantity: Number(l.quantity), unitCost: Number(l.unitCost), taxRate: Number(l.taxRate) })),
+        lines: lines.map(l => ({ ...l, quantity: Number(l.quantity), unitCost: Number(l.unitCost), discountPercent: Number(l.discountPercent) || 0, taxRate: Number(l.taxRate) })),
         otherTaxes: otherTaxes.filter(t => t.label.trim()).map(t => ({ label: t.label.trim(), amount: Number(t.amount) || 0 })),
       };
       if (editingInvoice) {
@@ -378,6 +380,7 @@ export function PurchasesPage() {
       productLotId: l.productLotId ?? '',
       quantity: l.quantity,
       unitCost: l.unitCost,
+      discountPercent: l.discountPercent ?? '0',
       taxRate: l.taxRate,
       byPackage: Number(l.unitFactor ?? 1) > 1,
       packSize: l.unitFactor ?? '1',
@@ -739,10 +742,16 @@ export function PurchasesPage() {
                 )}
 
                 <div className="grid grid-cols-6 items-end gap-3">
+                  <Field label="Bonificación %" htmlFor="line-discountPercent" hint="(ej. 10+1 ≈ 9,09%)">
+                    <Input id="line-discountPercent" min="0" max="100" step="0.01" type="number" value={line.discountPercent} onChange={e => setLine({ ...line, discountPercent: e.target.value })} />
+                  </Field>
                   <Field label="IVA %" htmlFor="line-taxRate">
                     <Input id="line-taxRate" min="0" step="0.01" type="number" value={line.taxRate} onChange={e => setLine({ ...line, taxRate: e.target.value })} />
                   </Field>
-                  <div className="col-span-5 flex items-end justify-end">
+                  <div className="col-span-2 flex items-end pb-2 text-sm text-muted-foreground">
+                    {Number(line.discountPercent) > 0 && Number(line.unitCost) > 0 && `Costo neto: ${money(netUnitCost(line))}`}
+                  </div>
+                  <div className="col-span-2 flex items-end justify-end">
                     <Button type="button" variant="outline" onClick={addLine} disabled={addingLine}>
                       {addingLine ? <Spinner /> : <Plus />} Agregar línea
                     </Button>
@@ -779,7 +788,10 @@ export function PurchasesPage() {
                             <TableCell className="font-mono text-xs">{l.barcode}</TableCell>
                             <TableCell>{l.productName}</TableCell>
                             <TableCell className="text-right">{l.quantity}</TableCell>
-                            <TableCell className="text-right">{money(Number(l.unitCost))}</TableCell>
+                            <TableCell className="text-right">
+                              {money(Number(l.unitCost))}
+                              {Number(l.discountPercent) > 0 && <span className="text-xs text-muted-foreground"> (-{l.discountPercent}%)</span>}
+                            </TableCell>
                             <TableCell className="text-right font-medium">{money(lineTotal(l))}</TableCell>
                             <TableCell>
                               <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)}>
@@ -879,7 +891,10 @@ export function PurchasesPage() {
                       <TableRow key={i}>
                         <TableCell>{l.description ?? l.barcode}</TableCell>
                         <TableCell className="text-right">{Number(l.quantity)}</TableCell>
-                        <TableCell className="text-right">{money(Number(l.unitCost))}</TableCell>
+                        <TableCell className="text-right">
+                          {money(Number(l.unitCost))}
+                          {Number(l.discountPercent) > 0 && <span className="text-xs text-muted-foreground"> (-{l.discountPercent}%)</span>}
+                        </TableCell>
                         <TableCell className="text-right font-medium">{money(lineTotal(l))}</TableCell>
                       </TableRow>
                     ))}

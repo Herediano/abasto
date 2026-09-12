@@ -764,6 +764,14 @@ html body[data-scroll-locked] {
 :root:not([data-theme='light']) .mostrador-closed:hover {
   background: #b0453c;
 }
+/* La pastilla del ícono del Mostrador: misma forma que `.module-tile__chip`
+ * (cuadrado, size-8, rounded-md), pero translúcida sobre el fondo sólido
+ * verde/rojo del botón en vez de a color propio —acá el color ya lo lleva
+ * el botón entero (estado de la caja), la pastilla solo separa el ícono. */
+.mostrador__chip {
+  background: rgb(255 255 255 / 18%);
+  color: #ffffff;
+}
 
 /* El header del módulo se estira de borde a borde cuando el contenedor del
  * cuerpo queda centrado (≥1280px = el máximo 7xl): ancho de ventana con
@@ -777,5 +785,24 @@ html body[data-scroll-locked] {
   .module-header {
     margin-inline: calc(50% - 50vw);
     width: 100vw;
+  }
+}
+
+/* Ticket de venta (ver components/ticket-print.tsx): al imprimir, sólo se ve
+ * el ticket — todo lo demás se oculta con visibility (no display) para no
+ * dejar páginas en blanco, y el ticket se saca del flujo con position:fixed
+ * para no heredar el layout de la app. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-ticket,
+  .print-ticket * {
+    visibility: visible;
+  }
+  .print-ticket {
+    position: fixed;
+    inset: 0;
+    width: 80mm;
   }
 }

@@ -118,3 +118,30 @@ export const DEFAULT_RANGOS: Record<string, PermissionKey[]> = {
 
 /** Orden fijo de los 7 rangos de fábrica (el mismo en todos lados: seed, backfill, UI). */
 export const SYSTEM_RANGO_NAMES = Object.keys(DEFAULT_RANGOS);
+
+export type PlantillaKey = 'kiosco' | 'mayorista';
+
+/**
+ * Qué rangos de fábrica trae cada plantilla al dar de alta una empresa. Los
+ * permisos de cada rango siguen siendo los de DEFAULT_RANGOS —la plantilla no
+ * inventa un set de permisos nuevo, sólo decide cuántos de los 7 roles hacen
+ * falta el día uno. "Dueño" está en las dos: quien crea la cuenta siempre
+ * queda con todos los permisos, tenga la empresa un empleado o cien.
+ *
+ * Es un punto de partida, no un techo: un kiosco que crece prende el resto de
+ * los rangos a mano desde Rangos (clonar/crear), sin migrar nada.
+ */
+export const PLANTILLAS: Record<PlantillaKey, { label: string; description: string; rangos: string[] }> = {
+  kiosco: {
+    label: 'Kiosco / autoservicio',
+    description: 'Un negocio chico, sin roles separados: quien vende, repone y compra suele ser la misma persona.',
+    rangos: ['Cajero', 'Dueño'],
+  },
+  mayorista: {
+    label: 'Supermercado / mayorista',
+    description: 'Varias sucursales o personal con funciones separadas: caja, recepción, compras y administración.',
+    rangos: SYSTEM_RANGO_NAMES,
+  },
+};
+
+export const PLANTILLA_KEYS = Object.keys(PLANTILLAS) as PlantillaKey[];

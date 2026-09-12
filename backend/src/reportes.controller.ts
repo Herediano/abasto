@@ -125,6 +125,16 @@ export class ReportesController {
         ],
         rows: d.masVendidos.map(r => ({ producto: r.name, unidades: r.qty, facturado: r.revenue, margen: r.margin ?? '' })),
       },
+      sinRotacion: {
+        name: 'sin-rotacion',
+        columns: [
+          { header: 'Producto', key: 'producto', width: 34 },
+          { header: 'Stock', key: 'stock' },
+          { header: 'Última venta', key: 'ultimaVenta', numFmt: 'dd/mm/yyyy' },
+          ...(d.verPlata ? [{ ...M('valorizado'), header: 'Valorizado' }] : []),
+        ],
+        rows: d.sinRotacion.map(r => ({ producto: r.name, stock: r.stock, ultimaVenta: r.lastSaleAt ? new Date(r.lastSaleAt) : '', valorizado: r.valorizado ?? '' })),
+      },
       arqueos: {
         name: 'arqueos-con-diferencia',
         columns: [
@@ -159,7 +169,7 @@ export class ReportesController {
     const ventaWhere = { tenantId, status: 'confirmed', occurredAt: enRango, warehouseId: { in: whIds } };
     const verPlata = request.user.permissions.has('reportes.ver_plata');
 
-    const [porMedio, porCajero, porSucursalRaw, masVendidosRaw, stockValRaw, arqueos, ctaCte, saleAgg] = await Promise.all([
+    const [porMedio, porCajero, porSucursalRaw, masVendidosRaw, sinRotacionRaw, stockValRaw, arqueos, ctaCte, saleAgg] = await Promise.all([
       this.prisma.salePayment.groupBy({
         by: ['method'],
         where: { tenantId, sale: { status: 'confirmed', occurredAt: enRango, warehouseId: { in: whIds } } },
@@ -178,6 +188,34 @@ export class ReportesController {
           AND s.warehouse_id = ANY($4::uuid[])
         GROUP BY l.product_id, p.name ORDER BY qty DESC LIMIT 15`,
         tenantId, desde, hasta, whIds,
+      ),
+      // El complemento de "más vendidos": productos con stock en el depósito
+      // pero sin una sola línea de venta en el rango — plata parada en la
+      // góndola. lastSaleAt mira TODA la historia (no sólo el rango), para
+      // poder decir "no se vendió nunca" vs. "no se vendió desde tal fecha".
+      whIds.length === 0 ? Promise.resolve([]) : this.prisma.$queryRawUnsafe<Array<{ productId: string; name: string; stock: number; valorizado: number; lastSaleAt: string | null }>>(
+        `SELECT q.product_id AS "productId", p.name, q.stock::float8 AS stock,
+               (q.stock * COALESCE(p.cost_price, 0))::float8 AS valorizado,
+               ult.last_sale_at AS "lastSaleAt"
+        FROM (
+          SELECT sm.product_id, SUM(sm.quantity) AS stock
+          FROM stock_movements sm
+          WHERE sm.tenant_id = $1::uuid AND sm.warehouse_id = ANY($2::uuid[])
+          GROUP BY sm.product_id HAVING SUM(sm.quantity) > 0
+        ) q
+        JOIN products p ON p.id = q.product_id AND p.is_active
+        LEFT JOIN LATERAL (
+          SELECT MAX(s.occurred_at) AS last_sale_at
+          FROM sale_lines l JOIN sales s ON s.id = l.sale_id
+          WHERE l.product_id = q.product_id AND s.tenant_id = $1::uuid AND s.status = 'confirmed' AND s.warehouse_id = ANY($2::uuid[])
+        ) ult ON true
+        WHERE NOT EXISTS (
+          SELECT 1 FROM sale_lines l JOIN sales s ON s.id = l.sale_id
+          WHERE l.product_id = q.product_id AND s.tenant_id = $1::uuid AND s.status = 'confirmed'
+            AND s.warehouse_id = ANY($2::uuid[]) AND s.occurred_at BETWEEN $3 AND $4
+        )
+        ORDER BY valorizado DESC LIMIT 20`,
+        tenantId, whIds, desde, hasta,
       ),
       whIds.length === 0 ? Promise.resolve([{ total: 0 }]) : this.prisma.$queryRawUnsafe<Array<{ total: number }>>(
         `SELECT COALESCE(SUM(q.stock * COALESCE(p.cost_price, 0)), 0)::float8 AS total
@@ -222,6 +260,10 @@ export class ReportesController {
         return { warehouse: w?.name ?? '—', branch: w?.branch?.name ?? '—', total: Number(s._sum.total ?? 0), count: s._count._all };
       }).sort((a, b) => b.total - a.total),
       masVendidos: masVendidosRaw.map(r => ({ name: r.name, qty: Number(r.qty), revenue: Number(r.revenue), margin: verPlata ? Number(r.margin) : null })),
+      sinRotacion: sinRotacionRaw.map(r => ({
+        name: r.name, stock: Number(r.stock), lastSaleAt: r.lastSaleAt,
+        valorizado: verPlata ? Number(r.valorizado) : null,
+      })),
       stockValorizado: verPlata ? Number(stockValRaw[0]?.total ?? 0) : null,
       arqueosConDiferencia: arqueos.map(s => ({
         id: s.id, cashRegister: s.cashRegister.name, closedBy: s.closedBy?.name ?? '—',

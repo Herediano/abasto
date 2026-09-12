@@ -3,7 +3,7 @@ import { Prisma, PurchaseInvoiceStatus, PurchaseInvoiceType } from '@prisma/clie
 import { PrismaService } from './prisma/prisma.service';
 import { registrarMovimientoCuentaProveedor } from './cuenta-corriente-proveedor.util';
 
-type InvoiceLineInput = { barcode?: unknown; productId?: unknown; productLotId?: unknown; quantity?: unknown; unitCost?: unknown; taxRate?: unknown; byPackage?: unknown; unitFactor?: unknown };
+type InvoiceLineInput = { barcode?: unknown; productId?: unknown; productLotId?: unknown; quantity?: unknown; unitCost?: unknown; discountPercent?: unknown; taxRate?: unknown; byPackage?: unknown; unitFactor?: unknown };
 type OtherTaxInput = { label?: unknown; amount?: unknown };
 type OtherTax = { label: string; amount: number };
 
@@ -19,6 +19,13 @@ export class PurchasesService {
   private money(value: unknown, field: string) {
     const n = Number(value);
     if (!Number.isFinite(n) || n < 0) throw new UnprocessableEntityException(`${field} debe ser un número mayor o igual a cero`);
+    return n;
+  }
+
+  /** Bonificación de línea (0-100): "10+1" ≈ 9.09%, o el % que la factura ya trae. */
+  private percent(value: unknown, field: string) {
+    const n = Number(value ?? 0);
+    if (!Number.isFinite(n) || n < 0 || n > 100) throw new UnprocessableEntityException(`${field} debe ser un número entre 0 y 100`);
     return n;
   }
 
@@ -71,13 +78,14 @@ export class PurchasesService {
     if (!supplier) throw new NotFoundException('Proveedor no encontrado');
     const warehouse = await this.prisma.warehouse.findFirst({ where: { id: user.warehouseId, tenantId: user.tenantId, isActive: true } });
     if (!warehouse) throw new UnprocessableEntityException('La sucursal/depósito asignado al usuario no existe');
-    const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitFactor: number; unitCost: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
+    const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitFactor: number; unitCost: number; discountPercent: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
     for (const line of rawLines) {
       const barcode = typeof line.barcode === 'string' ? line.barcode.trim() : '';
       const { product, scannedPack } = await this.resolveLineProduct(user.tenantId, { barcode });
       if (!product) throw new UnprocessableEntityException(`No existe un producto activo con barcode ${barcode || '(vacío)'}`);
       const quantity = this.money(line.quantity, 'quantity');
       const unitCost = this.money(line.unitCost, 'unitCost');
+      const discountPercent = this.percent(line.discountPercent, 'discountPercent');
       const taxRate = this.money(line.taxRate ?? 0, 'taxRate');
       if (quantity <= 0) throw new UnprocessableEntityException('quantity debe ser mayor a cero');
       const productLotId = typeof line.productLotId === 'string' && line.productLotId ? line.productLotId : undefined;
@@ -86,9 +94,12 @@ export class PurchasesService {
       // El factor se resuelve del producto, no del cliente, y queda congelado en la
       // linea. Escanear el código del bulto ya implica cargar por bulto.
       const unitFactor = (scannedPack || line.byPackage === true) ? Number(product.unitsPerPurchase) : 1;
-      const lineSubtotal = Number((quantity * unitCost).toFixed(2));
+      // unitCost es el precio de lista; el IVA (y todo lo demás) se calcula
+      // sobre el neto de bonificación, no sobre el bruto.
+      const netUnitCost = unitCost * (1 - discountPercent / 100);
+      const lineSubtotal = Number((quantity * netUnitCost).toFixed(2));
       const lineTax = Number((lineSubtotal * taxRate / 100).toFixed(2));
-      lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitFactor, unitCost, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
+      lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitFactor, unitCost, discountPercent, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
     }
     const subtotal = lines.reduce((sum, line) => sum + line.lineSubtotal, 0);
     const taxTotal = lines.reduce((sum, line) => sum + line.lineTax, 0);
@@ -137,7 +148,10 @@ export class PurchasesService {
         // La factura viene en la unidad del proveedor (bulto); el ledger guarda
         // siempre la unidad base, asi que la conversion ocurre aca.
         const baseQuantity = new Prisma.Decimal(line.quantity).mul(line.unitFactor);
-        let unitCostCargado = new Prisma.Decimal(line.unitCost);
+        // Se parte del costo neto de bonificación (precio de lista de la línea
+        // menos discountPercent), no del bruto: eso es lo que de verdad salió
+        // de la empresa por unidad.
+        let unitCostCargado = new Prisma.Decimal(line.unitCost).mul(new Prisma.Decimal(1).minus(new Prisma.Decimal(line.discountPercent).div(100)));
         if (otherTaxesTotal.greaterThan(0) && subtotalFactura.greaterThan(0)) {
           const proporcion = new Prisma.Decimal(line.lineSubtotal).div(subtotalFactura);
           unitCostCargado = unitCostCargado.add(otherTaxesTotal.mul(proporcion).div(line.quantity));
@@ -220,13 +234,13 @@ export class PurchasesService {
     if (!supplier) throw new NotFoundException('Proveedor no encontrado');
     const rawLines = Array.isArray(body.lines) ? body.lines as InvoiceLineInput[] : invoice.lines;
     if (!rawLines.length) throw new UnprocessableEntityException('La factura debe tener al menos una línea');
-    const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitFactor: number; unitCost: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
+    const lines: Array<{ productId: string; productLotId?: string; barcode: string; description: string; quantity: number; unitFactor: number; unitCost: number; discountPercent: number; taxRate: number; lineSubtotal: number; lineTax: number; lineTotal: number }> = [];
     for (const raw of rawLines) {
       const productId = typeof raw.productId === 'string' ? raw.productId : '';
       const barcode = typeof raw.barcode === 'string' ? raw.barcode.trim() : '';
       const { product, scannedPack } = await this.resolveLineProduct(user.tenantId, { productId: productId || undefined, barcode });
       if (!product) throw new UnprocessableEntityException(`No existe el producto ${barcode || productId || '(vacío)'}`);
-      const quantity = this.money(raw.quantity, 'quantity'); const unitCost = this.money(raw.unitCost, 'unitCost'); const taxRate = this.money(raw.taxRate ?? 0, 'taxRate');
+      const quantity = this.money(raw.quantity, 'quantity'); const unitCost = this.money(raw.unitCost, 'unitCost'); const discountPercent = this.percent(raw.discountPercent, 'discountPercent'); const taxRate = this.money(raw.taxRate ?? 0, 'taxRate');
       if (quantity <= 0) throw new UnprocessableEntityException('quantity debe ser mayor a cero');
       const productLotId = typeof raw.productLotId === 'string' && raw.productLotId ? raw.productLotId : undefined;
       if (product.manejaVencimiento && !productLotId) throw new UnprocessableEntityException(`El producto ${product.name} requiere lote`);
@@ -236,8 +250,9 @@ export class PurchasesService {
       const stored = 'unitFactor' in raw && raw.unitFactor !== undefined && raw.unitFactor !== null ? Number(raw.unitFactor) : null;
       const byPackage = ('byPackage' in raw && raw.byPackage === true) || scannedPack;
       const unitFactor = stored ?? (byPackage ? Number(product.unitsPerPurchase) : 1);
-      const lineSubtotal = Number((quantity * unitCost).toFixed(2)); const lineTax = Number((lineSubtotal * taxRate / 100).toFixed(2));
-      lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitFactor, unitCost, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
+      const netUnitCost = unitCost * (1 - discountPercent / 100);
+      const lineSubtotal = Number((quantity * netUnitCost).toFixed(2)); const lineTax = Number((lineSubtotal * taxRate / 100).toFixed(2));
+      lines.push({ productId: product.id, productLotId, barcode: product.barcode, description: product.name, quantity, unitFactor, unitCost, discountPercent, taxRate, lineSubtotal, lineTax, lineTotal: Number((lineSubtotal + lineTax).toFixed(2)) });
     }
     const subtotal = lines.reduce((sum, line) => sum + line.lineSubtotal, 0); const taxTotal = lines.reduce((sum, line) => sum + line.lineTax, 0);
     const otherTaxes = this.parseOtherTaxes(body.otherTaxes);

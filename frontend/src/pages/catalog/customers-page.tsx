@@ -18,7 +18,13 @@ import { fechaHora, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
-const EMPTY = { name: '', legalName: '', taxId: '', email: '', phone: '', address: '', priceListId: '', creditLimit: '' };
+const EMPTY = { name: '', legalName: '', taxId: '', email: '', phone: '', address: '', condicionFiscal: 'consumidor_final', priceListId: '', creditLimit: '' };
+const CONDICIONES_FISCALES = [
+  { value: 'consumidor_final', label: 'Consumidor Final' },
+  { value: 'responsable_inscripto', label: 'Responsable Inscripto' },
+  { value: 'monotributista', label: 'Monotributista' },
+  { value: 'exento', label: 'Exento' },
+];
 
 export function CustomersPage() {
   const { session, can } = useAuth();
@@ -75,6 +81,7 @@ export function CustomersPage() {
       email: c.email ?? '',
       phone: c.phone ?? '',
       address: c.address ?? '',
+      condicionFiscal: c.condicionFiscal ?? 'consumidor_final',
       priceListId: c.priceListId ?? '',
       creditLimit: c.creditLimit ?? '',
     } : EMPTY);
@@ -278,6 +285,11 @@ export function CustomersPage() {
             </div>
 
             <div className="grid gap-3">
+              <Field label="Condición frente al IVA" htmlFor="c-condicion" hint="decide la letra del comprobante al venderle">
+                <Select id="c-condicion" value={form.condicionFiscal} onChange={e => setForm({ ...form, condicionFiscal: e.target.value })}>
+                  {CONDICIONES_FISCALES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </Select>
+              </Field>
               <Field label="Lista de precios" htmlFor="c-list" hint="(vacío = lista base)">
                 <Select id="c-list" value={form.priceListId} onChange={e => setForm({ ...form, priceListId: e.target.value })}>
                   <option value="">Lista base</option>

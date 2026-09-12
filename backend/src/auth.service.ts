@@ -1,6 +1,8 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { sembrarRangosDeFabrica } from './rangos.util';
+import { PLANTILLAS, type PlantillaKey } from './permissions.catalog';
+import { TENANT_CONDICIONES_FISCALES, type TenantCondicionFiscal } from './fiscal.util';
 import type { AuthUser } from './auth.types';
 import * as argon2 from 'argon2';
 import * as jwt from 'jsonwebtoken';
@@ -48,15 +50,19 @@ export class AuthService {
     const name = typeof user?.name === 'string' ? user.name.trim() : '';
     const email = normalizeEmail(user?.email);
     if (!tenantName || !taxId || !name || !email) throw new UnprocessableEntityException('tenant.name, tenant.taxId, user.name y user.email son obligatorios');
+    const plantillaInput = typeof tenant?.plantilla === 'string' ? tenant.plantilla : 'mayorista';
+    if (!(plantillaInput in PLANTILLAS)) throw new UnprocessableEntityException(`tenant.plantilla inválida: ${plantillaInput}`);
+    const plantilla = plantillaInput as PlantillaKey;
     const password = user?.password;
     validatePassword(password);
     const passwordHash = await argon2.hash(password as string, { type: argon2.argon2id });
     try {
       const created = await this.prisma.$transaction(async tx => {
-        const tenantCreated = await tx.tenant.create({ data: { name: tenantName, legalName: typeof tenant?.legalName === 'string' ? tenant.legalName.trim() : undefined, taxId } });
-        // Los 7 rangos de fábrica nacen con la empresa; quien la crea queda
-        // como Dueño (todos los permisos), no un flag de admin aparte.
-        const rangos = await sembrarRangosDeFabrica(tx, tenantCreated.id);
+        const tenantCreated = await tx.tenant.create({ data: { name: tenantName, legalName: typeof tenant?.legalName === 'string' ? tenant.legalName.trim() : undefined, taxId, plantilla } });
+        // Los rangos de fábrica que trae la plantilla nacen con la empresa;
+        // quien la crea queda como Dueño (todos los permisos), no un flag de
+        // admin aparte.
+        const rangos = await sembrarRangosDeFabrica(tx, tenantCreated.id, plantilla);
         // Toda empresa nace operable: una sucursal con su depósito y su caja, y
         // el Dueño asignado. Sin esto, abrir caja (y por lo tanto vender) es un
         // callejón sin salida hasta configurar varias pantallas a mano.
@@ -76,7 +82,7 @@ export class AuthService {
       return {
         ...this.token(created.user),
         user: { id: created.user.id, name: created.user.name, email: created.user.email, rangoId: created.user.rangoId, rangoName: 'Dueño', permissions: permisos.map(p => p.key), warehouseId: created.user.warehouseId, branch: { id: created.sucursal.id, name: created.sucursal.name }, homeBranch: { id: created.sucursal.id, name: created.sucursal.name }, canNavigateBranches: permisos.some(p => p.key === 'sucursales.navegar'), preferences: {} },
-        tenant: { id: created.tenant.id, name: created.tenant.name, logo: created.tenant.logo, timezone: created.tenant.timezone, autoUpdateCostOnPurchase: created.tenant.autoUpdateCostOnPurchase },
+        tenant: { id: created.tenant.id, name: created.tenant.name, logo: created.tenant.logo, timezone: created.tenant.timezone, autoUpdateCostOnPurchase: created.tenant.autoUpdateCostOnPurchase, plantilla: created.tenant.plantilla, condicionFiscal: created.tenant.condicionFiscal },
       };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El taxId o email ya está registrado');
@@ -126,7 +132,7 @@ export class AuthService {
     user: {
       id: string; name: string; email: string; rangoId: string; warehouseId: string | null; preferences: unknown;
       rango: { name: string; permissions: { key: string }[] };
-      tenant: { id: string; name: string; logo: string | null; timezone: string; autoUpdateCostOnPurchase: boolean };
+      tenant: { id: string; name: string; logo: string | null; timezone: string; autoUpdateCostOnPurchase: boolean; plantilla: string; condicionFiscal: string };
       branch: { id: string; name: string } | null;
       warehouse: { branch: { id: string; name: string } } | null;
     },
@@ -143,7 +149,7 @@ export class AuthService {
         canNavigateBranches,
         preferences: (user.preferences as Record<string, unknown> | null) ?? {},
       },
-      tenant: { id: user.tenant.id, name: user.tenant.name, logo: user.tenant.logo, timezone: user.tenant.timezone, autoUpdateCostOnPurchase: user.tenant.autoUpdateCostOnPurchase },
+      tenant: { id: user.tenant.id, name: user.tenant.name, logo: user.tenant.logo, timezone: user.tenant.timezone, autoUpdateCostOnPurchase: user.tenant.autoUpdateCostOnPurchase, plantilla: user.tenant.plantilla, condicionFiscal: user.tenant.condicionFiscal },
     };
   }
 
@@ -209,6 +215,10 @@ export class AuthService {
       data.timezone = body.timezone;
     }
     if (typeof body.autoUpdateCostOnPurchase === 'boolean') data.autoUpdateCostOnPurchase = body.autoUpdateCostOnPurchase;
+    if (typeof body.condicionFiscal === 'string') {
+      if (!TENANT_CONDICIONES_FISCALES.includes(body.condicionFiscal as TenantCondicionFiscal)) throw new UnprocessableEntityException('Condición frente al IVA no reconocida');
+      data.condicionFiscal = body.condicionFiscal;
+    }
     await this.prisma.tenant.update({ where: { id: actor.tenantId }, data });
     return this.me(actor);
   }

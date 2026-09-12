@@ -81,6 +81,18 @@ model Tenant {
   legalName                String?                   @map("legal_name")
   taxId                    String?                   @unique @map("tax_id")
   status                   String                    @default("active")
+  // Preset elegido en el alta (ver PLANTILLAS en permissions.catalog.ts):
+  // decide qué rangos de fábrica nacen con la empresa. Sólo se lee al crear
+  // el tenant — después es puramente informativo, nunca vuelve a gatear nada,
+  // así que un negocio que crece prende permisos a mano desde Rangos en vez
+  // de tener que "cambiar de plantilla".
+  plantilla                String                    @default("mayorista")
+  // Condición frente al IVA de LA EMPRESA (no de un producto — eso es
+  // Product.ivaSituacion). Determina qué letra de comprobante puede emitir:
+  // ver resolveComprobanteType() en fiscal.util.ts. "responsable_inscripto" es
+  // el default porque el cliente contra quien se diseña (docs/producto.md) es
+  // el supermercado mayorista, que factura A con IVA discriminado.
+  condicionFiscal          String                    @default("responsable_inscripto") @map("condicion_fiscal")
   // Logo del negocio como data URI (base64). Chico — hoy sólo se muestra en el
   // encabezado del escritorio; el uso en comprobantes viene después.
   logo                     String?
@@ -143,20 +155,20 @@ model Tenant {
 // Toda empresa nace con una ("Casa Central"). Separada del depósito desde la
 // migración `20260906..._sucursales`: antes `Warehouse` era las dos cosas.
 model Branch {
-  id         String      @id @default(uuid()) @db.Uuid
-  tenantId   String      @map("tenant_id") @db.Uuid
-  name       String
-  code       String
-  address    String?
-  isActive   Boolean     @default(true) @map("is_active")
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
-  tenant     Tenant      @relation(fields: [tenantId], references: [id])
-  warehouses Warehouse[]
-  users      User[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  name               String
+  code               String
+  address            String?
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  warehouses         Warehouse[]
+  users              User[]
   paymentAdjustments PaymentAdjustment[]
-  stockRules ProductStockRule[]
-  priceLists PriceList[]
+  stockRules         ProductStockRule[]
+  priceLists         PriceList[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, code])
@@ -266,17 +278,17 @@ model CashMovement {
 // cuadrar el arqueo: cupón de tarjeta, id de operación de una transferencia o
 // QR — texto libre porque cada medio pide algo distinto.
 model SalePayment {
-  id        String            @id @default(uuid()) @db.Uuid
-  tenantId  String            @map("tenant_id") @db.Uuid
-  saleId    String            @map("sale_id") @db.Uuid
-  method    PaymentMethodType
+  id              String            @id @default(uuid()) @db.Uuid
+  tenantId        String            @map("tenant_id") @db.Uuid
+  saleId          String            @map("sale_id") @db.Uuid
+  method          PaymentMethodType
   // Lo que efectivamente entra por este medio (base imputada + su recargo/descuento).
-  amount    Decimal           @db.Decimal(14, 2)
+  amount          Decimal           @db.Decimal(14, 2)
   // Parte de `amount` que es recargo (+) o descuento (−) por el medio de pago.
-  surchargeAmount Decimal      @default(0) @map("surcharge_amount") @db.Decimal(14, 2)
-  reference String?
-  tenant    Tenant            @relation(fields: [tenantId], references: [id])
-  sale      Sale              @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  surchargeAmount Decimal           @default(0) @map("surcharge_amount") @db.Decimal(14, 2)
+  reference       String?
+  tenant          Tenant            @relation(fields: [tenantId], references: [id])
+  sale            Sale              @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
 
   @@unique([id, tenantId])
   @@index([tenantId, saleId])
@@ -383,38 +395,38 @@ model ProductPrice {
 // Criterio de actualizacion guardado: es el cuerpo de POST /prices/bulk con
 // nombre, para re-aplicarlo ("Bebidas = costo +35%") sin reconfigurarlo.
 model PriceRule {
-  id             String    @id @default(uuid()) @db.Uuid
-  tenantId       String    @map("tenant_id") @db.Uuid
-  name           String
-  priceListId    String    @map("price_list_id") @db.Uuid
-  target         String // salePrice | costPrice
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  name              String
+  priceListId       String    @map("price_list_id") @db.Uuid
+  target            String // salePrice | costPrice
   // Alcance de un solo eje: el modelo viejo. Las reglas nuevas guardan
   // `selection` y dejan estos dos en null; se leen sólo para las ya existentes.
-  scopeType      String?   @map("scope_type") // all | category | brand | ids
-  scopeValue     String?   @map("scope_value")
+  scopeType         String?   @map("scope_type") // all | category | brand | ids
+  scopeValue        String?   @map("scope_value")
   // Selección apilable (PriceSelection en price-selection.util.ts): categorías,
   // marcas, proveedores, productos puntuales, margen, antigüedad… combinados
   // con AND. Es JSON y no columnas porque los filtros se suman seguido y no
   // vale una migración por cada uno.
-  selection      Json?
-  operationType  String    @map("operation_type") // percent | margin | round | supplierIncrease | tier
+  selection         Json?
+  operationType     String    @map("operation_type") // percent | margin | round | supplierIncrease | tier
   // null = el criterio guarda a QUIÉN se le aplica, pero el valor se escribe en
   // el momento. Es el caso real del aumento de proveedor: la selección se repite
   // todos los meses, el porcentaje cambia siempre. Para "tier" es el % de
   // descuento; para "margin" con useCategoryMargin no se usa (queda null).
-  operationValue Decimal?  @map("operation_value") @db.Decimal(10, 2)
+  operationValue    Decimal?  @map("operation_value") @db.Decimal(10, 2)
   // Sólo con operationType "margin": ignora operationValue y resuelve el % por
   // la categoría de cada producto (Category.targetMargin), igual que el check
   // homónimo del bulk directo.
-  useCategoryMargin Boolean @default(false) @map("use_category_margin")
+  useCategoryMargin Boolean   @default(false) @map("use_category_margin")
   // Sólo con operationType "tier": desde qué cantidad rige el precio por cantidad.
-  tierMinQty     Decimal?  @map("tier_min_qty") @db.Decimal(14, 3)
-  rounding       String?
-  lastRunAt      DateTime? @map("last_run_at") @db.Timestamptz(6)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  tenant         Tenant    @relation(fields: [tenantId], references: [id])
-  priceList      PriceList @relation(fields: [priceListId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tierMinQty        Decimal?  @map("tier_min_qty") @db.Decimal(14, 3)
+  rounding          String?
+  lastRunAt         DateTime? @map("last_run_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  priceList         PriceList @relation(fields: [priceListId, tenantId], references: [id, tenantId], onDelete: Cascade)
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -541,32 +553,32 @@ model Sale {
 }
 
 model SaleLine {
-  id             String  @id @default(uuid()) @db.Uuid
-  tenantId       String  @map("tenant_id") @db.Uuid
-  saleId         String  @map("sale_id") @db.Uuid
-  productId      String  @map("product_id") @db.Uuid
-  productLotId   String? @map("product_lot_id") @db.Uuid
-  barcode        String
-  description    String
-  quantity       Decimal @db.Decimal(14, 3)
+  id              String           @id @default(uuid()) @db.Uuid
+  tenantId        String           @map("tenant_id") @db.Uuid
+  saleId          String           @map("sale_id") @db.Uuid
+  productId       String           @map("product_id") @db.Uuid
+  productLotId    String?          @map("product_lot_id") @db.Uuid
+  barcode         String
+  description     String
+  quantity        Decimal          @db.Decimal(14, 3)
   // listPrice y discountAmount se guardan aunque sean derivables: son la unica
   // forma de mostrar despues cuanto se desconto, porque las promos cambian.
-  listPrice      Decimal @map("list_price") @db.Decimal(14, 2)
-  unitPrice      Decimal @map("unit_price") @db.Decimal(14, 2)
+  listPrice       Decimal          @map("list_price") @db.Decimal(14, 2)
+  unitPrice       Decimal          @map("unit_price") @db.Decimal(14, 2)
   // Costo unitario del producto al momento de vender (`Product.costPrice`). Se
   // congela acá para calcular el margen real de la venta aunque el costo cambie
   // después. Nulo en ventas viejas y en productos sin costo cargado.
-  unitCost       Decimal? @map("unit_cost") @db.Decimal(14, 2)
-  discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(14, 2)
-  promotionId    String? @map("promotion_id") @db.Uuid
-  promotionName  String? @map("promotion_name")
-  taxRate        Decimal @default(21) @map("tax_rate") @db.Decimal(5, 2)
-  lineSubtotal   Decimal @map("line_subtotal") @db.Decimal(14, 2)
-  lineTax        Decimal @map("line_tax") @db.Decimal(14, 2)
-  lineTotal      Decimal @map("line_total") @db.Decimal(14, 2)
-  tenant         Tenant  @relation(fields: [tenantId], references: [id])
-  sale           Sale    @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
-  product        Product @relation(fields: [productId, tenantId], references: [id, tenantId])
+  unitCost        Decimal?         @map("unit_cost") @db.Decimal(14, 2)
+  discountAmount  Decimal          @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  promotionId     String?          @map("promotion_id") @db.Uuid
+  promotionName   String?          @map("promotion_name")
+  taxRate         Decimal          @default(21) @map("tax_rate") @db.Decimal(5, 2)
+  lineSubtotal    Decimal          @map("line_subtotal") @db.Decimal(14, 2)
+  lineTax         Decimal          @map("line_tax") @db.Decimal(14, 2)
+  lineTotal       Decimal          @map("line_total") @db.Decimal(14, 2)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  sale            Sale             @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product         Product          @relation(fields: [productId, tenantId], references: [id, tenantId])
   creditNoteLines CreditNoteLine[]
 
   @@unique([id, tenantId])
@@ -842,22 +854,22 @@ model ProductStockRule {
 }
 
 model Supplier {
-  id               String            @id @default(uuid()) @db.Uuid
-  tenantId         String            @map("tenant_id") @db.Uuid
+  id               String                    @id @default(uuid()) @db.Uuid
+  tenantId         String                    @map("tenant_id") @db.Uuid
   name             String
-  legalName        String?           @map("legal_name")
-  taxId            String?           @map("tax_id")
+  legalName        String?                   @map("legal_name")
+  taxId            String?                   @map("tax_id")
   email            String?
   phone            String?
   address          String?
   // Cuenta corriente con el proveedor. Positivo = nosotros le debemos a él.
   // accountBalance es CACHE — la fuente de verdad es SupplierAccountMovement
   // (mismo criterio que Customer.accountBalance).
-  accountBalance   Decimal           @default(0) @map("account_balance") @db.Decimal(14, 2)
-  isActive         Boolean           @default(true) @map("is_active")
-  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  accountBalance   Decimal                   @default(0) @map("account_balance") @db.Decimal(14, 2)
+  isActive         Boolean                   @default(true) @map("is_active")
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant           Tenant                    @relation(fields: [tenantId], references: [id])
   lots             ProductLot[]
   purchaseInvoices PurchaseInvoice[]
   products         ProductSupplier[]
@@ -1022,6 +1034,11 @@ model Customer {
   email            String?
   phone            String?
   address          String?
+  // Condición frente al IVA de este cliente — junto con Tenant.condicionFiscal
+  // decide la letra del comprobante al venderle (ver fiscal.util.ts).
+  // "consumidor_final" es el default: es el caso del cliente de mostrador que
+  // nunca se dió de alta como Customer con un dato fiscal propio.
+  condicionFiscal  String                    @default("consumidor_final") @map("condicion_fiscal")
   priceListId      String?                   @map("price_list_id") @db.Uuid
   // Cuenta corriente. Sin límite (null) es crédito sin tope explícito; 0
   // bloquea la venta a cuenta corriente. accountBalance es CACHE — la fuente
@@ -1123,38 +1140,38 @@ model StockMovement {
 }
 
 model PurchaseInvoice {
-  id              String                    @id @default(uuid()) @db.Uuid
-  tenantId        String                    @map("tenant_id") @db.Uuid
-  supplierId      String                    @map("supplier_id") @db.Uuid
-  warehouseId     String                    @map("warehouse_id") @db.Uuid
-  createdById     String                    @map("created_by_id") @db.Uuid
-  invoiceType     PurchaseInvoiceType       @map("invoice_type")
+  id               String                    @id @default(uuid()) @db.Uuid
+  tenantId         String                    @map("tenant_id") @db.Uuid
+  supplierId       String                    @map("supplier_id") @db.Uuid
+  warehouseId      String                    @map("warehouse_id") @db.Uuid
+  createdById      String                    @map("created_by_id") @db.Uuid
+  invoiceType      PurchaseInvoiceType       @map("invoice_type")
   // Nulos mientras el estado es `received`: la mercadería ya entró a stock
   // pero todavía no llegó el papel fiscal del proveedor (ver "completar
   // factura"). `remitoNumber` es la referencia de ese remito, si lo hay.
-  pointOfSale     String?                   @map("point_of_sale")
-  invoiceNumber   String?                   @map("invoice_number")
-  remitoNumber    String?                   @map("remito_number")
-  issueDate       DateTime                  @map("issue_date") @db.Date
+  pointOfSale      String?                   @map("point_of_sale")
+  invoiceNumber    String?                   @map("invoice_number")
+  remitoNumber     String?                   @map("remito_number")
+  issueDate        DateTime                  @map("issue_date") @db.Date
   // Cuándo vence el pago. Informativo — no bloquea nada — pero es lo que
   // alimenta "vence esta semana" en Compras y en el escritorio.
-  dueDate         DateTime?                 @map("due_date") @db.Date
-  currency        String                    @default("ARS")
-  subtotal        Decimal                   @db.Decimal(14, 2)
-  taxTotal        Decimal                   @map("tax_total") @db.Decimal(14, 2)
-  otherTaxes      Json?                     @map("other_taxes")
-  otherTaxesTotal Decimal                   @default(0) @map("other_taxes_total") @db.Decimal(14, 2)
-  total           Decimal                   @db.Decimal(14, 2)
-  status          PurchaseInvoiceStatus     @default(draft)
-  notes           String?
-  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  tenant          Tenant                    @relation(fields: [tenantId], references: [id])
-  supplier        Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
-  warehouse       Warehouse                 @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
-  createdBy       User                      @relation(fields: [createdById], references: [id])
-  lines           PurchaseInvoiceLine[]
-  revisions       PurchaseInvoiceRevision[]
+  dueDate          DateTime?                 @map("due_date") @db.Date
+  currency         String                    @default("ARS")
+  subtotal         Decimal                   @db.Decimal(14, 2)
+  taxTotal         Decimal                   @map("tax_total") @db.Decimal(14, 2)
+  otherTaxes       Json?                     @map("other_taxes")
+  otherTaxesTotal  Decimal                   @default(0) @map("other_taxes_total") @db.Decimal(14, 2)
+  total            Decimal                   @db.Decimal(14, 2)
+  status           PurchaseInvoiceStatus     @default(draft)
+  notes            String?
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant           Tenant                    @relation(fields: [tenantId], references: [id])
+  supplier         Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  warehouse        Warehouse                 @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  createdBy        User                      @relation(fields: [createdById], references: [id])
+  lines            PurchaseInvoiceLine[]
+  revisions        PurchaseInvoiceRevision[]
   accountMovements SupplierAccountMovement[]
 
   @@unique([id, tenantId])
@@ -1181,27 +1198,34 @@ model PurchaseInvoiceRevision {
 }
 
 model PurchaseInvoiceLine {
-  id           String          @id @default(uuid()) @db.Uuid
-  tenantId     String          @map("tenant_id") @db.Uuid
-  invoiceId    String          @map("invoice_id") @db.Uuid
-  productId    String          @map("product_id") @db.Uuid
-  productLotId String?         @map("product_lot_id") @db.Uuid
-  barcode      String
-  description  String
-  quantity     Decimal         @db.Decimal(14, 3)
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @map("tenant_id") @db.Uuid
+  invoiceId       String          @map("invoice_id") @db.Uuid
+  productId       String          @map("product_id") @db.Uuid
+  productLotId    String?         @map("product_lot_id") @db.Uuid
+  barcode         String
+  description     String
+  quantity        Decimal         @db.Decimal(14, 3)
   // Factor congelado al confirmar: si el producto cambia de bulto despues, las
   // reversiones de esta factura tienen que usar el factor original o el stock
   // queda descuadrado.
-  unitFactor   Decimal         @default(1) @map("unit_factor") @db.Decimal(14, 3)
-  unitCost     Decimal         @map("unit_cost") @db.Decimal(14, 2)
-  taxRate      Decimal         @default(0) @map("tax_rate") @db.Decimal(5, 2)
-  lineSubtotal Decimal         @map("line_subtotal") @db.Decimal(14, 2)
-  lineTax      Decimal         @map("line_tax") @db.Decimal(14, 2)
-  lineTotal    Decimal         @map("line_total") @db.Decimal(14, 2)
-  tenant       Tenant          @relation(fields: [tenantId], references: [id])
-  invoice      PurchaseInvoice @relation(fields: [invoiceId, tenantId], references: [id, tenantId])
-  product      Product         @relation(fields: [productId, tenantId], references: [id, tenantId])
-  productLot   ProductLot?     @relation(fields: [productLotId, tenantId], references: [id, tenantId])
+  unitFactor      Decimal         @default(1) @map("unit_factor") @db.Decimal(14, 3)
+  // Precio de lista, tal como lo dice el proveedor — nunca se pisa con el neto,
+  // así queda visible cuánto se bonificó. discountPercent es la bonificación
+  // (ej. "10+1" ≈ 9.09%, o un % que la factura ya trae) sobre ESE precio: lo que
+  // realmente cuesta el producto sale de unitCost * (1 - discountPercent/100),
+  // y es eso lo que se factura, se tributa y termina cargado como costo (ver
+  // PurchasesService.confirm).
+  unitCost        Decimal         @map("unit_cost") @db.Decimal(14, 2)
+  discountPercent Decimal         @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  taxRate         Decimal         @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  lineSubtotal    Decimal         @map("line_subtotal") @db.Decimal(14, 2)
+  lineTax         Decimal         @map("line_tax") @db.Decimal(14, 2)
+  lineTotal       Decimal         @map("line_total") @db.Decimal(14, 2)
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  invoice         PurchaseInvoice @relation(fields: [invoiceId, tenantId], references: [id, tenantId])
+  product         Product         @relation(fields: [productId, tenantId], references: [id, tenantId])
+  productLot      ProductLot?     @relation(fields: [productLotId, tenantId], references: [id, tenantId])
 
   @@unique([id, tenantId])
   @@index([tenantId, invoiceId])

@@ -286,12 +286,14 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
   const [logo, setLogo] = useState<string | null>(session.tenant.logo ?? null);
   const [tz, setTz] = useState(session.tenant.timezone ?? TIMEZONES[0].value);
   const [autoCost, setAutoCost] = useState(session.tenant.autoUpdateCostOnPurchase ?? false);
+  const [condicionFiscal, setCondicionFiscal] = useState(session.tenant.condicionFiscal ?? 'responsable_inscripto');
   const [state, setState] = useState<'idle' | 'saving' | 'ok'>('idle');
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const dirty = name.trim() !== session.tenant.name || logo !== (session.tenant.logo ?? null)
-    || tz !== (session.tenant.timezone ?? TIMEZONES[0].value) || autoCost !== (session.tenant.autoUpdateCostOnPurchase ?? false);
+    || tz !== (session.tenant.timezone ?? TIMEZONES[0].value) || autoCost !== (session.tenant.autoUpdateCostOnPurchase ?? false)
+    || condicionFiscal !== (session.tenant.condicionFiscal ?? 'responsable_inscripto');
 
   async function pickLogo(file: File | undefined) {
     if (!file) return;
@@ -308,7 +310,7 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
     setState('saving');
     setError('');
     try {
-      await api('/auth/tenant', { method: 'PATCH', body: JSON.stringify({ name, logo, timezone: tz, autoUpdateCostOnPurchase: autoCost }) }, session.accessToken);
+      await api('/auth/tenant', { method: 'PATCH', body: JSON.stringify({ name, logo, timezone: tz, autoUpdateCostOnPurchase: autoCost, condicionFiscal }) }, session.accessToken);
       await onSaved();
       setState('ok');
       setTimeout(() => setState('idle'), 1800);
@@ -352,7 +354,19 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
               {TIMEZONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </Select>
           </Field>
+          <Field label="Condición frente al IVA" htmlFor="emp-condicion" hint="define qué comprobantes podés emitir">
+            <Select id="emp-condicion" value={condicionFiscal} onChange={e => setCondicionFiscal(e.target.value)}>
+              <option value="responsable_inscripto">Responsable Inscripto</option>
+              <option value="monotributista">Monotributista</option>
+              <option value="exento">Exento</option>
+            </Select>
+          </Field>
         </div>
+
+        <p className="text-chico text-muted-foreground">
+          Con esto y la condición fiscal de cada cliente se calcula la letra del comprobante (A/B/C) al vender. ARCA
+          todavía no está conectado: los comprobantes salen internos, sin CAE, hasta que se habilite.
+        </p>
 
         <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
           <input type="checkbox" checked={autoCost} onChange={e => setAutoCost(e.target.checked)} className="mt-0.5 size-4" />

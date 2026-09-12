@@ -131,23 +131,27 @@ export class CreditNotesService {
       const totalNc = r2(subtotal + taxTotal);
       if (totalNc <= 0) throw new UnprocessableEntityException('La devolución no tiene monto');
 
-      // Numeración interna, mismo patrón atómico que las ventas.
+      // Una NC tiene que llevar la misma letra que la factura que corrige (una
+      // "NC A" no numera junto a una "NC B"), así que la secuencia es propia
+      // por letra — de ahí el prefijo, distinto de la secuencia de la venta
+      // misma aunque compartan letra.
       const pointOfSale = venta.pointOfSale;
+      const docType = `credit_note_${venta.docType}`;
       await tx.saleSequence.upsert({
-        where: { tenantId_docType_pointOfSale: { tenantId, docType: 'credit_note', pointOfSale } },
-        create: { tenantId, docType: 'credit_note', pointOfSale, lastNumber: 0 },
+        where: { tenantId_docType_pointOfSale: { tenantId, docType, pointOfSale } },
+        create: { tenantId, docType, pointOfSale, lastNumber: 0 },
         update: {},
       });
       const [{ last_number: number }] = await tx.$queryRaw<Array<{ last_number: number }>>`
         UPDATE sale_sequences SET last_number = last_number + 1
-        WHERE tenant_id = ${tenantId}::uuid AND doc_type = 'credit_note' AND point_of_sale = ${pointOfSale}
+        WHERE tenant_id = ${tenantId}::uuid AND doc_type = ${docType} AND point_of_sale = ${pointOfSale}
         RETURNING last_number
       `;
 
       const nota = await tx.creditNote.create({
         data: {
           tenantId, saleId, warehouseId: venta.warehouseId, customerId: venta.customerId, userId: user.id,
-          shiftId: turno?.id ?? null, pointOfSale, number, reason, refundMethod, subtotal, taxTotal, total: totalNc,
+          shiftId: turno?.id ?? null, docType: venta.docType, pointOfSale, number, reason, refundMethod, subtotal, taxTotal, total: totalNc,
         },
       });
 

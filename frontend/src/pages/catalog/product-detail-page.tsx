@@ -148,6 +148,18 @@ export function ProductDetailPage() {
   // `lots` se carga para futuros usos (edición de lote); hoy no se lista suelto.
   void lots;
 
+  // Comparador de proveedores: el más barato primero, los que todavía no
+  // tienen costo cargado al final (no son "gratis", son un dato que falta).
+  const sortedSuppliers = useMemo(() => {
+    const list = product?.suppliers ?? [];
+    return [...list].sort((a, b) => {
+      const costA = a.lastCost ? Number(a.lastCost) : Infinity;
+      const costB = b.lastCost ? Number(b.lastCost) : Infinity;
+      return costA - costB;
+    });
+  }, [product?.suppliers]);
+  const cheapestSupplierId = sortedSuppliers.find(s => s.lastCost)?.supplierId;
+
   const branchRuleDirty = JSON.stringify(branchRule) !== JSON.stringify(branchRuleBase);
   const dirty = useMemo(
     () => JSON.stringify(form) !== JSON.stringify(baseline) || branchRuleDirty,
@@ -629,8 +641,8 @@ export function ProductDetailPage() {
         )}
       </ModuleSection>
 
-      <ModuleSection title="Proveedores" description="Quién te vende este producto. Se completa solo al registrar compras y podés agregar más a mano. La ★ marca a quién pedirle al reponer.">
-        {(product?.suppliers ?? []).length > 0 && (
+      <ModuleSection title="Proveedores" description="Quién te vende este producto y a qué costo — ordenados del más barato al más caro. La ★ marca a quién pedirle al reponer, y no siempre coincide con el más barato: a veces pesa más la entrega o la confianza.">
+        {sortedSuppliers.length > 0 && (
           <Table>
             <TableHeader>
               <TableRow>
@@ -642,7 +654,7 @@ export function ProductDetailPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(product?.suppliers ?? []).map(s => {
+              {sortedSuppliers.map(s => {
                 const editing = editSupplierId === s.supplierId;
                 return (
                   <TableRow key={s.id}>
@@ -667,9 +679,16 @@ export function ProductDetailPage() {
                       ) : null}
                     </TableCell>
                     <TableCell className="text-right">
-                      {editing
-                        ? <Input type="number" min="0" step="0.01" value={editSupplier.cost} onChange={e => setEditSupplier(f => ({ ...f, cost: e.target.value }))} className="h-8 max-w-28 text-right" />
-                        : (s.lastCost ? money(Number(s.lastCost)) : <span className="text-placeholder">—</span>)}
+                      {editing ? (
+                        <Input type="number" min="0" step="0.01" value={editSupplier.cost} onChange={e => setEditSupplier(f => ({ ...f, cost: e.target.value }))} className="h-8 max-w-28 text-right" />
+                      ) : s.lastCost ? (
+                        <div className="flex items-center justify-end gap-2">
+                          {sortedSuppliers.length > 1 && s.supplierId === cheapestSupplierId && <Badge variant="success">Más barato</Badge>}
+                          {money(Number(s.lastCost))}
+                        </div>
+                      ) : (
+                        <span className="text-placeholder">—</span>
+                      )}
                     </TableCell>
                     <TableCell>{s.lastPurchaseAt ? fecha(s.lastPurchaseAt) : <span className="text-placeholder">a mano</span>}</TableCell>
                     {puedeEditar && (

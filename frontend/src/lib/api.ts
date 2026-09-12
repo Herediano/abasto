@@ -96,7 +96,7 @@ export type Session = {
     /** ¿Puede mirar otras sucursales además de la suya? */
     canNavigateBranches?: boolean;
   };
-  tenant: { id: string; name: string; logo?: string | null; timezone?: string; autoUpdateCostOnPurchase?: boolean };
+  tenant: { id: string; name: string; logo?: string | null; timezone?: string; autoUpdateCostOnPurchase?: boolean; plantilla?: string; condicionFiscal?: string };
 };
 
 export type Permission = { key: string; area: string; label: string; dangerous: boolean };
@@ -351,6 +351,7 @@ export type Customer = {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
+  condicionFiscal?: string;
   priceListId?: string | null;
   priceListName?: string | null;
   creditLimit?: string | null;
@@ -530,7 +531,7 @@ export type PurchaseInvoice = {
   total: string;
   notes?: string | null;
   supplier?: { name: string };
-  lines: Array<{ productId: string; productLotId?: string | null; barcode: string; description?: string | null; quantity: string; unitFactor?: string; unitCost: string; taxRate: string }>;
+  lines: Array<{ productId: string; productLotId?: string | null; barcode: string; description?: string | null; quantity: string; unitFactor?: string; unitCost: string; discountPercent?: string; taxRate: string }>;
 };
 
 export type SupplierAccountMovement = {
@@ -579,6 +580,9 @@ export type Sale = {
   total: string;
   /** Recargo/descuento por medio de pago. Lo que se cobró es total + surchargeTotal. */
   surchargeTotal?: string;
+  /** null = sin autorizar todavía por ARCA (hoy siempre, ver fiscal.util.ts en el backend). */
+  cae?: string | null;
+  caeExpiresAt?: string | null;
   occurredAt: string;
   lineCount?: number;
 };

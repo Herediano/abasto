@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen, SummaryLine } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
+import { TicketPrint, type TicketData } from '@/components/ticket-print';
 import { VentasChart } from '@/components/ventas-chart';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
@@ -20,7 +21,12 @@ import { fechaHora, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
 const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente', mixed: 'Varios medios' };
-const comprobante = (s: { pointOfSale: string; number: number }) => `${s.pointOfSale}-${String(s.number).padStart(8, '0')}`;
+// Sin letra (ventas de antes de resolverla, o docType "internal") se muestra
+// sólo el número; con letra real (A/B/C) se antepone, como en Compras.
+const comprobante = (s: { docType?: string; pointOfSale: string; number: number }) => {
+  const numero = `${s.pointOfSale}-${String(s.number).padStart(8, '0')}`;
+  return s.docType && s.docType.length === 1 ? `${s.docType} ${numero}` : numero;
+};
 
 const REFUND_LABEL: Record<string, string> = { cash: 'Efectivo del turno', account: 'Crédito a cuenta corriente' };
 
@@ -38,6 +44,7 @@ export function SalesHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [detalle, setDetalle] = useState<SaleDetail | null>(null);
+  const [ticket, setTicket] = useState<TicketData | null>(null);
   const [notas, setNotas] = useState<CreditNote[]>([]);
   const [anulando, setAnulando] = useState<Sale | null>(null);
   const [motivo, setMotivo] = useState('');
@@ -142,6 +149,7 @@ export function SalesHistoryPage() {
 
   return (
     <>
+      <TicketPrint ticket={ticket} tenantName={session!.tenant.name} />
       <ModuleScreen
         title="Ventas"
         actions={<ExportMenu path="/sales" params={exportParams} filename="ventas" />}
@@ -223,7 +231,10 @@ export function SalesHistoryPage() {
                   <TableBody>
                     {items.map(s => (
                       <TableRow key={s.id}>
-                        <TableCell className="font-mono text-chico">{comprobante(s)}</TableCell>
+                        <TableCell className="font-mono text-chico">
+                          {comprobante(s)}
+                          {!s.cae && <div className="font-sans text-micro text-muted-foreground">CAE pendiente</div>}
+                        </TableCell>
                         <TableCell className="whitespace-nowrap">{fechaHora(s.occurredAt)}</TableCell>
                         <TableCell>{s.customerName ?? <span className="text-muted-foreground">Consumidor final</span>}</TableCell>
                         <TableCell>{PAGOS[s.paymentMethod] ?? s.paymentMethod}</TableCell>
@@ -334,6 +345,19 @@ export function SalesHistoryPage() {
             </div>
           )}
           <DialogFooter>
+            {detalle && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setTicket({
+                  docType: detalle.docType, pointOfSale: detalle.pointOfSale, number: detalle.number, occurredAt: detalle.occurredAt,
+                  customerName: detalle.customerName, subtotal: detalle.subtotal, taxTotal: detalle.taxTotal, total: detalle.total,
+                  surchargeTotal: detalle.surchargeTotal, lines: detalle.lines, payments: detalle.payments,
+                })}
+              >
+                <Receipt /> Imprimir
+              </Button>
+            )}
             {puedeDevolver && detalle?.status === 'confirmed' && (
               <Button
                 type="button"

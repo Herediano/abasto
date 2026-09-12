@@ -7,6 +7,7 @@ import { PermissionGuard } from './permission.guard';
 import { AuthRequest } from './auth.types';
 import { RequirePermission } from './require-permission.decorator';
 import { sendExport } from './export.util';
+import { CUSTOMER_CONDICIONES_FISCALES, type CustomerCondicionFiscal } from './fiscal.util';
 
 /**
  * El modelo Customer existía desde el principio pero nunca tuvo pantalla. Se
@@ -18,7 +19,7 @@ import { sendExport } from './export.util';
 export class CustomersController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  private async parse(tenantId: string, body: Record<string, unknown>, actual?: { priceListId: string | null; creditLimit: Prisma.Decimal | null }) {
+  private async parse(tenantId: string, body: Record<string, unknown>, actual?: { priceListId: string | null; creditLimit: Prisma.Decimal | null; condicionFiscal?: string }) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) throw new BadRequestException('El nombre es obligatorio');
     const priceListId = body.priceListId === null || body.priceListId === ''
@@ -34,6 +35,10 @@ export class CustomersController {
       ? null
       : body.creditLimit === undefined ? (actual?.creditLimit !== null && actual?.creditLimit !== undefined ? Number(actual.creditLimit) : null) : Number(body.creditLimit);
     if (creditLimit !== null && (!Number.isFinite(creditLimit) || creditLimit < 0)) throw new BadRequestException('El límite de crédito no puede ser negativo');
+    const condicionFiscal = typeof body.condicionFiscal === 'string'
+      ? body.condicionFiscal
+      : actual?.condicionFiscal ?? 'consumidor_final';
+    if (!CUSTOMER_CONDICIONES_FISCALES.includes(condicionFiscal as CustomerCondicionFiscal)) throw new BadRequestException('Condición frente al IVA no reconocida');
     return {
       name,
       legalName: texto(body.legalName),
@@ -43,6 +48,7 @@ export class CustomersController {
       address: texto(body.address),
       priceListId,
       creditLimit,
+      condicionFiscal,
     };
   }
 

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import { cotizar, type LineaPedida } from './sale-pricing.util';
 import { registrarMovimientoCuenta } from './cuenta-corriente.util';
+import { authorizeFiscal, resolveComprobanteType, type CustomerCondicionFiscal, type TenantCondicionFiscal } from './fiscal.util';
 
 const FORMAS_PAGO = ['cash', 'card', 'transfer', 'qr', 'account'] as const;
 const PUNTO_VENTA_DEFAULT = '0001';
@@ -54,6 +55,18 @@ export class SalesService {
     const general = await this.prisma.priceList.findFirst({ where: { tenantId, isDefault: true, branchId: null } });
     if (!general) throw new UnprocessableEntityException('No hay una lista de precios general por defecto configurada');
     return general.id;
+  }
+
+  /** La letra del comprobante: la condición fiscal de la empresa contra la del cliente (ver fiscal.util.ts). */
+  private async resolveDocType(tenantId: string, customerId: string | null): Promise<string> {
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { condicionFiscal: true } });
+    const customerCondicion = customerId
+      ? (await this.prisma.customer.findFirst({ where: { id: customerId, tenantId }, select: { condicionFiscal: true } }))?.condicionFiscal
+      : null;
+    return resolveComprobanteType(
+      tenant.condicionFiscal as TenantCondicionFiscal,
+      (customerCondicion as CustomerCondicionFiscal | undefined) ?? 'consumidor_final',
+    );
   }
 
   private parseLineas(body: Record<string, unknown>): LineaPedida[] {
@@ -155,7 +168,7 @@ export class SalesService {
     const priceListId = await this.listaDelCliente(tenantId, customerId, user.branchId);
     const lineas = this.parseLineas(body);
     const pointOfSale = typeof body.pointOfSale === 'string' && body.pointOfSale ? body.pointOfSale : PUNTO_VENTA_DEFAULT;
-    const docType = 'internal';
+    const docType = await this.resolveDocType(tenantId, customerId);
 
     const cotizadas = await cotizar(this.prisma, tenantId, priceListId, lineas);
     const sinPrecio = cotizadas.filter(c => c.listPrice <= 0);
@@ -209,6 +222,11 @@ export class SalesService {
           occurredAt: new Date(),
         },
       });
+
+      // Hoy no hace nada (ver fiscal.util.ts): deja cae/caeExpiresAt en null y
+      // la venta queda "interna" hasta que se conecte ARCA de verdad.
+      const fiscal = await authorizeFiscal({ tenantId, docType, pointOfSale, number });
+      if (fiscal.cae) await tx.sale.update({ where: { id: venta.id }, data: { cae: fiscal.cae, caeExpiresAt: fiscal.caeExpiresAt } });
 
       await tx.salePayment.createMany({
         data: pagos.map(p => ({ tenantId, saleId: venta.id, method: p.method, amount: p.amount, surchargeAmount: p.surchargeAmount, reference: p.reference })),

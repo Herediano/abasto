@@ -22,6 +22,7 @@ type Panel = {
   porCajero: { name: string; total: number; count: number }[];
   porSucursal: { warehouse: string; branch: string; total: number; count: number }[];
   masVendidos: { name: string; qty: number; revenue: number; margin: number | null }[];
+  sinRotacion: { name: string; stock: number; lastSaleAt: string | null; valorizado: number | null }[];
   stockValorizado: number | null;
   arqueosConDiferencia: { id: string; cashRegister: string; closedBy: string; closedAt: string | null; difference: number }[];
   cuentasCorrientes: { id: string; name: string; balance: number; creditLimit: number | null }[];
@@ -185,6 +186,37 @@ export function ReportesPage() {
                 ))}
               </TableBody>
             </Table>
+          </ModuleSection>
+
+          <ModuleSection
+            title="Sin rotación"
+            description="Tienen stock pero no se vendieron ni una vez en este rango — plata parada en la góndola."
+            actions={data.sinRotacion.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, section: 'sinRotacion' }} filename="sin-rotacion" /> : undefined}
+          >
+            {data.sinRotacion.length === 0 ? (
+              <p className="text-chico text-muted-foreground">Todo lo que tiene stock se vendió al menos una vez en este rango.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead className="text-right">Stock</TableHead>
+                    <TableHead>Última venta</TableHead>
+                    {data.verPlata && <TableHead className="text-right">Valorizado</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.sinRotacion.map((r, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{r.name}</TableCell>
+                      <TableCell className="text-right tabular">{r.stock}</TableCell>
+                      <TableCell>{r.lastSaleAt ? fecha(r.lastSaleAt) : <span className="text-muted-foreground">Nunca</span>}</TableCell>
+                      {data.verPlata && <TableCell className="text-right tabular">{r.valorizado != null ? money(r.valorizado) : '—'}</TableCell>}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </ModuleSection>
         </div>
       ) : view === 'caja' ? (
