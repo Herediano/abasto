@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Vault } from '@phosphor-icons/react';
+import { Receipt, Vault } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CashShiftReport } from '@/components/cash-shift-report';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ExportMenu } from '@/components/export-menu';
@@ -35,6 +36,7 @@ export function ShiftsHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [detalle, setDetalle] = useState<CashShift | null>(null);
+  const [shiftToPrint, setShiftToPrint] = useState<CashShift | null>(null);
 
   useEffect(() => {
     api<CashRegister[]>('/cash-registers', {}, token).then(setRegisters).catch(() => {});
@@ -62,6 +64,7 @@ export function ShiftsHistoryPage() {
 
   return (
     <>
+      <CashShiftReport shift={shiftToPrint} tenantName={session!.tenant.name} onPrinted={() => setShiftToPrint(null)} />
       <ModuleScreen
         title="Turnos de caja"
         actions={<ExportMenu path="/cash-shifts" params={filtros} filename="turnos-de-caja" />}
@@ -211,6 +214,11 @@ export function ShiftsHistoryPage() {
             </div>
           )}
           <DialogFooter>
+            {detalle && (
+              <Button variant="outline" onClick={() => setShiftToPrint(detalle)}>
+                <Receipt /> Imprimir
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDetalle(null)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>

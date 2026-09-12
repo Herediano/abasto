@@ -124,6 +124,7 @@ model Tenant {
   purchaseOrderLines       PurchaseOrderLine[]
   productBarcodes          ProductBarcode[]
   productSuppliers         ProductSupplier[]
+  productComponents        ProductComponent[]
   productPriceHistory      ProductPriceHistory[]
   priceLists               PriceList[]
   productPrices            ProductPrice[]
@@ -823,12 +824,39 @@ model Product {
   priceTiers           PriceTier[]
   saleLines            SaleLine[]
   stockRules           ProductStockRule[]
+  // Si tiene filas acá, ES un kit/combo (ver ProductComponent). partOfKits es
+  // la relación inversa: en qué combos de OTROS productos aparece este como
+  // ingrediente — un producto es una cosa o la otra, nunca las dos (se valida
+  // en products.controller.ts, no en la base, para poder dar un mensaje claro).
+  components           ProductComponent[]    @relation("KitComponents")
+  partOfKits           ProductComponent[]    @relation("ComponentOf")
 
   @@unique([id, tenantId])
   @@unique([tenantId, barcode])
   @@unique([tenantId, sku])
   @@index([tenantId])
   @@map("products")
+}
+
+// Kit/combo: un producto que se vende como una unidad pero se arma con stock
+// de otros productos ("combo desayuno" = café + medialuna). El kit nunca
+// tiene stock propio ni se compra a un proveedor — vender o devolver un kit
+// mueve el stock de sus componentes (ver product-kit.util.ts). Depth 1 nada
+// más: un componente no puede ser a su vez un kit (se valida al alta, no acá).
+model ProductComponent {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  kitProductId       String   @map("kit_product_id") @db.Uuid
+  componentProductId String   @map("component_product_id") @db.Uuid
+  quantity           Decimal  @db.Decimal(14, 3)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant             Tenant   @relation(fields: [tenantId], references: [id])
+  kitProduct         Product  @relation("KitComponents", fields: [kitProductId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  componentProduct   Product  @relation("ComponentOf", fields: [componentProductId, tenantId], references: [id, tenantId])
+
+  @@unique([tenantId, kitProductId, componentProductId])
+  @@index([tenantId, componentProductId])
+  @@map("product_components")
 }
 
 // Mínimo / "reponer hasta" de un producto EN UNA SUCURSAL. Pisa el valor

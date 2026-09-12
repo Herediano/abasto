@@ -10,12 +10,13 @@ import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LabelPrint, type LabelData } from '@/components/label-print';
+import { LabelPrint, PER_PAGE_OPTIONS, type LabelItem, type PerPage } from '@/components/label-print';
 import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-screen';
+import { ProductSearchDialog } from '@/components/product-search-dialog';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ApiError, api, errorMessage, type Branch, type Category, type Lot, type PriceList, type PriceTier, type Product, type ProductSupplierLink, type StockItem, type Supplier } from '@/lib/api';
+import { ApiError, api, errorMessage, type Branch, type Category, type Lot, type PriceList, type PriceTier, type Product, type ProductComponentLink, type ProductSupplierLink, type StockItem, type Supplier } from '@/lib/api';
 import { fecha, money, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -112,7 +113,8 @@ export function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [printingLabel, setPrintingLabel] = useState(false);
   const [labelCopies, setLabelCopies] = useState('1');
-  const [label, setLabel] = useState<LabelData | null>(null);
+  const [labelPerPage, setLabelPerPage] = useState<PerPage>(6);
+  const [label, setLabel] = useState<LabelItem[] | null>(null);
   const [stock, setStock] = useState<StockItem[]>([]);
   const [lots, setLots] = useState<Lot[]>([]);
   const [tiers, setTiers] = useState<PriceTier[]>([]);
@@ -140,6 +142,14 @@ export function ProductDetailPage() {
   const [editSupplierId, setEditSupplierId] = useState('');
   const [editSupplier, setEditSupplier] = useState({ supplierCode: '', cost: '' });
   const [removeSupplierLink, setRemoveSupplierLink] = useState<ProductSupplierLink | null>(null);
+  // Kit/combo: componentes armados con otros productos (buscador + cantidad).
+  const [kitSearchOpen, setKitSearchOpen] = useState(false);
+  const [pendingComponent, setPendingComponent] = useState<Product | null>(null);
+  const [componentQty, setComponentQty] = useState('1');
+  const [savingComponent, setSavingComponent] = useState(false);
+  const [editComponentId, setEditComponentId] = useState('');
+  const [editComponentQty, setEditComponentQty] = useState('');
+  const [removeComponentLink, setRemoveComponentLink] = useState<ProductComponentLink | null>(null);
   // Reposición por sucursal (solo si el negocio tiene más de una): pisa el valor
   // general del producto. Se guarda con la misma barra "Guardar cambios".
   const [ruleBranchId, setRuleBranchId] = useState('');
@@ -395,6 +405,46 @@ export function ProductDetailPage() {
     } catch (err) {
       setError(errorMessage(err));
       setRemoveSupplierLink(null);
+    }
+  }
+
+  async function addComponent() {
+    if (!pendingComponent) return;
+    setSavingComponent(true);
+    setError('');
+    try {
+      await api(`/products/${id}/components`, { method: 'POST', body: JSON.stringify({ componentProductId: pendingComponent.id, quantity: componentQty }) }, token);
+      setPendingComponent(null);
+      setComponentQty('1');
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingComponent(false);
+    }
+  }
+
+  async function patchComponent(componentId: string, quantity: string) {
+    setError('');
+    try {
+      await api(`/products/${id}/components/${componentId}`, { method: 'PATCH', body: JSON.stringify({ quantity }) }, token);
+      setEditComponentId('');
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function doRemoveComponent() {
+    if (!removeComponentLink) return;
+    setError('');
+    try {
+      await api(`/products/${id}/components/${removeComponentLink.id}`, { method: 'DELETE' }, token);
+      setRemoveComponentLink(null);
+      await loadProduct();
+    } catch (err) {
+      setError(errorMessage(err));
+      setRemoveComponentLink(null);
     }
   }
 
@@ -745,6 +795,79 @@ export function ProductDetailPage() {
           </form>
         )}
       </ModuleSection>
+
+      <ModuleSection
+        title="Kit / combo"
+        description={
+          (product?.components ?? []).length > 0
+            ? 'Este producto no tiene stock propio: vender uno descuenta el de sus componentes, en la cantidad de acá abajo.'
+            : product?.isComponentOfKit
+              ? 'Ya es componente de otro combo, así que no puede tener sus propios componentes (un combo no puede contener otro combo).'
+              : 'Si este producto es un combo armado con otros (ej. "combo desayuno" = café + medialuna), sumá acá sus componentes.'
+        }
+      >
+        {(product?.components ?? []).length > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Componente</TableHead>
+                <TableHead className="text-right">Cantidad</TableHead>
+                {puedeEditar && <TableHead className="w-16" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(product?.components ?? []).map(c => {
+                const editing = editComponentId === c.id;
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <div className="font-medium">{c.componentName}</div>
+                      <div className="text-chico text-placeholder">{c.componentBarcode}</div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editing
+                        ? <Input type="number" min="0.001" step="0.001" value={editComponentQty} onChange={e => setEditComponentQty(e.target.value)} className="ml-auto h-8 max-w-24 text-right" />
+                        : quantity(c.quantity)}
+                    </TableCell>
+                    {puedeEditar && (
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {editing ? (
+                            <>
+                              <Button type="button" size="sm" variant="outline" onClick={() => void patchComponent(c.id, editComponentQty)}>Guardar</Button>
+                              <Button type="button" size="sm" variant="ghost" onClick={() => setEditComponentId('')}>Cancelar</Button>
+                            </>
+                          ) : (
+                            <>
+                              <button type="button" onClick={() => { setEditComponentId(c.id); setEditComponentQty(c.quantity); }} className="text-muted-foreground hover:text-foreground" aria-label={`Editar ${c.componentName}`}>
+                                <PencilSimple className="size-4" />
+                              </button>
+                              <button type="button" onClick={() => setRemoveComponentLink(c)} className="text-muted-foreground hover:text-destructive" aria-label={`Quitar ${c.componentName}`}>
+                                <Trash className="size-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+        {(product?.components ?? []).length > 0 && (
+          <p className="text-chico text-muted-foreground">
+            Costo sugerido del combo: {money((product?.components ?? []).reduce((sum, c) => sum + Number(c.quantity) * Number(c.componentCostPrice ?? 0), 0))}
+            {' '}(suma de sus componentes al costo de hoy — el costo del combo se sigue cargando a mano arriba, en Precios).
+          </p>
+        )}
+        {puedeEditar && !product?.isComponentOfKit && (
+          <Button type="button" variant="outline" size="sm" onClick={() => setKitSearchOpen(true)}>
+            <Plus /> Agregar componente
+          </Button>
+        )}
+      </ModuleSection>
     </div>
   );
 
@@ -856,7 +979,7 @@ export function ProductDetailPage() {
 
   return (
     <>
-      <LabelPrint label={label} onPrinted={() => setLabel(null)} />
+      <LabelPrint items={label} perPage={labelPerPage} onPrinted={() => setLabel(null)} />
       <ModuleScreen
         title={creando ? 'Nuevo producto' : (product?.name ?? '')}
         actions={
@@ -937,9 +1060,16 @@ export function ProductDetailPage() {
           {!product?.salePrice && (
             <Alert variant="destructive">Este producto no tiene precio de venta cargado — la etiqueta saldría sin precio.</Alert>
           )}
-          <Field label="Cantidad de copias" htmlFor="label-copies" hint="una por cada punta de góndola donde va este producto">
-            <Input id="label-copies" type="number" min="1" step="1" value={labelCopies} onChange={e => setLabelCopies(e.target.value)} />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Cantidad de copias" htmlFor="label-copies" hint="una por cada punta de góndola donde va este producto">
+              <Input id="label-copies" type="number" min="1" step="1" value={labelCopies} onChange={e => setLabelCopies(e.target.value)} />
+            </Field>
+            <Field label="Por hoja" htmlFor="label-per-page">
+              <Select id="label-per-page" value={labelPerPage} onChange={e => setLabelPerPage(Number(e.target.value) as PerPage)}>
+                {PER_PAGE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
+            </Field>
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setPrintingLabel(false)}>Cancelar</Button>
             <Button
@@ -947,10 +1077,10 @@ export function ProductDetailPage() {
               onClick={() => {
                 if (!product) return;
                 setPrintingLabel(false);
-                setLabel({
+                setLabel([{
                   name: product.name, brand: product.brand, barcode: product.barcode,
-                  price: Number(product.salePrice ?? 0), copies: Math.max(1, Number(labelCopies) || 1),
-                });
+                  price: product.salePrice ? Number(product.salePrice) : null, copies: Math.max(1, Number(labelCopies) || 1),
+                }]);
               }}
             >
               <Printer /> Imprimir
@@ -1006,6 +1136,47 @@ export function ProductDetailPage() {
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRemoveSupplierLink(null)}>Cancelar</Button>
             <Button type="button" variant="destructive" onClick={() => void doRemoveSupplier()}>
+              <Trash /> Quitar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ProductSearchDialog
+        open={kitSearchOpen}
+        onOpenChange={setKitSearchOpen}
+        titulo="Buscar componente"
+        accion="Elegir"
+        token={token}
+        onPick={p => { setKitSearchOpen(false); setComponentQty('1'); setPendingComponent(p); }}
+      />
+
+      <Dialog open={!!pendingComponent} onOpenChange={o => { if (!o) setPendingComponent(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Agregar «{pendingComponent?.name}»</DialogTitle>
+          </DialogHeader>
+          <Field label="Cantidad por combo" htmlFor="component-qty" hint="cuántas unidades de este producto lleva cada combo vendido">
+            <Input id="component-qty" type="number" min="0.001" step="0.001" autoFocus value={componentQty} onChange={e => setComponentQty(e.target.value)} />
+          </Field>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPendingComponent(null)}>Cancelar</Button>
+            <Button type="button" onClick={() => void addComponent()} disabled={savingComponent}>
+              {savingComponent ? <Spinner /> : <Plus />} Agregar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!removeComponentLink} onOpenChange={o => { if (!o) setRemoveComponentLink(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quitar «{removeComponentLink?.componentName}»</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Deja de formar parte de este combo. No afecta el stock ya vendido.</p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRemoveComponentLink(null)}>Cancelar</Button>
+            <Button type="button" variant="destructive" onClick={() => void doRemoveComponent()}>
               <Trash /> Quitar
             </Button>
           </DialogFooter>

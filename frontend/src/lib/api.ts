@@ -133,7 +133,19 @@ export type Product = {
   suppliers?: ProductSupplierLink[];
   priceHistory?: PriceHistoryRow[];
   stockRules?: ProductStockRule[];
+  components?: ProductComponentLink[];
+  /** Ya es ingrediente de otro combo — no puede tener sus propios componentes. */
+  isComponentOfKit?: boolean;
   activeBranchId?: string | null;
+};
+
+export type ProductComponentLink = {
+  id: string;
+  componentProductId: string;
+  componentName: string;
+  componentBarcode: string;
+  componentCostPrice?: string | null;
+  quantity: string;
 };
 
 export type ProductStockRule = {
@@ -379,6 +391,8 @@ export type CashShift = {
   openedAt: string;
   closedAt?: string | null;
   expectedCash?: string | null;
+  /** Cuánto debería haber en el cajón ahora mismo, sin cerrar el turno (para el reporte X). */
+  expectedCashNow?: string | null;
   countedCash?: string | null;
   cashDifference?: string | null;
   closingNotes?: string | null;

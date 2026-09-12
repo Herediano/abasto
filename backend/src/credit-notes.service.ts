@@ -2,6 +2,7 @@ import { ConflictException, Inject, Injectable, NotFoundException, Unprocessable
 import { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import { registrarMovimientoCuenta } from './cuenta-corriente.util';
+import { obtenerComponentes } from './product-kit.util';
 
 type Usuario = { id: string; tenantId: string; permissions: Set<string>; warehouseId?: string | null };
 
@@ -163,17 +164,27 @@ export class CreditNotesService {
             lineSubtotal: l.lineSubtotal, lineTax: l.lineTax, lineTotal: l.lineTotal,
           },
         });
-        // El stock devuelto reingresa al mismo depósito y lote de la venta.
-        const lockKey = [tenantId, l.productId, l.productLotId ?? 'no-lot', venta.warehouseId].join(':');
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
-        await tx.stockMovement.create({
-          data: {
-            tenantId, productId: l.productId, productLotId: l.productLotId, warehouseId: venta.warehouseId,
-            quantity: new Prisma.Decimal(l.quantity), movementType: 'adjustment_in',
-            referenceType: 'credit_note', referenceId: nota.id,
-            notes: `Nota de crédito ${comprobante(pointOfSale, number)} sobre venta ${comprobante(venta.pointOfSale, venta.number)}: ${reason}`,
-          },
-        });
+        // Un kit no tiene stock propio: lo que reingresa es el de sus
+        // componentes. Sin lote propio por componente (no queda registrado a
+        // nivel de línea qué lote exacto consumió cada uno en la venta
+        // original) — para productos con vencimiento es una aproximación
+        // consciente: la cantidad total cierra bien, el lote puntual no.
+        const componentes = await obtenerComponentes(tx, tenantId, l.productId);
+        const objetivos = componentes.length
+          ? componentes.map(comp => ({ productId: comp.componentProductId, productLotId: null as string | null, quantity: comp.quantity * l.quantity }))
+          : [{ productId: l.productId, productLotId: l.productLotId, quantity: l.quantity }];
+        for (const obj of objetivos) {
+          const lockKey = [tenantId, obj.productId, obj.productLotId ?? 'no-lot', venta.warehouseId].join(':');
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+          await tx.stockMovement.create({
+            data: {
+              tenantId, productId: obj.productId, productLotId: obj.productLotId, warehouseId: venta.warehouseId,
+              quantity: new Prisma.Decimal(obj.quantity), movementType: 'adjustment_in',
+              referenceType: 'credit_note', referenceId: nota.id,
+              notes: `Nota de crédito ${comprobante(pointOfSale, number)} sobre venta ${comprobante(venta.pointOfSale, venta.number)}: ${reason}`,
+            },
+          });
+        }
       }
 
       if (refundMethod === 'account') {

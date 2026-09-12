@@ -734,6 +734,8 @@ export class ProductsController {
         suppliers: { include: { supplier: { select: { name: true } } }, orderBy: [{ isPreferred: 'desc' }, { lastPurchaseAt: 'desc' }, { supplier: { name: 'asc' } }] },
         priceHistory: { orderBy: { createdAt: 'desc' }, take: 50 },
         stockRules: { include: { branch: { select: { id: true, name: true } } } },
+        components: { include: { componentProduct: { select: { name: true, barcode: true, costPrice: true } } }, orderBy: { createdAt: 'asc' } },
+        _count: { select: { partOfKits: true } },
       },
     });
     return {
@@ -742,6 +744,12 @@ export class ProductsController {
       category: undefined,
       suppliers: product.suppliers.map(s => ({ id: s.id, supplierId: s.supplierId, supplierName: s.supplier.name, supplierCode: s.supplierCode, lastCost: s.lastCost, lastPurchaseAt: s.lastPurchaseAt, isPreferred: s.isPreferred })),
       stockRules: product.stockRules.map(r => ({ branchId: r.branchId, branchName: r.branch.name, minStock: r.minStock, maxStock: r.maxStock })),
+      components: product.components.map(c => ({ id: c.id, componentProductId: c.componentProductId, componentName: c.componentProduct.name, componentBarcode: c.componentProduct.barcode, componentCostPrice: c.componentProduct.costPrice, quantity: c.quantity })),
+      // Si esto es > 0, el producto ya es ingrediente de otro kit — no puede
+      // tener sus propios componentes (ver addComponent): un kit no puede
+      // contener otro kit.
+      isComponentOfKit: product._count.partOfKits > 0,
+      _count: undefined,
       activeBranchId: request.user.branchId ?? null,
     };
   }
@@ -957,6 +965,50 @@ export class ProductsController {
       if (link.isPreferred) await this.ensurePreferredSupplier(tx, tenantId, id);
     });
     return { deleted: true, hadPurchases };
+  }
+
+  // Kit/combo: un producto sin stock propio armado con stock de otros (ver
+  // ProductComponent en schema.prisma). Depth 1: un componente no puede ser a
+  // su vez un kit, y un producto no puede ser kit y componente de otro a la
+  // vez — evita tener que expandir kits recursivamente al vender/devolver.
+
+  @Post(':id/components')
+  @RequirePermission('productos.editar')
+  async addComponent(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: { componentProductId?: unknown; quantity?: unknown }) {
+    const tenantId = request.user.tenantId;
+    if (id === body.componentProductId) throw new BadRequestException('Un producto no puede ser componente de sí mismo');
+    const kit = await this.prisma.product.findFirst({ where: { id, tenantId }, select: { id: true, _count: { select: { partOfKits: true } } } });
+    if (!kit) throw new BadRequestException('Producto no encontrado');
+    if (kit._count.partOfKits > 0) throw new ConflictException('Este producto ya es componente de otro combo; no puede tener sus propios componentes');
+    const componentProductId = typeof body.componentProductId === 'string' ? body.componentProductId : '';
+    const component = await this.prisma.product.findFirst({ where: { id: componentProductId, tenantId, isActive: true }, select: { id: true, _count: { select: { components: true } } } });
+    if (!component) throw new BadRequestException('Producto componente no encontrado');
+    if (component._count.components > 0) throw new ConflictException('Ese producto ya es un combo; no se puede armar un combo con otro combo adentro');
+    if (await this.prisma.productComponent.findFirst({ where: { tenantId, kitProductId: id, componentProductId }, select: { id: true } })) throw new ConflictException('Ese producto ya es parte de este combo');
+    const quantity = Number(body.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) throw new UnprocessableEntityException('La cantidad debe ser mayor a cero');
+    return this.prisma.productComponent.create({ data: { tenantId, kitProductId: id, componentProductId, quantity } });
+  }
+
+  @Patch(':id/components/:componentId')
+  @RequirePermission('productos.editar')
+  async updateComponent(@Req() request: AuthRequest, @Param('id') id: string, @Param('componentId') componentId: string, @Body() body: { quantity?: unknown }) {
+    const tenantId = request.user.tenantId;
+    const link = await this.prisma.productComponent.findFirst({ where: { id: componentId, tenantId, kitProductId: id } });
+    if (!link) throw new BadRequestException('El componente no está asociado al producto');
+    const quantity = Number(body.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) throw new UnprocessableEntityException('La cantidad debe ser mayor a cero');
+    return this.prisma.productComponent.update({ where: { id: componentId }, data: { quantity } });
+  }
+
+  @Delete(':id/components/:componentId')
+  @RequirePermission('productos.editar')
+  async removeComponent(@Req() request: AuthRequest, @Param('id') id: string, @Param('componentId') componentId: string) {
+    const tenantId = request.user.tenantId;
+    const link = await this.prisma.productComponent.findFirst({ where: { id: componentId, tenantId, kitProductId: id } });
+    if (!link) throw new BadRequestException('El componente no está asociado al producto');
+    await this.prisma.productComponent.delete({ where: { id: componentId } });
+    return { deleted: true };
   }
 
   @Get(':id/lots') @RequirePermission('stock.ver')

@@ -21,8 +21,9 @@ import { useAuth } from '@/lib/auth-context';
 import { BulkUpdate } from './bulk-update';
 import { TierBulkUpdate } from './tier-bulk-update';
 import { CalendarView } from './calendar-view';
+import { LabelsView } from './labels-view';
 
-type View = 'listas' | 'actualizar' | 'promociones' | 'calendario' | 'historial';
+type View = 'listas' | 'actualizar' | 'promociones' | 'etiquetas' | 'calendario' | 'historial';
 /** Dentro de "Actualizar": precio único (venta/costo/margen) o precio por cantidad (escalas). */
 type ModoActualizar = 'unico' | 'cantidad';
 /** Alcance de una promoción: sigue siendo de un solo eje. */
@@ -478,6 +479,7 @@ export function PricesPage() {
           { key: 'listas', label: 'Listas' },
           { key: 'actualizar', label: 'Actualizar' },
           { key: 'promociones', label: 'Promociones' },
+          { key: 'etiquetas', label: 'Etiquetas' },
           { key: 'calendario', label: 'Calendario' },
           { key: 'historial', label: 'Historial' },
         ]}
@@ -824,6 +826,10 @@ export function PricesPage() {
           )}
           </ModuleSection>
         </div>
+      )}
+
+      {view === 'etiquetas' && session && (
+        <LabelsView token={token} tenantId={session.tenant.id} />
       )}
 
       {view === 'calendario' && (

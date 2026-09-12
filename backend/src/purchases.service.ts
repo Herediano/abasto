@@ -22,6 +22,11 @@ export class PurchasesService {
     return n;
   }
 
+  /** Un kit/combo no se compra armado a un proveedor — se arma con el stock de sus componentes al venderlo. */
+  private async esKit(tenantId: string, productId: string) {
+    return (await this.prisma.productComponent.count({ where: { tenantId, kitProductId: productId } })) > 0;
+  }
+
   /** Bonificación de línea (0-100): "10+1" ≈ 9.09%, o el % que la factura ya trae. */
   private percent(value: unknown, field: string) {
     const n = Number(value ?? 0);
@@ -83,6 +88,7 @@ export class PurchasesService {
       const barcode = typeof line.barcode === 'string' ? line.barcode.trim() : '';
       const { product, scannedPack } = await this.resolveLineProduct(user.tenantId, { barcode });
       if (!product) throw new UnprocessableEntityException(`No existe un producto activo con barcode ${barcode || '(vacío)'}`);
+      if (await this.esKit(user.tenantId, product.id)) throw new UnprocessableEntityException(`${product.name} es un combo armado con otros productos; no se compra directo, se arma solo con el stock de sus componentes`);
       const quantity = this.money(line.quantity, 'quantity');
       const unitCost = this.money(line.unitCost, 'unitCost');
       const discountPercent = this.percent(line.discountPercent, 'discountPercent');
@@ -240,6 +246,7 @@ export class PurchasesService {
       const barcode = typeof raw.barcode === 'string' ? raw.barcode.trim() : '';
       const { product, scannedPack } = await this.resolveLineProduct(user.tenantId, { productId: productId || undefined, barcode });
       if (!product) throw new UnprocessableEntityException(`No existe el producto ${barcode || productId || '(vacío)'}`);
+      if (await this.esKit(user.tenantId, product.id)) throw new UnprocessableEntityException(`${product.name} es un combo armado con otros productos; no se compra directo, se arma solo con el stock de sus componentes`);
       const quantity = this.money(raw.quantity, 'quantity'); const unitCost = this.money(raw.unitCost, 'unitCost'); const discountPercent = this.percent(raw.discountPercent, 'discountPercent'); const taxRate = this.money(raw.taxRate ?? 0, 'taxRate');
       if (quantity <= 0) throw new UnprocessableEntityException('quantity debe ser mayor a cero');
       const productLotId = typeof raw.productLotId === 'string' && raw.productLotId ? raw.productLotId : undefined;

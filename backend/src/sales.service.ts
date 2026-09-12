@@ -4,6 +4,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { cotizar, type LineaPedida } from './sale-pricing.util';
 import { registrarMovimientoCuenta } from './cuenta-corriente.util';
 import { authorizeFiscal, resolveComprobanteType, type CustomerCondicionFiscal, type TenantCondicionFiscal } from './fiscal.util';
+import { obtenerComponentes } from './product-kit.util';
 
 const FORMAS_PAGO = ['cash', 'card', 'transfer', 'qr', 'account'] as const;
 const PUNTO_VENTA_DEFAULT = '0001';
@@ -242,10 +243,16 @@ export class SalesService {
         const producto = porId.get(c.productId);
         if (!producto) throw new UnprocessableEntityException('Un producto de la venta ya no existe');
 
+        // Un kit/combo no tiene stock ni lote propio: la línea se registra a
+        // su nombre (es lo que el cliente compró y lo que sale en el ticket),
+        // pero el stock que se mueve es el de sus componentes, más abajo.
+        const componentes = await obtenerComponentes(tx, tenantId, c.productId);
+        const esKit = componentes.length > 0;
+
         // Productos con vencimiento: se elige el lote que vence primero y tiene
         // stock (FEFO). Pedirselo al vendedor trabaria el mostrador.
         let productLotId: string | null = null;
-        if (producto.manejaVencimiento) {
+        if (!esKit && producto.manejaVencimiento) {
           productLotId = await this.loteFEFO(tx, tenantId, c.productId, user.warehouseId!, c.quantity);
           if (!productLotId) throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: `No hay un lote con stock suficiente de ${producto.name}` });
         }
@@ -261,12 +268,25 @@ export class SalesService {
           },
         });
 
-        // El stock se descuenta con la misma validacion que cualquier egreso.
-        await this.egreso(tx, tenantId, {
-          productId: c.productId, productLotId, warehouseId: user.warehouseId!, quantity: c.quantity,
-          movementType: 'sale_out', referenceType: 'sale', referenceId: venta.id,
-          notes: `Venta ${pointOfSale}-${String(number).padStart(8, '0')}`,
-        });
+        // El stock se descuenta con la misma validacion que cualquier egreso —
+        // del kit si es un producto común, o de cada componente (cantidad ×
+        // lo vendido) si es un combo.
+        const objetivos = esKit
+          ? componentes.map(comp => ({ productId: comp.componentProductId, name: comp.name, manejaVencimiento: comp.manejaVencimiento, quantity: comp.quantity * c.quantity }))
+          : [{ productId: c.productId, name: producto.name, manejaVencimiento: producto.manejaVencimiento, quantity: c.quantity }];
+
+        for (const obj of objetivos) {
+          let lotId = esKit ? null : productLotId;
+          if (esKit && obj.manejaVencimiento) {
+            lotId = await this.loteFEFO(tx, tenantId, obj.productId, user.warehouseId!, obj.quantity);
+            if (!lotId) throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: `No hay un lote con stock suficiente de ${obj.name}` });
+          }
+          await this.egreso(tx, tenantId, {
+            productId: obj.productId, productLotId: lotId, warehouseId: user.warehouseId!, quantity: obj.quantity,
+            movementType: 'sale_out', referenceType: 'sale', referenceId: venta.id,
+            notes: `Venta ${pointOfSale}-${String(number).padStart(8, '0')}${esKit ? ` (combo: ${producto.name})` : ''}`,
+          });
+        }
       }
 
       return tx.sale.findUniqueOrThrow({ where: { id: venta.id }, include: { lines: true, customer: { select: { name: true } } } });

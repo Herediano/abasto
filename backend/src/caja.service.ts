@@ -103,7 +103,7 @@ export class CajaService {
   }
 
   /** Total esperado en el cajón: fondo inicial + ventas en efectivo + ingresos − retiros − gastos. */
-  private async efectivoEsperado(tx: Prisma.TransactionClient, tenantId: string, turno: { id: string; openingCash: Prisma.Decimal }) {
+  private async efectivoEsperado(tx: Pick<Prisma.TransactionClient, 'salePayment' | 'cashMovement'>, tenantId: string, turno: { id: string; openingCash: Prisma.Decimal }) {
     const [ventasEfectivo, movimientos] = await Promise.all([
       tx.salePayment.aggregate({
         where: { tenantId, method: 'cash', sale: { shiftId: turno.id, status: 'confirmed' } },
@@ -132,6 +132,10 @@ export class CajaService {
       turno.closedById ? this.prisma.user.findUnique({ where: { id: turno.closedById }, select: { name: true } }) : Promise.resolve(null),
       this.prisma.cashRegister.findUnique({ where: { id: turno.cashRegisterId }, select: { id: true, name: true, warehouseId: true } }),
     ]);
+    // Para "Reporte X" (turno todavía abierto): el mismo cálculo que usa el
+    // cierre, pero sin cerrar nada — una foto de "cuánto debería haber ahora".
+    // En un turno ya cerrado da lo mismo que expectedCash (nada cambia después).
+    const expectedCashNow = await this.efectivoEsperado(this.prisma, user.tenantId, turno);
     return {
       ...turno,
       cashRegister,
@@ -140,6 +144,7 @@ export class CajaService {
       salesCount: cantidadVentas,
       totalsByMethod: porMedio.map(p => ({ method: p.method, total: Number(p._sum.amount ?? 0) })),
       movements: movimientos.map(m => ({ ...m, userName: m.user.name, user: undefined })),
+      expectedCashNow,
     };
   }
 

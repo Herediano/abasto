@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Field } from '@/components/field';
 import { ProductSearchDialog } from '@/components/product-search-dialog';
 import { SupervisorAuthDialog } from '@/components/supervisor-auth-dialog';
+import { CashShiftReport } from '@/components/cash-shift-report';
 import { TicketPrint, type TicketData } from '@/components/ticket-print';
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
@@ -101,6 +102,7 @@ export function PosPage() {
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [ticket, setTicket] = useState<TicketData | null>(null);
+  const [shiftToPrint, setShiftToPrint] = useState<CashShift | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [cobrando, setCobrando] = useState(false);
   const [cobrarOpen, setCobrarOpen] = useState(false);
@@ -500,6 +502,7 @@ export function PosPage() {
     // El cajero está acá todo el día y no tiene que ver nada más.
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <TicketPrint ticket={ticket} tenantName={session!.tenant.name} />
+      <CashShiftReport shift={shiftToPrint} tenantName={session!.tenant.name} onPrinted={() => setShiftToPrint(null)} />
       {/* Esto no es navegación: es el estado del turno, que el cajero necesita
           a la vista permanentemente. */}
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-2.5">
@@ -915,7 +918,12 @@ export function PosPage() {
                 <Button type="button" variant="destructive" onClick={() => setCajaView('cerrar')}>
                   <Lock /> Cerrar turno
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setCajaOpen(false)}>Cerrar panel</Button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShiftToPrint(shift)}>
+                    <Receipt /> Imprimir X
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setCajaOpen(false)}>Cerrar panel</Button>
+                </div>
               </DialogFooter>
             </>
           )}
@@ -976,6 +984,9 @@ export function PosPage() {
                 </div>
               )}
               <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShiftToPrint(closeResult)}>
+                  <Receipt /> Imprimir Z
+                </Button>
                 <Button type="button" onClick={terminarCierre}>Entendido</Button>
               </DialogFooter>
             </>
