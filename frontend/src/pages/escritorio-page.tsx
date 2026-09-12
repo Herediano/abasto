@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react';
 import { EyeSlash, Plus } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
-import ReactGridLayout, { noCompactor, useContainerWidth, type Compactor, type Layout } from 'react-grid-layout';
+import ReactGridLayout, { useContainerWidth, type Compactor, type Layout } from 'react-grid-layout';
 import { useEscritorioSummary } from '@/components/layout/escritorio-shell';
 import { LiveClock } from '@/components/live-clock';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
@@ -216,11 +216,187 @@ function layoutInvalido(items: readonly Caja[]): boolean {
   );
 }
 
-/** El tablero es un damero fijo: SIN gravedad ni compactación. Cada tarjeta
- *  queda EXACTAMENTE donde el usuario la suelta; sacar una de arriba no hace
- *  subir a las de abajo. `preventCollision` bloquea arrastrar/estirar sobre
- *  una celda ocupada (la tarjeta rebota) y `maxRows` frena en la fila 6. */
-const damero: Compactor = { ...noCompactor, preventCollision: true };
+/** El tablero es un damero fijo: SIN gravedad ni compactación global — una
+ *  tarjeta que no participa del arrastre/estirado en curso no se mueve ni un
+ *  pixel; sacar una de arriba no hace subir a las de abajo. Lo único que se
+ *  resuelve solo es el CAMINO de la tarjeta que se está moviendo o
+ *  agrandando: si pisa a otras, las empuja en esa misma dirección —en
+ *  cadena, si una empujada pisa a una tercera— hasta hacerles lugar. Si el
+ *  empuje se queda sin dónde ir (borde de la grilla o tope de `MAX_ROWS`), no
+ *  se bloquea todo el movimiento: se frena en el máximo que sí entra. Ver
+ *  `resolvePush`. */
+type Dir = 'right' | 'left' | 'down' | 'up';
+
+const rectsOverlap = (a: TilePos, b: TilePos) =>
+  a.col < b.col + b.w && a.col + a.w > b.col && a.row < b.row + b.h && a.row + a.h > b.row;
+
+const cellInBounds = (c: TilePos, cols: number, maxRows: number) =>
+  c.col >= 0 && c.row >= 0 && c.col + c.w <= cols && c.row + c.h <= maxRows;
+
+const sameRect = (a: TilePos, b: TilePos) => a.col === b.col && a.row === b.row && a.w === b.w && a.h === b.h;
+
+function pushAgainst(cell: TilePos, dir: Dir, ref: TilePos): TilePos {
+  switch (dir) {
+    case 'right':
+      return { ...cell, col: ref.col + ref.w };
+    case 'left':
+      return { ...cell, col: ref.col - cell.w };
+    case 'down':
+      return { ...cell, row: ref.row + ref.h };
+    case 'up':
+      return { ...cell, row: ref.row - cell.h };
+  }
+}
+
+/** Si empujar al costado (izquierda/derecha) no tiene lugar, el desvío es
+ *  hacia abajo; si el que no tenía lugar era abajo/arriba, el desvío es hacia
+ *  la derecha. Así, una tarjeta que no puede correrse más porque se acaba la
+ *  grilla en esa dirección no frena todo el estirado: busca lugar en el otro
+ *  eje antes de darse por vencida. */
+const REROUTE: Record<Dir, Dir> = { right: 'down', left: 'down', down: 'right', up: 'right' };
+
+/** Empuja `cell` contra `ref` en `dir`; si eso no entra en la grilla, prueba
+ *  la dirección de desvío (`REROUTE`) antes de rendirse. Devuelve la celda ya
+ *  empujada junto con la dirección que realmente hizo falta usar —la cadena
+ *  sigue en ESA, no necesariamente en `dir`— o `null` si ninguna de las dos
+ *  entra. */
+function pushWithReroute(
+  cell: TilePos,
+  dir: Dir,
+  ref: TilePos,
+  cols: number,
+  maxRows: number,
+): { cell: TilePos; dir: Dir } | null {
+  const directo = pushAgainst(cell, dir, ref);
+  if (cellInBounds(directo, cols, maxRows)) return { cell: directo, dir };
+  const desvio = REROUTE[dir];
+  const alterno = pushAgainst(cell, desvio, ref);
+  if (cellInBounds(alterno, cols, maxRows)) return { cell: alterno, dir: desvio };
+  return null;
+}
+
+/** Encadenado: lo que `from` acaba de pisar al llegar a su lugar nuevo se
+ *  empuja también —en la misma dirección, o desviado si esa no tiene lugar—
+ *  y así siguiendo. `false` si algún eslabón de la cadena no encuentra lugar
+ *  en ningún eje dentro de la grilla. Tope de pasos como cinturón extra:
+ *  con el tablero acotado (5×6) nunca debería hacer falta, pero evita que un
+ *  caso no previsto cuelgue el arrastre en vez de simplemente frenarlo. */
+function cascadePush(working: Map<string, TilePos>, from: TilePos, dir: Dir, cols: number, maxRows: number): boolean {
+  const queue: { cell: TilePos; dir: Dir }[] = [{ cell: from, dir }];
+  let guard = 500;
+  while (queue.length) {
+    if (guard-- <= 0) return false;
+    const { cell: ref, dir: refDir } = queue.shift()!;
+    for (const [key, cell] of working) {
+      if (cell.key === ref.key || !rectsOverlap(ref, cell)) continue;
+      const result = pushWithReroute(cell, refDir, ref, cols, maxRows);
+      if (!result) return false;
+      working.set(key, result.cell);
+      queue.push(result);
+    }
+  }
+  return true;
+}
+
+/** Un intento puntual: ¿entra `target` (la tarjeta en movimiento) empujando a
+ *  quien haga falta? Cada borde que creció respecto de `old` empuja, en esa
+ *  dirección (o desviado, ver `pushWithReroute`), a lo que todavía pise a
+ *  `target`. `null` si algún empuje no encuentra lugar en ningún eje — el
+ *  llamador decide qué hacer con eso (`pushToFit`). */
+function tryPush(rest: TilePos[], old: TilePos, target: TilePos, cols: number, maxRows: number): TilePos[] | null {
+  const working = new Map(rest.map(t => [t.key, t]));
+  const edges: { dir: Dir; grow: number }[] = [
+    { dir: 'right', grow: Math.max(0, target.col + target.w - (old.col + old.w)) },
+    { dir: 'left', grow: Math.max(0, old.col - target.col) },
+    { dir: 'down', grow: Math.max(0, target.row + target.h - (old.row + old.h)) },
+    { dir: 'up', grow: Math.max(0, old.row - target.row) },
+  ];
+  for (const { dir, grow } of edges) {
+    if (grow <= 0) continue;
+    for (const key of [...working.keys()]) {
+      const cell = working.get(key)!;
+      if (!rectsOverlap(target, cell)) continue;
+      const result = pushWithReroute(cell, dir, target, cols, maxRows);
+      if (!result) return null;
+      working.set(key, result.cell);
+      if (!cascadePush(working, result.cell, result.dir, cols, maxRows)) return null;
+    }
+  }
+  return [...working.values()];
+}
+
+/** Retrocede `attempt` un paso hacia `old` en el eje que corresponda: si el
+ *  eje no cambió de tamaño (traslación — arrastre), retrocede la posición; si
+ *  cambió de tamaño (estirado), angosta desde el borde que creció y deja fijo
+ *  el que no se movió. */
+function stepAxis(oldLo: number, oldHi: number, lo: number, hi: number): [number, number] {
+  if (lo === oldLo && hi === oldHi) return [lo, hi];
+  if (hi - lo === oldHi - oldLo) {
+    if (lo > oldLo) return [lo - 1, hi - 1];
+    if (lo < oldLo) return [lo + 1, hi + 1];
+    return [lo, hi];
+  }
+  if (lo === oldLo) return [lo, Math.max(hi - 1, lo)];
+  if (hi === oldHi) return [Math.min(lo + 1, hi), hi];
+  return [lo, hi];
+}
+
+function stepBack(old: TilePos, attempt: TilePos): TilePos {
+  const [col, colHi] = stepAxis(old.col, old.col + old.w, attempt.col, attempt.col + attempt.w);
+  const [row, rowHi] = stepAxis(old.row, old.row + old.h, attempt.row, attempt.row + attempt.h);
+  return { ...attempt, col, row, w: colHi - col, h: rowHi - row };
+}
+
+/** Busca el mayor tamaño/posición, entre `old` (donde estaba) y `target`
+ *  (donde el usuario la quiere), para el cual el empuje en cadena entra
+ *  completo en la grilla — achicando la diferencia de a un paso hasta que
+ *  algún intento cierre. `old` siempre cierra (ya era una posición válida),
+ *  así que la función termina; el tope de pasos es solo un cinturón extra. */
+function pushToFit(baseline: TilePos[], old: TilePos, target: TilePos, cols: number, maxRows: number): TilePos[] {
+  const rest = baseline.filter(t => t.key !== old.key);
+  let attempt = target;
+  let guard = cols + maxRows + 4;
+  while (guard-- > 0) {
+    if (cellInBounds(attempt, cols, maxRows)) {
+      const pushed = tryPush(rest, old, attempt, cols, maxRows);
+      if (pushed) return [...pushed, attempt];
+    }
+    if (sameRect(attempt, old)) return baseline;
+    attempt = stepBack(old, attempt);
+  }
+  return baseline;
+}
+
+/** Puente con react-grid-layout: identifica cuál tarjeta cambió respecto del
+ *  último tablero asentado (`baseline`) y le aplica `pushToFit`. Se compara
+ *  siempre contra ese último tablero asentado —no contra el tick anterior del
+ *  mismo arrastre— para que, si soltás donde ya no hace falta empujar a
+ *  nadie, las tarjetas corridas vuelvan solas a su lugar en vez de quedar
+ *  "pegadas" a donde las dejó un paso intermedio. Si ninguna tarjeta cambió
+ *  (o cambió más de una, cosa que no debería pasar en este tablero), se
+ *  devuelve el layout tal cual llegó. */
+function resolvePush(baseline: TilePos[], layout: Layout, cols: number, maxRows: number): Layout {
+  const byKey = new Map(baseline.map(t => [t.key, t]));
+  let moverKey: string | null = null;
+  for (const item of layout) {
+    const b = byKey.get(item.i);
+    if (b && (b.col !== item.x || b.row !== item.y || b.w !== item.w || b.h !== item.h)) {
+      if (moverKey) return layout;
+      moverKey = item.i;
+    }
+  }
+  if (!moverKey) return layout;
+  const old = byKey.get(moverKey);
+  const moved = layout.find(l => l.i === moverKey);
+  if (!old || !moved) return layout;
+  const target: TilePos = { key: moverKey, col: moved.x, row: moved.y, w: moved.w, h: moved.h };
+  const resolved = pushToFit(baseline, old, target, cols, maxRows);
+  const byResolved = new Map(resolved.map(t => [t.key, t]));
+  return layout.map(item => {
+    const r = byResolved.get(item.i);
+    return r ? { ...item, x: r.col, y: r.row, w: r.w, h: r.h } : item;
+  });
+}
 
 /** Tablero de fábrica: los módulos en su orden, fila por fila, dejando la
  *  última columna como flanco de vacíos. Es el punto de partida de toda
@@ -392,6 +568,18 @@ export function EscritorioPage() {
       maxH: MAX_ROWS,
     }));
   }, [tiles]);
+  // El compactor empuja contra el ÚLTIMO tablero asentado (`tiles`), no
+  // contra un tick anterior del mismo arrastre — de ahí la dependencia. Se
+  // recrea solo cuando `tiles` cambia (o sea, al soltar), así que durante un
+  // mismo gesto el punto de comparación queda fijo (ver `resolvePush`).
+  const compactor = useMemo<Compactor>(
+    () => ({
+      type: null,
+      allowOverlap: true,
+      compact: (layout, cols) => resolvePush(tiles, layout, cols, MAX_ROWS),
+    }),
+    [tiles],
+  );
   // Commit de un layout (lo que da react-grid-layout tras un drag o resize):
   // se guarda tal cual, sin reinterpretar nada — salvo el tope duro de apilado.
   const commit = (visual: Layout) => {
@@ -494,7 +682,7 @@ export function EscritorioPage() {
           key={gridNonce}
           layout={layoutFor}
           width={width}
-          compactor={damero}
+          compactor={compactor}
           gridConfig={{ cols: GRID_COLS, rowHeight: ROW_H, margin: [GAP, GAP], containerPadding: [0, 0], maxRows: MAX_ROWS }}
           dragConfig={{ cancel: '.tile-cancel', threshold: CLICK_SLOP_PX }}
           resizeConfig={{
