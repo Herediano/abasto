@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Package, PencilSimple, Plus, Star, Trash } from '@phosphor-icons/react';
+import { Package, PencilSimple, Plus, Printer, Star, Trash } from '@phosphor-icons/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LabelPrint, type LabelData } from '@/components/label-print';
 import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-screen';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
@@ -109,6 +110,9 @@ export function ProductDetailPage() {
   const soloLectura = creando ? !puedeCrear : !puedeEditar;
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [printingLabel, setPrintingLabel] = useState(false);
+  const [labelCopies, setLabelCopies] = useState('1');
+  const [label, setLabel] = useState<LabelData | null>(null);
   const [stock, setStock] = useState<StockItem[]>([]);
   const [lots, setLots] = useState<Lot[]>([]);
   const [tiers, setTiers] = useState<PriceTier[]>([]);
@@ -852,11 +856,15 @@ export function ProductDetailPage() {
 
   return (
     <>
+      <LabelPrint label={label} onPrinted={() => setLabel(null)} />
       <ModuleScreen
         title={creando ? 'Nuevo producto' : (product?.name ?? '')}
         actions={
           !creando && product && (
             <>
+              <Button variant="outline" onClick={() => { setLabelCopies('1'); setPrintingLabel(true); }}>
+                <Printer /> Imprimir etiqueta
+              </Button>
               {puedeEditar && (
                 <Button variant="outline" disabled={busy} onClick={() => void setActive(!product.isActive)}>
                   {product.isActive ? 'Desactivar' : 'Activar'}
@@ -920,6 +928,36 @@ export function ProductDetailPage() {
 
         {creando || view === 'general' ? generalTab : view === 'stock' ? stockTab : preciosTab}
       </ModuleScreen>
+
+      <Dialog open={printingLabel} onOpenChange={setPrintingLabel}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Imprimir etiqueta</DialogTitle>
+          </DialogHeader>
+          {!product?.salePrice && (
+            <Alert variant="destructive">Este producto no tiene precio de venta cargado — la etiqueta saldría sin precio.</Alert>
+          )}
+          <Field label="Cantidad de copias" htmlFor="label-copies" hint="una por cada punta de góndola donde va este producto">
+            <Input id="label-copies" type="number" min="1" step="1" value={labelCopies} onChange={e => setLabelCopies(e.target.value)} />
+          </Field>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPrintingLabel(false)}>Cancelar</Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!product) return;
+                setPrintingLabel(false);
+                setLabel({
+                  name: product.name, brand: product.brand, barcode: product.barcode,
+                  price: Number(product.salePrice ?? 0), copies: Math.max(1, Number(labelCopies) || 1),
+                });
+              }}
+            >
+              <Printer /> Imprimir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>

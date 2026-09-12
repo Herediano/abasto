@@ -37,7 +37,7 @@ export function TicketPrint({ ticket, tenantName }: { ticket: TicketData | null;
   const numero = `${ticket.pointOfSale}-${String(ticket.number).padStart(8, '0')}`;
 
   return (
-    <div className="print-ticket hidden print:block font-mono text-[11px] leading-snug text-black">
+    <div className="print-area print-ticket hidden print:block font-mono text-[11px] leading-snug text-black">
       <p className="text-center text-sm font-bold">{tenantName}</p>
       <p className="text-center">{letra ? `Comprobante ${letra}` : 'Comprobante interno'} {numero}</p>
       <p className="text-center">{fechaHora(ticket.occurredAt)}</p>
