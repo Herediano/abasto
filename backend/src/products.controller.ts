@@ -339,7 +339,7 @@ export class ProductsController {
           minStock: eff.minStock == null ? null : String(eff.minStock),
           maxStock: eff.maxStock == null ? null : String(eff.maxStock),
           branchOverride: eff.branchOverride,
-          suggestedOrder: suggestedOrder(currentStock, eff.maxStock, packSize),
+          suggestedOrder: suggestedOrder(currentStock, eff.maxStock, packSize, eff.minStock),
           preferredSupplierId: pref?.supplier.id ?? null,
           preferredSupplierName: pref?.supplier.name ?? null,
           preferredSupplierCode: pref?.supplierCode ?? null,

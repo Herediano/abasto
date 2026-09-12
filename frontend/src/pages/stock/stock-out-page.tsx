@@ -14,13 +14,6 @@ import { api, errorMessage, type Lot, type Product, type Warehouse } from '@/lib
 import { fecha } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
-// La transferencia sale por su propia pantalla (registra las dos puntas); acá
-// quedan sólo los egresos de una sola punta.
-const MOVEMENT_TYPES = [
-  ['sale_out', 'Venta'],
-  ['adjustment_out', 'Ajuste negativo'],
-] as const;
-
 export function StockOutPage() {
   const { session, can } = useAuth();
   const token = session!.accessToken;
@@ -31,7 +24,7 @@ export function StockOutPage() {
   const [error, setError] = useState('');
   const [product, setProduct] = useState<Product | null>(null);
   const [productLotId, setProductLotId] = useState('');
-  const [form, setForm] = useState({ warehouseId: '', quantity: '', movementType: 'sale_out' as string, notes: '' });
+  const [form, setForm] = useState({ warehouseId: '', quantity: '', notes: '' });
 
   const branchId = session?.user.branch?.id;
   useEffect(() => {
@@ -67,7 +60,7 @@ export function StockOutPage() {
     try {
       await api(
         '/stock/out',
-        { method: 'POST', body: JSON.stringify({ productId: product.id, productLotId: productLotId || undefined, warehouseId: form.warehouseId, quantity: Number(form.quantity), movementType: form.movementType, notes: form.notes || undefined }) },
+        { method: 'POST', body: JSON.stringify({ productId: product.id, productLotId: productLotId || undefined, warehouseId: form.warehouseId, quantity: Number(form.quantity), movementType: 'adjustment_out', notes: form.notes || undefined }) },
         token,
       );
       navigate('/stock');
@@ -106,15 +99,6 @@ export function StockOutPage() {
             </Field>
             <Field label="Cantidad" htmlFor="quantity">
               <Input id="quantity" required min="0.001" step="0.001" type="number" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} />
-            </Field>
-            <Field label="Tipo" htmlFor="movementType">
-              <Select id="movementType" value={form.movementType} onChange={e => setForm({ ...form, movementType: e.target.value })}>
-                {MOVEMENT_TYPES.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
             </Field>
             <Field label="Notas" htmlFor="notes" hint="(opcional)">
               <Textarea id="notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />

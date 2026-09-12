@@ -23,9 +23,6 @@ export class StockService {
       throw new UnprocessableEntityException('movementType no es válido para esta operación');
     }
     if (body.operationId !== undefined && typeof body.operationId !== 'string') throw new UnprocessableEntityException('operationId debe ser UUID');
-    if (body.movementType === MovementType.transfer_in || body.movementType === MovementType.transfer_out) {
-      if (typeof body.operationId !== 'string' || !body.operationId.trim()) throw new UnprocessableEntityException('operationId es obligatorio para transferencias');
-    }
     return {
       productId: body.productId as string,
       productLotId: typeof body.productLotId === 'string' ? body.productLotId : undefined,

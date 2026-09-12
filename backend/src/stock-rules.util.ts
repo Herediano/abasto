@@ -30,13 +30,19 @@ export function effectiveStockRule(
 }
 
 /**
- * Cuánto pedir para volver al máximo. Redondea hacia arriba al múltiplo del
- * bulto de compra (si se compra por bulto). null si no hay máximo o ya está por
+ * Cuánto pedir para volver al máximo ("reponer hasta"), o si no hay máximo
+ * configurado, al menos hasta el mínimo (sin esto, un producto sin "reponer
+ * hasta" quedaba sin sugerencia real — el llamador tenía que inventar algo,
+ * y el fallback que había en Reposición usaba el mínimo tal cual, como si
+ * "pedir" y "el umbral que dispara la alerta" fueran lo mismo). Redondea
+ * hacia arriba al múltiplo del bulto de compra (si se compra por bulto).
+ * null sólo si no hay ni máximo ni mínimo, o ya está en el objetivo o por
  * encima.
  */
-export function suggestedOrder(current: number, max: number | null, packSize = 1): number | null {
-  if (max == null || current >= max) return null;
-  const need = max - current;
+export function suggestedOrder(current: number, max: number | null, packSize = 1, min: number | null = null): number | null {
+  const objetivo = max ?? min;
+  if (objetivo == null || current >= objetivo) return null;
+  const need = objetivo - current;
   const step = packSize > 1 ? packSize : 1;
   return Math.ceil(need / step) * step;
 }

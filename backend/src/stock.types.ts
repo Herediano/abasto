@@ -1,7 +1,10 @@
 import { MovementType } from '@prisma/client';
 
-export const IN_MOVEMENT_TYPES = [MovementType.purchase_in, MovementType.transfer_in, MovementType.adjustment_in] as const;
-export const OUT_MOVEMENT_TYPES = [MovementType.sale_out, MovementType.transfer_out, MovementType.adjustment_out] as const;
+// purchase_in, sale_out, transfer_in/out se generan sólo desde sus propios flujos
+// (compras, ventas, POST /stock/transfer), cada uno con su referencia. El
+// endpoint manual de movimientos es sólo para ajustes sin flujo propio.
+export const IN_MOVEMENT_TYPES = [MovementType.adjustment_in] as const;
+export const OUT_MOVEMENT_TYPES = [MovementType.adjustment_out] as const;
 
 export type MovementInput = {
   productId?: unknown;
