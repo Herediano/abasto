@@ -52,6 +52,10 @@ export class ReportesController {
       : 'semana';
     const cfg = CFG[period];
 
+    // A diferencia de /reportes/panel, este gráfico vive en el módulo Ventas y
+    // acompaña la sucursal activa a propósito: si el Dueño cambia de sucursal
+    // arriba, este gráfico cambia con él. El consolidado entre todas vive sólo
+    // en Reportes.
     const whIds = request.user.branchWarehouseIds ?? [];
     const [cur, prev] = await Promise.all([
       this.serie(tenantId, whIds, cfg.slot, `occurred_at >= ${cfg.start} AND occurred_at < now()`, cfg.n),
@@ -75,9 +79,10 @@ export class ReportesController {
 
   /**
    * Panel de reportes del encargado / dueño: varios bloques en una sola llamada,
-   * para un rango de fechas (por defecto los últimos 30 días). Todo lo que
-   * depende de un depósito va acotado a la sucursal activa, salvo la comparativa
-   * entre sucursales, que siempre muestra todas.
+   * para un rango de fechas (por defecto los últimos 30 días). Consolidado por
+   * defecto entre todas las sucursales (quien puede navegar sucursales); pasar
+   * `?branchId=` lo acota a una sola. Quien no puede navegar sucursales sigue
+   * viendo sólo la suya, sin excepción — ver `resolveWarehouseIds`.
    */
   @Get('panel')
   @RequirePermission('reportes.ver')
@@ -162,7 +167,7 @@ export class ReportesController {
 
   private async buildPanel(request: AuthRequest, query: Record<string, string | undefined>) {
     const tenantId = request.user.tenantId;
-    const whIds = request.user.branchWarehouseIds ?? [];
+    const whIds = await this.resolveWarehouseIds(request, query.branchId);
     const desde = query.from ? new Date(`${query.from}T00:00:00`) : new Date(Date.now() - 30 * 864e5);
     const hasta = query.to ? new Date(`${query.to}T23:59:59.999`) : new Date();
     const enRango = { gte: desde, lte: hasta };
@@ -271,6 +276,27 @@ export class ReportesController {
       })),
       cuentasCorrientes: ctaCte.map(c => ({ id: c.id, name: c.name, balance: Number(c.accountBalance), creditLimit: c.creditLimit === null ? null : Number(c.creditLimit) })),
     };
+  }
+
+  /**
+   * A qué depósitos acotar un reporte. Quien no puede navegar sucursales
+   * (`sucursales.navegar`) sigue viendo sólo la suya, como siempre — no hay
+   * forma de que consolide datos de otra. Quien sí puede, ve todas las
+   * sucursales activas del tenant sumadas por defecto (el "consolidado
+   * real"), salvo que pida una puntual con `branchId`.
+   */
+  private async resolveWarehouseIds(request: AuthRequest, branchId?: string): Promise<string[]> {
+    const tenantId = request.user.tenantId;
+    if (!request.user.canNavigateBranches) return request.user.branchWarehouseIds ?? [];
+    if (branchId) {
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: branchId, tenantId, isActive: true },
+        select: { warehouses: { where: { isActive: true }, select: { id: true } } },
+      });
+      return branch?.warehouses.map(w => w.id) ?? [];
+    }
+    const warehouses = await this.prisma.warehouse.findMany({ where: { tenantId, isActive: true }, select: { id: true } });
+    return warehouses.map(w => w.id);
   }
 
   private async serie(tenantId: string, warehouseIds: string[], slot: string, windowSql: string, n: number) {

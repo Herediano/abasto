@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { ExportButton } from '@/components/export-menu';
 import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-screen';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage } from '@/lib/api';
+import { api, errorMessage, type Branch } from '@/lib/api';
 import { fecha, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -31,23 +32,31 @@ type Panel = {
 export function ReportesPage() {
   const { session } = useAuth();
   const token = session!.accessToken;
+  const puedeVerTodas = !!session!.user.canNavigateBranches;
   const [view, setView] = useState<View>('ventas');
   const hoy = inputDate();
   const hace30 = inputDate(Date.now() - 30 * 864e5);
   const [from, setFrom] = useState(hace30);
   const [to, setTo] = useState(hoy);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchId, setBranchId] = useState('');
   const [data, setData] = useState<Panel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (puedeVerTodas) api<Branch[]>('/branches', {}, token).then(setBranches).catch(() => {});
+  }, [token, puedeVerTodas]);
+
+  useEffect(() => {
     setLoading(true);
     const p = new URLSearchParams({ from, to });
+    if (branchId) p.set('branchId', branchId);
     api<Panel>(`/reportes/panel?${p}`, {}, token)
       .then(setData)
       .catch(e => setError(errorMessage(e)))
       .finally(() => setLoading(false));
-  }, [token, from, to]);
+  }, [token, from, to, branchId]);
 
   const resumen = data && (
     <SummaryLine
@@ -77,13 +86,23 @@ export function ReportesPage() {
 
       {/* El rango de fechas es el control principal de Reportes: queda a la
           vista, no detrás de «Filtros». */}
-      <div className="grid gap-3 sm:max-w-md sm:grid-cols-2">
+      <div className={`grid gap-3 sm:max-w-2xl ${puedeVerTodas ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
         <Field label="Desde" htmlFor="r-from">
           <Input id="r-from" type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} />
         </Field>
         <Field label="Hasta" htmlFor="r-to">
           <Input id="r-to" type="date" value={to} min={from} max={hoy} onChange={e => setTo(e.target.value)} />
         </Field>
+        {puedeVerTodas && (
+          <Field label="Sucursal" htmlFor="r-branch">
+            <Select id="r-branch" value={branchId} onChange={e => setBranchId(e.target.value)}>
+              <option value="">Todas las sucursales</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </Select>
+          </Field>
+        )}
       </div>
 
       {loading || !data ? (
@@ -92,7 +111,7 @@ export function ReportesPage() {
         <div className="flex flex-col">
           <ModuleSection
             title="Por medio de pago"
-            actions={<ExportButton path="/reportes/panel" params={{ from, to, section: 'medioDePago' }} filename="ventas-por-medio-de-pago" />}
+            actions={<ExportButton path="/reportes/panel" params={{ from, to, branchId, section: 'medioDePago' }} filename="ventas-por-medio-de-pago" />}
           >
             <Table>
               <TableHeader>
@@ -116,7 +135,7 @@ export function ReportesPage() {
 
           <ModuleSection
             title="Por cajero"
-            actions={<ExportButton path="/reportes/panel" params={{ from, to, section: 'cajero' }} filename="ventas-por-cajero" />}
+            actions={<ExportButton path="/reportes/panel" params={{ from, to, branchId, section: 'cajero' }} filename="ventas-por-cajero" />}
           >
             <Table>
               <TableHeader>
@@ -140,7 +159,7 @@ export function ReportesPage() {
 
           <ModuleSection
             title="Comparativa entre sucursales"
-            actions={<ExportButton path="/reportes/panel" params={{ from, to, section: 'sucursales' }} filename="ventas-por-sucursal" />}
+            actions={<ExportButton path="/reportes/panel" params={{ from, to, branchId, section: 'sucursales' }} filename="ventas-por-sucursal" />}
           >
             <Table>
               <TableHeader>
@@ -164,7 +183,7 @@ export function ReportesPage() {
 
           <ModuleSection
             title="Más vendidos"
-            actions={<ExportButton path="/reportes/panel" params={{ from, to, section: 'masVendidos' }} filename="mas-vendidos" />}
+            actions={<ExportButton path="/reportes/panel" params={{ from, to, branchId, section: 'masVendidos' }} filename="mas-vendidos" />}
           >
             <Table>
               <TableHeader>
@@ -191,7 +210,7 @@ export function ReportesPage() {
           <ModuleSection
             title="Sin rotación"
             description="Tienen stock pero no se vendieron ni una vez en este rango — plata parada en la góndola."
-            actions={data.sinRotacion.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, section: 'sinRotacion' }} filename="sin-rotacion" /> : undefined}
+            actions={data.sinRotacion.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, branchId, section: 'sinRotacion' }} filename="sin-rotacion" /> : undefined}
           >
             {data.sinRotacion.length === 0 ? (
               <p className="text-chico text-muted-foreground">Todo lo que tiene stock se vendió al menos una vez en este rango.</p>
@@ -223,7 +242,7 @@ export function ReportesPage() {
         <div className="flex flex-col">
           <ModuleSection
             title="Arqueos con diferencia"
-            actions={data.arqueosConDiferencia.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, section: 'arqueos' }} filename="arqueos-con-diferencia" /> : undefined}
+            actions={data.arqueosConDiferencia.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, branchId, section: 'arqueos' }} filename="arqueos-con-diferencia" /> : undefined}
           >
             {data.arqueosConDiferencia.length === 0 ? (
               <p className="text-chico text-muted-foreground">Ningún turno cerró con diferencia en este rango.</p>
@@ -257,7 +276,7 @@ export function ReportesPage() {
         <div className="flex flex-col">
           <ModuleSection
             title="Cuentas corrientes con saldo"
-            actions={data.cuentasCorrientes.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, section: 'cuentas' }} filename="cuentas-corrientes" /> : undefined}
+            actions={data.cuentasCorrientes.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, branchId, section: 'cuentas' }} filename="cuentas-corrientes" /> : undefined}
           >
             {data.cuentasCorrientes.length === 0 ? (
               <p className="text-chico text-muted-foreground">Ningún cliente tiene saldo pendiente.</p>
