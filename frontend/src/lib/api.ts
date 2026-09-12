@@ -378,6 +378,8 @@ export type CashMovement = {
   type: 'deposit' | 'withdrawal' | 'expense';
   amount: string;
   reason: string;
+  /** Desglose por billete (denominación → cantidad), sólo si se contó billete por billete. */
+  denominations?: Record<string, number> | null;
   occurredAt: string;
   userName?: string;
 };
@@ -394,14 +396,19 @@ export type CashShift = {
   /** Cuánto debería haber en el cajón ahora mismo, sin cerrar el turno (para el reporte X). */
   expectedCashNow?: string | null;
   countedCash?: string | null;
+  /** Desglose del arqueo por billete (denominación → cantidad), sólo si se contó billete por billete. */
+  cashCount?: Record<string, number> | null;
   cashDifference?: string | null;
   closingNotes?: string | null;
-  cashRegister?: { id: string; name: string; warehouseId: string };
+  cashRegister?: { id: string; name: string; warehouseId: string; warehouse?: { name: string; branch: { name: string } } };
   cashRegisterName?: string;
   openedByName?: string;
   closedByName?: string | null;
   salesCount?: number;
-  totalsByMethod?: { method: string; total: number }[];
+  saleTotals?: { subtotal: number; taxTotal: number; surchargeTotal: number; total: number };
+  totalsByMethod?: { method: string; total: number; count?: number }[];
+  /** Sólo pagos en card_credit con una tarjeta puntual elegida de la lista. */
+  totalsByCard?: { cardId: string; name: string; total: number; count: number }[];
   movements?: CashMovement[];
 };
 

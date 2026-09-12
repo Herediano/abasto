@@ -4,6 +4,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CashShiftReport } from '@/components/cash-shift-report';
+import { DenominationCounter, denominationTotal, type DenominationCount } from '@/components/denomination-counter';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ExportMenu } from '@/components/export-menu';
@@ -38,7 +39,7 @@ export function ShiftsHistoryPage() {
   const [detalle, setDetalle] = useState<CashShift | null>(null);
   const [shiftToPrint, setShiftToPrint] = useState<CashShift | null>(null);
   const [cerrando, setCerrando] = useState<CashShift | null>(null);
-  const [countedCash, setCountedCash] = useState('');
+  const [cashCount, setCashCount] = useState<DenominationCount>({});
   const [closingNotes, setClosingNotes] = useState('');
   const [closingError, setClosingError] = useState('');
   const [closingSaving, setClosingSaving] = useState(false);
@@ -62,7 +63,7 @@ export function ShiftsHistoryPage() {
 
   function abrirCierre(shift: CashShift) {
     setCerrando(shift);
-    setCountedCash('');
+    setCashCount({});
     setClosingNotes('');
     setClosingError('');
   }
@@ -74,7 +75,7 @@ export function ShiftsHistoryPage() {
     try {
       const cerrado = await api<CashShift>(`/cash-shifts/${cerrando.id}/close`, {
         method: 'POST',
-        body: JSON.stringify({ countedCash: Number(countedCash), closingNotes: closingNotes || undefined }),
+        body: JSON.stringify({ cashCount, closingNotes: closingNotes || undefined }),
       }, token);
       setCerrando(null);
       setDetalle(cerrado);
@@ -285,15 +286,13 @@ export function ShiftsHistoryPage() {
             <p className="text-chico text-placeholder">Esperado ahora</p>
             <p className="font-semibold tabular">{money(Number(cerrando?.expectedCashNow))}</p>
           </div>
-          <Field label="Efectivo contado" htmlFor="cierre-contado">
-            <Input id="cierre-contado" type="number" min="0" step="0.01" autoFocus value={countedCash} onChange={e => setCountedCash(e.target.value)} />
-          </Field>
+          <DenominationCounter value={cashCount} onChange={setCashCount} />
           <Field label="Notas" htmlFor="cierre-notas" hint="(opcional)">
             <Input id="cierre-notas" value={closingNotes} onChange={e => setClosingNotes(e.target.value)} />
           </Field>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setCerrando(null)}>Cancelar</Button>
-            <Button type="button" variant="destructive" disabled={closingSaving || !countedCash} onClick={confirmarCierre}>
+            <Button type="button" variant="destructive" disabled={closingSaving || denominationTotal(cashCount) <= 0} onClick={confirmarCierre}>
               {closingSaving && <Spinner />} Cerrar turno
             </Button>
           </DialogFooter>

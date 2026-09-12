@@ -297,6 +297,10 @@ model CashShift {
   closedAt       DateTime?      @map("closed_at") @db.Timestamptz(6)
   expectedCash   Decimal?       @map("expected_cash") @db.Decimal(14, 2)
   countedCash    Decimal?       @map("counted_cash") @db.Decimal(14, 2)
+  /**
+   * Desglose del arqueo por billete (denominación → cantidad, ej. {"2000": 5, "1000": 10}); countedCash es la suma. Null si se cargó el total directo, sin desglosar.
+   */
+  cashCount      Json?          @map("cash_count")
   cashDifference Decimal?       @map("cash_difference") @db.Decimal(14, 2)
   closingNotes   String?        @map("closing_notes")
   tenant         Tenant         @relation(fields: [tenantId], references: [id])
@@ -316,17 +320,21 @@ model CashShift {
 // durante un turno abierto. Es lo que explica que el efectivo contado no sea
 // sólo fondo inicial + ventas en efectivo.
 model CashMovement {
-  id         String           @id @default(uuid()) @db.Uuid
-  tenantId   String           @map("tenant_id") @db.Uuid
-  shiftId    String           @map("shift_id") @db.Uuid
-  userId     String           @map("user_id") @db.Uuid
-  type       CashMovementType
-  amount     Decimal          @db.Decimal(14, 2)
-  reason     String
-  occurredAt DateTime         @default(now()) @map("occurred_at") @db.Timestamptz(6)
-  tenant     Tenant           @relation(fields: [tenantId], references: [id])
-  shift      CashShift        @relation(fields: [shiftId, tenantId], references: [id, tenantId])
-  user       User             @relation(fields: [userId], references: [id])
+  id            String           @id @default(uuid()) @db.Uuid
+  tenantId      String           @map("tenant_id") @db.Uuid
+  shiftId       String           @map("shift_id") @db.Uuid
+  userId        String           @map("user_id") @db.Uuid
+  type          CashMovementType
+  amount        Decimal          @db.Decimal(14, 2)
+  reason        String
+  /**
+   * Mismo desglose por billete que CashShift.cashCount, para un retiro/ingreso contado billete por billete. Null si se cargó el monto directo.
+   */
+  denominations Json?
+  occurredAt    DateTime         @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+  shift         CashShift        @relation(fields: [shiftId, tenantId], references: [id, tenantId])
+  user          User             @relation(fields: [userId], references: [id])
 
   @@unique([id, tenantId])
   @@index([tenantId, shiftId])

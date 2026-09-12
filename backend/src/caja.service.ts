@@ -18,6 +18,33 @@ function monto(v: unknown) {
 }
 
 /**
+ * Desglose de un conteo de efectivo por billete (denominación → cantidad).
+ * No hay una lista fija de denominaciones acá a propósito — el billete más
+ * nuevo lo define el cajero al cargarlo, no un enum que hay que migrar cada
+ * vez que cambia el billete de mayor valor. Devuelve el total (suma de
+ * denominación × cantidad) para que sea la fuente de verdad de `countedCash`
+ * / `amount`, en vez de un número tipeado aparte que puede no coincidir.
+ */
+function contarBilletes(v: unknown): { total: number; cashCount: Record<string, number> } | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== 'object' || Array.isArray(v)) throw new UnprocessableEntityException('El desglose de billetes tiene que ser denominación → cantidad');
+  const entradas = Object.entries(v as Record<string, unknown>);
+  if (!entradas.length) return null;
+  let total = 0;
+  const cashCount: Record<string, number> = {};
+  for (const [denominacion, cantidadRaw] of entradas) {
+    const valor = Number(denominacion);
+    if (!Number.isInteger(valor) || valor <= 0) throw new UnprocessableEntityException(`Denominación inválida: ${denominacion}`);
+    const cantidad = Number(cantidadRaw);
+    if (!Number.isInteger(cantidad) || cantidad < 0) throw new UnprocessableEntityException(`Cantidad de billetes de $${denominacion} inválida`);
+    if (cantidad === 0) continue;
+    cashCount[denominacion] = cantidad;
+    total += valor * cantidad;
+  }
+  return { total: Math.round(total * 100) / 100, cashCount };
+}
+
+/**
  * Caja: registros físicos de cobro, turnos y arqueo. Un turno abierto es lo
  * que le da sentido a todo lo demás — movimientos de efectivo y ventas se
  * cuelgan de él — y sólo puede haber uno por caja y uno por usuario a la vez
@@ -93,12 +120,15 @@ export class CajaService {
     if (turno.status !== 'open') throw new ConflictException('El turno ya está cerrado');
     const type = typeof body.type === 'string' ? body.type : '';
     if (!TIPOS_MOVIMIENTO.includes(type as (typeof TIPOS_MOVIMIENTO)[number])) throw new UnprocessableEntityException(`El tipo debe ser uno de: ${TIPOS_MOVIMIENTO.join(', ')}`);
-    const amount = monto(body.amount);
+    // Contado billete por billete (recomendado, sobre todo para un retiro) o
+    // monto directo — el desglose, si viene, manda sobre lo tipeado.
+    const conteo = contarBilletes(body.denominations);
+    const amount = conteo ? conteo.total : monto(body.amount);
     if (!Number.isFinite(amount) || amount <= 0) throw new UnprocessableEntityException('El monto debe ser mayor a cero');
     const reason = texto(body.reason);
     if (!reason) throw new UnprocessableEntityException('Indicá el motivo del movimiento');
     return this.prisma.cashMovement.create({
-      data: { tenantId: user.tenantId, shiftId, userId: user.id, type: type as (typeof TIPOS_MOVIMIENTO)[number], amount, reason },
+      data: { tenantId: user.tenantId, shiftId, userId: user.id, type: type as (typeof TIPOS_MOVIMIENTO)[number], amount, reason, denominations: conteo?.cashCount },
     });
   }
 
@@ -121,17 +151,34 @@ export class CajaService {
     );
   }
 
-  /** Detalle de un turno: movimientos, y —si ya cerró o se pide para cerrar— el desglose de ventas por medio de pago. */
+  /** Detalle de un turno: movimientos, y —si ya cerró o se pide para cerrar— el desglose de ventas por medio de pago y por tarjeta puntual. */
   async detail(user: Usuario, shiftId: string) {
     const turno = await this.turnoDeUsuario(user, shiftId);
-    const [movimientos, porMedio, cantidadVentas, openedBy, closedBy, cashRegister] = await Promise.all([
+    const [movimientos, porMedio, porTarjetaRaw, ventaAgg, cantidadVentas, openedBy, closedBy, cashRegister] = await Promise.all([
       this.prisma.cashMovement.findMany({ where: { tenantId: user.tenantId, shiftId }, orderBy: { occurredAt: 'asc' }, include: { user: { select: { name: true } } } }),
-      this.prisma.salePayment.groupBy({ by: ['method'], where: { tenantId: user.tenantId, sale: { shiftId, status: 'confirmed' } }, _sum: { amount: true } }),
+      this.prisma.salePayment.groupBy({ by: ['method'], where: { tenantId: user.tenantId, sale: { shiftId, status: 'confirmed' } }, _sum: { amount: true }, _count: { _all: true } }),
+      // Desglose por tarjeta puntual (sólo pagos con card_credit que eligieron una de la lista, no el % genérico).
+      this.prisma.salePayment.groupBy({
+        by: ['cardId'],
+        where: { tenantId: user.tenantId, cardId: { not: null }, sale: { shiftId, status: 'confirmed' } },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      this.prisma.sale.aggregate({
+        where: { tenantId: user.tenantId, shiftId, status: 'confirmed' },
+        _sum: { subtotal: true, taxTotal: true, surchargeTotal: true, total: true },
+      }),
       this.prisma.sale.count({ where: { tenantId: user.tenantId, shiftId, status: 'confirmed' } }),
       this.prisma.user.findUnique({ where: { id: turno.openedById }, select: { name: true } }),
       turno.closedById ? this.prisma.user.findUnique({ where: { id: turno.closedById }, select: { name: true } }) : Promise.resolve(null),
-      this.prisma.cashRegister.findUnique({ where: { id: turno.cashRegisterId }, select: { id: true, name: true, warehouseId: true } }),
+      this.prisma.cashRegister.findUnique({
+        where: { id: turno.cashRegisterId },
+        select: { id: true, name: true, warehouseId: true, warehouse: { select: { name: true, branch: { select: { name: true } } } } },
+      }),
     ]);
+    const tarjetas = porTarjetaRaw.length
+      ? new Map((await this.prisma.paymentCard.findMany({ where: { tenantId: user.tenantId, id: { in: porTarjetaRaw.map(t => t.cardId as string) } }, select: { id: true, name: true } })).map(c => [c.id, c.name]))
+      : new Map<string, string>();
     // Para "Reporte X" (turno todavía abierto): el mismo cálculo que usa el
     // cierre, pero sin cerrar nada — una foto de "cuánto debería haber ahora".
     // En un turno ya cerrado da lo mismo que expectedCash (nada cambia después).
@@ -142,7 +189,14 @@ export class CajaService {
       openedByName: openedBy?.name ?? '',
       closedByName: closedBy?.name ?? null,
       salesCount: cantidadVentas,
-      totalsByMethod: porMedio.map(p => ({ method: p.method, total: Number(p._sum.amount ?? 0) })),
+      saleTotals: {
+        subtotal: Number(ventaAgg._sum.subtotal ?? 0),
+        taxTotal: Number(ventaAgg._sum.taxTotal ?? 0),
+        surchargeTotal: Number(ventaAgg._sum.surchargeTotal ?? 0),
+        total: Number(ventaAgg._sum.total ?? 0),
+      },
+      totalsByMethod: porMedio.map(p => ({ method: p.method, total: Number(p._sum.amount ?? 0), count: p._count._all })),
+      totalsByCard: porTarjetaRaw.map(t => ({ cardId: t.cardId as string, name: tarjetas.get(t.cardId as string) ?? '—', total: Number(t._sum.amount ?? 0), count: t._count._all })),
       movements: movimientos.map(m => ({ ...m, userName: m.user.name, user: undefined })),
       expectedCashNow,
     };
@@ -154,7 +208,9 @@ export class CajaService {
       if (!turno) throw new NotFoundException('Turno no encontrado');
       if (!user.permissions.has('caja.ver_todas') && turno.openedById !== user.id) throw new NotFoundException('Turno no encontrado');
       if (turno.status === 'closed') throw new ConflictException('El turno ya está cerrado');
-      const countedCash = monto(body.countedCash);
+      // Contado billete por billete (recomendado) o monto directo — el desglose, si viene, manda sobre lo tipeado.
+      const conteo = contarBilletes(body.cashCount);
+      const countedCash = conteo ? conteo.total : monto(body.countedCash);
       if (!Number.isFinite(countedCash) || countedCash < 0) throw new UnprocessableEntityException('Contá el efectivo del cajón antes de cerrar');
 
       const expectedCash = await this.efectivoEsperado(tx, user.tenantId, turno);
@@ -164,7 +220,7 @@ export class CajaService {
         where: { id: shiftId },
         data: {
           status: 'closed', closedById: user.id, closedAt: new Date(),
-          expectedCash, countedCash, cashDifference, closingNotes: texto(body.closingNotes),
+          expectedCash, countedCash, cashCount: conteo?.cashCount, cashDifference, closingNotes: texto(body.closingNotes),
         },
       });
     });

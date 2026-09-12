@@ -821,6 +821,12 @@ html body[data-scroll-locked] {
   .print-ticket {
     width: 80mm;
   }
+  /* Cierre de caja (cash-shift-report.tsx): hoja A4 completa, no ticket térmico. */
+  .print-a4 {
+    width: 190mm;
+    padding: 10mm;
+    box-sizing: border-box;
+  }
 }
 
 /* Etiquetas de góndola: una `.label-page` por hoja A4 (grilla de cols×rows,

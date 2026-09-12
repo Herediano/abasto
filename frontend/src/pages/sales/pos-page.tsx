@@ -13,6 +13,7 @@ import { ProductSearchDialog } from '@/components/product-search-dialog';
 import { CustomerSearchDialog } from '@/components/customer-search-dialog';
 import { SupervisorAuthDialog } from '@/components/supervisor-auth-dialog';
 import { CashShiftReport } from '@/components/cash-shift-report';
+import { DenominationCounter, denominationTotal, type DenominationCount } from '@/components/denomination-counter';
 import { TicketPrint, type TicketData } from '@/components/ticket-print';
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
@@ -134,10 +135,11 @@ export function PosPage() {
   const [cajaView, setCajaView] = useState<'panel' | 'cerrar' | 'resultado'>('panel');
   const [movType, setMovType] = useState<'deposit' | 'withdrawal' | 'expense'>('deposit');
   const [movAmount, setMovAmount] = useState('');
+  const [movCashCount, setMovCashCount] = useState<DenominationCount>({});
   const [movReason, setMovReason] = useState('');
   const [movSaving, setMovSaving] = useState(false);
   const [movError, setMovError] = useState('');
-  const [countedCash, setCountedCash] = useState('');
+  const [cashCount, setCashCount] = useState<DenominationCount>({});
   const [closingNotes, setClosingNotes] = useState('');
   const [closing, setClosing] = useState(false);
   const [closeResult, setCloseResult] = useState<CashShift | null>(null);
@@ -431,6 +433,10 @@ export function PosPage() {
     }
   }
 
+  // Gasto se paga contra un comprobante con un total fijo, no billete por
+  // billete; depósito y retiro sí se cuentan (entra/sale efectivo físico).
+  const movUsaConteo = movType !== 'expense';
+
   async function agregarMovimiento() {
     if (!shift) return;
     setMovSaving(true);
@@ -438,11 +444,16 @@ export function PosPage() {
     try {
       await api(`/cash-shifts/${shift.id}/movements`, {
         method: 'POST',
-        body: JSON.stringify({ type: movType, amount: Number(movAmount), reason: movReason }),
+        body: JSON.stringify(
+          movUsaConteo
+            ? { type: movType, denominations: movCashCount, reason: movReason }
+            : { type: movType, amount: Number(movAmount), reason: movReason },
+        ),
       }, token);
       const actualizado = await api<CashShift>(`/cash-shifts/${shift.id}`, {}, token);
       setShift(actualizado);
       setMovAmount('');
+      setMovCashCount({});
       setMovReason('');
     } catch (err) {
       setMovError(errorMessage(err));
@@ -458,7 +469,7 @@ export function PosPage() {
     try {
       const cerrado = await api<CashShift>(`/cash-shifts/${shift.id}/close`, {
         method: 'POST',
-        body: JSON.stringify({ countedCash: Number(countedCash) || 0, closingNotes: closingNotes || undefined }),
+        body: JSON.stringify({ cashCount, closingNotes: closingNotes || undefined }),
       }, token);
       setCloseResult(cerrado);
       setCajaView('resultado');
@@ -474,7 +485,7 @@ export function PosPage() {
     setCajaOpen(false);
     setCajaView('panel');
     setCloseResult(null);
-    setCountedCash('');
+    setCashCount({});
     setClosingNotes('');
   }
 
@@ -998,13 +1009,28 @@ export function PosPage() {
                   )}
                 </div>
                 {movError && <Alert variant="destructive">{movError}</Alert>}
-                <div className="flex items-center gap-2">
-                  <Select aria-label="Tipo de movimiento" value={movType} onChange={e => setMovType(e.target.value as typeof movType)} className="w-44 shrink-0">
-                    {MOVIMIENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
-                  </Select>
-                  <Input type="number" min="0" step="0.01" placeholder="Monto" aria-label="Monto del movimiento" value={movAmount} onChange={e => setMovAmount(e.target.value)} className="w-28 shrink-0" />
-                  <Input placeholder="Motivo" aria-label="Motivo" value={movReason} onChange={e => setMovReason(e.target.value)} />
-                  <Button type="button" size="sm" disabled={movSaving || !movAmount || !movReason} onClick={agregarMovimiento}>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      aria-label="Tipo de movimiento"
+                      value={movType}
+                      onChange={e => { setMovType(e.target.value as typeof movType); setMovAmount(''); setMovCashCount({}); }}
+                      className="w-44 shrink-0"
+                    >
+                      {MOVIMIENTOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                    </Select>
+                    <Input placeholder="Motivo" aria-label="Motivo" value={movReason} onChange={e => setMovReason(e.target.value)} />
+                  </div>
+                  {movUsaConteo ? (
+                    <DenominationCounter value={movCashCount} onChange={setMovCashCount} />
+                  ) : (
+                    <Input type="number" min="0" step="0.01" placeholder="Monto" aria-label="Monto del movimiento" value={movAmount} onChange={e => setMovAmount(e.target.value)} />
+                  )}
+                  <Button
+                    type="button" size="sm" className="self-end"
+                    disabled={movSaving || !movReason || (movUsaConteo ? denominationTotal(movCashCount) <= 0 : !movAmount)}
+                    onClick={agregarMovimiento}
+                  >
                     {movSaving && <Spinner />} Registrar
                   </Button>
                 </div>
@@ -1030,16 +1056,14 @@ export function PosPage() {
                 <DialogTitle>Cierre de turno · arqueo</DialogTitle>
               </DialogHeader>
               {movError && <Alert variant="destructive">{movError}</Alert>}
-              <p className="text-sm text-muted-foreground">Contá el efectivo del cajón y anotalo. El sistema calcula la diferencia con lo que debería haber.</p>
-              <Field label="Efectivo contado" htmlFor="contado">
-                <Input id="contado" type="number" min="0" step="0.01" autoFocus value={countedCash} onChange={e => setCountedCash(e.target.value)} />
-              </Field>
+              <p className="text-sm text-muted-foreground">Contá el efectivo del cajón billete por billete. El sistema calcula la diferencia con lo que debería haber.</p>
+              <DenominationCounter value={cashCount} onChange={setCashCount} />
               <Field label="Notas" htmlFor="notas-cierre" hint="(opcional)">
                 <Input id="notas-cierre" value={closingNotes} onChange={e => setClosingNotes(e.target.value)} />
               </Field>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setCajaView('panel')}>Volver</Button>
-                <Button type="button" variant="destructive" disabled={closing || !countedCash} onClick={cerrarTurno}>
+                <Button type="button" variant="destructive" disabled={closing || denominationTotal(cashCount) <= 0} onClick={cerrarTurno}>
                   {closing && <Spinner />} Cerrar turno
                 </Button>
               </DialogFooter>
