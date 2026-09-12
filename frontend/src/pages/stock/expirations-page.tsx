@@ -138,7 +138,7 @@ export function ExpirationsPage() {
       </ListFilters>
       {loading ? (
         <PageSpinner />
-      ) : items.length === 0 ? (
+      ) : error && !editing ? null : items.length === 0 ? (
         <EmptyState icon={CalendarX} title="Nada por vencer" description="No hay stock con fecha de vencimiento registrada." />
       ) : visibles.length === 0 ? (
         <EmptyState icon={CalendarX} title="Sin resultados" description="Ningún lote coincide con la búsqueda." />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { OP } from '@/lib/modules';
 
 /**
  * Preferencias de dispositivo (viven en localStorage, no viajan con la cuenta):
@@ -77,7 +78,13 @@ export function usePreguntarLibre() {
   return { libre, setLibre: cambiar };
 }
 
-/** Los colores de avatar que ofrece Ajustes. El primero es el cian de la marca. */
+/**
+ * Los colores de avatar que ofrece Ajustes. El primero es el cian de la marca
+ * (`--color-primary`, reactivo al tema); el resto sale de la misma receta
+ * OKLCH que el color de los módulos del escritorio (`hueFor`/`OP` en
+ * `lib/modules.tsx`), repartidos parejo en la rueda para que se sientan de la
+ * misma familia sin repetir un matiz exacto de módulo.
+ */
 export const AVATAR_COLORS = [
-  '#0b748c', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#0d9488', '#475569',
+  'var(--color-primary)', OP(66), OP(117), OP(168), OP(219), OP(270), OP(321),
 ];

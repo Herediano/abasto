@@ -120,7 +120,7 @@ export const moduleByKey = (key: string) => BY_KEY.get(key);
  * magenta. Los que viven adentro de Ajustes comparten un pizarra de
  * croma bajo —son sistema, no operación.
  */
-const OP = (h: number) => `oklch(0.60 0.20 ${h})`;
+export const OP = (h: number) => `oklch(0.60 0.20 ${h})`;
 const HUES: Record<string, string> = {
   stock: OP(20), // rojo carmín
   compras: OP(55), // naranja-oro

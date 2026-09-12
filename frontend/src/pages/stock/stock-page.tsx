@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Package } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { EmptyState } from '@/components/empty-state';
@@ -10,25 +10,21 @@ import { Select } from '@/components/ui/select';
 import { stockViews } from '@/components/stock-nav';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { api, errorMessage, type StockItem } from '@/lib/api';
+import { api, type StockItem } from '@/lib/api';
 import { fecha, quantity } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
+import { useResource } from '@/lib/use-resource';
 
 export function StockPage() {
   const { session, can } = useAuth();
   const token = session!.accessToken;
-  const [items, setItems] = useState<StockItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [warehouseId, setWarehouseId] = useState('');
 
-  useEffect(() => {
-    api<{ items: StockItem[] }>('/stock', {}, token)
-      .then(r => setItems(r.items))
-      .catch(e => setError(errorMessage(e)))
-      .finally(() => setLoading(false));
-  }, [token]);
+  const { data: items = [], loading, error } = useResource(
+    () => api<{ items: StockItem[] }>('/stock', {}, token).then(r => r.items),
+    [token],
+  );
 
   // Los depósitos salen del propio listado: no hace falta otra llamada.
   const warehouses = useMemo(() => {
@@ -73,7 +69,7 @@ export function StockPage() {
       </ListFilters>
       {loading ? (
         <PageSpinner />
-      ) : items.length === 0 ? (
+      ) : error ? null : items.length === 0 ? (
         <EmptyState icon={Package} title="Todavía no hay stock" description="Registrá un ingreso para empezar a ver existencias acá." />
       ) : visibles.length === 0 ? (
         <EmptyState icon={Package} title="Sin resultados" description="Ningún ítem de stock coincide con la búsqueda." />

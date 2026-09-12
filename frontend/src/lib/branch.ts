@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 /**
  * La sucursal activa: la que se está mirando. Vive en localStorage (no viaja
  * con la cuenta) y se manda en cada request como el header `X-Branch`. El
@@ -7,6 +9,7 @@
  * la sucursal de otra.
  */
 const KEY = 'abasto-branch';
+const bus = new EventTarget();
 
 type Stored = { userId: string; branchId: string };
 
@@ -28,7 +31,13 @@ export function activeBranchFor(userId: string | undefined): string | null {
   return s && s.userId === userId ? s.branchId : null;
 }
 
-/** Cambia la sucursal activa y recarga: todas las pantallas vuelven a pedir sus datos. */
+/**
+ * Cambia la sucursal activa. Antes hacía un `location.reload()` — recargaba
+ * todo el navegador (flash blanco, se pierde la transición). Ahora avisa por
+ * `useBranchVersion()`, que `App.tsx` usa para remontar las rutas: cada
+ * pantalla vuelve a pedir sus datos igual que con un reload, pero sin salir
+ * de la página del navegador.
+ */
 export function setActiveBranch(userId: string, branchId: string | null) {
   try {
     if (branchId) localStorage.setItem(KEY, JSON.stringify({ userId, branchId }));
@@ -36,5 +45,16 @@ export function setActiveBranch(userId: string, branchId: string | null) {
   } catch {
     // sin persistencia: no se puede cambiar de sucursal en modo privado
   }
-  window.location.reload();
+  bus.dispatchEvent(new Event('change'));
+}
+
+/** Sube en 1 cada vez que cambia la sucursal activa — usarlo como `key` para remontar. */
+export function useBranchVersion(): number {
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const onChange = () => setVersion(v => v + 1);
+    bus.addEventListener('change', onChange);
+    return () => bus.removeEventListener('change', onChange);
+  }, []);
+  return version;
 }

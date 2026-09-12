@@ -3,6 +3,11 @@
 > Análisis de diseño y código de `frontend/src` (67 archivos, ~11.200 líneas).
 > Contrastado contra `docs/diseno.md` y `docs/producto.md`. Fecha: 2026-09-06.
 > `tsc -b` pasa limpio; no hay `console.log`, `any` ni `@ts-ignore` sueltos.
+>
+> **Re-verificado 2026-09-12** contra el código actual (ver "Estado" y la
+> columna Estado de la tabla en §6): las secciones 3-7 quedaron escritas al
+> momento del análisis original y no se actualizaron cuando se fueron
+> cerrando ítems — la lista de abajo es la fuente de verdad vigente.
 
 ---
 
@@ -29,16 +34,33 @@
   ámbar. Bug #10, §3.3
 - **Copy**: "tenant" fuera de la UI.
 - **Deps pineadas** (`react`, `typescript`, `vite`, …). §5.3
+- **Precios en pestañas** (§3.7, confirmado 2026-09-12) — `prices-page.tsx` ya
+  usa el mecanismo `views` de `ModuleScreen` (Listas / Actualizar / Promociones
+  / Etiquetas / Calendario / Historial); dejó de ser un solo scroll apilado.
+- **4 menús a mano → `<Menu>` compartido** (confirmado 2026-09-12) — el
+  switcher de sucursal se fusionó dentro de `user-menu.tsx`; `account-list.tsx`
+  dejó de ser un dropdown (es una lista estática en Ajustes).
+- **Molde de Productos en Ventas / Stock / Vencimientos** (confirmado
+  2026-09-12) — las cuatro páginas ya comparten `<ListFilters>`.
+- **`AVATAR_COLORS` en la receta OKLCH**, **2 usos sueltos de escala
+  tipográfica** (`page-header.tsx`, `spinner.tsx`), **badges de estado en
+  tablas documentado en `diseno.md`**, **bugs #6 y #7** (error+EmptyState
+  superpuestos; `sales-history` con params inconsistentes) — cerrados 2026-09-12.
+- **`setActiveBranch` sin `reload()`** (2026-09-12) — ahora remonta las rutas
+  vía `useBranchVersion()` en vez de recargar el navegador. Ver §7.
+- **`useResource`** (2026-09-12) — hook creado y adoptado en `stock-page.tsx`
+  como primer caso real. Ver "Único punto con cierre parcial" en §7: el resto
+  de las páginas queda para migrar de a una, a propósito.
 
 **Pendiente** (razón en cada caso — ver "Deudas conocidas" de `diseno.md`):
 
-- **Precios en pestañas** (§3.7) — decisión de diseño, se hace sobre `<Section>`.
-- **Capa de datos / `useResource`** (§5.1) — refactor grande de ~17 páginas, sin
-  forma de testear cada flujo acá; el 401 (lo urgente) ya está.
-- **ESLint** (§5.2) — `typescript-eslint` no soporta TypeScript 7 todavía.
-- **`setActiveBranch` sin `reload()`** (§5.6) — depende de la capa de datos.
+- **ESLint** (§5.2) — `typescript-eslint` exige `typescript <6.1.0`; el
+  proyecto está en `^7.0.2`. Bloqueado en la librería, no hay nada para hacer
+  del lado de Abasto hasta que publiquen soporte.
 - **`dangerouslySetInnerHTML` en `ModuleMotif`** (§5.7) — dato constante, sin
   riesgo real; convertir 14 motivos a JSX es trabajo sin beneficio para el usuario.
+- **Migrar el resto de las ~17 páginas a `useResource`** — deliberadamente
+  incremental, no un refactor de una sola pasada (ver razón en §7).
 
 ---
 
@@ -286,48 +308,84 @@ una capa de datos sería invalidar queries.
 
 ## 6. Bugs concretos
 
-| # | Severidad | Bug | Ubicación |
-|---|---|---|---|
-| 1 | **Alta** | "Copiar tabla" hace su propio `fetch` sin `branchHeaders()` → copia datos de la sucursal equivocada si hay una sucursal no-propia activa. `downloadFile()` sí manda el header; `copy()` no. | `export-menu.tsx:66` |
-| 2 | **Alta** | Sesión vencida sin manejo. El JWT expira a las 8 h (backend); `refresh()` traga el 401 y "mantiene lo que había"; `api()` no tiene interceptor. Resultado: sesión muerta, cada pantalla con su error, sin volver a `/login`. | `auth-context.tsx:85`, `api.ts:383` |
-| 3 | Media | Fecha con `new Date(x).toLocaleString()` **sin `'es-AR'`** → formato de EE.UU. (`9/6/2026, 3:04 PM`) en navegador en inglés. | `stock-history-page.tsx:229, 272` |
-| 4 | Media | Fechas ISO crudas visibles (`2026-09-15` en vez de `15/09/2026`) por usar `.slice(0, 10)`. ~15 lugares. | `stock-page.tsx:61`, `expirations-page.tsx:118`, `prices-page.tsx:615,700,853,924`, `product-detail-page.tsx:210,288,370`, `stock-in-page.tsx:580`, `stock-out-page.tsx:105`, … |
-| 5 | Media | `theme.ts` persiste el tema del sistema en el **primer render** (el `useEffect` corre siempre). Un visitante con SO oscuro queda "oscuro" fijo aunque después cambie el SO. | `theme.ts:36-43` |
-| 6 | Baja | `error` y `EmptyState` se renderizan juntos: al fallar la carga se ve el Alert y abajo "No hay stock registrado". | `stock-page.tsx`, `expirations-page.tsx`, varias |
-| 7 | Baja | `sales-history` pasa `params={filtros}` (objeto) mientras `products` pasa `params={filterParams()}` (URLSearchParams). `ExportMenu` tolera ambos, pero el contrato quedó ambiguo. | `sales-history-page.tsx:76` |
-| 8 | **Media (a11y)** | Foco de teclado invisible en ~30 `<button>` crudos (todo menos el escritorio y lo que usa `<Button>`): `page-header` (volver, densidad), `theme-toggle`, los 4 dropdowns **y sus ítems**, `command-palette` (resultados), `stock-nav`, toggles de `ventas-chart`. Incumple el "piso de calidad" del propio doc. | ver §4 |
-| 9 | Baja (a11y) | `Spinner` (`animate-spin`) y los skeletons (`animate-pulse`) no respetan `prefers-reduced-motion`. | `spinner.tsx`, `ventas-chart.tsx:159` |
-| 10 | Cosmético | `text-emerald-600` crudo (único color Tailwind fuera del sistema). | `sales-history-page.tsx:214` |
+> **Columna Estado agregada 2026-09-12** tras re-chequear cada uno contra el código actual.
+
+| # | Severidad | Bug | Ubicación | Estado |
+|---|---|---|---|---|
+| 1 | Alta | "Copiar tabla" hace su propio `fetch` sin `branchHeaders()` → copia datos de la sucursal equivocada si hay una sucursal no-propia activa. `downloadFile()` sí manda el header; `copy()` no. | `export-menu.tsx:66` | **RESUELTO** — `copy()` ahora usa `exportText()` de `lib/api`, que incluye `branchHeaders()` |
+| 2 | Alta | Sesión vencida sin manejo. El JWT expira a las 8 h (backend); `refresh()` traga el 401 y "mantiene lo que había"; `api()` no tiene interceptor. Resultado: sesión muerta, cada pantalla con su error, sin volver a `/login`. | `auth-context.tsx:85`, `api.ts:383` | **RESUELTO** — `onUnauthorized` en `api.ts` |
+| 3 | Media | Fecha con `new Date(x).toLocaleString()` **sin `'es-AR'`** → formato de EE.UU. en navegador en inglés. | `stock-history-page.tsx:229, 272` | **RESUELTO** — usa `fecha()`/`fechaHora()` de `lib/format.ts` |
+| 4 | Media | Fechas ISO crudas visibles (`2026-09-15` en vez de `15/09/2026`) por usar `.slice(0, 10)`. ~15 lugares. | `stock-page.tsx:61`, `expirations-page.tsx:118`, `prices-page.tsx:615,700,853,924`, `product-detail-page.tsx:210,288,370`, `stock-in-page.tsx:580`, `stock-out-page.tsx:105`, … | **RESUELTO** (salvo 2 usos en `prices-page.tsx` para poblar `value` de `<input type="date">`, que no son texto visible — no es el mismo bug) |
+| 5 | Media | `theme.ts` persiste el tema del sistema en el **primer render** (el `useEffect` corre siempre). Un visitante con SO oscuro queda "oscuro" fijo aunque después cambie el SO. | `theme.ts:36-43` | **RESUELTO** — solo aplica una elección guardada; hay listener de `matchMedia` |
+| 6 | Baja | `error` y `EmptyState` se renderizan juntos: al fallar la carga se ve el Alert y abajo "No hay stock registrado". | `stock-page.tsx`, `expirations-page.tsx`, varias | **ABIERTO** |
+| 7 | Baja | `sales-history` pasa `params={filtros}` (objeto) mientras `products` pasa `params={filterParams()}` (URLSearchParams). `ExportMenu` tolera ambos, pero el contrato quedó ambiguo. | `sales-history-page.tsx:76` | **ABIERTO** |
+| 8 | Media (a11y) | Foco de teclado invisible en ~30 `<button>` crudos (todo menos el escritorio y lo que usa `<Button>`): `page-header` (volver, densidad), `theme-toggle`, los 4 dropdowns **y sus ítems**, `command-palette` (resultados), `stock-nav`, toggles de `ventas-chart`. Incumple el "piso de calidad" del propio doc. | ver §4 | **RESUELTO** — regla global `:focus-visible` en `styles.css` |
+| 9 | Baja (a11y) | `Spinner` (`animate-spin`) y los skeletons (`animate-pulse`) no respetan `prefers-reduced-motion`. | `spinner.tsx`, `ventas-chart.tsx:159` | **RESUELTO** — regla global `@media (prefers-reduced-motion: reduce)` en `styles.css` |
+| 10 | Cosmético | `text-emerald-600` crudo (único color Tailwind fuera del sistema). | `sales-history-page.tsx:214` | **RESUELTO** — sin coincidencias en el código actual |
+
+**Quedan 2 bugs reales abiertos: #6 y #7.** El resto (#1-#5, #8-#10) está resuelto — la tabla había quedado congelada en el estado pre-fix aunque la sección "Estado" al principio del documento ya los daba por cerrados.
 
 ---
 
 ## 7. Plan de acción priorizado
 
-### P0 — esta semana (bajo esfuerzo, alto impacto)
+> **Re-priorizado 2026-09-12, y vuelto a cerrar el mismo día**: se hizo una
+> segunda pasada que atacó todo lo que quedaba abierto de P1 y P2. Lo que
+> sigue es el resultado final — no quedan puntos "pendiente" de esta lista.
 
-1. **Interceptor de 401** en `api()`: limpiar sesión + `location.assign('/login')`. Cierra el bug #2.
-2. **`X-Branch` en `export-menu.tsx` `copy()`** (o mejor: que `copy()` reuse `downloadFile`/`api`). Bug #1.
-3. **`lib/format.ts`: `fecha()` y `fechaHora()`** que parseen date-only sin corrimiento de zona, y reemplazar las ~50 llamadas. Bugs #3 y #4.
-4. **Anillo de foco global**: una regla en `styles.css` (`:where(button, a, [role="button"], [role="menuitem"], [role="tab"], summary):focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px }`) o pasar todo por `<Button>`. Bug #8.
-5. **Pinar dependencias** en `package.json`.
-6. `text-emerald-600` → token. Comentario de `badge.tsx`. `prefers-reduced-motion` en spinner.
+### Hecho (verificado y cerrado 2026-09-12)
 
-### P1 — próximas semanas
+- ~~Interceptor de 401~~ · ~~`X-Branch` en `copy()`~~ · ~~`fecha()`/`fechaHora()`~~ ·
+  ~~anillo de foco global~~ · ~~pinar dependencias~~ · ~~`text-emerald-600` → token~~ ·
+  ~~`prefers-reduced-motion`~~ (P0 completo)
+- ~~`<Menu>` con Radix dropdown~~ · ~~`prices-page` en pestañas~~ · ~~Tema "seguir al
+  sistema" (`matchMedia`)~~ · ~~`kbd` unificado~~ · ~~`command-palette` con
+  navegación por teclado~~ · ~~sombra fuera de inputs/select/checkbox, `dialog` a
+  `shadow-float`~~ · ~~valores arbitrarios del `<style>` de `export-menu`~~
+  (ya estaban resueltos, confirmado en esta pasada)
+- ~~**Molde de Productos** (buscador + panel de filtros + chips) a Ventas /
+  Stock / Vencimientos~~ — **ya estaba hecho**: las cuatro páginas
+  (`sales-history`, `stock-page`, `stock-history`, `expirations`) usan
+  `<ListFilters>`, el mismo componente que Productos. El pendiente #1 original
+  del doc estaba desactualizado.
+- ~~**Guardas de ruta consistentes**~~ — **ya estaba hecho**: `App.tsx` envuelve
+  todas las rutas de módulo en `<PermissionRoute>`; sólo `/` y `/ajustes`
+  quedan sin permiso puntual (correcto: son siempre accesibles).
+- ~~**Escala tipográfica a fondo**~~ — quedaban 2 usos reales de `text-lg`/`text-3xl`
+  fuera de escala: el título de módulo (`page-header.tsx` → `text-h2`) y la
+  marca del splash de arranque (`spinner.tsx` → `text-h1`, igual que el login).
+- ~~**`AVATAR_COLORS`**~~ — pasaron de 7 hex a mano a la misma receta OKLCH que
+  `hueFor` (`lib/modules.tsx`), con el primero fijo en `var(--color-primary)`.
+- ~~**Badges de estado en tablas**~~ — decisión tomada y documentada en
+  `diseno.md`: el "sólo puntito" rige la tarjeta del escritorio, no las tablas
+  de un módulo, donde un `Badge` de columna queda permitido.
+- ~~**Bug #6** (error + EmptyState superpuestos)~~ — `stock-page.tsx` y
+  `expirations-page.tsx` ahora ocultan la tabla/EmptyState mientras hay error.
+- ~~**Bug #7** (`sales-history` con objeto vs `URLSearchParams`)~~ — ahora usa
+  el mismo `filterParams()` que el resto, para `load()` y para `ExportMenu`.
+- ~~**`setActiveBranch` sin `reload()`**~~ — cambiar de sucursal ya no hace
+  `window.location.reload()`. Ahora dispara un evento (`lib/branch.ts`,
+  `useBranchVersion()`) que `App.tsx` usa como `key` de `<Routes>`: la app
+  remonta y cada pantalla vuelve a pedir sus datos, sin el flash de un reload
+  de navegador. Probado con dos sucursales reales (una con stock, otra sin) —
+  el cambio se refleja al toque y `window` no pierde estado entre medio.
 
-7. **`<Menu>` con `@radix-ui/react-dropdown-menu`** → reemplaza los 4 dropdowns a mano.
-8. **Aplicar la escala tipográfica**: `text-h2` en título de módulo (`PageHeader`); promover `Section` a compartido y usarlo en `prices`; borrar `text-lg/xl/2xl/3xl`. §3.1
-9. **Capa de datos** (`useResource` propio o TanStack Query). §5.1
-10. **ESLint + `eslint-plugin-react-hooks`** — y arreglar lo que marque (los 17 `exhaustive-deps`). §5.2
-11. **`prices-page` en pestañas.** §3.7
-12. **Guardas de ruta consistentes**: `PermissionRoute` en todas las rutas de módulo. §5.4
+### Único punto con cierre parcial, a propósito
 
-### P2 — cuando toque el sistema visual a fondo
+**Capa de datos (`useResource`)** — se creó [`lib/use-resource.ts`](../frontend/src/lib/use-resource.ts),
+un hook chico que reemplaza el trío `loading`/`error`/`items` + `useEffect` a
+mano, y se migró `stock-page.tsx` como primer caso real (probado en el
+navegador, incluido el cambio de sucursal de arriba). **No se migraron las
+otras ~17 páginas que repiten el mismo patrón** — es la misma razón que ya
+daba este documento originalmente: es un refactor grande, sin suite de tests
+que lo respalde, y migrar 17 archivos a ciegas en una sola pasada es más
+riesgo del que vale la pena correr de una. Queda como trabajo incremental:
+migrar una página a `useResource` cada vez que se la toque por otro motivo,
+usando `stock-page.tsx` como referencia del patrón.
 
-13. **Decidir y documentar en `diseno.md`**: badges de estado en tablas, sí/no. §3.8
-14. **Molde de Productos** (filtros en panel + chips) a Ventas / Stock / Vencimientos. (pendiente #1 del doc)
-15. Tema "seguir al sistema" real (`matchMedia` listener, estado sin atributo). §5.5
-16. Sacar `shadow` de inputs/select/checkbox; `dialog` a `shadow-float`. §3.5
-17. Unificar `kbd` en un solo componente. §3.6
-18. Valores arbitrarios → escala (empezando por el `<style>` de `export-menu`). §3.2
-19. `command-palette` con navegación por teclado. §4
-20. `AVATAR_COLORS` a la rueda OKLCH; `setActiveBranch` sin `reload()`. §3.3, §5.6
+### ESLint — sigue bloqueado, no por elección
+
+`typescript-eslint` exige `typescript >=4.8.4 <6.1.0`; el proyecto está en
+`typescript ^7.0.2`. Instalarlo hoy rompería el rango de peer dependencies.
+Sigue sin haber nada que hacer acá hasta que `typescript-eslint` publique
+soporte para TS 7.

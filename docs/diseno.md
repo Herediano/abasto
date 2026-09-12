@@ -110,6 +110,14 @@ Regla: **el color de acción es uno solo** (el cian). El ámbar y el rojo no son
 puntito), nunca como fondo de un bloque. El dato clave de las tarjetas es
 siempre monocromo: la alerta la lleva el puntito, sola.
 
+**Decisión (2026-09-12): esto rige la tarjeta del escritorio, no las tablas de
+un módulo.** En la tarjeta (ver "Anatomía de la tarjeta" más abajo) el dato
+clave tiene que ser monocromo porque compite por atención con el resto del
+tablero. Dentro de una tabla (`products`, `sales-history`, `expirations`) el
+lector ya está enfocado en esa columna: un `Badge` de fondo teñido
+(`success`/`warning`/`destructive`) en la columna de estado es un patrón
+legible y estándar, y **queda permitido** — no hace falta bajarlo a puntito ahí.
+
 #### Color por módulo — identidad, no estado
 
 En el escritorio, cada tarjeta lleva un **matiz propio** en la pastilla del

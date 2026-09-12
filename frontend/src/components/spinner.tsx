@@ -33,7 +33,7 @@ export function PageSpinner({ label, className }: { label?: string; className?: 
 export function FullPageLoading({ label }: { label?: string } = {}) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-background p-6">
-      <div className="type-display text-3xl tracking-tight text-foreground">
+      <div className="type-display text-h1 tracking-tight text-foreground">
         abasto<span className="animate-pulse text-primary">.ai</span>
       </div>
       <div className="h-0.5 w-24 overflow-hidden rounded-full bg-muted">

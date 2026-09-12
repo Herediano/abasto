@@ -94,12 +94,21 @@ export function SalesHistoryPage() {
     }
   }
 
-  const exportParams = { ...filtros, ...(search ? { search } : {}) };
+  const filterParams = () => {
+    const params = new URLSearchParams();
+    if (filtros.status) params.set('status', filtros.status);
+    if (filtros.paymentMethod) params.set('paymentMethod', filtros.paymentMethod);
+    if (filtros.from) params.set('from', filtros.from);
+    if (filtros.to) params.set('to', filtros.to);
+    if (search) params.set('search', search);
+    return params;
+  };
 
   const load = () => {
     setLoading(true);
-    const p = new URLSearchParams({ page: String(page), pageSize: '20' });
-    for (const [k, v] of Object.entries(exportParams)) if (v) p.set(k, v);
+    const p = filterParams();
+    p.set('page', String(page));
+    p.set('pageSize', '20');
     return api<{ items: Sale[]; pagination: Pagination }>(`/sales?${p}`, {}, token)
       .then(r => { setItems(r.items); setPagination(r.pagination); })
       .catch(e => setError(errorMessage(e)))
@@ -152,7 +161,7 @@ export function SalesHistoryPage() {
       <TicketPrint ticket={ticket} tenantName={session!.tenant.name} />
       <ModuleScreen
         title="Ventas"
-        actions={<ExportMenu path="/sales" params={exportParams} filename="ventas" />}
+        actions={<ExportMenu path="/sales" params={filterParams()} filename="ventas" />}
         summary={resumen}
         views={[
           { key: 'comprobantes', label: 'Comprobantes' },

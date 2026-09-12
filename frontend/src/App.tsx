@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { PermissionRoute } from '@/components/layout/admin-route';
 import { FullScreenRoute, ProtectedRoute } from '@/components/layout/protected-route';
 import { FullPageLoading } from '@/components/spinner';
+import { useBranchVersion } from '@/lib/branch';
 import {
   AjustesPage, CategoriesPage, CustomersPage, EscritorioPage, ExpirationsPage, LoginPage,
   PosPage, PricesPage, ProductDetailPage, ProductsPage, PurchasesPage, ReportesPage, RestockPage,
@@ -11,9 +12,12 @@ import {
 } from '@/lib/lazy-pages';
 
 function App() {
+  // Cambiar de sucursal remonta las rutas (ver lib/branch.ts): cada pantalla
+  // vuelve a pedir sus datos, sin el flash de un reload de navegador.
+  const branchVersion = useBranchVersion();
   return (
     <Suspense fallback={<FullPageLoading />}>
-      <Routes>
+      <Routes key={branchVersion}>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       {/* La caja va afuera del escritorio: pantalla completa, su propio mundo. */}
