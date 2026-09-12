@@ -21,6 +21,9 @@ type PagoPedido = {
   /** Lo que efectivamente cobra este medio: baseAmount + surchargeAmount. */
   amount: number;
   reference: string | null;
+  /** Sólo si se pagó con una tarjeta puntual de la lista (no "Tarjeta" a secas). */
+  cardId: string | null;
+  installments: number | null;
 };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -122,10 +125,18 @@ export class SalesService {
     return new Map(filas.map(f => [f.method, Number(f.percent)]));
   }
 
+  /** Recargo por tarjeta puntual + cuotas: `cardId` → cuotas → %. Convive con `ajustesDePago`: si el pago no trae una tarjeta de acá, sigue rigiendo el % genérico de "Tarjeta". */
+  private async tarjetasDelTenant(tenantId: string): Promise<Map<string, Map<number, number>>> {
+    const tarjetas = await this.prisma.paymentCard.findMany({ where: { tenantId, isActive: true }, include: { installmentOptions: true } });
+    return new Map(tarjetas.map(t => [t.id, new Map(t.installmentOptions.map(o => [o.installments, Number(o.surchargePercent)]))]));
+  }
+
   /**
    * Resuelve los pagos: cada `amount` que manda la pantalla es la parte del
    * total de la mercadería imputada a ese medio (tiene que sumar `total`). Acá
-   * se le agrega el recargo/descuento del medio según la sucursal. El neto va a
+   * se le agrega el recargo/descuento del medio según la sucursal — o, si el
+   * pago trae `cardId`+`installments` de una tarjeta guardada, el recargo de
+   * esa tarjeta en esa cantidad de cuotas en vez del % genérico. El neto va a
    * `Sale.surchargeTotal` y lo que cada `SalePayment` cobra es base + ajuste.
    */
   private parsePagos(
@@ -133,6 +144,7 @@ export class SalesService {
     total: number,
     customerId: string | null,
     ajustes: Map<string, number>,
+    tarjetas: Map<string, Map<number, number>>,
   ): { pagos: PagoPedido[]; surchargeTotal: number } {
     // Compatibilidad con lo que mandaba la pantalla antes del pago dividido:
     // un paymentMethod suelto vale como un único pago por el total.
@@ -149,10 +161,22 @@ export class SalesService {
       const baseAmount = r2(Number(pago.amount));
       if (!Number.isFinite(baseAmount) || baseAmount <= 0) throw new UnprocessableEntityException('El monto de cada pago debe ser mayor a cero');
       const reference = typeof pago.reference === 'string' && pago.reference.trim() ? pago.reference.trim() : null;
-      // Cuenta corriente nunca lleva recargo: es fiado, no un medio con costo financiero.
-      const pct = method === 'account' ? 0 : (ajustes.get(method) ?? 0);
+
+      let cardId: string | null = null;
+      let installments: number | null = null;
+      let pct = method === 'account' ? 0 : (ajustes.get(method) ?? 0);
+      if (method === 'card' && typeof pago.cardId === 'string' && pago.cardId) {
+        const cuotas = tarjetas.get(pago.cardId);
+        if (!cuotas) throw new UnprocessableEntityException('La tarjeta elegida no existe o está de baja');
+        const n = Number(pago.installments ?? 1);
+        const pctTarjeta = cuotas.get(n);
+        if (pctTarjeta === undefined) throw new UnprocessableEntityException(`Esa tarjeta no tiene cargada la opción de ${n} cuota(s)`);
+        cardId = pago.cardId;
+        installments = n;
+        pct = pctTarjeta;
+      }
       const surchargeAmount = r2((baseAmount * pct) / 100);
-      return { method: method as PagoPedido['method'], baseAmount, surchargeAmount, amount: r2(baseAmount + surchargeAmount), reference };
+      return { method: method as PagoPedido['method'], baseAmount, surchargeAmount, amount: r2(baseAmount + surchargeAmount), reference, cardId, installments };
     });
     if (pagos.some(p => p.method === 'account') && !customerId) throw new UnprocessableEntityException('La venta a cuenta corriente necesita un cliente, no puede ser a consumidor final');
     const sumaBase = pagos.reduce((s, p) => s + p.baseAmount, 0);
@@ -165,6 +189,16 @@ export class SalesService {
     const tenantId = user.tenantId;
     if (!user.warehouseId) throw new UnprocessableEntityException('El usuario no tiene una sucursal/depósito asignado');
 
+    // El POS manda una clave por intento de cobro (no por reintento del
+    // navegador): si esta request ya generó una venta antes — la conexión se
+    // cortó justo después de confirmar y el cajero apretó "Confirmar" de
+    // nuevo — se devuelve esa venta en vez de cobrar y descontar stock dos veces.
+    const idempotencyKey = typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim() ? body.idempotencyKey.trim() : null;
+    if (idempotencyKey) {
+      const existente = await this.prisma.sale.findFirst({ where: { tenantId, idempotencyKey }, include: { lines: true, customer: { select: { name: true } } } });
+      if (existente) return existente;
+    }
+
     const customerId = typeof body.customerId === 'string' && body.customerId ? body.customerId : null;
     const priceListId = await this.listaDelCliente(tenantId, customerId, user.branchId);
     const lineas = this.parseLineas(body);
@@ -176,7 +210,8 @@ export class SalesService {
     if (sinPrecio.length) throw new UnprocessableEntityException('Hay productos sin precio cargado; no se pueden vender');
     const total = Math.round(cotizadas.reduce((s, c) => s + c.lineTotal, 0) * 100) / 100;
     const ajustes = await this.ajustesDePago(tenantId, user.branchId);
-    const { pagos, surchargeTotal } = this.parsePagos(body, total, customerId, ajustes);
+    const tarjetas = await this.tarjetasDelTenant(tenantId);
+    const { pagos, surchargeTotal } = this.parsePagos(body, total, customerId, ajustes, tarjetas);
     const paymentMethod = pagos.length === 1 ? pagos[0].method : 'mixed';
 
     const productos = await this.prisma.product.findMany({
@@ -185,7 +220,8 @@ export class SalesService {
     });
     const porId = new Map(productos.map(p => [p.id, p]));
 
-    return this.prisma.$transaction(async tx => {
+    try {
+      return await this.prisma.$transaction(async tx => {
       // Sin turno abierto no hay dónde imputar la venta ni con qué comparar el
       // efectivo al cerrar. Un usuario tiene a lo sumo un turno abierto.
       const turno = await tx.cashShift.findFirst({ where: { tenantId, openedById: user.id, status: 'open' } });
@@ -220,6 +256,7 @@ export class SalesService {
           taxTotal: cotizadas.reduce((s, c) => s + c.lineTax, 0),
           total,
           surchargeTotal,
+          idempotencyKey,
           occurredAt: new Date(),
         },
       });
@@ -230,7 +267,7 @@ export class SalesService {
       if (fiscal.cae) await tx.sale.update({ where: { id: venta.id }, data: { cae: fiscal.cae, caeExpiresAt: fiscal.caeExpiresAt } });
 
       await tx.salePayment.createMany({
-        data: pagos.map(p => ({ tenantId, saleId: venta.id, method: p.method, amount: p.amount, surchargeAmount: p.surchargeAmount, reference: p.reference })),
+        data: pagos.map(p => ({ tenantId, saleId: venta.id, method: p.method, amount: p.amount, surchargeAmount: p.surchargeAmount, reference: p.reference, cardId: p.cardId, installments: p.installments })),
       });
 
       const pagoCuenta = pagos.find(p => p.method === 'account');
@@ -290,10 +327,28 @@ export class SalesService {
       }
 
       return tx.sale.findUniqueOrThrow({ where: { id: venta.id }, include: { lines: true, customer: { select: { name: true } } } });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      // Si dos requests con la misma clave llegaron casi juntas (el reintento
+      // salió antes de que la primera terminara de commitear), la segunda
+      // choca acá contra el unique de idempotencyKey — se devuelve la venta
+      // que sí se creó en vez de propagar el error de violación.
+      if (idempotencyKey && (error as { code?: string }).code === 'P2002') {
+        const existente = await this.prisma.sale.findFirst({ where: { tenantId, idempotencyKey }, include: { lines: true, customer: { select: { name: true } } } });
+        if (existente) return existente;
+      }
+      throw error;
+    }
   }
 
-  /** Lote con vencimiento más próximo que tenga stock suficiente en el depósito. */
+  /**
+   * Lote con vencimiento más próximo que tenga stock suficiente en el depósito.
+   * Toma el mismo lock por lote que `egreso` ANTES de leer su stock (no sólo
+   * al descontar): sin esto, dos ventas concurrentes del mismo lote al límite
+   * pueden leer las dos "hay suficiente" antes de que ninguna confirme, y
+   * Postgres aborta una con un error de serialización que nadie atrapa. Lockear
+   * acá space la lectura FEFO de la misma forma que ya se hace en el egreso.
+   */
   private async loteFEFO(tx: Prisma.TransactionClient, tenantId: string, productId: string, warehouseId: string, cantidad: number) {
     const lotes = await tx.productLot.findMany({
       where: { tenantId, productId },
@@ -301,6 +356,8 @@ export class SalesService {
       select: { id: true },
     });
     for (const lote of lotes) {
+      const lockKey = [tenantId, productId, lote.id, warehouseId].join(':');
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
       const suma = await tx.stockMovement.aggregate({
         where: { tenantId, productId, productLotId: lote.id, warehouseId },
         _sum: { quantity: true },

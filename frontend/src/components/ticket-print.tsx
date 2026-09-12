@@ -14,7 +14,11 @@ export type TicketData = {
   total: string;
   surchargeTotal?: string;
   lines: Array<{ description: string; quantity: string; unitPrice: string; lineTotal: string }>;
-  payments: Array<{ method: string; amount: string }>;
+  /** `label` pisa el nombre genérico del medio — p. ej. la tarjeta puntual usada, con sus cuotas. */
+  payments: Array<{ method: string; amount: string; label?: string }>;
+  /** Sólo si se pagó (total o parcialmente) en efectivo con vuelto. */
+  cashReceived?: number;
+  change?: number;
 };
 
 /**
@@ -61,8 +65,14 @@ export function TicketPrint({ ticket, tenantName }: { ticket: TicketData | null;
       <div className="flex justify-between text-sm font-bold"><span>Total</span><span>{money(Number(ticket.total))}</span></div>
       <hr className="my-1 border-black" />
       {ticket.payments.map((p, i) => (
-        <div key={i} className="flex justify-between"><span>{PAGOS[p.method] ?? p.method}</span><span>{money(Number(p.amount))}</span></div>
+        <div key={i} className="flex justify-between"><span>{p.label ?? PAGOS[p.method] ?? p.method}</span><span>{money(Number(p.amount))}</span></div>
       ))}
+      {ticket.change != null && (
+        <>
+          <div className="flex justify-between"><span>Recibido</span><span>{money(ticket.cashReceived ?? 0)}</span></div>
+          <div className="flex justify-between font-bold"><span>Vuelto</span><span>{money(ticket.change)}</span></div>
+        </>
+      )}
       <p className="mt-2 text-center">
         {letra ? 'CAE pendiente — comprobante no válido como factura' : 'Comprobante no fiscal'}
       </p>

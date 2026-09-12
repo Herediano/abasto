@@ -146,6 +146,8 @@ model Tenant {
   rangoPermissions         RangoPermission[]
   branches                 Branch[]
   paymentAdjustments       PaymentAdjustment[]
+  paymentCards             PaymentCard[]
+  paymentCardInstallments  PaymentCardInstallment[]
   creditNotes              CreditNote[]
   creditNoteLines          CreditNoteLine[]
   productStockRules        ProductStockRule[]
@@ -197,6 +199,46 @@ model PaymentAdjustment {
   @@unique([tenantId, branchId, method])
   @@index([tenantId, branchId])
   @@map("payment_adjustments")
+}
+
+/**
+ * Tarjeta guardada de la empresa (ej. "Visa Crédito Banco Nación"): el cajero
+ * la elige al cobrar con tarjeta y ya tiene cargado el recargo de cada
+ * cantidad de cuotas, sin tener que acordarse ni tipearlo. Convive con
+ * `PaymentAdjustment` — si no se elige ninguna tarjeta puntual, sigue rigiendo
+ * el % genérico por "tarjeta" de la sucursal.
+ */
+model PaymentCard {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  tenantId           String                   @map("tenant_id") @db.Uuid
+  name               String
+  isActive           Boolean                  @default(true) @map("is_active")
+  createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant             Tenant                   @relation(fields: [tenantId], references: [id])
+  installmentOptions PaymentCardInstallment[]
+  salePayments       SalePayment[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@map("payment_cards")
+}
+
+/**
+ * Una opción de cuotas de una tarjeta ("3 cuotas" → 8.5% de recargo).
+ */
+model PaymentCardInstallment {
+  id               String      @id @default(uuid()) @db.Uuid
+  tenantId         String      @map("tenant_id") @db.Uuid
+  cardId           String      @map("card_id") @db.Uuid
+  // 1 = un pago (débito o crédito sin cuotas).
+  installments     Int
+  surchargePercent Decimal     @map("surcharge_percent") @db.Decimal(6, 3)
+  tenant           Tenant      @relation(fields: [tenantId], references: [id])
+  card             PaymentCard @relation(fields: [cardId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, cardId, installments])
+  @@map("payment_card_installments")
 }
 
 // Un puesto físico de cobro dentro de una sucursal ("Caja 1", "Caja 2"). Cada
@@ -290,8 +332,14 @@ model SalePayment {
   // Parte de `amount` que es recargo (+) o descuento (−) por el medio de pago.
   surchargeAmount Decimal           @default(0) @map("surcharge_amount") @db.Decimal(14, 2)
   reference       String?
+  // Sólo si se cobró con una tarjeta puntual de la lista (no con "Tarjeta" a
+  // secas): qué tarjeta y en cuántas cuotas, para que surchargeAmount salga
+  // de PaymentCardInstallment en vez del % genérico de PaymentAdjustment.
+  cardId          String?           @map("card_id") @db.Uuid
+  installments    Int?
   tenant          Tenant            @relation(fields: [tenantId], references: [id])
   sale            Sale              @relation(fields: [saleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  card            PaymentCard?      @relation(fields: [cardId, tenantId], references: [id, tenantId])
 
   @@unique([id, tenantId])
   @@index([tenantId, saleId])
@@ -533,9 +581,14 @@ model Sale {
   // total + surchargeTotal (recargo/descuento por medio de pago).
   total            Decimal                   @db.Decimal(14, 2)
   surchargeTotal   Decimal                   @default(0) @map("surcharge_total") @db.Decimal(14, 2)
-  paymentMethod    String                    @map("payment_method") // cash | card | transfer
+  paymentMethod    String                    @map("payment_method") // cash | card | transfer | qr | account | mixed
   status           String                    @default("confirmed") // confirmed | cancelled
   cancelReason     String?                   @map("cancel_reason")
+  // Clave que manda el POS por cada intento de cobro (no por reintento): si se
+  // corta la conexión justo después de confirmar y el cajero reintenta, la
+  // segunda request con la misma clave devuelve la venta ya creada en vez de
+  // cobrar y descontar stock dos veces. Nulo en ventas de antes de esto.
+  idempotencyKey   String?                   @map("idempotency_key")
   occurredAt       DateTime                  @default(now()) @map("occurred_at") @db.Timestamptz(6)
   createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant           Tenant                    @relation(fields: [tenantId], references: [id])
@@ -550,6 +603,7 @@ model Sale {
 
   @@unique([id, tenantId])
   @@unique([tenantId, docType, pointOfSale, number])
+  @@unique([tenantId, idempotencyKey])
   @@index([tenantId, occurredAt])
   @@index([tenantId, shiftId])
   @@map("sales")

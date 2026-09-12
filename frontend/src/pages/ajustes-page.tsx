@@ -13,7 +13,7 @@ import { AccountList } from '@/components/account-list';
 import { Avatar } from '@/components/ui/avatar';
 import { RangosPage } from '@/pages/admin/rangos-page';
 import { UsersPage } from '@/pages/admin/users-page';
-import { api, errorMessage, type Branch, type PaymentAdjustment, type PaymentMethod, type Session } from '@/lib/api';
+import { api, errorMessage, type Branch, type PaymentAdjustment, type PaymentCard, type PaymentMethod, type Session } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { fileToResizedDataUrl } from '@/lib/image';
 import { settingsModules } from '@/lib/modules';
@@ -72,6 +72,7 @@ export function AjustesPage({ initialView }: { initialView?: AjustesView } = {})
         <div className="flex flex-col">
           <EmpresaSection session={session!} onSaved={refresh} />
           <SucursalesSection token={session!.accessToken} />
+          <TarjetasSection token={session!.accessToken} />
         </div>
       )}
 
@@ -554,6 +555,190 @@ function SucursalesSection({ token }: { token: string }) {
 
       <AjustesPagoDialog branch={ajustesDe} token={token} onClose={() => setAjustesDe(null)} />
     </ModuleSection>
+  );
+}
+
+/**
+ * Tarjetas guardadas: nombre + una tabla de recargo por cantidad de cuotas.
+ * El cajero las elige al cobrar con tarjeta (POS) y el recargo ya está
+ * cargado — pisa el % genérico de "Tarjeta" de Recargos por medio de pago,
+ * que sigue rigiendo cuando no se elige ninguna tarjeta puntual.
+ */
+function TarjetasSection({ token }: { token: string }) {
+  const [items, setItems] = useState<PaymentCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [editing, setEditing] = useState<PaymentCard | 'new' | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = () =>
+    api<PaymentCard[]>('/payment-cards?activeOnly=0', {}, token)
+      .then(setItems)
+      .catch(e => setError(errorMessage(e)))
+      .finally(() => setLoading(false));
+  useEffect(() => { void load(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function toggleActiva(c: PaymentCard) {
+    setBusyId(c.id);
+    setError('');
+    try {
+      await api(`/payment-cards/${c.id}`, { method: 'PUT', body: JSON.stringify({ isActive: !c.isActive }) }, token);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <ModuleSection title="Tarjetas guardadas" description="Cada tarjeta lleva su recargo por cantidad de cuotas. Al cobrar con tarjeta, el cajero la elige de la lista y el recargo ya está cargado.">
+      {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
+      {loading ? (
+        <PageSpinner />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {items.length > 0 && (
+            <RowList>
+              {items.map(c => (
+                <RowListItem
+                  key={c.id}
+                  icon={Percent}
+                  iconClassName={c.isActive ? 'text-primary' : 'text-placeholder'}
+                  muted={!c.isActive}
+                  title={c.name}
+                  badge={!c.isActive && (
+                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-micro font-medium text-muted-foreground">Inactiva</span>
+                  )}
+                  meta={
+                    c.installmentOptions.length === 0
+                      ? 'Sin cuotas cargadas'
+                      : c.installmentOptions.map(o => `${o.installments === 1 ? '1 pago' : `${o.installments} cuotas`} (${Number(o.surchargePercent) >= 0 ? '+' : ''}${o.surchargePercent}%)`).join(' · ')
+                  }
+                  actions={
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => setEditing(c)} aria-label={`Editar ${c.name}`} disabled={busyId === c.id}>
+                        <PencilSimple />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => toggleActiva(c)} disabled={busyId === c.id}>
+                        {busyId === c.id ? <Spinner /> : c.isActive ? 'Desactivar' : 'Activar'}
+                      </Button>
+                    </>
+                  }
+                />
+              ))}
+            </RowList>
+          )}
+          <Button variant="outline" onClick={() => setEditing('new')} className="self-start">
+            <Plus /> Nueva tarjeta
+          </Button>
+        </div>
+      )}
+
+      <TarjetaDialog tarjeta={editing} token={token} onClose={() => setEditing(null)} onSaved={load} />
+    </ModuleSection>
+  );
+}
+
+function TarjetaDialog({
+  tarjeta, token, onClose, onSaved,
+}: {
+  tarjeta: PaymentCard | 'new' | null;
+  token: string;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const editing = tarjeta && tarjeta !== 'new' ? tarjeta : null;
+  const [name, setName] = useState('');
+  const [cuotas, setCuotas] = useState<{ installments: string; surchargePercent: string }[]>([{ installments: '1', surchargePercent: '0' }]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!tarjeta) return;
+    setError('');
+    if (editing) {
+      setName(editing.name);
+      setCuotas(editing.installmentOptions.length
+        ? editing.installmentOptions.map(o => ({ installments: String(o.installments), surchargePercent: o.surchargePercent }))
+        : [{ installments: '1', surchargePercent: '0' }]);
+    } else {
+      setName('');
+      setCuotas([{ installments: '1', surchargePercent: '0' }]);
+    }
+  }, [tarjeta]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function agregarCuota() {
+    setCuotas(prev => [...prev, { installments: '', surchargePercent: '' }]);
+  }
+  function quitarCuota(i: number) {
+    setCuotas(prev => prev.filter((_, idx) => idx !== i));
+  }
+  function actualizarCuota(i: number, cambios: Partial<{ installments: string; surchargePercent: string }>) {
+    setCuotas(prev => prev.map((c, idx) => (idx === i ? { ...c, ...cambios } : c)));
+  }
+
+  async function guardar() {
+    setSaving(true);
+    setError('');
+    try {
+      const installmentOptions = cuotas.map(c => ({ installments: Number(c.installments), surchargePercent: Number(c.surchargePercent) }));
+      const body = { name: name.trim(), installmentOptions };
+      if (editing) await api(`/payment-cards/${editing.id}`, { method: 'PUT', body: JSON.stringify(body) }, token);
+      else await api('/payment-cards', { method: 'POST', body: JSON.stringify(body) }, token);
+      onClose();
+      await onSaved();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!tarjeta} onOpenChange={o => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editing ? `Editar ${editing.name}` : 'Nueva tarjeta'}</DialogTitle>
+        </DialogHeader>
+        {error && <Alert variant="destructive">{error}</Alert>}
+        <Field label="Nombre" htmlFor="tarjeta-name" hint="p. ej. «Visa Crédito Banco Nación»">
+          <Input id="tarjeta-name" required value={name} onChange={e => setName(e.target.value)} />
+        </Field>
+        <div className="flex flex-col gap-2">
+          <p className="text-chico font-semibold text-placeholder">Cuotas y recargo (1 pago cuenta como una cuota)</p>
+          {cuotas.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input
+                type="number" min="1" step="1" placeholder="Cuotas" aria-label="Cantidad de cuotas"
+                value={c.installments} onChange={e => actualizarCuota(i, { installments: e.target.value })}
+                className="w-24"
+              />
+              <div className="relative flex-1">
+                <Input
+                  type="number" step="0.1" placeholder="Recargo" aria-label="Recargo en porcentaje"
+                  value={c.surchargePercent} onChange={e => actualizarCuota(i, { surchargePercent: e.target.value })}
+                  className="pr-7 tabular"
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+              </div>
+              {cuotas.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" onClick={() => quitarCuota(i)} aria-label="Quitar esta cuota">
+                  <Trash className="size-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={agregarCuota} className="self-start">
+            <Plus /> Agregar cuota
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button type="button" onClick={guardar} disabled={saving || !name.trim()}>{saving && <Spinner />} {editing ? 'Guardar cambios' : 'Crear tarjeta'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -45,14 +45,16 @@ import { PurchaseOrdersController } from './purchase-orders.controller';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { SupplierNotesController } from './supplier-notes.controller';
 import { SupplierNotesService } from './supplier-notes.service';
+import { PaymentCardsController } from './payment-cards.controller';
+import { PaymentCardsService } from './payment-cards.service';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, SuppliersAccountController, PurchaseOrdersController, RangosController, EscritorioController, ReportesController, CreditNotesController, TasksController, SupplierNotesController],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, SuppliersAccountController, PurchaseOrdersController, RangosController, EscritorioController, ReportesController, CreditNotesController, TasksController, SupplierNotesController, PaymentCardsController],
   providers: [
     StockService, AuthService, JwtAuthGuard, PermissionGuard, PurchasesService, PriceActivationService, PricesService, SalesService,
     CajaService, CuentasCorrientesService, SuppliersAccountService, PurchaseOrdersService, RangosService, BootstrapService, CreditNotesService,
-    SupplierNotesService,
+    SupplierNotesService, PaymentCardsService,
   ],
 })
 export class AppModule {}

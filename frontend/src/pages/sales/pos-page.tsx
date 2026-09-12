@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field } from '@/components/field';
 import { ProductSearchDialog } from '@/components/product-search-dialog';
+import { CustomerSearchDialog } from '@/components/customer-search-dialog';
 import { SupervisorAuthDialog } from '@/components/supervisor-auth-dialog';
 import { CashShiftReport } from '@/components/cash-shift-report';
 import { TicketPrint, type TicketData } from '@/components/ticket-print';
@@ -20,7 +21,7 @@ import { Spinner, PageSpinner } from '@/components/spinner';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
   api, errorMessage, type CashRegister, type CashShift, type Customer, type CustomerAccount,
-  type PaymentAdjustment, type PaymentMethod, type Product, type Promotion,
+  type PaymentAdjustment, type PaymentCard, type PaymentMethod, type Product, type Promotion,
 } from '@/lib/api';
 import { fecha, hora as fmtHora, money } from '@/lib/format';
 import { parseWeighedBarcode } from '@/lib/pesable';
@@ -50,7 +51,8 @@ type Quote = {
   withoutPrice: string[];
 };
 
-type Pago = { method: PaymentMethod; amount: string; reference: string };
+/** cardId/installments sólo si se eligió una tarjeta puntual de la lista guardada (no "Tarjeta" a secas). */
+type Pago = { method: PaymentMethod; amount: string; reference: string; cardId?: string; installments?: number };
 
 const PAGOS: { id: PaymentMethod; label: string; icon: typeof Money }[] = [
   { id: 'cash', label: 'Efectivo', icon: Money },
@@ -93,10 +95,12 @@ export function PosPage() {
   const puedeAutorizarAnulacion = can('caja.autorizar_anulacion');
   const token = session!.accessToken;
   const [items, setItems] = useState<Item[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState('');
+  const [clienteElegido, setClienteElegido] = useState<Customer | null>(null);
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
   const [customerAccount, setCustomerAccount] = useState<CustomerAccount | null>(null);
   const [adjustments, setAdjustments] = useState<Record<string, number>>({});
+  const [cards, setCards] = useState<PaymentCard[]>([]);
   const [barcode, setBarcode] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
@@ -107,8 +111,12 @@ export function PosPage() {
   const [cobrando, setCobrando] = useState(false);
   const [cobrarOpen, setCobrarOpen] = useState(false);
   const [pagos, setPagos] = useState<Pago[]>([{ method: 'cash', amount: '', reference: '' }]);
+  // Una clave por intento de cobro (no por reintento): si se corta la conexión
+  // justo después de confirmar, reintentar con la misma clave devuelve la
+  // venta ya hecha en vez de cobrar dos veces. Se renueva cada vez que se abre
+  // "Cobrar" de nuevo (venta nueva), no en cada click de "Confirmar".
+  const [idempotencyKey, setIdempotencyKey] = useState('');
   const barcodeRef = useRef<HTMLInputElement>(null);
-  const customerRef = useRef<HTMLSelectElement>(null);
 
   // Turno de caja: sin uno abierto no se puede vender. Es lo primero que se
   // resuelve al entrar; mientras se resuelve, la pantalla no muestra nada.
@@ -152,10 +160,6 @@ export function PosPage() {
   }, [token]);
 
   useEffect(() => { void cargarTurno(); }, [cargarTurno]);
-
-  useEffect(() => {
-    api<Customer[]>('/customers', {}, token).then(setCustomers).catch(() => {});
-  }, [token]);
 
   useEffect(() => {
     if (shift !== null || !session?.user.warehouseId) return;
@@ -211,6 +215,11 @@ export function PosPage() {
     api<PaymentAdjustment[]>('/branches/payment-adjustments/current', {}, token)
       .then(rows => setAdjustments(Object.fromEntries(rows.map(r => [r.method, r.percent]))))
       .catch(() => {});
+  }, [token]);
+
+  // Tarjetas guardadas con su recargo por cuotas, para elegir al cobrar con tarjeta.
+  useEffect(() => {
+    api<PaymentCard[]>('/payment-cards', {}, token).then(setCards).catch(() => {});
   }, [token]);
 
   const agregar = useCallback(async (codigo: string) => {
@@ -275,16 +284,17 @@ export function PosPage() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'F3') { e.preventDefault(); setBuscarOpen(true); }
-      if (e.key === 'F4') { e.preventDefault(); customerRef.current?.focus(); }
+      if (e.key === 'F4') { e.preventDefault(); setCustomerSearchOpen(true); }
       if (e.key === 'F6') { e.preventDefault(); setOfertasOpen(true); }
       if (e.key === 'F7') { e.preventDefault(); setCajaView('panel'); setCajaOpen(true); }
       if (e.key === 'F8') { e.preventDefault(); quitarUltima(); }
+      if (e.key === 'F9' && !cobrarOpen) { e.preventDefault(); abrirCobrar(); }
       // Escape devuelve al lector, que es el estado de reposo de la pantalla.
       if (e.key === 'Escape') barcodeRef.current?.focus();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [items.length, puedeAutorizarAnulacion]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [items.length, puedeAutorizarAnulacion, cobrarOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function agregarDesdeBusqueda(p: Product) {
     setItems(prev => {
@@ -298,6 +308,7 @@ export function PosPage() {
   function abrirCobrar() {
     if (!quote) return;
     setPagos([{ method: pagos[0]?.method ?? 'cash', amount: quote.total.toFixed(2), reference: '' }]);
+    setIdempotencyKey(crypto.randomUUID());
     setCobrarOpen(true);
   }
 
@@ -321,15 +332,35 @@ export function PosPage() {
     setPagos(prev => prev.filter((_, idx) => idx !== i));
   }
 
-  const sumaPagos = pagos.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  // El efectivo es el único medio que da vuelto: lo que se tipeó de más ahí no
+  // es "un pago de más" (error, como antes) sino plata que hay que devolver.
+  // Sólo puede haber un pago por medio (agregarPago no deja repetir), así que
+  // alcanza con encontrar el índice del de efectivo, si hay uno.
+  const cashIndex = pagos.findIndex(p => p.method === 'cash');
+  const otrosSum = pagos.reduce((s, p, idx) => (idx === cashIndex ? s : s + (Number(p.amount) || 0)), 0);
+  const cashNeeded = Math.max(0, Math.round(((quote?.total ?? 0) - otrosSum) * 100) / 100);
+  const cashTyped = cashIndex >= 0 ? Number(pagos[cashIndex].amount) || 0 : 0;
+  const vuelto = cashIndex >= 0 ? Math.max(0, Math.round((cashTyped - cashNeeded) * 100) / 100) : 0;
+  /** Lo que ese pago aplica de verdad a la venta: en efectivo, tope en lo que hace falta (el resto es vuelto). */
+  const montoAplicado = (p: Pago, idx: number) => (idx === cashIndex ? Math.min(cashTyped, cashNeeded) : Number(p.amount) || 0);
+
+  const sumaPagos = pagos.reduce((s, p, idx) => s + montoAplicado(p, idx), 0);
   const restante = Math.round(((quote?.total ?? 0) - sumaPagos) * 100) / 100;
   const usaCtaCte = pagos.some(p => p.method === 'account');
   const puedeConfirmar = Math.abs(restante) < 0.01 && (!usaCtaCte || !!customerId) && pagos.every(p => Number(p.amount) > 0);
 
-  // Recargo (+) o descuento (−) que suma cada medio sobre su parte del total.
-  const recargoDe = (method: PaymentMethod, base: number) =>
-    method === 'account' ? 0 : Math.round(base * (adjustments[method] ?? 0)) / 100;
-  const recargoTotal = Math.round(pagos.reduce((s, p) => s + recargoDe(p.method, Number(p.amount) || 0), 0) * 100) / 100;
+  /** % de recargo/descuento que le toca a un pago: el de su tarjeta puntual si eligió una, si no el genérico del medio. */
+  const porcentajeDe = (p: Pago) => {
+    if (p.method === 'card' && p.cardId && p.installments != null) {
+      const opcion = cards.find(c => c.id === p.cardId)?.installmentOptions.find(o => o.installments === p.installments);
+      if (opcion) return Number(opcion.surchargePercent);
+    }
+    return p.method === 'account' ? 0 : (adjustments[p.method] ?? 0);
+  };
+  // Recargo (+) o descuento (−) que suma cada medio sobre su parte del total
+  // (sobre lo aplicado, no sobre lo tipeado — el vuelto no tiene recargo).
+  const recargoDe = (p: Pago, base: number) => Math.round(base * porcentajeDe(p)) / 100;
+  const recargoTotal = Math.round(pagos.reduce((s, p, idx) => s + recargoDe(p, montoAplicado(p, idx)), 0) * 100) / 100;
   const totalACobrar = Math.round(((quote?.total ?? 0) + recargoTotal) * 100) / 100;
 
   async function cobrar() {
@@ -344,20 +375,32 @@ export function PosPage() {
         method: 'POST',
         body: JSON.stringify({
           customerId: customerId || undefined,
+          idempotencyKey,
           lines: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
-          payments: pagos.map(p => ({ method: p.method, amount: Number(p.amount), reference: p.reference || undefined })),
+          payments: pagos.map((p, idx) => ({ method: p.method, amount: montoAplicado(p, idx), reference: p.reference || undefined, cardId: p.cardId, installments: p.installments })),
         }),
       }, token);
       setCobrarOpen(false);
       setItems([]);
       setQuote(null);
       const letra = venta.docType.length === 1 ? `${venta.docType} ` : '';
-      setAviso(`Venta ${letra}${venta.pointOfSale}-${String(venta.number).padStart(8, '0')} cobrada por ${money(Number(venta.total))}.`);
+      setAviso(
+        `Venta ${letra}${venta.pointOfSale}-${String(venta.number).padStart(8, '0')} cobrada por ${money(Number(venta.total))}.`
+        + (vuelto > 0 ? ` Vuelto: ${money(vuelto)}.` : ''),
+      );
       setTicket({
         docType: venta.docType, pointOfSale: venta.pointOfSale, number: venta.number, occurredAt: venta.occurredAt,
         customerName: venta.customer?.name, subtotal: venta.subtotal, taxTotal: venta.taxTotal, total: venta.total,
         surchargeTotal: venta.surchargeTotal, lines: venta.lines,
-        payments: pagos.map(p => ({ method: p.method, amount: String(p.amount) })),
+        payments: pagos.map((p, idx) => {
+          const tarjeta = p.cardId ? cards.find(c => c.id === p.cardId) : undefined;
+          return {
+            method: p.method, amount: String(montoAplicado(p, idx)),
+            label: tarjeta ? `${tarjeta.name}${p.installments ? ` (${p.installments === 1 ? '1 pago' : `${p.installments} cuotas`})` : ''}` : undefined,
+          };
+        }),
+        cashReceived: cashIndex >= 0 ? cashTyped : undefined,
+        change: vuelto > 0 ? vuelto : undefined,
       });
       // Si se pagó a cuenta corriente, el saldo mostrado quedó viejo.
       if (customerId) api<CustomerAccount>(`/customers/${customerId}/account`, {}, token).then(setCustomerAccount).catch(() => {});
@@ -437,7 +480,11 @@ export function PosPage() {
   const lineaDe = (productId: string) => quote?.lines.find(l => l.productId === productId);
   const sinPrecio = quote?.withoutPrice ?? [];
   const puedeCobrar = items.length > 0 && sinPrecio.length === 0 && !!quote;
-  const clienteElegido = customers.find(c => c.id === customerId);
+
+  function elegirCliente(c: Customer | null) {
+    setCustomerId(c?.id ?? '');
+    setClienteElegido(c);
+  }
 
   if (shift === undefined) {
     return (
@@ -632,10 +679,11 @@ export function PosPage() {
           <div className="flex shrink-0 flex-wrap gap-2 text-sm">
             {[
               { k: 'F3', l: 'Buscar producto', go: () => { setBuscarOpen(true); } },
-              { k: 'F4', l: 'Cliente', go: () => customerRef.current?.focus() },
+              { k: 'F4', l: 'Cliente', go: () => setCustomerSearchOpen(true) },
               { k: 'F6', l: 'Ofertas del día', go: () => setOfertasOpen(true) },
               { k: 'F7', l: 'Caja', go: () => { setCajaView('panel'); setCajaOpen(true); } },
               { k: 'F8', l: 'Quitar la última', go: quitarUltima },
+              { k: 'F9', l: 'Cobrar', go: abrirCobrar },
             ].map(a => (
               <button
                 key={a.k}
@@ -655,18 +703,13 @@ export function PosPage() {
           <div className="flex items-center gap-2.5 border-b border-border px-4 py-3">
             <User className="size-5 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
-              <Select
-                ref={customerRef}
-                aria-label="Cliente"
-                value={customerId}
-                onChange={e => setCustomerId(e.target.value)}
-                className="h-8 border-0 bg-transparent px-0 font-semibold shadow-none focus-visible:ring-0"
+              <button
+                type="button"
+                onClick={() => setCustomerSearchOpen(true)}
+                className="block w-full truncate text-left text-sm font-semibold hover:text-primary"
               >
-                <option value="">Consumidor final</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </Select>
+                {clienteElegido?.name ?? 'Consumidor final'}
+              </button>
               <p className="truncate text-xs text-placeholder">
                 {quote?.priceList ? `Lista ${quote.priceList.name}` : clienteElegido?.priceListName ?? 'Lista mostrador'}
                 {customerAccount && (customerAccount.balance !== 0 || customerAccount.creditLimit !== null) && (
@@ -747,6 +790,13 @@ export function PosPage() {
         token={token}
       />
 
+      <CustomerSearchDialog
+        open={customerSearchOpen}
+        onOpenChange={setCustomerSearchOpen}
+        onPick={elegirCliente}
+        token={token}
+      />
+
       <SupervisorAuthDialog
         open={supervisorOpen}
         onOpenChange={setSupervisorOpen}
@@ -793,7 +843,16 @@ export function PosPage() {
       </Dialog>
 
       <Dialog open={cobrarOpen} onOpenChange={setCobrarOpen}>
-        <DialogContent>
+        <DialogContent
+          onKeyDown={e => {
+            // Enter en un monto/referencia confirma directo — el cajero no
+            // tiene por qué soltar el teclado para llegar al mouse.
+            if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT' && puedeConfirmar && !cobrando) {
+              e.preventDefault();
+              void cobrar();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Cobrar {quote ? money(quote.total) : ''}</DialogTitle>
           </DialogHeader>
@@ -801,14 +860,15 @@ export function PosPage() {
 
           <div className="flex flex-col gap-2">
             {pagos.map((p, i) => {
-              const rec = recargoDe(p.method, Number(p.amount) || 0);
+              const rec = recargoDe(p, montoAplicado(p, i));
+              const tarjetaElegida = p.cardId ? cards.find(c => c.id === p.cardId) : undefined;
               return (
               <div key={i} className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <Select
                     aria-label="Medio de pago"
                     value={p.method}
-                    onChange={e => actualizarPago(i, { method: e.target.value as PaymentMethod })}
+                    onChange={e => actualizarPago(i, { method: e.target.value as PaymentMethod, cardId: undefined, installments: undefined })}
                     className="w-40 shrink-0"
                   >
                     {PAGOS.map(pg => <option key={pg.id} value={pg.id} disabled={pg.id === 'account' && !customerId}>{pg.label}</option>)}
@@ -831,9 +891,37 @@ export function PosPage() {
                     </Button>
                   )}
                 </div>
+                {p.method === 'card' && cards.length > 0 && (
+                  <div className="flex items-center gap-2 pl-[10.5rem]">
+                    <Select
+                      aria-label="Tarjeta"
+                      value={p.cardId ?? ''}
+                      onChange={e => actualizarPago(i, { cardId: e.target.value || undefined, installments: undefined })}
+                      className="h-8 flex-1 text-chico"
+                    >
+                      <option value="">Tarjeta genérica ({adjustments.card ?? 0}%)</option>
+                      {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </Select>
+                    {tarjetaElegida && (
+                      <Select
+                        aria-label="Cuotas"
+                        value={p.installments ?? ''}
+                        onChange={e => actualizarPago(i, { installments: e.target.value ? Number(e.target.value) : undefined })}
+                        className="h-8 w-36 shrink-0 text-chico"
+                      >
+                        <option value="">Cuotas…</option>
+                        {tarjetaElegida.installmentOptions.map(o => (
+                          <option key={o.installments} value={o.installments}>
+                            {o.installments === 1 ? '1 pago' : `${o.installments} cuotas`} ({Number(o.surchargePercent) >= 0 ? '+' : ''}{o.surchargePercent}%)
+                          </option>
+                        ))}
+                      </Select>
+                    )}
+                  </div>
+                )}
                 {rec !== 0 && (
                   <p className="pl-[10.5rem] text-xs text-muted-foreground">
-                    {rec > 0 ? 'Recargo' : 'Descuento'} {PAGOS.find(pg => pg.id === p.method)?.label.toLowerCase()} ({adjustments[p.method]}%): {rec > 0 ? '+' : '−'}{money(Math.abs(rec))} → cobra {money((Number(p.amount) || 0) + rec)}
+                    {rec > 0 ? 'Recargo' : 'Descuento'} {tarjetaElegida ? tarjetaElegida.name : PAGOS.find(pg => pg.id === p.method)?.label.toLowerCase()} ({porcentajeDe(p)}%): {rec > 0 ? '+' : '−'}{money(Math.abs(rec))} → cobra {money(montoAplicado(p, i) + rec)}
                   </p>
                 )}
               </div>
@@ -848,6 +936,13 @@ export function PosPage() {
             <div className="flex items-center justify-between border-t border-border-soft pt-2 text-sm">
               <span className="text-muted-foreground">Total a cobrar (con {recargoTotal > 0 ? 'recargo' : 'descuento'})</span>
               <span className="font-display text-h3 font-bold tabular">{money(totalACobrar)}</span>
+            </div>
+          )}
+
+          {vuelto > 0 && (
+            <div className="flex items-center justify-between rounded-md bg-accent px-3 py-2">
+              <span className="font-medium text-accent-foreground">Vuelto</span>
+              <span className="font-display text-h2 font-bold tabular text-accent-foreground">{money(vuelto)}</span>
             </div>
           )}
 

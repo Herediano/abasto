@@ -409,7 +409,10 @@ export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'qr' | 'account';
 
 export type PaymentAdjustment = { method: PaymentMethod; percent: number };
 
-export type SalePayment = { method: PaymentMethod; amount: string; surchargeAmount?: string; reference?: string | null };
+export type PaymentCardInstallment = { id: string; installments: number; surchargePercent: string };
+export type PaymentCard = { id: string; name: string; isActive: boolean; installmentOptions: PaymentCardInstallment[] };
+
+export type SalePayment = { method: PaymentMethod; amount: string; surchargeAmount?: string; reference?: string | null; cardId?: string | null; installments?: number | null };
 
 export type CustomerAccountMovement = {
   id: string;
