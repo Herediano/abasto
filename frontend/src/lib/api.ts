@@ -405,7 +405,8 @@ export type CashShift = {
   movements?: CashMovement[];
 };
 
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'qr' | 'account';
+/** 'card' queda sólo por compatibilidad con ventas históricas; las nuevas usan card_debit/card_credit. */
+export type PaymentMethod = 'cash' | 'card' | 'card_debit' | 'card_credit' | 'transfer' | 'qr' | 'account';
 
 export type PaymentAdjustment = { method: PaymentMethod; percent: number };
 

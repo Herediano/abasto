@@ -20,7 +20,7 @@ import { api, errorMessage, type CreditNote, type Pagination, type Sale, type Sa
 import { fechaHora, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
-const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente', mixed: 'Varios medios' };
+const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', card_debit: 'Débito', card_credit: 'Crédito', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente', mixed: 'Varios medios' };
 // Sin letra (ventas de antes de resolverla, o docType "internal") se muestra
 // sólo el número; con letra real (A/B/C) se antepone, como en Compras.
 const comprobante = (s: { docType?: string; pointOfSale: string; number: number }) => {

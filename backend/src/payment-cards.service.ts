@@ -4,10 +4,11 @@ import { PrismaService } from './prisma/prisma.service';
 type InstallmentInput = { installments?: unknown; surchargePercent?: unknown };
 
 /**
- * Tarjetas guardadas: nombre + una tabla de recargo por cantidad de cuotas
- * (1 pago, 3 cuotas, 6…). El cajero elige una al cobrar con tarjeta y el
- * recargo ya está cargado — sin esto había que acordarse el % de cada banco
- * de memoria o dejarlo todo al % genérico de "Tarjeta" por sucursal.
+ * Tarjetas de crédito guardadas: nombre + una tabla de recargo por cantidad
+ * de cuotas (1 pago, 3 cuotas, 6…). El cajero elige una al cobrar en crédito
+ * y el recargo ya está cargado — sin esto había que acordarse el % de cada
+ * banco de memoria o dejarlo todo al % genérico de "Crédito" por sucursal.
+ * Débito no usa esto: siempre es 1 pago, sin tabla de cuotas.
  */
 @Injectable()
 export class PaymentCardsService {

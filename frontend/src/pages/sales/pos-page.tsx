@@ -57,7 +57,8 @@ type Pago = { method: PaymentMethod; amount: string; reference: string; cardId?:
 const PAGOS: { id: PaymentMethod; label: string; icon: typeof Money }[] = [
   { id: 'cash', label: 'Efectivo', icon: Money },
   { id: 'transfer', label: 'Transferencia', icon: Barcode },
-  { id: 'card', label: 'Tarjeta', icon: CreditCard },
+  { id: 'card_debit', label: 'Débito', icon: CreditCard },
+  { id: 'card_credit', label: 'Crédito', icon: CreditCard },
   { id: 'qr', label: 'QR', icon: QrCode },
   { id: 'account', label: 'Cuenta corriente', icon: Wallet },
 ];
@@ -351,7 +352,7 @@ export function PosPage() {
 
   /** % de recargo/descuento que le toca a un pago: el de su tarjeta puntual si eligió una, si no el genérico del medio. */
   const porcentajeDe = (p: Pago) => {
-    if (p.method === 'card' && p.cardId && p.installments != null) {
+    if (p.method === 'card_credit' && p.cardId && p.installments != null) {
       const opcion = cards.find(c => c.id === p.cardId)?.installmentOptions.find(o => o.installments === p.installments);
       if (opcion) return Number(opcion.surchargePercent);
     }
@@ -891,7 +892,7 @@ export function PosPage() {
                     </Button>
                   )}
                 </div>
-                {p.method === 'card' && cards.length > 0 && (
+                {p.method === 'card_credit' && (
                   <div className="flex items-center gap-2 pl-[10.5rem]">
                     <Select
                       aria-label="Tarjeta"
@@ -899,7 +900,7 @@ export function PosPage() {
                       onChange={e => actualizarPago(i, { cardId: e.target.value || undefined, installments: undefined })}
                       className="h-8 flex-1 text-chico"
                     >
-                      <option value="">Tarjeta genérica ({adjustments.card ?? 0}%)</option>
+                      <option value="">Crédito genérico ({adjustments.card_credit ?? 0}%)</option>
                       {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </Select>
                     {tarjetaElegida && (

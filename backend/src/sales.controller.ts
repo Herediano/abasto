@@ -8,7 +8,7 @@ import { SalesService } from './sales.service';
 import { PrismaService } from './prisma/prisma.service';
 import { sendExport } from './export.util';
 
-const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente', mixed: 'Varios medios' };
+const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', card_debit: 'Débito', card_credit: 'Crédito', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente', mixed: 'Varios medios' };
 
 @Controller('sales')
 @UseGuards(JwtAuthGuard, PermissionGuard)

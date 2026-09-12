@@ -592,7 +592,7 @@ function TarjetasSection({ token }: { token: string }) {
   }
 
   return (
-    <ModuleSection title="Tarjetas guardadas" description="Cada tarjeta lleva su recargo por cantidad de cuotas. Al cobrar con tarjeta, el cajero la elige de la lista y el recargo ya está cargado.">
+    <ModuleSection title="Tarjetas de crédito guardadas" description="Cada tarjeta lleva su recargo por cantidad de cuotas. Al cobrar en crédito, el cajero la elige de la lista y el recargo ya está cargado. Débito siempre es 1 pago, no usa esta lista.">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       {loading ? (
         <PageSpinner />
@@ -744,7 +744,8 @@ function TarjetaDialog({
 
 const MEDIOS_PAGO: { id: PaymentMethod; label: string }[] = [
   { id: 'cash', label: 'Efectivo' },
-  { id: 'card', label: 'Tarjeta' },
+  { id: 'card_debit', label: 'Débito' },
+  { id: 'card_credit', label: 'Crédito' },
   { id: 'transfer', label: 'Transferencia' },
   { id: 'qr', label: 'QR' },
 ];

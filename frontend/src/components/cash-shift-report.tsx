@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { fecha, fechaHora, money } from '@/lib/format';
 import type { CashShift } from '@/lib/api';
 
-const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
+const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', card_debit: 'Débito', card_credit: 'Crédito', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
 const MOVIMIENTOS: Record<string, string> = { deposit: 'Ingreso', withdrawal: 'Retiro', expense: 'Gasto' };
 
 /**

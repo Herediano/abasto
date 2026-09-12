@@ -6,7 +6,9 @@ import { registrarMovimientoCuenta } from './cuenta-corriente.util';
 import { authorizeFiscal, resolveComprobanteType, type CustomerCondicionFiscal, type TenantCondicionFiscal } from './fiscal.util';
 import { obtenerComponentes } from './product-kit.util';
 
-const FORMAS_PAGO = ['cash', 'card', 'transfer', 'qr', 'account'] as const;
+// 'card' (genérico) ya no se ofrece para ventas nuevas — quedó reemplazado por
+// card_debit/card_credit, que tienen recargo y cuotas distintos.
+const FORMAS_PAGO = ['cash', 'card_debit', 'card_credit', 'transfer', 'qr', 'account'] as const;
 const PUNTO_VENTA_DEFAULT = '0001';
 const TOLERANCIA = 0.01;
 
@@ -125,7 +127,7 @@ export class SalesService {
     return new Map(filas.map(f => [f.method, Number(f.percent)]));
   }
 
-  /** Recargo por tarjeta puntual + cuotas: `cardId` → cuotas → %. Convive con `ajustesDePago`: si el pago no trae una tarjeta de acá, sigue rigiendo el % genérico de "Tarjeta". */
+  /** Recargo por tarjeta puntual + cuotas (sólo card_credit): `cardId` → cuotas → %. Convive con `ajustesDePago`: si el pago no trae una tarjeta de acá, sigue rigiendo el % genérico de "Crédito". */
   private async tarjetasDelTenant(tenantId: string): Promise<Map<string, Map<number, number>>> {
     const tarjetas = await this.prisma.paymentCard.findMany({ where: { tenantId, isActive: true }, include: { installmentOptions: true } });
     return new Map(tarjetas.map(t => [t.id, new Map(t.installmentOptions.map(o => [o.installments, Number(o.surchargePercent)]))]));
@@ -165,7 +167,7 @@ export class SalesService {
       let cardId: string | null = null;
       let installments: number | null = null;
       let pct = method === 'account' ? 0 : (ajustes.get(method) ?? 0);
-      if (method === 'card' && typeof pago.cardId === 'string' && pago.cardId) {
+      if (method === 'card_credit' && typeof pago.cardId === 'string' && pago.cardId) {
         const cuotas = tarjetas.get(pago.cardId);
         if (!cuotas) throw new UnprocessableEntityException('La tarjeta elegida no existe o está de baja');
         const n = Number(pago.installments ?? 1);

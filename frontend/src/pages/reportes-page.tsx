@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/auth-context';
 
 type View = 'ventas' | 'caja' | 'cuentas';
 
-const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
+const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', card_debit: 'Débito', card_credit: 'Crédito', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
 
 type Panel = {
   range: { from: string; to: string };

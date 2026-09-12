@@ -6,7 +6,7 @@ import { AuthRequest } from './auth.types';
 
 /** El rango de fábrica que administra la empresa; único que da de alta sucursales. */
 const OWNER_RANGO = 'Dueño';
-const METODOS_PAGO = ['cash', 'card', 'transfer', 'qr', 'account'] as const;
+const METODOS_PAGO = ['cash', 'card_debit', 'card_credit', 'transfer', 'qr', 'account'] as const;
 
 @Controller('branches')
 @UseGuards(JwtAuthGuard, PermissionGuard)

@@ -10,7 +10,7 @@ import { sendExport, type ExportColumn } from './export.util';
 type Period = 'hoy' | 'semana' | 'mes' | 'anio';
 
 const PAGO_LABEL: Record<string, string> = {
-  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente',
+  cash: 'Efectivo', card: 'Tarjeta', card_debit: 'Débito', card_credit: 'Crédito', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente',
 };
 const MONEY_FMT = '#,##0.00';
 

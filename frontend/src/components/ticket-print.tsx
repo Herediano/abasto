@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { fechaHora, money } from '@/lib/format';
 
-const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
+const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', card_debit: 'Débito', card_credit: 'Crédito', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
 
 export type TicketData = {
   docType: string;

@@ -71,9 +71,14 @@ enum CashMovementType {
   expense
 }
 
+/**
+ * `card` queda sólo por compatibilidad con ventas ya cobradas; las nuevas separan débito de crédito (recargo y cuotas son distintos entre los dos).
+ */
 enum PaymentMethodType {
   cash
   card
+  card_debit
+  card_credit
   transfer
   qr
   account
@@ -212,11 +217,12 @@ model PaymentAdjustment {
 }
 
 /**
- * Tarjeta guardada de la empresa (ej. "Visa Crédito Banco Nación"): el cajero
- * la elige al cobrar con tarjeta y ya tiene cargado el recargo de cada
- * cantidad de cuotas, sin tener que acordarse ni tipearlo. Convive con
- * `PaymentAdjustment` — si no se elige ninguna tarjeta puntual, sigue rigiendo
- * el % genérico por "tarjeta" de la sucursal.
+ * Tarjeta de crédito guardada de la empresa (ej. "Visa Crédito Banco Nación"):
+ * el cajero la elige al cobrar en cuotas y ya tiene cargado el recargo de
+ * cada cantidad, sin tener que acordarse ni tipearlo. Sólo aplica a
+ * card_credit — débito siempre es 1 pago. Convive con `PaymentAdjustment` —
+ * si no se elige ninguna tarjeta puntual, sigue rigiendo el % genérico de
+ * "Crédito" de la sucursal.
  */
 model PaymentCard {
   id                 String                   @id @default(uuid()) @db.Uuid
@@ -241,7 +247,7 @@ model PaymentCardInstallment {
   id               String      @id @default(uuid()) @db.Uuid
   tenantId         String      @map("tenant_id") @db.Uuid
   cardId           String      @map("card_id") @db.Uuid
-  // 1 = un pago (débito o crédito sin cuotas).
+  // 1 = un pago.
   installments     Int
   surchargePercent Decimal     @map("surcharge_percent") @db.Decimal(6, 3)
   tenant           Tenant      @relation(fields: [tenantId], references: [id])
@@ -342,9 +348,9 @@ model SalePayment {
   // Parte de `amount` que es recargo (+) o descuento (−) por el medio de pago.
   surchargeAmount Decimal           @default(0) @map("surcharge_amount") @db.Decimal(14, 2)
   reference       String?
-  // Sólo si se cobró con una tarjeta puntual de la lista (no con "Tarjeta" a
-  // secas): qué tarjeta y en cuántas cuotas, para que surchargeAmount salga
-  // de PaymentCardInstallment en vez del % genérico de PaymentAdjustment.
+  // Sólo si se cobró con una tarjeta puntual de la lista (card_credit, no
+  // "Crédito" genérico): qué tarjeta y en cuántas cuotas, para que
+  // surchargeAmount salga de PaymentCardInstallment en vez del % genérico.
   cardId          String?           @map("card_id") @db.Uuid
   installments    Int?
   tenant          Tenant            @relation(fields: [tenantId], references: [id])
