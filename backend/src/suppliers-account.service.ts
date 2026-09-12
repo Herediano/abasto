@@ -15,7 +15,11 @@ export class SuppliersAccountService {
       where: { tenantId, supplierId },
       orderBy: { occurredAt: 'desc' },
       take: 200,
-      include: { user: { select: { name: true } }, purchaseInvoice: { select: { invoiceType: true, pointOfSale: true, invoiceNumber: true } } },
+      include: {
+        user: { select: { name: true } },
+        purchaseInvoice: { select: { invoiceType: true, pointOfSale: true, invoiceNumber: true } },
+        supplierNote: { select: { kind: true } },
+      },
     });
     return {
       supplierId,
@@ -29,6 +33,8 @@ export class SuppliersAccountService {
           ? `${m.purchaseInvoice.invoiceType} ${m.purchaseInvoice.pointOfSale}-${m.purchaseInvoice.invoiceNumber}`
           : null,
         purchaseInvoice: undefined,
+        noteKind: m.supplierNote?.kind ?? null,
+        supplierNote: undefined,
       })),
     };
   }

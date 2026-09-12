@@ -120,6 +120,8 @@ model Tenant {
   purchaseInvoiceLines     PurchaseInvoiceLine[]
   purchaseInvoiceRevisions PurchaseInvoiceRevision[]
   supplierAccountMovements SupplierAccountMovement[]
+  supplierNotes            SupplierNote[]
+  supplierNoteLines        SupplierNoteLine[]
   purchaseOrders           PurchaseOrder[]
   purchaseOrderLines       PurchaseOrderLine[]
   productBarcodes          ProductBarcode[]
@@ -688,6 +690,7 @@ model User {
   cashMovements            CashMovement[]
   customerAccountMovements CustomerAccountMovement[]
   supplierAccountMovements SupplierAccountMovement[]
+  supplierNotes            SupplierNote[]
   purchaseOrders           PurchaseOrder[]
   tasks                    Task[]
 
@@ -830,6 +833,7 @@ model Product {
   // en products.controller.ts, no en la base, para poder dar un mensaje claro).
   components           ProductComponent[]    @relation("KitComponents")
   partOfKits           ProductComponent[]    @relation("ComponentOf")
+  supplierNoteLines    SupplierNoteLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, barcode])
@@ -902,6 +906,7 @@ model Supplier {
   purchaseInvoices PurchaseInvoice[]
   products         ProductSupplier[]
   accountMovements SupplierAccountMovement[]
+  supplierNotes    SupplierNote[]
   purchaseOrders   PurchaseOrder[]
 
   @@unique([id, tenantId])
@@ -928,17 +933,92 @@ model SupplierAccountMovement {
   amount            Decimal                     @db.Decimal(14, 2)
   balanceAfter      Decimal                     @map("balance_after") @db.Decimal(14, 2)
   purchaseInvoiceId String?                     @map("purchase_invoice_id") @db.Uuid
+  supplierNoteId    String?                     @map("supplier_note_id") @db.Uuid
   userId            String                      @map("user_id") @db.Uuid
   notes             String?
   occurredAt        DateTime                    @default(now()) @map("occurred_at") @db.Timestamptz(6)
   tenant            Tenant                      @relation(fields: [tenantId], references: [id])
   supplier          Supplier                    @relation(fields: [supplierId, tenantId], references: [id, tenantId])
   purchaseInvoice   PurchaseInvoice?            @relation(fields: [purchaseInvoiceId, tenantId], references: [id, tenantId])
+  supplierNote      SupplierNote?               @relation(fields: [supplierNoteId, tenantId], references: [id, tenantId])
   user              User                        @relation(fields: [userId], references: [id])
 
   @@unique([id, tenantId])
   @@index([tenantId, supplierId, occurredAt])
   @@map("supplier_account_movements")
+}
+
+enum SupplierNoteKind {
+  credit_note
+  debit_note
+}
+
+// Nota de crédito/débito de proveedor, estructurada: a diferencia del "ajuste"
+// suelto de SupplierAccountMovement (un monto + un texto libre, sin rastro de
+// qué factura ni qué producto), esta queda linkeada línea por línea a la(s)
+// factura(s) que corrige, con o sin devolución física de mercadería. La emite
+// EL PROVEEDOR, no nosotros — supplierDocType/Number/etc. son el dato de SU
+// papel, de referencia; no generamos numeración propia (a diferencia de
+// CreditNote, que sí es un comprobante nuestro hacia un cliente).
+model SupplierNote {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  tenantId            String                    @map("tenant_id") @db.Uuid
+  supplierId          String                    @map("supplier_id") @db.Uuid
+  kind                SupplierNoteKind
+  reason              String
+  supplierDocType     String?                   @map("supplier_doc_type")
+  supplierPointOfSale String?                   @map("supplier_point_of_sale")
+  supplierNumber      String?                   @map("supplier_number")
+  supplierIssueDate   DateTime?                 @map("supplier_issue_date") @db.Date
+  subtotal            Decimal                   @db.Decimal(14, 2)
+  taxTotal            Decimal                   @map("tax_total") @db.Decimal(14, 2)
+  total               Decimal                   @db.Decimal(14, 2)
+  userId              String                    @map("user_id") @db.Uuid
+  occurredAt          DateTime                  @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  createdAt           DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant              Tenant                    @relation(fields: [tenantId], references: [id])
+  supplier            Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  user                User                      @relation(fields: [userId], references: [id])
+  lines               SupplierNoteLine[]
+  accountMovements    SupplierAccountMovement[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, supplierId, occurredAt])
+  @@map("supplier_notes")
+}
+
+model SupplierNoteLine {
+  id                    String               @id @default(uuid()) @db.Uuid
+  tenantId              String               @map("tenant_id") @db.Uuid
+  noteId                String               @map("note_id") @db.Uuid
+  purchaseInvoiceId     String               @map("purchase_invoice_id") @db.Uuid
+  purchaseInvoiceLineId String?              @map("purchase_invoice_line_id") @db.Uuid
+  productId             String?              @map("product_id") @db.Uuid
+  productLotId          String?              @map("product_lot_id") @db.Uuid
+  description           String
+  // Si devuelve stock: siempre linkeada a una línea puntual de la factura
+  // (quantity en la unidad de ESA línea, igual que PurchaseInvoiceLine) y
+  // resta/suma stock según sea NC o ND. Si no, es un ajuste financiero puro
+  // (precio, flete, bonificación) que puede o no referenciar una línea.
+  returnsStock          Boolean              @default(false) @map("returns_stock")
+  quantity              Decimal?             @db.Decimal(14, 3)
+  unitAmount            Decimal?             @map("unit_amount") @db.Decimal(14, 2)
+  taxRate               Decimal              @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  lineSubtotal          Decimal              @map("line_subtotal") @db.Decimal(14, 2)
+  lineTax               Decimal              @map("line_tax") @db.Decimal(14, 2)
+  lineTotal             Decimal              @map("line_total") @db.Decimal(14, 2)
+  tenant                Tenant               @relation(fields: [tenantId], references: [id])
+  note                  SupplierNote         @relation(fields: [noteId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  purchaseInvoice       PurchaseInvoice      @relation(fields: [purchaseInvoiceId, tenantId], references: [id, tenantId])
+  purchaseInvoiceLine   PurchaseInvoiceLine? @relation(fields: [purchaseInvoiceLineId, tenantId], references: [id, tenantId])
+  product               Product?             @relation(fields: [productId, tenantId], references: [id, tenantId])
+  productLot            ProductLot?          @relation(fields: [productLotId, tenantId], references: [id, tenantId])
+
+  @@unique([id, tenantId])
+  @@index([tenantId, noteId])
+  @@index([tenantId, purchaseInvoiceId])
+  @@index([tenantId, purchaseInvoiceLineId])
+  @@map("supplier_note_lines")
 }
 
 enum PurchaseOrderStatus {
@@ -1133,6 +1213,7 @@ model ProductLot {
   supplier             Supplier?             @relation(fields: [supplierId, tenantId], references: [id, tenantId])
   stockMovements       StockMovement[]
   purchaseInvoiceLines PurchaseInvoiceLine[]
+  supplierNoteLines    SupplierNoteLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, productId, lotNumber])
@@ -1168,39 +1249,40 @@ model StockMovement {
 }
 
 model PurchaseInvoice {
-  id               String                    @id @default(uuid()) @db.Uuid
-  tenantId         String                    @map("tenant_id") @db.Uuid
-  supplierId       String                    @map("supplier_id") @db.Uuid
-  warehouseId      String                    @map("warehouse_id") @db.Uuid
-  createdById      String                    @map("created_by_id") @db.Uuid
-  invoiceType      PurchaseInvoiceType       @map("invoice_type")
+  id                String                    @id @default(uuid()) @db.Uuid
+  tenantId          String                    @map("tenant_id") @db.Uuid
+  supplierId        String                    @map("supplier_id") @db.Uuid
+  warehouseId       String                    @map("warehouse_id") @db.Uuid
+  createdById       String                    @map("created_by_id") @db.Uuid
+  invoiceType       PurchaseInvoiceType       @map("invoice_type")
   // Nulos mientras el estado es `received`: la mercadería ya entró a stock
   // pero todavía no llegó el papel fiscal del proveedor (ver "completar
   // factura"). `remitoNumber` es la referencia de ese remito, si lo hay.
-  pointOfSale      String?                   @map("point_of_sale")
-  invoiceNumber    String?                   @map("invoice_number")
-  remitoNumber     String?                   @map("remito_number")
-  issueDate        DateTime                  @map("issue_date") @db.Date
+  pointOfSale       String?                   @map("point_of_sale")
+  invoiceNumber     String?                   @map("invoice_number")
+  remitoNumber      String?                   @map("remito_number")
+  issueDate         DateTime                  @map("issue_date") @db.Date
   // Cuándo vence el pago. Informativo — no bloquea nada — pero es lo que
   // alimenta "vence esta semana" en Compras y en el escritorio.
-  dueDate          DateTime?                 @map("due_date") @db.Date
-  currency         String                    @default("ARS")
-  subtotal         Decimal                   @db.Decimal(14, 2)
-  taxTotal         Decimal                   @map("tax_total") @db.Decimal(14, 2)
-  otherTaxes       Json?                     @map("other_taxes")
-  otherTaxesTotal  Decimal                   @default(0) @map("other_taxes_total") @db.Decimal(14, 2)
-  total            Decimal                   @db.Decimal(14, 2)
-  status           PurchaseInvoiceStatus     @default(draft)
-  notes            String?
-  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  tenant           Tenant                    @relation(fields: [tenantId], references: [id])
-  supplier         Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
-  warehouse        Warehouse                 @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
-  createdBy        User                      @relation(fields: [createdById], references: [id])
-  lines            PurchaseInvoiceLine[]
-  revisions        PurchaseInvoiceRevision[]
-  accountMovements SupplierAccountMovement[]
+  dueDate           DateTime?                 @map("due_date") @db.Date
+  currency          String                    @default("ARS")
+  subtotal          Decimal                   @db.Decimal(14, 2)
+  taxTotal          Decimal                   @map("tax_total") @db.Decimal(14, 2)
+  otherTaxes        Json?                     @map("other_taxes")
+  otherTaxesTotal   Decimal                   @default(0) @map("other_taxes_total") @db.Decimal(14, 2)
+  total             Decimal                   @db.Decimal(14, 2)
+  status            PurchaseInvoiceStatus     @default(draft)
+  notes             String?
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id])
+  supplier          Supplier                  @relation(fields: [supplierId, tenantId], references: [id, tenantId])
+  warehouse         Warehouse                 @relation(fields: [warehouseId, tenantId], references: [id, tenantId])
+  createdBy         User                      @relation(fields: [createdById], references: [id])
+  lines             PurchaseInvoiceLine[]
+  revisions         PurchaseInvoiceRevision[]
+  accountMovements  SupplierAccountMovement[]
+  supplierNoteLines SupplierNoteLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, invoiceType, pointOfSale, invoiceNumber])
@@ -1226,34 +1308,35 @@ model PurchaseInvoiceRevision {
 }
 
 model PurchaseInvoiceLine {
-  id              String          @id @default(uuid()) @db.Uuid
-  tenantId        String          @map("tenant_id") @db.Uuid
-  invoiceId       String          @map("invoice_id") @db.Uuid
-  productId       String          @map("product_id") @db.Uuid
-  productLotId    String?         @map("product_lot_id") @db.Uuid
-  barcode         String
-  description     String
-  quantity        Decimal         @db.Decimal(14, 3)
+  id                String             @id @default(uuid()) @db.Uuid
+  tenantId          String             @map("tenant_id") @db.Uuid
+  invoiceId         String             @map("invoice_id") @db.Uuid
+  productId         String             @map("product_id") @db.Uuid
+  productLotId      String?            @map("product_lot_id") @db.Uuid
+  barcode           String
+  description       String
+  quantity          Decimal            @db.Decimal(14, 3)
   // Factor congelado al confirmar: si el producto cambia de bulto despues, las
   // reversiones de esta factura tienen que usar el factor original o el stock
   // queda descuadrado.
-  unitFactor      Decimal         @default(1) @map("unit_factor") @db.Decimal(14, 3)
+  unitFactor        Decimal            @default(1) @map("unit_factor") @db.Decimal(14, 3)
   // Precio de lista, tal como lo dice el proveedor — nunca se pisa con el neto,
   // así queda visible cuánto se bonificó. discountPercent es la bonificación
   // (ej. "10+1" ≈ 9.09%, o un % que la factura ya trae) sobre ESE precio: lo que
   // realmente cuesta el producto sale de unitCost * (1 - discountPercent/100),
   // y es eso lo que se factura, se tributa y termina cargado como costo (ver
   // PurchasesService.confirm).
-  unitCost        Decimal         @map("unit_cost") @db.Decimal(14, 2)
-  discountPercent Decimal         @default(0) @map("discount_percent") @db.Decimal(5, 2)
-  taxRate         Decimal         @default(0) @map("tax_rate") @db.Decimal(5, 2)
-  lineSubtotal    Decimal         @map("line_subtotal") @db.Decimal(14, 2)
-  lineTax         Decimal         @map("line_tax") @db.Decimal(14, 2)
-  lineTotal       Decimal         @map("line_total") @db.Decimal(14, 2)
-  tenant          Tenant          @relation(fields: [tenantId], references: [id])
-  invoice         PurchaseInvoice @relation(fields: [invoiceId, tenantId], references: [id, tenantId])
-  product         Product         @relation(fields: [productId, tenantId], references: [id, tenantId])
-  productLot      ProductLot?     @relation(fields: [productLotId, tenantId], references: [id, tenantId])
+  unitCost          Decimal            @map("unit_cost") @db.Decimal(14, 2)
+  discountPercent   Decimal            @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  taxRate           Decimal            @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  lineSubtotal      Decimal            @map("line_subtotal") @db.Decimal(14, 2)
+  lineTax           Decimal            @map("line_tax") @db.Decimal(14, 2)
+  lineTotal         Decimal            @map("line_total") @db.Decimal(14, 2)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  invoice           PurchaseInvoice    @relation(fields: [invoiceId, tenantId], references: [id, tenantId])
+  product           Product            @relation(fields: [productId, tenantId], references: [id, tenantId])
+  productLot        ProductLot?        @relation(fields: [productLotId, tenantId], references: [id, tenantId])
+  supplierNoteLines SupplierNoteLine[]
 
   @@unique([id, tenantId])
   @@index([tenantId, invoiceId])

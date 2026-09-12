@@ -447,6 +447,15 @@ html body[data-scroll-locked] {
       animation-duration: 150ms !important;
       animation-iteration-count: 1 !important;
     }
+    /* Mismo motivo que .menu-content — y además una razón funcional: Radix
+     * espera el evento `animationend` para desmontar un Dialog cerrado; con
+     * 0.01ms (la regla de arriba) ese evento no siempre llega, y el diálogo
+     * queda "cerrado" en data-state pero visible y en el DOM para siempre. */
+    .dialog-overlay[data-state],
+    .dialog-content[data-state] {
+      animation-duration: 150ms !important;
+      animation-iteration-count: 1 !important;
+    }
   }
 }
 

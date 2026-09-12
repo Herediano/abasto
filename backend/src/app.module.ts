@@ -43,13 +43,16 @@ import { SuppliersAccountController } from './suppliers-account.controller';
 import { SuppliersAccountService } from './suppliers-account.service';
 import { PurchaseOrdersController } from './purchase-orders.controller';
 import { PurchaseOrdersService } from './purchase-orders.service';
+import { SupplierNotesController } from './supplier-notes.controller';
+import { SupplierNotesService } from './supplier-notes.service';
 
 @Module({
   imports: [PrismaModule, ScheduleModule.forRoot()],
-  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, SuppliersAccountController, PurchaseOrdersController, RangosController, EscritorioController, ReportesController, CreditNotesController, TasksController],
+  controllers: [HealthController, TenantsController, ProductsController, StockController, WarehousesController, BranchesController, SuppliersController, CategoriesController, ProductReferenceController, AuthController, UsersController, PurchasesController, PricesController, PriceListsController, PriceRulesController, PromotionsController, CustomersController, SalesController, CashRegistersController, CashShiftsController, CuentasCorrientesController, SuppliersAccountController, PurchaseOrdersController, RangosController, EscritorioController, ReportesController, CreditNotesController, TasksController, SupplierNotesController],
   providers: [
     StockService, AuthService, JwtAuthGuard, PermissionGuard, PurchasesService, PriceActivationService, PricesService, SalesService,
     CajaService, CuentasCorrientesService, SuppliersAccountService, PurchaseOrdersService, RangosService, BootstrapService, CreditNotesService,
+    SupplierNotesService,
   ],
 })
 export class AppModule {}

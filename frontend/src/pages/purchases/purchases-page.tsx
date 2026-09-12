@@ -19,7 +19,7 @@ import { Select } from '@/components/ui/select';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { api, errorMessage, type Lot, type Pagination, type Product, type PurchaseInvoice, type PurchaseOrder, type Supplier } from '@/lib/api';
+import { api, errorMessage, type Lot, type Pagination, type Product, type PurchaseInvoice, type PurchaseOrder, type Supplier, type SupplierNote } from '@/lib/api';
 import { fecha, inputDate, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
@@ -129,6 +129,7 @@ export function PurchasesPage() {
   const [filtros, setFiltros] = useState({ supplierId: searchParams.get('supplierId') ?? '', status: '', from: '', to: '' });
   const [loading, setLoading] = useState(true);
   const [detalle, setDetalle] = useState<PurchaseInvoice | null>(null);
+  const [notasFactura, setNotasFactura] = useState<SupplierNote[]>([]);
   const [cancellingInvoice, setCancellingInvoice] = useState<PurchaseInvoice | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
@@ -320,6 +321,12 @@ export function PurchasesPage() {
     const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 300);
     return () => clearTimeout(t);
   }, [searchInput]);
+  useEffect(() => {
+    if (!detalle) { setNotasFactura([]); return; }
+    api<SupplierNote[]>(`/purchases/invoices/${detalle.id}/supplier-notes`, {}, token)
+      .then(setNotasFactura)
+      .catch(() => setNotasFactura([]));
+  }, [detalle, token]);
   useEffect(() => { setPage(1); }, [filtros]);
   useEffect(() => { void load(); }, [token, page, filtros, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -909,6 +916,24 @@ export function PurchasesPage() {
               </div>
               {Number(detalle.otherTaxesTotal ?? 0) > 0 && (detalle.status === 'confirmed' || detalle.status === 'corrected' || detalle.status === 'received') && (
                 <p className="text-chico text-placeholder">Los otros impuestos se prorratearon entre las líneas: el costo que quedó cargado en cada producto incluye su parte proporcional.</p>
+              )}
+              {notasFactura.length > 0 && (
+                <div className="flex flex-col gap-1 border-t border-border pt-3">
+                  <p className="text-chico font-semibold text-placeholder">Notas de crédito / débito sobre esta factura</p>
+                  {notasFactura.map(n => {
+                    // Una nota puede juntar varias facturas: se muestra sólo la
+                    // parte de esta, no el total de la nota entera.
+                    const parcial = n.lines.filter(l => l.purchaseInvoiceId === detalle.id).reduce((s, l) => s + Number(l.lineTotal), 0);
+                    return (
+                      <div key={n.id} className="flex items-center justify-between text-sm">
+                        <span>{n.kind === 'credit_note' ? 'Nota de crédito' : 'Nota de débito'} · {n.reason}</span>
+                        <span className={n.kind === 'credit_note' ? 'font-medium text-success tabular' : 'font-medium text-warning tabular'}>
+                          {n.kind === 'credit_note' ? '−' : '+'}{money(parcial)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}

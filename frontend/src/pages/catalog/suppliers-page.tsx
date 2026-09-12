@@ -11,6 +11,7 @@ import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen, SummaryLine } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
 import { PageSpinner, Spinner } from '@/components/spinner';
+import { SupplierNoteDialog } from '@/components/supplier-note-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Supplier, type SupplierAccount } from '@/lib/api';
 import { fechaHora, money } from '@/lib/format';
@@ -52,6 +53,7 @@ export function SuppliersPage() {
   const [ajusteMonto, setAjusteMonto] = useState('');
   const [ajusteNotas, setAjusteNotas] = useState('');
   const [ajusteSaving, setAjusteSaving] = useState(false);
+  const [notaOpen, setNotaOpen] = useState(false);
 
   const load = () =>
     api<Supplier[]>('/suppliers', {}, token)
@@ -319,12 +321,18 @@ export function SuppliersPage() {
 
               {can('compras.corregir') && (
                 <form onSubmit={registrarAjuste} className="flex items-end gap-2">
-                  <Field label="Ajuste manual" htmlFor="ajuste-monto" hint="+ suma deuda, − la resta" className="flex-1">
+                  <Field label="Ajuste manual" htmlFor="ajuste-monto" hint="+ suma deuda, − la resta, sin factura" className="flex-1">
                     <Input id="ajuste-monto" type="number" step="0.01" required value={ajusteMonto} onChange={e => setAjusteMonto(e.target.value)} />
                   </Field>
                   <Input placeholder="Motivo" aria-label="Motivo del ajuste" required value={ajusteNotas} onChange={e => setAjusteNotas(e.target.value)} className="flex-1" />
                   <Button type="submit" variant="outline" disabled={ajusteSaving}>{ajusteSaving && <Spinner />} Ajustar</Button>
                 </form>
+              )}
+
+              {can('compras.corregir') && (
+                <Button type="button" variant="outline" className="self-start" onClick={() => setNotaOpen(true)}>
+                  Nota de crédito / débito con factura
+                </Button>
               )}
 
               <div className="flex flex-col gap-1">
@@ -337,7 +345,15 @@ export function SuppliersPage() {
                       <div key={m.id} className="flex items-center gap-2 border-b border-border-soft px-3 py-2 text-sm last:border-0">
                         <div className="min-w-0 flex-1">
                           <p className="truncate">
-                            {m.type === 'invoice' ? (m.comprobante ?? 'Factura') : m.type === 'payment' ? 'Pago' : 'Ajuste'}
+                            {m.type === 'invoice'
+                              ? (m.comprobante ?? 'Factura')
+                              : m.type === 'payment'
+                                ? 'Pago'
+                                : m.noteKind === 'credit_note'
+                                  ? 'Nota de crédito'
+                                  : m.noteKind === 'debit_note'
+                                    ? 'Nota de débito'
+                                    : 'Ajuste'}
                             {m.notes && m.type !== 'invoice' ? ` · ${m.notes}` : ''}
                           </p>
                           <p className="text-chico text-placeholder">{fechaHora(m.occurredAt)} · {m.userName}</p>
@@ -359,6 +375,17 @@ export function SuppliersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {cuentaProveedor && (
+        <SupplierNoteDialog
+          open={notaOpen}
+          onOpenChange={setNotaOpen}
+          token={token}
+          supplierId={cuentaProveedor.id}
+          supplierName={cuentaProveedor.name}
+          onCreated={() => { void refrescarCuenta(); }}
+        />
+      )}
     </>
   );
 }

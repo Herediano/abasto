@@ -17,7 +17,7 @@ export async function registrarMovimientoCuentaProveedor(
   tenantId: string,
   supplierId: string,
   amount: number,
-  opts: { type: 'invoice' | 'payment' | 'adjustment'; purchaseInvoiceId?: string | null; userId: string; notes?: string | null },
+  opts: { type: 'invoice' | 'payment' | 'adjustment'; purchaseInvoiceId?: string | null; supplierNoteId?: string | null; userId: string; notes?: string | null },
 ) {
   const proveedor = await tx.supplier.findFirst({ where: { id: supplierId, tenantId } });
   if (!proveedor) throw new NotFoundException('Proveedor no encontrado');
@@ -26,7 +26,8 @@ export async function registrarMovimientoCuentaProveedor(
   return tx.supplierAccountMovement.create({
     data: {
       tenantId, supplierId, type: opts.type, amount, balanceAfter,
-      purchaseInvoiceId: opts.purchaseInvoiceId ?? null, userId: opts.userId, notes: opts.notes ?? null,
+      purchaseInvoiceId: opts.purchaseInvoiceId ?? null, supplierNoteId: opts.supplierNoteId ?? null,
+      userId: opts.userId, notes: opts.notes ?? null,
     },
   });
 }

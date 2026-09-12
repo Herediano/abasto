@@ -545,7 +545,7 @@ export type PurchaseInvoice = {
   total: string;
   notes?: string | null;
   supplier?: { name: string };
-  lines: Array<{ productId: string; productLotId?: string | null; barcode: string; description?: string | null; quantity: string; unitFactor?: string; unitCost: string; discountPercent?: string; taxRate: string }>;
+  lines: Array<{ id: string; productId: string; productLotId?: string | null; barcode: string; description?: string | null; quantity: string; unitFactor?: string; unitCost: string; discountPercent?: string; taxRate: string }>;
 };
 
 export type SupplierAccountMovement = {
@@ -557,6 +557,44 @@ export type SupplierAccountMovement = {
   occurredAt: string;
   userName?: string;
   comprobante?: string | null;
+  /** Si el ajuste vino de una SupplierNote estructurada, qué tipo era. */
+  noteKind?: SupplierNoteKind | null;
+};
+
+export type SupplierNoteKind = 'credit_note' | 'debit_note';
+
+export type SupplierNoteLine = {
+  id: string;
+  purchaseInvoiceId: string;
+  purchaseInvoiceLineId?: string | null;
+  productId?: string | null;
+  productLotId?: string | null;
+  description: string;
+  returnsStock: boolean;
+  quantity?: string | null;
+  unitAmount?: string | null;
+  taxRate: string;
+  lineSubtotal: string;
+  lineTax: string;
+  lineTotal: string;
+};
+
+export type SupplierNote = {
+  id: string;
+  supplierId: string;
+  kind: SupplierNoteKind;
+  reason: string;
+  supplierDocType?: string | null;
+  supplierPointOfSale?: string | null;
+  supplierNumber?: string | null;
+  supplierIssueDate?: string | null;
+  supplierComprobante?: string | null;
+  subtotal: string;
+  taxTotal: string;
+  total: string;
+  occurredAt: string;
+  userName?: string;
+  lines: SupplierNoteLine[];
 };
 
 export type SupplierAccount = {
