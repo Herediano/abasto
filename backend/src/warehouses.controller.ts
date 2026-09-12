@@ -13,12 +13,17 @@ export class WarehousesController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   @Get() @RequirePermission('depositos.ver')
-  list(@Req() request: AuthRequest) {
-    return this.prisma.warehouse.findMany({
-      where: { tenantId: request.user.tenantId, isActive: true },
-      orderBy: { name: 'asc' },
-      include: { branch: { select: { id: true, name: true } } },
+  async list(@Req() request: AuthRequest, @Query('includeInactive') includeInactive?: string) {
+    const tenantId = request.user.tenantId;
+    const all = includeInactive === '1' || includeInactive === 'true';
+    const rows = await this.prisma.warehouse.findMany({
+      where: { tenantId, ...(all ? {} : { isActive: true }) },
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+      include: { branch: { select: { id: true, name: true } }, _count: { select: { users: true, cashRegisters: true } } },
     });
+    if (!all) return rows;
+    // Un depósito con caja o con gente asignada es el operativo de su sucursal: no se puede desactivar sin dejarla sin dónde vender.
+    return rows.map(w => ({ ...w, canDeactivate: w.isActive && w._count.users === 0 && w._count.cashRegisters === 0 }));
   }
 
   @Get('export') @RequirePermission('depositos.ver')
@@ -64,10 +69,23 @@ export class WarehousesController {
   @Put(':id')
   @RequirePermission('depositos.editar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
+    const tenantId = request.user.tenantId;
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     const code = typeof body.code === 'string' ? body.code.trim() : '';
     if (!name || !code) throw new BadRequestException('name y code son obligatorios');
-    try { return await this.prisma.warehouse.updateMany({ where: { id, tenantId: request.user.tenantId, isActive: true }, data: { name, code, address: typeof body.address === 'string' ? body.address.trim() : null } }).then(async result => { if (!result.count) throw new BadRequestException('Depósito no encontrado'); return this.prisma.warehouse.findFirstOrThrow({ where: { id, tenantId: request.user.tenantId } }); }); }
+    const current = await this.prisma.warehouse.findFirst({ where: { id, tenantId }, include: { _count: { select: { users: true, cashRegisters: true } } } });
+    if (!current) throw new BadRequestException('Depósito no encontrado');
+
+    const data: Record<string, unknown> = { name, code, address: typeof body.address === 'string' ? body.address.trim() : null };
+    if (typeof body.isActive === 'boolean' && body.isActive !== current.isActive) {
+      if (!body.isActive) {
+        if (current._count.users > 0) throw new ConflictException('Reasigná los usuarios de este depósito antes de desactivarlo');
+        if (current._count.cashRegisters > 0) throw new ConflictException('Este depósito tiene una caja: es el operativo de su sucursal, no se puede desactivar');
+      }
+      data.isActive = body.isActive;
+    }
+
+    try { return await this.prisma.warehouse.update({ where: { id }, data }); }
     catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El código de depósito ya existe'); throw error; }
   }
 }

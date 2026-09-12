@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CashRegister as RegisterIcon, PencilSimple, Plus, Warehouse as WarehouseIcon } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
@@ -36,7 +37,7 @@ export function WarehousesPage() {
 
   const load = () =>
     Promise.all([
-      api<Warehouse[]>('/warehouses', {}, token),
+      api<Warehouse[]>('/warehouses?includeInactive=1', {}, token),
       api<Branch[]>('/branches', {}, token),
       puedeCajas || can('caja.operar') ? api<CashRegister[]>('/cash-registers', {}, token) : Promise.resolve([]),
     ])
@@ -96,11 +97,22 @@ export function WarehousesPage() {
     }
   }
 
-  const sinCaja = items.filter(w => !registers.some(r => r.warehouseId === w.id)).length;
+  async function toggleActive(w: Warehouse) {
+    setError('');
+    try {
+      await api(`/warehouses/${w.id}`, { method: 'PUT', body: JSON.stringify({ name: w.name, code: w.code, address: w.address, isActive: !w.isActive }) }, token);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  const activos = items.filter(w => w.isActive !== false);
+  const sinCaja = activos.filter(w => !registers.some(r => r.warehouseId === w.id)).length;
   const resumen = !loading && items.length > 0 && (
     <SummaryLine
       items={[
-        { label: 'Depósitos', value: String(items.length) },
+        { label: 'Depósitos', value: String(activos.length) },
         ...(sinCaja > 0 ? [{ label: 'Sin caja', value: String(sinCaja), tone: 'warn' as const }] : []),
       ]}
     />
@@ -144,6 +156,7 @@ export function WarehousesPage() {
                   <TableHead>Depósito</TableHead>
                   <TableHead>Código</TableHead>
                   <TableHead>Cajas</TableHead>
+                  <TableHead>Estado</TableHead>
                   {(puedeEditar || puedeCajas) && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -158,6 +171,7 @@ export function WarehousesPage() {
                     <TableCell className="text-sm text-muted-foreground">
                       {cajas.length ? cajas.map(c => c.name).join(', ') : <span className="text-destructive">sin cajas</span>}
                     </TableCell>
+                    <TableCell>{w.isActive === false ? <Badge variant="destructive">Inactivo</Badge> : <Badge variant="success">Activo</Badge>}</TableCell>
                     {(puedeEditar || puedeCajas) && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
@@ -167,9 +181,20 @@ export function WarehousesPage() {
                             </Button>
                           )}
                           {puedeEditar && (
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
-                              <PencilSimple />
-                            </Button>
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => openEdit(w)}>
+                                <PencilSimple />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => toggleActive(w)}
+                                disabled={w.isActive !== false && w.canDeactivate === false}
+                                title={w.isActive !== false && w.canDeactivate === false ? 'Tiene caja o usuarios asignados: reasignalos primero' : undefined}
+                              >
+                                {w.isActive === false ? 'Activar' : 'Desactivar'}
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -192,7 +217,7 @@ export function WarehousesPage() {
             <Field label="Depósito" htmlFor="caja-wh">
               <Select id="caja-wh" required value={cajaForm.warehouseId} onChange={e => setCajaForm({ ...cajaForm, warehouseId: e.target.value })}>
                 <option value="" disabled>Elegí un depósito</option>
-                {items.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                {activos.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
               </Select>
             </Field>
             <Field label="Nombre de la caja" htmlFor="caja-name" hint="p. ej. «Caja 1», «Caja fondo»">

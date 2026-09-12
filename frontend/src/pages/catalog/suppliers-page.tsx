@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { PencilSimple, Plus, ShoppingCartSimple, Truck, Wallet } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/empty-state';
@@ -56,7 +57,7 @@ export function SuppliersPage() {
   const [notaOpen, setNotaOpen] = useState(false);
 
   const load = () =>
-    api<Supplier[]>('/suppliers', {}, token)
+    api<Supplier[]>('/suppliers?includeInactive=1', {}, token)
       .then(setItems)
       .catch(e => setError(errorMessage(e)))
       .finally(() => setLoading(false));
@@ -151,6 +152,19 @@ export function SuppliersPage() {
     }
   }
 
+  async function toggleActive(s: Supplier) {
+    setError('');
+    try {
+      await api(`/suppliers/${s.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: s.name, legalName: s.legalName, taxId: s.taxId, email: s.email, phone: s.phone, address: s.address, isActive: !s.isActive }),
+      }, token);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
   const deudas = items.filter(s => Number(s.accountBalance ?? 0) > 0);
   const totalDeuda = deudas.reduce((a, s) => a + Number(s.accountBalance ?? 0), 0);
   const resumen = !loading && items.length > 0 && totalDeuda > 0 && (
@@ -209,6 +223,7 @@ export function SuppliersPage() {
                   <TableHead>Cuenta corriente</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Teléfono</TableHead>
+                  <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -225,6 +240,7 @@ export function SuppliersPage() {
                     </TableCell>
                     <TableCell>{s.email ?? '—'}</TableCell>
                     <TableCell>{s.phone ?? '—'}</TableCell>
+                    <TableCell>{s.isActive === false ? <Badge variant="destructive">Inactivo</Badge> : <Badge variant="success">Activo</Badge>}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         {can('proveedores.ver') && (
@@ -233,9 +249,14 @@ export function SuppliersPage() {
                           </Button>
                         )}
                         {puedeEditar && (
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(s)} aria-label={`Editar ${s.name}`}>
-                            <PencilSimple />
-                          </Button>
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(s)} aria-label={`Editar ${s.name}`}>
+                              <PencilSimple />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => toggleActive(s)}>
+                              {s.isActive === false ? 'Activar' : 'Desactivar'}
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>

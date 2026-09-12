@@ -11,7 +11,14 @@ import { sendExport } from './export.util';
 @UseGuards(JwtAuthGuard, PermissionGuard)
 export class SuppliersController {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
-  @Get() @RequirePermission('proveedores.ver') list(@Req() request: AuthRequest) { return this.prisma.supplier.findMany({ where: { tenantId: request.user.tenantId, isActive: true }, orderBy: { name: 'asc' } }); }
+  @Get() @RequirePermission('proveedores.ver')
+  list(@Req() request: AuthRequest, @Query('includeInactive') includeInactive?: string) {
+    const all = includeInactive === '1' || includeInactive === 'true';
+    return this.prisma.supplier.findMany({
+      where: { tenantId: request.user.tenantId, ...(all ? {} : { isActive: true }) },
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+    });
+  }
 
   @Get('export')
   @RequirePermission('proveedores.ver')
@@ -43,9 +50,24 @@ export class SuppliersController {
   @Put(':id')
   @RequirePermission('proveedores.editar')
   async update(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
+    const tenantId = request.user.tenantId;
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name) throw new BadRequestException('name es obligatorio');
-    try { return await this.prisma.supplier.updateMany({ where: { id, tenantId: request.user.tenantId, isActive: true }, data: { name, legalName: typeof body.legalName === 'string' ? body.legalName.trim() : null, taxId: typeof body.taxId === 'string' ? body.taxId.trim() : null, email: typeof body.email === 'string' ? body.email.trim() : null, phone: typeof body.phone === 'string' ? body.phone.trim() : null, address: typeof body.address === 'string' ? body.address.trim() : null } }).then(async result => { if (!result.count) throw new BadRequestException('Proveedor no encontrado'); return this.prisma.supplier.findFirstOrThrow({ where: { id, tenantId: request.user.tenantId } }); }); }
-    catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El proveedor ya existe'); throw error; }
+    const current = await this.prisma.supplier.findFirst({ where: { id, tenantId } });
+    if (!current) throw new BadRequestException('Proveedor no encontrado');
+    try {
+      return await this.prisma.supplier.update({
+        where: { id },
+        data: {
+          name,
+          legalName: typeof body.legalName === 'string' ? body.legalName.trim() : null,
+          taxId: typeof body.taxId === 'string' ? body.taxId.trim() : null,
+          email: typeof body.email === 'string' ? body.email.trim() : null,
+          phone: typeof body.phone === 'string' ? body.phone.trim() : null,
+          address: typeof body.address === 'string' ? body.address.trim() : null,
+          isActive: typeof body.isActive === 'boolean' ? body.isActive : current.isActive,
+        },
+      });
+    } catch (error) { if ((error as { code?: string }).code === 'P2002') throw new ConflictException('El proveedor ya existe'); throw error; }
   }
 }

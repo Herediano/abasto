@@ -480,7 +480,16 @@ export type Branch = {
   canDeactivate?: boolean;
 };
 
-export type Warehouse = { id: string; name: string; code: string; address?: string | null; branchId?: string; branch?: { id: string; name: string } | null };
+export type Warehouse = {
+  id: string;
+  name: string;
+  code: string;
+  address?: string | null;
+  branchId?: string;
+  branch?: { id: string; name: string } | null;
+  isActive?: boolean;
+  canDeactivate?: boolean;
+};
 
 export type Supplier = {
   id: string;
@@ -491,6 +500,7 @@ export type Supplier = {
   phone?: string | null;
   address?: string | null;
   accountBalance?: string | number;
+  isActive?: boolean;
 };
 
 export type Lot = {
