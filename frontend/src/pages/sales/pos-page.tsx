@@ -26,7 +26,7 @@ import {
 } from '@/lib/api';
 import { fecha, hora as fmtHora, money } from '@/lib/format';
 import { parseWeighedBarcode } from '@/lib/pesable';
-import { parseQuantityPrefix } from '@/lib/quantity-prefix';
+import { parsePendingQuantity, parseQuantityPrefix } from '@/lib/quantity-prefix';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -309,11 +309,15 @@ export function PosPage() {
   }, [items.length, puedeAutorizarAnulacion, cobrarOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function agregarDesdeBusqueda(p: Product) {
+    // Si venía tipeando "5x" para cargar varias y terminó de elegir el
+    // producto por búsqueda en vez de código, esa cantidad sigue valiendo.
+    const cantidad = parsePendingQuantity(barcode) ?? 1;
     setItems(prev => {
       const existente = prev.find(i => i.productId === p.id && !i.pesable);
-      if (existente) return prev.map(i => (i === existente ? { ...i, quantity: i.quantity + 1 } : i));
-      return [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: 1 }];
+      if (existente) return prev.map(i => (i === existente ? { ...i, quantity: i.quantity + cantidad } : i));
+      return [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: cantidad }];
     });
+    setBarcode('');
     setBuscarOpen(false);
   }
 
