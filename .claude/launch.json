@@ -10,8 +10,8 @@
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "frontend", "--", "--host"],
-      "port": 5173
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend", "--", "--host", "--port", "5183", "--strictPort"],
+      "port": 5183
     },
     {
       "name": "landing",
