@@ -15,6 +15,7 @@ import { Kbd } from '@/components/ui/kbd';
 import { Label } from '@/components/ui/label';
 import { ListFilters, type ActiveFilter } from '@/components/list-filters';
 import { ModuleScreen, ModuleSection } from '@/components/module-screen';
+import { ComprasHelp } from '@/components/compras-help';
 import { Select } from '@/components/ui/select';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -457,6 +458,7 @@ export function PurchasesPage() {
     <>
       <ModuleScreen
         title="Compras"
+        help={<ComprasHelp />}
         actions={
           <>
             <ExportMenu path="/purchases/invoices" params={exportParams} filename="compras" label="Exportar facturas" />
@@ -478,7 +480,7 @@ export function PurchasesPage() {
         {error && <Alert variant="destructive">{error}</Alert>}
 
         {view === 'facturas' ? (
-          <ModuleSection title="Facturas cargadas" description="Cada factura confirmada movió stock. Corregirla o anularla revierte y vuelve a mover, nunca la borra.">
+          <ModuleSection title="Facturas cargadas">
             <ListFilters
               search={searchInput}
               onSearch={setSearchInput}
@@ -569,7 +571,7 @@ export function PurchasesPage() {
             )}
           </ModuleSection>
         ) : view === 'pedidos' ? (
-          <ModuleSection title="Pedidos a proveedor" description="Nacen desde Reposición: no reconcilian cantidades contra la factura, sólo avisan qué se pidió y a quién hasta que llegue.">
+          <ModuleSection title="Pedidos a proveedor">
             {ordersError && <Alert variant="destructive">{ordersError}</Alert>}
             {ordersLoading ? (
               <PageSpinner />
@@ -814,7 +816,7 @@ export function PurchasesPage() {
               </div>
             </ModuleSection>
 
-            <ModuleSection title="Otros impuestos" description="Percepciones, impuestos internos u otros cargos que la factura del proveedor liste aparte del IVA.">
+            <ModuleSection title="Otros impuestos">
               <div className="grid gap-3">
                 {otherTaxes.map((t, i) => (
                   <div key={i} className="grid grid-cols-6 items-end gap-3">

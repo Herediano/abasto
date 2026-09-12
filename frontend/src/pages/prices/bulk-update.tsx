@@ -353,7 +353,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
   return (
     <div className="flex flex-col">
       {/* ---------------------------------------------------- 1 · a quién */}
-      <ModuleSection title="1 · A qué productos" description="Los filtros se suman: cada uno recorta el conjunto. El contador dice cuántos quedan.">
+      <ModuleSection title="1 · A qué productos">
         <SelectionBuilder
           value={selection}
           onChange={setSelection}
@@ -366,7 +366,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
       </ModuleSection>
 
       {/* ---------------------------------------------------- 2 · qué les hago */}
-      <ModuleSection title="2 · Qué les hago" description="Elegí por el trabajo que estás haciendo, no por la cuenta que hay detrás.">
+      <ModuleSection title="2 · Qué les hago">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {OPERACIONES.map(o => (
             <button
@@ -501,7 +501,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
       </ModuleSection>
 
       {/* ---------------------------------------------------- 3 · revisar */}
-      <ModuleSection title="3 · Revisar y aplicar" description="Nada se guarda hasta que apliques.">
+      <ModuleSection title="3 · Revisar y aplicar">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => ejecutar(true)} disabled={!listo || calculando}>
             {calculando ? <Spinner /> : <Eye />} Calcular
@@ -589,7 +589,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
 
       {/* ---------------------------------------------------- programados */}
       {scheduled.length > 0 && (
-        <ModuleSection title="Cambios programados" description="Todavía no rigen. Entran solos en la fecha indicada; hasta entonces se pueden cancelar.">
+        <ModuleSection title="Cambios programados">
           <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
@@ -618,10 +618,7 @@ export function BulkUpdate({ token, priceLists, categories, priceListId, onPrice
       )}
 
       {/* ---------------------------------------------------- criterios */}
-      <ModuleSection
-        title="Selecciones guardadas"
-        description="Los conjuntos que se repiten mes a mes, listos para volver a aplicar. Recalculan con los precios del momento."
-      >
+      <ModuleSection title="Selecciones guardadas">
         {rules.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Todavía no guardaste ninguna. Armá una selección arriba y ponele nombre — por ejemplo «Productos de Arcor», para el día que aumenten.

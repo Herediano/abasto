@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
+import { ModuleScreen } from '@/components/module-screen';
+import { ProductsHelp } from '@/components/products-help';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -95,8 +96,9 @@ export function CategoriesPage() {
 
   return (
     <>
-      <PageHeader
+      <ModuleScreen
         title="Categorías"
+        help={<ProductsHelp />}
         actions={
           puedeEditar && (
             <Button onClick={openCreate}>
@@ -104,7 +106,7 @@ export function CategoriesPage() {
             </Button>
           )
         }
-      />
+      >
       {error && !open && !deleting && <Alert variant="destructive">{error}</Alert>}
       <Card>
         <CardContent className="p-0">
@@ -149,6 +151,7 @@ export function CategoriesPage() {
           )}
         </CardContent>
       </Card>
+      </ModuleScreen>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

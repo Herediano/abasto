@@ -122,7 +122,6 @@ export function UsersPage() {
     <>
       <ModuleSection
         title="Usuarios"
-        description="Quién entra al sistema y con qué rango."
         actions={
           <Button onClick={openCreate}>
             <Plus /> Nuevo usuario

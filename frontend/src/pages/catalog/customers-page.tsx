@@ -10,6 +10,7 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen, SummaryLine } from '@/components/module-screen';
+import { ClientesHelp } from '@/components/clientes-help';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -169,6 +170,7 @@ export function CustomersPage() {
     <>
       <ModuleScreen
         title="Clientes"
+        help={<ClientesHelp />}
         actions={
           <div className="flex gap-2">
             <ExportMenu path="/customers" params={{ search }} filename="clientes" />

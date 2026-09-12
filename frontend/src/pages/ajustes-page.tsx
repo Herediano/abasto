@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ModuleScreen, ModuleSection } from '@/components/module-screen';
+import { AjustesHelp } from '@/components/ajustes-help';
 import { RowList, RowListItem } from '@/components/row-list';
 import { Select } from '@/components/ui/select';
 import { PageSpinner, Spinner } from '@/components/spinner';
@@ -56,13 +57,13 @@ export function AjustesPage({ initialView }: { initialView?: AjustesView } = {})
   ];
 
   return (
-    <ModuleScreen title="Ajustes" views={views} view={view} onView={k => setView(k as AjustesView)}>
+    <ModuleScreen title="Ajustes" help={<AjustesHelp />} views={views} view={view} onView={k => setView(k as AjustesView)}>
       {view === 'cuenta' && (
         <div className="flex flex-col">
           <PerfilSection session={session!} onSaved={refresh} />
           <PasswordSection token={session!.accessToken} />
           <PreferenciasSection />
-          <ModuleSection title="Sesiones" description="Las cuentas con sesión abierta en este dispositivo. Podés alternar entre ellas sin volver a escribir la contraseña.">
+          <ModuleSection title="Sesiones">
             <AccountList />
           </ModuleSection>
         </div>
@@ -130,7 +131,7 @@ function PerfilSection({ session, onSaved }: { session: Session; onSaved: () => 
   }
 
   return (
-    <ModuleSection title="Perfil" description="Cómo te ve el resto del equipo.">
+    <ModuleSection title="Perfil">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <div className="flex flex-wrap items-center gap-4">
@@ -208,13 +209,13 @@ function PasswordSection({ token }: { token: string }) {
   }
 
   return (
-    <ModuleSection title="Contraseña" description="Al menos 8 caracteres. Te va a pedir la actual para confirmar.">
+    <ModuleSection title="Contraseña">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid max-w-md gap-4" onSubmit={submit}>
         <Field label="Contraseña actual" htmlFor="pw-actual">
           <Input id="pw-actual" type="password" required autoComplete="current-password" value={form.currentPassword} onChange={e => setForm({ ...form, currentPassword: e.target.value })} />
         </Field>
-        <Field label="Nueva contraseña" htmlFor="pw-nueva">
+        <Field label="Nueva contraseña" htmlFor="pw-nueva" hint="(mínimo 8 caracteres)">
           <Input id="pw-nueva" type="password" required minLength={8} autoComplete="new-password" value={form.newPassword} onChange={e => setForm({ ...form, newPassword: e.target.value })} />
         </Field>
         <Field label="Repetir la nueva" htmlFor="pw-rep">
@@ -233,7 +234,7 @@ function PreferenciasSection() {
   const { libre, setLibre } = usePreguntarLibre();
 
   return (
-    <ModuleSection title="Preferencias" description="Se guardan en este dispositivo.">
+    <ModuleSection title="Preferencias">
       <Choice label="Tema">
         <Toggle active={theme === 'light'} onClick={() => setTheme('light')}><Sun weight="fill" className="size-4" /> Claro</Toggle>
         <Toggle active={theme === 'dark'} onClick={() => setTheme('dark')}><Moon weight="fill" className="size-4" /> Oscuro</Toggle>
@@ -322,7 +323,7 @@ function EmpresaSection({ session, onSaved }: { session: Session; onSaved: () =>
   }
 
   return (
-    <ModuleSection title="Datos de la empresa" description="Sólo vos, como Dueño, ves y cambiás esto.">
+    <ModuleSection title="Datos de la empresa">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       <form className="grid gap-4" onSubmit={submit}>
         <div className="flex items-center gap-4">
@@ -456,7 +457,7 @@ function SucursalesSection({ token }: { token: string }) {
     accion(b.id, () => api(`/branches/${b.id}`, { method: 'DELETE' }, token));
 
   return (
-    <ModuleSection title="Sucursales" description="Cada sucursal es un local del negocio. Nace con un depósito y una caja; los depósitos extra se agregan desde el módulo Depósitos.">
+    <ModuleSection title="Sucursales">
       {error && !open && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       {loading ? (
         <PageSpinner />
@@ -592,7 +593,7 @@ function TarjetasSection({ token }: { token: string }) {
   }
 
   return (
-    <ModuleSection title="Tarjetas de crédito guardadas" description="Cada tarjeta lleva su recargo por cantidad de cuotas. Al cobrar en crédito, el cajero la elige de la lista y el recargo ya está cargado. Débito siempre es 1 pago, no usa esta lista.">
+    <ModuleSection title="Tarjetas de crédito guardadas">
       {error && <Alert variant="destructive" className="mb-3">{error}</Alert>}
       {loading ? (
         <PageSpinner />

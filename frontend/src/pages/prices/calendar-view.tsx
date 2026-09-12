@@ -117,10 +117,7 @@ export function CalendarView({ token, promotions, onError, onEditPromotion }: Pr
 
   return (
     <div className="flex flex-col">
-      <ModuleSection
-        title="Qué cambia y cuándo"
-        description="Precios programados y promociones que todavía no arrancaron o están por terminar, en una sola línea de tiempo. No es una pantalla más para cargar nada: se arma sola con lo que ya tenés en Actualizar y en Promociones."
-      >
+      <ModuleSection title="Qué cambia y cuándo">
         {loading ? (
           <PageSpinner />
         ) : eventos.length === 0 ? (

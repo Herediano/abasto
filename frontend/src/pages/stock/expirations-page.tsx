@@ -12,6 +12,7 @@ import { ListFilters } from '@/components/list-filters';
 import { Select } from '@/components/ui/select';
 import { ModuleScreen } from '@/components/module-screen';
 import { stockViews } from '@/components/stock-nav';
+import { StockHelp } from '@/components/stock-help';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type StockItem } from '@/lib/api';
@@ -124,7 +125,7 @@ export function ExpirationsPage() {
 
   return (
     <>
-      <ModuleScreen title="Stock" views={stockViews(can)}>
+      <ModuleScreen title="Stock" help={<StockHelp />} views={stockViews(can)}>
       {error && !editing && <Alert variant="destructive">{error}</Alert>}
       <ListFilters
         search={search}

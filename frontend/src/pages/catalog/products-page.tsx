@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Field } from '@/components/field';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen, SummaryLine } from '@/components/module-screen';
+import { ProductsHelp } from '@/components/products-help';
 import { ExportMenu } from '@/components/export-menu';
 import { ImportWizard } from '@/components/import-wizard';
 import { PageSpinner, Spinner } from '@/components/spinner';
@@ -171,6 +172,7 @@ export function ProductsPage() {
     <>
       <ModuleScreen
         title="Productos"
+        help={<ProductsHelp />}
         actions={
           <>
             {puedeEditar && (

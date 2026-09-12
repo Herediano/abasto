@@ -7,6 +7,7 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ModuleScreen } from '@/components/module-screen';
 import { stockViews } from '@/components/stock-nav';
+import { StockHelp } from '@/components/stock-help';
 import { ProductPicker } from '@/components/product-picker';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
@@ -94,7 +95,7 @@ export function StockTransferPage() {
   const manejaLote = Boolean(product?.manejaVencimiento);
 
   return (
-    <ModuleScreen title="Stock" views={stockViews(can)}>
+    <ModuleScreen title="Stock" help={<StockHelp />} views={stockViews(can)}>
       {done && <Alert>{done}</Alert>}
       {error && <Alert variant="destructive">{error}</Alert>}
       <form className="grid max-w-lg gap-4" onSubmit={submit}>

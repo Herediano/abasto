@@ -12,6 +12,7 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen } from '@/components/module-screen';
+import { TurnosHelp } from '@/components/turnos-help';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -100,6 +101,7 @@ export function ShiftsHistoryPage() {
       <CashShiftReport shift={shiftToPrint} tenantName={session!.tenant.name} onPrinted={() => setShiftToPrint(null)} />
       <ModuleScreen
         title="Turnos de caja"
+        help={<TurnosHelp />}
         actions={<ExportMenu path="/cash-shifts" params={filtros} filename="turnos-de-caja" />}
       >
       {error && <Alert variant="destructive">{error}</Alert>}

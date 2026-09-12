@@ -161,7 +161,7 @@ export function TierBulkUpdate({ token, priceLists, categories, priceListId, onP
 
   return (
     <div className="flex flex-col">
-      <ModuleSection title="1 · A qué productos" description="Los filtros se suman: cada uno recorta el conjunto. El contador dice cuántos quedan.">
+      <ModuleSection title="1 · A qué productos">
         <SelectionBuilder
           value={selection}
           onChange={setSelection}
@@ -173,10 +173,7 @@ export function TierBulkUpdate({ token, priceLists, categories, priceListId, onP
         />
       </ModuleSection>
 
-      <ModuleSection
-        title="2 · Qué les hago"
-        description="Se calcula sobre la venta actual de cada producto, no sobre un precio fijo: cada uno conserva su propia base."
-      >
+      <ModuleSection title="2 · Qué les hago">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Desde cuántas unidades" htmlFor="tier-minqty" hint="en la misma venta">
             <Input id="tier-minqty" type="number" min="2" step="1" value={minQty} onChange={e => setMinQty(e.target.value)} placeholder="6" />
@@ -205,10 +202,7 @@ export function TierBulkUpdate({ token, priceLists, categories, priceListId, onP
         </div>
       </ModuleSection>
 
-      <ModuleSection
-        title="3 · Revisar y aplicar"
-        description="Nada se guarda hasta que apliques. No pisa el precio único del producto: agrega o actualiza sólo el escalón de esta cantidad."
-      >
+      <ModuleSection title="3 · Revisar y aplicar">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => void ejecutar(true)} disabled={!listo || calculando}>
             {calculando ? <Spinner /> : <Calculator />} Calcular
@@ -274,10 +268,7 @@ export function TierBulkUpdate({ token, priceLists, categories, priceListId, onP
         )}
       </ModuleSection>
 
-      <ModuleSection
-        title="Selecciones guardadas"
-        description="Las políticas de precio por cantidad que se repiten, listas para volver a aplicar. Recalculan sobre la venta del momento."
-      >
+      <ModuleSection title="Selecciones guardadas">
         {rules.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Todavía no guardaste ninguna. Armá una selección arriba y ponele nombre — por ejemplo «Almacén por docena».

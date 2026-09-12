@@ -8,6 +8,7 @@ import { ModuleScreen } from '@/components/module-screen';
 import { ExportMenu } from '@/components/export-menu';
 import { Select } from '@/components/ui/select';
 import { stockViews } from '@/components/stock-nav';
+import { StockHelp } from '@/components/stock-help';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, type StockItem } from '@/lib/api';
@@ -47,6 +48,7 @@ export function StockPage() {
   return (
     <ModuleScreen
       title="Stock"
+      help={<StockHelp />}
       views={stockViews(can)}
       actions={<ExportMenu path="/stock" filename="stock" />}
     >

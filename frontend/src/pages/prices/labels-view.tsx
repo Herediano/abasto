@@ -101,10 +101,7 @@ export function LabelsView({ token, tenantId }: { token: string; tenantId: strin
 
   return (
     <div className="flex flex-col gap-6">
-      <ModuleSection
-        title="Cargar productos"
-        description="Escaneá, tipeá el código de barras o buscá por nombre (F3). Si cargás el mismo producto de nuevo, suma una copia más en vez de duplicar la fila."
-      >
+      <ModuleSection title="Cargar productos">
         {error && <Alert variant="destructive">{error}</Alert>}
         <div className="flex gap-2">
           <Input
@@ -164,7 +161,7 @@ export function LabelsView({ token, tenantId }: { token: string; tenantId: strin
         )}
       </ModuleSection>
 
-      <ModuleSection title="Imprimir" description="Sólo el precio de lista de hoy — precios de promoción quedan para más adelante.">
+      <ModuleSection title="Imprimir">
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Etiquetas por hoja" htmlFor="labels-per-page" className="max-w-52">
             <Select id="labels-per-page" value={perPage} onChange={e => setPerPage(Number(e.target.value) as PerPage)}>

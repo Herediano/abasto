@@ -11,6 +11,7 @@ import { ListFilters, type ActiveFilter } from '@/components/list-filters';
 import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ModuleScreen, ModuleSection } from '@/components/module-screen';
+import { PricesHelp } from '@/components/prices-help';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -434,6 +435,7 @@ export function PricesPage() {
     <>
       <ModuleScreen
         title="Precios"
+        help={<PricesHelp />}
         /**
          * Exportar y la acción principal van acá, en la cabecera, y cambian con
          * la vista activa (docs/diseno.md, «La cabecera»). Cada acción existe en
@@ -595,10 +597,7 @@ export function PricesPage() {
 
       {view === 'listas' && !detalleId && (
         <div className="flex flex-col">
-          <ModuleSection
-            title="Listas de precios"
-            description="Una lista de precios es a quién se le cobra ese precio: mostrador, mayorista, distribuidor. Se le asigna a un cliente en su ficha; el que no tiene ninguna paga la lista por defecto."
-          >
+          <ModuleSection title="Listas de precios">
           <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
@@ -671,10 +670,7 @@ export function PricesPage() {
       {view === 'actualizar' && (
         <div className="flex flex-col">
           {pendingCosts.length > 0 && (
-            <ModuleSection
-              title="Costos por sincronizar"
-              description="La última compra de estos productos quedó a un costo distinto del que tienen cargado. No se tocó solo porque «actualizar costo automático» está apagado en Ajustes → La empresa: revisá y aplicá el que corresponda antes de armar un aumento de venta."
-            >
+            <ModuleSection title="Costos por sincronizar">
               <div className="overflow-hidden rounded-md border">
                 <Table>
                   <TableHeader>
@@ -759,10 +755,7 @@ export function PricesPage() {
 
       {view === 'promociones' && (
         <div className="flex flex-col">
-          <ModuleSection
-            title="Promociones"
-            description="Se configuran acá y se aplican solas en la caja mientras estén vigentes. F6 en la caja lista las ofertas del momento. Arrastrá una fila para cambiar el orden: si dos pegan sobre el mismo producto, gana la primera de la lista."
-          >
+          <ModuleSection title="Promociones">
           {promotions.length === 0 ? (
             <p className="text-sm text-muted-foreground">Todavía no cargaste ninguna.</p>
           ) : (
@@ -843,10 +836,7 @@ export function PricesPage() {
 
       {view === 'historial' && (
         <div className="flex flex-col">
-          <ModuleSection
-            title="Auditoría de precios"
-            description="Cada cambio de precio, con su origen y quién lo hizo. Es sólo lectura: nada de esto se edita ni se borra."
-          >
+          <ModuleSection title="Auditoría de precios">
           {/* Mismo molde que el resto de los listados: los filtros detrás del
               botón y lo activo vuelve como chips que se sacan de a uno. */}
           <ListFilters activeFilters={auditFiltrosActivos}>

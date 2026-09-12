@@ -10,6 +10,7 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen, SummaryLine } from '@/components/module-screen';
+import { ProveedoresHelp } from '@/components/proveedores-help';
 import { ExportMenu } from '@/components/export-menu';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { SupplierNoteDialog } from '@/components/supplier-note-dialog';
@@ -180,6 +181,7 @@ export function SuppliersPage() {
     <>
       <ModuleScreen
         title="Proveedores"
+        help={<ProveedoresHelp />}
         actions={
           <>
             <ExportMenu path="/suppliers" filename="proveedores" />

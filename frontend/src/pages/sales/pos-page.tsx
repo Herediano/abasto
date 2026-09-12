@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowCircleDown, ArrowCircleUp, Barcode, CreditCard, Lock, Money, Percent, QrCode,
+  ArrowCircleDown, ArrowCircleUp, Barcode, CreditCard, Lock, Money, Percent, Question, QrCode,
   Receipt, ShoppingCartSimple, Trash, User, Wallet,
 } from '@phosphor-icons/react';
+import { CajaHelp } from '@/components/caja-help';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,6 +99,7 @@ export function PosPage() {
   const puedeAutorizarAnulacion = can('caja.autorizar_anulacion');
   const token = session!.accessToken;
   const [items, setItems] = useState<Item[]>([]);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [customerId, setCustomerId] = useState('');
   const [clienteElegido, setClienteElegido] = useState<Customer | null>(null);
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
@@ -595,6 +597,9 @@ export function PosPage() {
         <div className="ml-auto flex items-center gap-2">
           {/* El cajero pasa el turno entero mirando esta pantalla y no tiene el
               riel a mano: el tema tiene que estar acá. */}
+          <Button variant="outline" size="icon" onClick={() => setHelpOpen(true)} aria-label="Cómo funciona Caja" title="Cómo funciona">
+            <Question className="size-5" />
+          </Button>
           <ThemeToggle className="hover:bg-secondary" />
           <Button variant="ghost" size="sm" asChild>
             <Link to="/ventas/historial">Ver ventas</Link>
@@ -604,6 +609,17 @@ export function PosPage() {
           </Button>
         </div>
       </header>
+
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <DialogContent className="max-h-[80vh] max-w-xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Caja</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 text-chico text-muted-foreground [&_h4]:font-semibold [&_h4]:text-foreground [&_strong]:font-medium [&_strong]:text-foreground">
+            <CajaHelp />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr_380px]">
         {/* Izquierda: escanear y el carrito. */}

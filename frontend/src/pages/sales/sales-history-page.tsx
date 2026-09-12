@@ -10,6 +10,7 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen, SummaryLine } from '@/components/module-screen';
+import { VentasHelp } from '@/components/ventas-help';
 import { ExportMenu } from '@/components/export-menu';
 import { TicketPrint, type TicketData } from '@/components/ticket-print';
 import { VentasChart } from '@/components/ventas-chart';
@@ -161,6 +162,7 @@ export function SalesHistoryPage() {
       <TicketPrint ticket={ticket} tenantName={session!.tenant.name} />
       <ModuleScreen
         title="Ventas"
+        help={<VentasHelp />}
         actions={<ExportMenu path="/sales" params={filterParams()} filename="ventas" />}
         summary={resumen}
         views={[

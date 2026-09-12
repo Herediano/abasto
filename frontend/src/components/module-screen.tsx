@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
+import { Question } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/page-header';
 import { prefetchRoute } from '@/lib/lazy-pages';
 import { cn } from '@/lib/utils';
@@ -27,6 +30,8 @@ export type ModuleView = {
 
 export function ModuleScreen({
   title,
+  help,
+  helpTitle,
   actions,
   summary,
   views,
@@ -35,6 +40,10 @@ export function ModuleScreen({
   children,
 }: {
   title: string;
+  /** Explicación del módulo entero (todas sus pestañas), para el botón "?" — ver `ModuleHelp`. Nada de esto va suelto en la pantalla. */
+  help?: ReactNode;
+  /** Título del diálogo de ayuda, si tiene que ser distinto del título de la pantalla (ej. una ficha con nombre propio, como un producto). */
+  helpTitle?: string;
   actions?: ReactNode;
   summary?: ReactNode;
   views?: ModuleView[];
@@ -42,6 +51,7 @@ export function ModuleScreen({
   onView?: (key: string) => void;
   children: ReactNode;
 }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   const hayVistas = Boolean(views && views.length > 1);
   const tabClass = (activo: boolean) =>
     cn(
@@ -53,7 +63,32 @@ export function ModuleScreen({
 
   return (
     <>
-      <PageHeader title={title} actions={actions} />
+      <PageHeader
+        title={title}
+        actions={
+          <>
+            {help && (
+              <Button variant="outline" size="icon" onClick={() => setHelpOpen(true)} aria-label={`Cómo funciona ${title}`} title="Cómo funciona">
+                <Question className="size-5" />
+              </Button>
+            )}
+            {actions}
+          </>
+        }
+      />
+
+      {help && (
+        <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+          <DialogContent className="max-h-[80vh] max-w-xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{helpTitle ?? title}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 text-chico text-muted-foreground [&_h4]:font-semibold [&_h4]:text-foreground [&_strong]:font-medium [&_strong]:text-foreground">
+              {help}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {(summary || hayVistas) && (
         <div className="flex flex-col gap-3 border-b border-border-soft pb-3">

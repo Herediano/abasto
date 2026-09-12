@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LabelPrint, PER_PAGE_OPTIONS, type LabelItem, type PerPage } from '@/components/label-print';
 import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-screen';
+import { ProductsHelp } from '@/components/products-help';
 import { ProductSearchDialog } from '@/components/product-search-dialog';
 import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
@@ -629,7 +630,7 @@ export function ProductDetailPage() {
 
   const stockTab = (
     <div className="flex flex-col gap-6">
-      <ModuleSection title="Reposición" description="Cuando el stock cae por debajo del mínimo, el producto aparece en la lista de Reposición.">
+      <ModuleSection title="Reposición">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Stock mínimo" htmlFor="s-min">
             <Input id="s-min" type="number" min="0" step="0.001" value={form.minStock} disabled={soloLectura} onChange={e => set('minStock', e.target.value)} />
@@ -695,7 +696,7 @@ export function ProductDetailPage() {
         )}
       </ModuleSection>
 
-      <ModuleSection title="Proveedores" description="Quién te vende este producto y a qué costo — ordenados del más barato al más caro. La ★ marca a quién pedirle al reponer, y no siempre coincide con el más barato: a veces pesa más la entrega o la confianza.">
+      <ModuleSection title="Proveedores">
         {sortedSuppliers.length > 0 && (
           <Table>
             <TableHeader>
@@ -873,12 +874,7 @@ export function ProductDetailPage() {
 
   const preciosTab = (
     <div className="flex flex-col gap-6">
-      <ModuleSection
-        title="Costo y precio de venta"
-        description={puedeEditarPrecios
-          ? 'La venta es el precio de la lista base (mostrador). Las otras listas y las actualizaciones masivas van en el módulo Precios. Cada cambio queda en el historial de abajo.'
-          : 'Se cargan desde el módulo de Precios.'}
-      >
+      <ModuleSection title="Costo y precio de venta">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Precio de costo" htmlFor="p-cost" hint="(lo que te cuesta)">
             <Input id="p-cost" type="number" min="0" step="0.01" value={form.costPrice} disabled={soloLectura || !puedeEditarPrecios} onChange={e => set('costPrice', e.target.value)} />
@@ -910,7 +906,7 @@ export function ProductDetailPage() {
         <Button variant="ghost" size="sm" onClick={() => navigate('/precios')}>Abrir módulo Precios</Button>
       </ModuleSection>
 
-      <ModuleSection title="Escalas por cantidad" description="A partir de cierta cantidad rige otro precio. Se aplican en la caja.">
+      <ModuleSection title="Escalas por cantidad">
         {tiers.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {tiers.map(t => (
@@ -982,6 +978,8 @@ export function ProductDetailPage() {
       <LabelPrint items={label} perPage={labelPerPage} onPrinted={() => setLabel(null)} />
       <ModuleScreen
         title={creando ? 'Nuevo producto' : (product?.name ?? '')}
+        help={<ProductsHelp />}
+        helpTitle="Productos"
         actions={
           !creando && product && (
             <>

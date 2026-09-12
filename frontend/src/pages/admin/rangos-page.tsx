@@ -121,7 +121,6 @@ export function RangosPage() {
     <>
       <ModuleSection
         title="Rangos"
-        description="Qué puede tocar cada rango de la empresa. Los permisos sensibles van marcados."
         actions={puedeGestionar ? <Button onClick={() => { setNuevoNombre(''); setCloneFromId(''); setNuevoError(''); setNuevoOpen(true); }}><Plus /> Nuevo rango</Button> : undefined}
       >
       {error && <Alert variant="destructive">{error}</Alert>}

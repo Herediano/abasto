@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { ExportButton } from '@/components/export-menu';
 import { ModuleScreen, ModuleSection, SummaryLine } from '@/components/module-screen';
+import { ReportesHelp } from '@/components/reportes-help';
 import { PageSpinner } from '@/components/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type Branch } from '@/lib/api';
@@ -73,6 +74,7 @@ export function ReportesPage() {
   return (
     <ModuleScreen
       title="Reportes"
+      help={<ReportesHelp />}
       summary={resumen || undefined}
       views={[
         { key: 'ventas', label: 'Ventas' },
@@ -209,7 +211,6 @@ export function ReportesPage() {
 
           <ModuleSection
             title="Sin rotación"
-            description="Tienen stock pero no se vendieron ni una vez en este rango — plata parada en la góndola."
             actions={data.sinRotacion.length > 0 ? <ExportButton path="/reportes/panel" params={{ from, to, branchId, section: 'sinRotacion' }} filename="sin-rotacion" /> : undefined}
           >
             {data.sinRotacion.length === 0 ? (
