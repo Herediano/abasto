@@ -26,6 +26,7 @@ import {
 } from '@/lib/api';
 import { fecha, hora as fmtHora, money } from '@/lib/format';
 import { parseWeighedBarcode } from '@/lib/pesable';
+import { parseQuantityPrefix } from '@/lib/quantity-prefix';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -231,28 +232,36 @@ export function PosPage() {
     setBuscando(true);
     setError('');
     try {
-      // Un código de balanza no es el barcode del producto: trae el peso
-      // embebido y hay que resolver el producto por su SKU.
-      const pesado = parseWeighedBarcode(limpio);
-      if (pesado) {
-        const rp = await api<{ items: Product[] }>(`/products?sku=${encodeURIComponent(pesado.sku)}`, {}, token);
-        const p = rp.items.find(x => x.isWeighed);
-        if (p) {
-          setItems(prev => [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: pesado.weightKg, pesable: true }]);
-          setBarcode('');
-          return;
+      // "5*7790000000001": varias unidades de un toque, sin escanear una por
+      // una. No aplica a un código de balanza — ese ya trae el peso exacto.
+      const prefijo = parseQuantityPrefix(limpio);
+      const codigoBuscado = prefijo?.barcode ?? limpio;
+      const cantidad = prefijo?.quantity ?? 1;
+
+      if (!prefijo) {
+        // Un código de balanza no es el barcode del producto: trae el peso
+        // embebido y hay que resolver el producto por su SKU.
+        const pesado = parseWeighedBarcode(codigoBuscado);
+        if (pesado) {
+          const rp = await api<{ items: Product[] }>(`/products?sku=${encodeURIComponent(pesado.sku)}`, {}, token);
+          const p = rp.items.find(x => x.isWeighed);
+          if (p) {
+            setItems(prev => [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: pesado.weightKg, pesable: true }]);
+            setBarcode('');
+            return;
+          }
         }
       }
-      const r = await api<{ items: Product[] }>(`/products?barcode=${encodeURIComponent(limpio)}`, {}, token);
+      const r = await api<{ items: Product[] }>(`/products?barcode=${encodeURIComponent(codigoBuscado)}`, {}, token);
       const p = r.items[0];
       if (!p) {
-        setError(`No hay ningún producto con el código ${limpio}`);
+        setError(`No hay ningún producto con el código ${codigoBuscado}`);
         return;
       }
       setItems(prev => {
         const existente = prev.find(i => i.productId === p.id && !i.pesable);
-        if (existente) return prev.map(i => (i === existente ? { ...i, quantity: i.quantity + 1 } : i));
-        return [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: 1 }];
+        if (existente) return prev.map(i => (i === existente ? { ...i, quantity: i.quantity + cantidad } : i));
+        return [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: cantidad }];
       });
       setBarcode('');
     } catch (err) {
@@ -616,7 +625,7 @@ export function PosPage() {
               ref={barcodeRef}
               autoFocus
               aria-label="Código de barras"
-              placeholder="Escaneá o escribí el código"
+              placeholder="Escaneá o escribí el código (ej. 5*7790000000001 para 5 unidades)"
               className="min-w-0 flex-1 bg-transparent text-grande outline-none placeholder:text-placeholder"
               value={barcode}
               onChange={e => setBarcode(e.target.value)}
