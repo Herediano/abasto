@@ -309,15 +309,21 @@ export function PosPage() {
   }, [items.length, puedeAutorizarAnulacion, cobrarOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function agregarDesdeBusqueda(p: Product) {
-    // Si venía tipeando "5x" para cargar varias y terminó de elegir el
-    // producto por búsqueda en vez de código, esa cantidad sigue valiendo.
-    const cantidad = parsePendingQuantity(barcode) ?? 1;
+    // Si venía tipeando "5x" para cargar varias, la búsqueda sólo completa el
+    // código en el lector — no carga sola. El cajero ve "5x<código>" y tiene
+    // que apretar Enter él mismo, como con cualquier otra carga.
+    const cantidad = parsePendingQuantity(barcode);
+    if (cantidad != null) {
+      setBarcode(`${cantidad}x${p.barcode}`);
+      setBuscarOpen(false);
+      requestAnimationFrame(() => barcodeRef.current?.focus());
+      return;
+    }
     setItems(prev => {
       const existente = prev.find(i => i.productId === p.id && !i.pesable);
-      if (existente) return prev.map(i => (i === existente ? { ...i, quantity: i.quantity + cantidad } : i));
-      return [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: cantidad }];
+      if (existente) return prev.map(i => (i === existente ? { ...i, quantity: i.quantity + 1 } : i));
+      return [...prev, { productId: p.id, name: p.name, barcode: p.barcode, quantity: 1 }];
     });
-    setBarcode('');
     setBuscarOpen(false);
   }
 
