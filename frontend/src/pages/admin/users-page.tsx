@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { PencilSimple, Plus, UsersThree as UsersIcon } from '@phosphor-icons/react';
+import { Key, PencilSimple, Plus, UsersThree as UsersIcon } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth-context';
 
 const EMPTY_CREATE_FORM = { name: '', email: '', password: '', rangoId: '', branchId: '' };
 const EMPTY_EDIT_FORM = { name: '', rangoId: '', branchId: '', isActive: true };
+const EMPTY_PASSWORD_FORM = { newPassword: '', repeat: '' };
 
 export function UsersPage() {
   const { session, refresh } = useAuth();
@@ -31,6 +32,8 @@ export function UsersPage() {
   const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM);
   const [editing, setEditing] = useState<TeamUser | null>(null);
   const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
+  const [resetting, setResetting] = useState<TeamUser | null>(null);
+  const [passwordForm, setPasswordForm] = useState(EMPTY_PASSWORD_FORM);
   const [saving, setSaving] = useState(false);
 
   const load = () =>
@@ -90,6 +93,31 @@ export function UsersPage() {
     }
   }
 
+  function openReset(u: TeamUser) {
+    setResetting(u);
+    setPasswordForm(EMPTY_PASSWORD_FORM);
+    setError('');
+  }
+
+  async function submitReset(e: FormEvent) {
+    e.preventDefault();
+    if (!resetting) return;
+    if (passwordForm.newPassword !== passwordForm.repeat) {
+      setError('La nueva contraseña y su repetición no coinciden');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await api(`/users/${resetting.id}/password`, { method: 'PUT', body: JSON.stringify({ newPassword: passwordForm.newPassword }) }, token);
+      setResetting(null);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <>
       <ModuleSection
@@ -101,7 +129,7 @@ export function UsersPage() {
           </Button>
         }
       >
-      {error && !createOpen && !editing && <Alert variant="destructive">{error}</Alert>}
+      {error && !createOpen && !editing && !resetting && <Alert variant="destructive">{error}</Alert>}
           {loading ? (
             <PageSpinner />
           ) : items.length === 0 ? (
@@ -136,6 +164,11 @@ export function UsersPage() {
                       <Badge variant={u.isActive ? 'success' : 'destructive'}>{u.isActive ? 'Activo' : 'Inactivo'}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
+                      {u.id !== session!.user.id && (
+                        <Button variant="ghost" size="icon" title="Restablecer contraseña" onClick={() => openReset(u)}>
+                          <Key />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
                         <PencilSimple />
                       </Button>
@@ -220,6 +253,31 @@ export function UsersPage() {
               </Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Spinner />} Guardar cambios
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!resetting} onOpenChange={open => !open && setResetting(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restablecer contraseña de {resetting?.name}</DialogTitle>
+          </DialogHeader>
+          {error && resetting && <Alert variant="destructive">{error}</Alert>}
+          <form className="grid gap-4" onSubmit={submitReset}>
+            <Field label="Nueva contraseña" htmlFor="reset-password" hint="(mínimo 8 caracteres)">
+              <Input id="reset-password" required minLength={8} type="password" autoComplete="new-password" value={passwordForm.newPassword} onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} />
+            </Field>
+            <Field label="Repetir la nueva" htmlFor="reset-repeat">
+              <Input id="reset-repeat" required minLength={8} type="password" autoComplete="new-password" value={passwordForm.repeat} onChange={e => setPasswordForm({ ...passwordForm, repeat: e.target.value })} />
+            </Field>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setResetting(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Spinner />} Restablecer
               </Button>
             </DialogFooter>
           </form>

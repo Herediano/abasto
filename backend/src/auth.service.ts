@@ -196,6 +196,20 @@ export class AuthService {
     return this.me(actor);
   }
 
+  /**
+   * Un admin (`usuarios.gestionar`) le restablece la contraseña a otro
+   * usuario del tenant que la olvidó — sin pedir la actual, a diferencia de
+   * `updateMe`. No sirve para la propia cuenta: eso sigue yendo por
+   * `updateMe`, que sí exige la contraseña actual.
+   */
+  async resetPassword(tenantId: string, targetUserId: string, newPassword: unknown) {
+    const target = await this.prisma.user.findFirst({ where: { id: targetUserId, tenantId } });
+    if (!target) throw new UnprocessableEntityException('Usuario no encontrado');
+    validatePassword(newPassword);
+    const passwordHash = await argon2.hash(newPassword as string, { type: argon2.argon2id });
+    await this.prisma.user.update({ where: { id: targetUserId }, data: { passwordHash } });
+  }
+
   /** Sólo el Dueño toca los datos de la empresa: nombre, logo y zona horaria. */
   async updateTenant(actor: { id: string; tenantId: string; rangoName: string }, body: Record<string, unknown>) {
     if (actor.rangoName !== OWNER_RANGO) throw new ForbiddenException('Sólo el Dueño puede cambiar los datos de la empresa');

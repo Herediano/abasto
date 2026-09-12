@@ -69,4 +69,12 @@ export class UsersController {
     });
     return { id: updated.id, name: updated.name, email: updated.email, rangoId: updated.rangoId, rangoName: updated.rango.name, isActive: updated.isActive, branchId: updated.branchId, branch: updated.branch };
   }
+
+  @Put(':id/password')
+  @RequirePermission('usuarios.gestionar')
+  async resetPassword(@Req() request: AuthRequest, @Param('id') id: string, @Body() body: Record<string, unknown>) {
+    if (id === request.user.id) throw new BadRequestException('Para tu propia contraseña usá Ajustes, que te pide la actual');
+    await this.auth.resetPassword(request.user.tenantId, id, body.newPassword);
+    return { ok: true };
+  }
 }
