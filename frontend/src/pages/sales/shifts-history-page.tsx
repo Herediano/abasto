@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Receipt, Vault } from '@phosphor-icons/react';
+import { Lock, Receipt, Vault } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,14 +11,14 @@ import { Field } from '@/components/field';
 import { Input } from '@/components/ui/input';
 import { ListFilters } from '@/components/list-filters';
 import { ModuleScreen } from '@/components/module-screen';
-import { PageSpinner } from '@/components/spinner';
+import { PageSpinner, Spinner } from '@/components/spinner';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { api, errorMessage, type CashRegister, type CashShift, type Pagination } from '@/lib/api';
 import { fechaHora, money } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
-const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
+const PAGOS: Record<string, string> = { cash: 'Efectivo', card: 'Tarjeta', card_debit: 'Débito', card_credit: 'Crédito', transfer: 'Transferencia', qr: 'QR', account: 'Cuenta corriente' };
 
 /**
  * Todas las cajas de la sucursal, para el supervisor: quién abrió y cerró
@@ -37,6 +37,12 @@ export function ShiftsHistoryPage() {
   const [error, setError] = useState('');
   const [detalle, setDetalle] = useState<CashShift | null>(null);
   const [shiftToPrint, setShiftToPrint] = useState<CashShift | null>(null);
+  const [cerrando, setCerrando] = useState<CashShift | null>(null);
+  const [countedCash, setCountedCash] = useState('');
+  const [closingNotes, setClosingNotes] = useState('');
+  const [closingError, setClosingError] = useState('');
+  const [closingSaving, setClosingSaving] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     api<CashRegister[]>('/cash-registers', {}, token).then(setRegisters).catch(() => {});
@@ -52,7 +58,33 @@ export function ShiftsHistoryPage() {
       .then(r => { setItems(r.items); setPagination(r.pagination); })
       .catch(e => setError(errorMessage(e)))
       .finally(() => setLoading(false));
-  }, [token, page, filtros]);
+  }, [token, page, filtros, refreshKey]);
+
+  function abrirCierre(shift: CashShift) {
+    setCerrando(shift);
+    setCountedCash('');
+    setClosingNotes('');
+    setClosingError('');
+  }
+
+  async function confirmarCierre() {
+    if (!cerrando) return;
+    setClosingSaving(true);
+    setClosingError('');
+    try {
+      const cerrado = await api<CashShift>(`/cash-shifts/${cerrando.id}/close`, {
+        method: 'POST',
+        body: JSON.stringify({ countedCash: Number(countedCash), closingNotes: closingNotes || undefined }),
+      }, token);
+      setCerrando(null);
+      setDetalle(cerrado);
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      setClosingError(errorMessage(err));
+    } finally {
+      setClosingSaving(false);
+    }
+  }
 
   const set = (k: keyof typeof filtros) => (v: string) => setFiltros(f => ({ ...f, [k]: v }));
   const activeFilters = [
@@ -171,7 +203,7 @@ export function ShiftsHistoryPage() {
                 <span className="text-muted-foreground">Fondo inicial</span><span className="tabular">{money(Number(detalle.openingCash))}</span>
                 <span className="text-muted-foreground">Ventas</span><span>{detalle.salesCount ?? 0}</span>
               </div>
-              {detalle.status === 'closed' && (
+              {detalle.status === 'closed' ? (
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-md border border-border p-3">
                     <p className="text-chico text-placeholder">Esperado</p>
@@ -185,6 +217,11 @@ export function ShiftsHistoryPage() {
                     <p className="text-chico text-placeholder">Diferencia</p>
                     <p className="font-semibold tabular">{money(Number(detalle.cashDifference))}</p>
                   </div>
+                </div>
+              ) : (
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-chico text-placeholder">Esperado ahora</p>
+                  <p className="font-semibold tabular">{money(Number(detalle.expectedCashNow))}</p>
                 </div>
               )}
               {!!detalle.totalsByMethod?.length && (
@@ -213,13 +250,52 @@ export function ShiftsHistoryPage() {
               </div>
             </div>
           )}
+          <DialogFooter className="justify-between sm:justify-between">
+            <div>
+              {detalle?.status === 'open' && (
+                <Button variant="destructive" onClick={() => abrirCierre(detalle)}>
+                  <Lock /> Cerrar turno
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {detalle && (
+                <Button variant="outline" onClick={() => setShiftToPrint(detalle)}>
+                  <Receipt /> Imprimir
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setDetalle(null)}>Cerrar</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(cerrando)} onOpenChange={o => !o && setCerrando(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cerrar turno · arqueo</DialogTitle>
+          </DialogHeader>
+          {cerrando && (
+            <p className="text-sm text-muted-foreground">
+              {cerrando.cashRegisterName ?? cerrando.cashRegister?.name} · abrió {cerrando.openedByName}
+            </p>
+          )}
+          {closingError && <Alert variant="destructive">{closingError}</Alert>}
+          <div className="rounded-md border border-border p-3 text-sm">
+            <p className="text-chico text-placeholder">Esperado ahora</p>
+            <p className="font-semibold tabular">{money(Number(cerrando?.expectedCashNow))}</p>
+          </div>
+          <Field label="Efectivo contado" htmlFor="cierre-contado">
+            <Input id="cierre-contado" type="number" min="0" step="0.01" autoFocus value={countedCash} onChange={e => setCountedCash(e.target.value)} />
+          </Field>
+          <Field label="Notas" htmlFor="cierre-notas" hint="(opcional)">
+            <Input id="cierre-notas" value={closingNotes} onChange={e => setClosingNotes(e.target.value)} />
+          </Field>
           <DialogFooter>
-            {detalle && (
-              <Button variant="outline" onClick={() => setShiftToPrint(detalle)}>
-                <Receipt /> Imprimir
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setDetalle(null)}>Cerrar</Button>
+            <Button type="button" variant="outline" onClick={() => setCerrando(null)}>Cancelar</Button>
+            <Button type="button" variant="destructive" disabled={closingSaving || !countedCash} onClick={confirmarCierre}>
+              {closingSaving && <Spinner />} Cerrar turno
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
