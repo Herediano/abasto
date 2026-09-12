@@ -151,7 +151,7 @@ export function ChecklistToggle() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[340px] max-w-[calc(100vw-2rem)] rounded-md border border-border bg-card p-2 shadow-float">
+        <div className="absolute left-0 top-full z-50 mt-2 w-[340px] max-w-[calc(100vw-2rem)] rounded-md border border-border bg-card p-2 shadow-float">
           <div className="flex items-center justify-between px-2 pb-1 pt-0.5">
             <p className="text-chico font-semibold">Tareas</p>
             <button

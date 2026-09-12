@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type Ref } from 'react';
-import { CalendarBlank, CashRegister, EyeSlash, Plus } from '@phosphor-icons/react';
+import { EyeSlash, Plus } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router-dom';
 import ReactGridLayout, { noCompactor, useContainerWidth, type Compactor, type Layout } from 'react-grid-layout';
 import { useEscritorioSummary } from '@/components/layout/escritorio-shell';
 import { LiveClock } from '@/components/live-clock';
 import { ModuleMotif, gridModules, hueFor, type ModuleDef } from '@/lib/modules';
-import { hora as fmtHora } from '@/lib/format';
-import { compact, statFor, type EscritorioSummary, type TileBar } from '@/lib/escritorio';
+import { compact, statFor, type TileBar } from '@/lib/escritorio';
 import { prefetchRoute } from '@/lib/lazy-pages';
 import { useAuth } from '@/lib/auth-context';
 import { setActiveBranch } from '@/lib/branch';
@@ -117,96 +116,6 @@ function FacturacionChart({ bars, hue }: { bars: TileBar[]; hue: string }) {
  * turno está abierto. Lleva lo que el cajero quiere saber sin entrar: desde qué
  * hora, cuántos tickets y cuánto efectivo hay.
  */
-/**
- * Puntito que parpadea: el estado se alterna en React (no CSS), forzando el
- * re-render cada 500ms — el estilo inline cambia de opacidad, así ninguna
- * regla de animación del sistema lo puede frenar.
- */
-function BlinkDot() {
-  const [on, setOn] = useState(true);
-  useEffect(() => {
-    const t = setInterval(() => setOn(v => !v), 500);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <span
-      className="inline-flex size-2 shrink-0 self-center rounded-full bg-white"
-      style={{ opacity: on ? 1 : 0.15, transition: 'opacity 0.45s ease' }}
-      aria-label="Caja abierta"
-    />
-  );
-}
-
-/**
- * Texto que corre de derecha a izquierda (marquee), arrancando visible y
- * alineado a la izquierda (sin sangría). Cada copia lleva su propio espacio al
- * final (padding, no margin), así el bloque duplicado mide EXACTAMENTE 2x una
- * copia: al trasladarlo -50% la segunda copia queda clavada donde arrancó la
- * primera. Al no medir el ancho del texto, el empalme cierra perfecto aunque
- * la fuente tarde en cargar (que era lo que causaba el "flick"). Usa
- * element.animate() (Web Animations API): todo en JS, no CSS.
- */
-
-function Marquee({ text, className }: { text: string; className?: string }) {
-  const stripRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const strip = stripRef.current;
-    if (!strip) return;
-    // Mitad del bloque duplicado = una copia exacta (letra + gap), que es
-    // justo el desplazamiento que cierra el bucle sin salto. -50% no depende
-    // de medir nada: siempre alinea, con la fuente ya cargada o no.
-    const anim = strip.animate(
-      [
-        { transform: 'translateX(0)' },
-        { transform: 'translateX(-50%)' },
-      ],
-      { duration: 9000, iterations: Infinity, easing: 'linear' },
-    );
-    return () => anim.cancel();
-  }, [text]);
-
-  return (
-    <span className={cn('block w-full overflow-hidden whitespace-nowrap', className)}>
-      <span ref={stripRef} className="inline-block" style={{ willChange: 'transform' }}>
-        <span className="inline-block pr-6">{text}</span>
-        <span aria-hidden="true" className="inline-block pr-6">{text}</span>
-      </span>
-    </span>
-  );
-}
-
-function AbrirMostrador({ summary }: { summary: EscritorioSummary | null }) {
-  const navigate = useNavigate();
-  const caja = summary?.caja;
-  const abierta = caja?.abierta ?? false;
-  const hora = caja?.desde ? fmtHora(caja.desde) : '';
-  const tickets = caja?.tickets ?? 0;
-  const efectivo = caja?.efectivo != null ? ` · ${caja.efectivo.toLocaleString('es-AR', { maximumFractionDigits: 0 })} en efectivo` : '';
-  return (
-    <button
-      type="button"
-      onClick={() => navigate('/ventas')}
-      onMouseEnter={() => prefetchRoute('/ventas')}
-      onFocus={() => prefetchRoute('/ventas')}
-      className={cn(
-        'group relative flex max-w-[240px] flex-col items-start gap-0.5 overflow-hidden rounded-lg px-4 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-offset-2 uiverse-ctl',
-        abierta ? 'mostrador-open' : 'mostrador-closed',
-      )}
-    >
-      <span className="flex items-center gap-2 text-sm font-bold">
-        <CashRegister weight="fill" className="size-4" />
-        Mostrador
-        {abierta && <BlinkDot />}
-      </span>
-      <Marquee
-        className="text-micro leading-snug opacity-80"
-        text={abierta ? `Abierta ${hora} · ${tickets} ${tickets === 1 ? 'ticket' : 'tickets'}${efectivo}` : 'Sin turno abierto'}
-      />
-    </button>
-  );
-}
-
 /**
  * El escritorio es un tablero fijo: una grilla de celdas de igual tamaño donde
  * vive cada tarjeta (los huecos —de tarjetas ocultas o por mudanza— quedan como
@@ -553,42 +462,32 @@ export function EscritorioPage() {
   }
 
   return (
-    <div className="pt-4">
-      {/* Saludo a la izquierda; hora grande + fecha debajo, a la derecha. */}
-      <div className="mt-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="type-display text-h1 font-semibold leading-tight [text-wrap:balance]">
-            <span className="text-primary">{saludo()}</span>
-            {nombre && <span className="text-foreground">, {nombre}</span>}
-            <span className="text-primary">.</span>
-          </h1>
-          {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
-            <p className="mt-3 text-chico text-muted-foreground">
-              Estás viendo {session.user.branch.name}.{' '}
-              <button
-                type="button"
-                onClick={() => setActiveBranch(session.user.id, null)}
-                className="font-medium text-primary hover:underline"
-              >
-                Volver a {session.user.homeBranch.name}
-              </button>
-            </p>
-          )}
-        </div>
-        <div className="shrink-0 text-right">
-          <LiveClock fontSize={36} className="font-display font-semibold text-foreground" />
-          <p className="mt-1 flex items-center justify-end gap-1.5 text-chico font-medium tracking-[0.14em] text-placeholder">
-            <CalendarBlank weight="fill" className="size-3.5 shrink-0" />
-            <span className="capitalize">{hoy}</span>
+    <div className="pt-2">
+      {/* Saludo arriba de todo, fecha pegada debajo, hora al final (hero).
+          Un solo ritmo de espaciado (flex-col + gap chico), sin márgenes
+          sueltos por hijo — así no vuelve a colarse un hueco por acumulación
+          de mt-x en cascada. Todo el bloque en un solo tono (ink): el cian
+          queda para lo que se puede tocar, no para texto de lectura. */}
+      <div className="flex flex-col gap-1">
+        <h1 className="type-display min-w-0 text-h1 font-semibold leading-tight text-foreground [text-wrap:balance]">
+          {saludo()}
+          {nombre && `, ${nombre}`}.
+        </h1>
+        <p className="text-chico font-medium text-placeholder">{cap(hoy)}</p>
+        <LiveClock fontSize={64} secondsScale={0.22} className="font-display font-bold tracking-tight text-foreground" />
+        {session?.user.branch && session.user.homeBranch && session.user.branch.id !== session.user.homeBranch.id && (
+          <p className="text-chico text-muted-foreground">
+            Estás viendo {session.user.branch.name}.{' '}
+            <button
+              type="button"
+              onClick={() => setActiveBranch(session.user.id, null)}
+              className="font-medium text-primary hover:underline"
+            >
+              Volver a {session.user.homeBranch.name}
+            </button>
           </p>
-        </div>
+        )}
       </div>
-
-      {canCaja && (
-        <div className="mb-3 mt-5">
-          <AbrirMostrador summary={summary} />
-        </div>
-      )}
 
       <div ref={containerRef} className="min-w-0">
         <ReactGridLayout

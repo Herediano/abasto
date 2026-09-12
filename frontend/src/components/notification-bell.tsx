@@ -39,7 +39,7 @@ export function NotificationBell({ summary }: { summary: EscritorioSummary | nul
         )}
       </MenuTrigger>
 
-      <MenuContent className="w-80 p-2">
+      <MenuContent align="start" className="w-80 p-2">
         <MenuLabel className="px-2.5">Para mirar hoy</MenuLabel>
         {!summary ? (
           <MenuBlock className="text-chico text-placeholder">Cargando el estado del negocio…</MenuBlock>

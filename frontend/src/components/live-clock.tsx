@@ -36,9 +36,21 @@ function RollingDigitFace({ mv, n, height }: { mv: MotionValue<number>; n: numbe
   );
 }
 
-/** Reloj en vivo HH:MM:SS con dígitos que ruedan al cambiar (mismo look que el
- *  odómetro de "Counter" de React Bits). `:` es texto plano, no rueda. */
-export function LiveClock({ fontSize = 14, className }: { fontSize?: number; className?: string }) {
+/** Reloj en vivo HH:MM con los segundos como badge chico arriba a la derecha
+ *  (mismo look que el odómetro de "Counter" de React Bits, dígito a dígito).
+ *  `:` es texto plano, no rueda. */
+export function LiveClock({
+  fontSize = 14,
+  showSeconds = true,
+  secondsScale = 0.22,
+  className,
+}: {
+  fontSize?: number;
+  showSeconds?: boolean;
+  /** Tamaño de los segundos relativo a `fontSize`. */
+  secondsScale?: number;
+  className?: string;
+}) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -49,25 +61,37 @@ export function LiveClock({ fontSize = 14, className }: { fontSize?: number; cla
   const m = now.getMinutes();
   const s = now.getSeconds();
   const height = fontSize * 1.25;
-  const groups: [number, number][] = [
-    [Math.floor(h / 10), h % 10],
-    [Math.floor(m / 10), m % 10],
-    [Math.floor(s / 10), s % 10],
-  ];
+  const secondsFontSize = fontSize * secondsScale;
+  const secondsHeight = secondsFontSize * 1.25;
 
   return (
     <span
       className={className}
-      style={{ fontSize, lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'inline-flex', alignItems: 'center' }}
-      aria-label={now.toLocaleTimeString('es-AR')}
+      style={{ display: 'inline-flex', alignItems: 'flex-start' }}
+      aria-label={now.toLocaleTimeString('es-AR', { hour12: false })}
     >
-      {groups.map(([tens, units], i) => (
-        <span key={i} className="inline-flex items-center">
-          {i > 0 && <span className="mx-px opacity-60">:</span>}
-          <RollingDigit digit={tens} height={height} />
-          <RollingDigit digit={units} height={height} />
+      <span
+        className="inline-flex items-center"
+        style={{ fontSize, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}
+      >
+        <RollingDigit digit={Math.floor(h / 10)} height={height} />
+        <RollingDigit digit={h % 10} height={height} />
+        <span className="relative mx-px inline-block" style={{ height, width: '0.32em' }}>
+          <span className="absolute inset-0 flex items-center justify-center">:</span>
         </span>
-      ))}
+        <RollingDigit digit={Math.floor(m / 10)} height={height} />
+        <RollingDigit digit={m % 10} height={height} />
+      </span>
+      {/* Al costado del último dígito de los minutos, pegados — no arriba. */}
+      {showSeconds && (
+        <span
+          className="ml-1 inline-flex items-center text-muted-foreground"
+          style={{ fontSize: secondsFontSize, fontVariantNumeric: 'tabular-nums', transform: `translateY(${secondsHeight * 0.68}px)` }}
+        >
+          <RollingDigit digit={Math.floor(s / 10)} height={secondsHeight} />
+          <RollingDigit digit={s % 10} height={secondsHeight} />
+        </span>
+      )}
     </span>
   );
 }

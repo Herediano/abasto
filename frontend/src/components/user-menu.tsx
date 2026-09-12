@@ -94,7 +94,7 @@ export function UserMenu({ className }: { className?: string }) {
         <CaretDown className="size-3.5 text-placeholder transition-transform group-data-[state=open]:rotate-180" />
       </MenuTrigger>
 
-      <MenuContent className="w-72 p-2">
+      <MenuContent align="start" className="w-72 p-2">
         {/* Quién sos: avatar, nombre, email y la empresa a la que pertenecés. */}
         <MenuBlock className="flex items-center gap-3 pb-2 pt-1">
           <Avatar name={user.name} preferences={user.preferences} className="size-10 text-sm" />
