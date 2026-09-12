@@ -537,6 +537,7 @@ export type Movement = {
   expirationDate?: string | null;
   warehouseName: string;
   occurredAt: string;
+  reason?: string | null;
   notes?: string | null;
   referenceType?: string | null;
 };

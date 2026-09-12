@@ -1,8 +1,8 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { MovementType, Prisma } from '@prisma/client';
+import { AdjustmentReason, MovementType, Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from './prisma/prisma.service';
-import { IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementInput } from './stock.types';
+import { ADJUSTMENT_REASONS, IN_MOVEMENT_TYPES, OUT_MOVEMENT_TYPES, MovementInput } from './stock.types';
 
 type Scope = { tenantId: string; productId: string; productLotId?: string; warehouseId: string };
 
@@ -23,6 +23,15 @@ export class StockService {
       throw new UnprocessableEntityException('movementType no es válido para esta operación');
     }
     if (body.operationId !== undefined && typeof body.operationId !== 'string') throw new UnprocessableEntityException('operationId debe ser UUID');
+    // La baja manual (adjustment_out) necesita un motivo estructurado para poder
+    // reportar mermas/roturas/vencimientos por separado — antes quedaba sólo en notas libres.
+    let reason: AdjustmentReason | undefined;
+    if (body.movementType === MovementType.adjustment_out) {
+      if (typeof body.reason !== 'string' || !ADJUSTMENT_REASONS.includes(body.reason as AdjustmentReason)) {
+        throw new UnprocessableEntityException('reason es obligatorio para una baja manual (merma, rotura, vencido u otro)');
+      }
+      reason = body.reason as AdjustmentReason;
+    }
     return {
       productId: body.productId as string,
       productLotId: typeof body.productLotId === 'string' ? body.productLotId : undefined,
@@ -33,6 +42,7 @@ export class StockService {
       occurredAt: body.occurredAt === undefined ? undefined : new Date(String(body.occurredAt)),
       referenceType: typeof body.referenceType === 'string' ? body.referenceType : undefined,
       referenceId: typeof body.referenceId === 'string' ? body.referenceId : undefined,
+      reason,
       notes: typeof body.notes === 'string' ? body.notes : undefined,
     };
   }
@@ -75,7 +85,7 @@ export class StockService {
       return tx.stockMovement.create({ data: {
         tenantId, productId: input.productId, productLotId: input.productLotId, warehouseId: input.warehouseId,
         quantity: new Prisma.Decimal(input.quantity).negated(), movementType: input.movementType, operationId: input.operationId,
-        occurredAt: input.occurredAt, referenceType: input.referenceType, referenceId: input.referenceId, notes: input.notes,
+        occurredAt: input.occurredAt, referenceType: input.referenceType, referenceId: input.referenceId, reason: input.reason, notes: input.notes,
       } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
@@ -175,6 +185,7 @@ export class StockService {
     if (warehouseIds) conditions.push({ warehouseId: { in: warehouseIds } });
     if (query.warehouseId) conditions.push({ warehouseId: query.warehouseId });
     if (query.movementType) conditions.push({ movementType: query.movementType as MovementType });
+    if (query.reason) conditions.push({ reason: query.reason as AdjustmentReason });
     if (query.fromDate || query.toDate) {
       conditions.push({
         occurredAt: {

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/field';
@@ -14,17 +14,30 @@ import { api, errorMessage, type Lot, type Product, type Warehouse } from '@/lib
 import { fecha } from '@/lib/format';
 import { useAuth } from '@/lib/auth-context';
 
+const REASONS = [
+  ['merma', 'Merma'],
+  ['rotura', 'Rotura'],
+  ['vencido', 'Vencido'],
+  ['otro', 'Otro'],
+] as const;
+
 export function StockOutPage() {
   const { session, can } = useAuth();
   const token = session!.accessToken;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [lots, setLots] = useState<Lot[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [product, setProduct] = useState<Product | null>(null);
-  const [productLotId, setProductLotId] = useState('');
-  const [form, setForm] = useState({ warehouseId: '', quantity: '', notes: '' });
+  const [productLotId, setProductLotId] = useState(searchParams.get('productLotId') ?? '');
+  const [form, setForm] = useState({
+    warehouseId: searchParams.get('warehouseId') ?? '',
+    quantity: searchParams.get('quantity') ?? '',
+    reason: searchParams.get('reason') ?? '',
+    notes: '',
+  });
 
   const branchId = session?.user.branch?.id;
   useEffect(() => {
@@ -33,10 +46,19 @@ export function StockOutPage() {
         // Sólo los depósitos de la sucursal activa: el egreso sale de acá.
         const w = branchId ? all.filter(x => x.branchId === branchId) : all;
         setWarehouses(w);
-        setForm(f => ({ ...f, warehouseId: w[0]?.id ?? '' }));
+        setForm(f => ({ ...f, warehouseId: f.warehouseId || w[0]?.id || '' }));
       })
       .catch(e => setError(errorMessage(e)));
   }, [token, branchId]);
+
+  // Si venimos de Vencimientos con un producto puntual (?productId=), lo precargamos.
+  useEffect(() => {
+    const productId = searchParams.get('productId');
+    if (!productId) return;
+    api<Product>(`/products/${productId}`, {}, token)
+      .then(setProduct)
+      .catch(e => setError(errorMessage(e)));
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!product) {
@@ -47,7 +69,7 @@ export function StockOutPage() {
     api<Lot[]>(`/products/${product.id}/lots`, {}, token)
       .then(fetched => {
         setLots(fetched);
-        setProductLotId(fetched[0]?.id ?? '');
+        setProductLotId(id => (id && fetched.some(l => l.id === id) ? id : fetched[0]?.id ?? ''));
       })
       .catch(e => setError(errorMessage(e)));
   }, [product, token]);
@@ -60,7 +82,7 @@ export function StockOutPage() {
     try {
       await api(
         '/stock/out',
-        { method: 'POST', body: JSON.stringify({ productId: product.id, productLotId: productLotId || undefined, warehouseId: form.warehouseId, quantity: Number(form.quantity), movementType: 'adjustment_out', notes: form.notes || undefined }) },
+        { method: 'POST', body: JSON.stringify({ productId: product.id, productLotId: productLotId || undefined, warehouseId: form.warehouseId, quantity: Number(form.quantity), movementType: 'adjustment_out', reason: form.reason, notes: form.notes || undefined }) },
         token,
       );
       navigate('/stock');
@@ -99,6 +121,16 @@ export function StockOutPage() {
             </Field>
             <Field label="Cantidad" htmlFor="quantity">
               <Input id="quantity" required min="0.001" step="0.001" type="number" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} />
+            </Field>
+            <Field label="Motivo" htmlFor="reason">
+              <Select id="reason" required value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })}>
+                <option value="" disabled>Elegí un motivo</option>
+                {REASONS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label="Notas" htmlFor="notes" hint="(opcional)">
               <Textarea id="notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />

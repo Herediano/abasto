@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { CalendarX, PencilSimple } from '@phosphor-icons/react';
+import { Link } from 'react-router-dom';
+import { CalendarX, PencilSimple, TrashSimple } from '@phosphor-icons/react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,18 @@ function daysRemaining(expirationDate: string) {
   const expiration = new Date(expirationDate);
   expiration.setHours(0, 0, 0, 0);
   return Math.round((expiration.getTime() - today.getTime()) / DAY_MS);
+}
+
+/** Precarga Egreso con este lote y motivo "Vencido" — evita tener que ir a buscarlo de nuevo a mano. */
+function bajaUrl(item: StockItem) {
+  const params = new URLSearchParams({
+    productId: item.productId,
+    productLotId: item.productLotId ?? '',
+    warehouseId: item.warehouseId,
+    quantity: item.quantity,
+    reason: 'vencido',
+  });
+  return `/stock/out?${params}`;
 }
 
 function urgencyBadge(days: number) {
@@ -171,9 +184,16 @@ export function ExpirationsPage() {
                       <TableCell className="text-right font-semibold tabular">{quantity(i.quantity)}</TableCell>
                       {puedeEditar && (
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(i)}>
-                            <PencilSimple />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(i)} aria-label="Corregir vencimiento" title="Corregir vencimiento">
+                              <PencilSimple />
+                            </Button>
+                            <Button asChild variant="ghost" size="icon" aria-label="Dar de baja" title="Dar de baja">
+                              <Link to={bajaUrl(i)}>
+                                <TrashSimple />
+                              </Link>
+                            </Button>
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>

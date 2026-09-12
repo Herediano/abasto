@@ -29,6 +29,15 @@ const MOVEMENT_TYPES = [
 
 const MOVEMENT_LABEL = Object.fromEntries(MOVEMENT_TYPES) as Record<string, string>;
 
+const ADJUSTMENT_REASONS = [
+  ['merma', 'Merma'],
+  ['rotura', 'Rotura'],
+  ['vencido', 'Vencido'],
+  ['otro', 'Otro'],
+] as const;
+
+const REASON_LABEL = Object.fromEntries(ADJUSTMENT_REASONS) as Record<string, string>;
+
 const REFERENCE_LABEL: Record<string, string> = {
   purchase_invoice: 'Factura de compra',
   purchase_invoice_correction: 'Corrección de factura',
@@ -53,6 +62,7 @@ export function StockHistoryPage() {
   const [supplierId, setSupplierId] = useState('');
   const [warehouseId, setWarehouseId] = useState('');
   const [movementType, setMovementType] = useState(searchParams.get('movementType') ?? '');
+  const [reason, setReason] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [items, setItems] = useState<Movement[]>([]);
@@ -69,6 +79,7 @@ export function StockHistoryPage() {
     if (supplierId) params.set('supplierId', supplierId);
     if (warehouseId) params.set('warehouseId', warehouseId);
     if (movementType) params.set('movementType', movementType);
+    if (reason) params.set('reason', reason);
     if (fromDate) params.set('fromDate', fromDate);
     if (toDate) params.set('toDate', toDate);
     return api<{ items: Movement[]; pagination: Pagination }>(`/stock/movements?${params}`, {}, token)
@@ -97,13 +108,14 @@ export function StockHistoryPage() {
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
-  useEffect(() => { void load(); }, [token, search, supplierId, warehouseId, movementType, fromDate, toDate, page]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, [token, search, supplierId, warehouseId, movementType, reason, fromDate, toDate, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reset = (fn: () => void) => { fn(); setPage(1); };
   const activeFilters = [
     supplierId && { key: 'sup', label: suppliers.find(s => s.id === supplierId)?.name ?? 'Proveedor', clear: () => reset(() => setSupplierId('')) },
     warehouseId && { key: 'wh', label: warehouses.find(w => w.id === warehouseId)?.name ?? 'Depósito', clear: () => reset(() => setWarehouseId('')) },
     movementType && { key: 'type', label: MOVEMENT_LABEL[movementType] ?? movementType, clear: () => reset(() => setMovementType('')) },
+    reason && { key: 'reason', label: REASON_LABEL[reason] ?? reason, clear: () => reset(() => setReason('')) },
     fromDate && { key: 'from', label: `Desde ${fromDate}`, clear: () => reset(() => setFromDate('')) },
     toDate && { key: 'to', label: `Hasta ${toDate}`, clear: () => reset(() => setToDate('')) },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
@@ -139,6 +151,14 @@ export function StockHistoryPage() {
           <Select id="filter-type" value={movementType} onChange={e => reset(() => setMovementType(e.target.value))}>
             <option value="">Todos los tipos</option>
             {MOVEMENT_TYPES.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Motivo" htmlFor="filter-reason">
+          <Select id="filter-reason" value={reason} onChange={e => reset(() => setReason(e.target.value))}>
+            <option value="">Todos los motivos</option>
+            {ADJUSTMENT_REASONS.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
           </Select>
@@ -245,6 +265,12 @@ export function StockHistoryPage() {
                 <dt className="text-muted-foreground">Origen</dt>
                 <dd>{originLabel(viewing.referenceType)}</dd>
               </div>
+              {viewing.reason && (
+                <div>
+                  <dt className="text-muted-foreground">Motivo</dt>
+                  <dd>{REASON_LABEL[viewing.reason] ?? viewing.reason}</dd>
+                </div>
+              )}
               <div className="col-span-2">
                 <dt className="text-muted-foreground">Notas</dt>
                 <dd className="whitespace-pre-wrap">{viewing.notes ?? '—'}</dd>
